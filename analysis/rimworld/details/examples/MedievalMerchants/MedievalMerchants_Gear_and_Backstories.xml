@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 專屬服裝：商人華袍 -->
+  <ThingDef ParentName="ApparelMakeableBase">
+    <defName>MyMod_Apparel_MerchantRobes</defName>
+    <label>商貿同盟華袍</label>
+    <description>一件用上等絲綢縫製的華麗長袍，金色的滾邊象徵著財富。穿著它能顯著提升社交能力與談判籌碼。</description>
+    <graphicData>
+      <texPath>Things/Pawn/Humanlike/Apparel/Robes/Robes</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <color>(200, 160, 50)</color>
+    </graphicData>
+    <costList>
+      <Cloth>80</Cloth>
+      <Gold>2</Gold>
+    </costList>
+    <statBases>
+      <MaxHitPoints>100</MaxHitPoints>
+      <WorkToMake>4000</WorkToMake>
+      <Mass>1.5</Mass>
+      <StuffEffectMultiplierArmor>0.2</StuffEffectMultiplierArmor>
+      <StuffEffectMultiplierInsulation_Cold>0.60</StuffEffectMultiplierInsulation_Cold>
+      <StuffEffectMultiplierInsulation_Heat>0.60</StuffEffectMultiplierInsulation_Heat>
+      <EquipDelay>2</EquipDelay>
+    </statBases>
+    <equippedStatOffsets>
+      <SocialImpact>0.20</SocialImpact>
+      <TradePriceImprovement>0.10</TradePriceImprovement>
+    </equippedStatOffsets>
+    <apparel>
+      <bodyPartGroups>
+        <li>Torso</li>
+        <li>Legs</li>
+      </bodyPartGroups>
+      <li>OnSkin</li>
+      <tags>
+        <li>MedievalMerchant_High</li>
+      </tags>
+    </apparel>
+  </ThingDef>
+
+  <!-- 2. 專屬武器：傭兵重弩 -->
+  <ThingDef ParentName="BaseWeapon">
+    <defName>MyMod_Weapon_MercenaryCrossbow</defName>
+    <label>同盟重弩</label>
+    <description>一種結構複雜的機械弩，威力強大且穿透力極高。雖然裝填緩慢，但足以貫穿厚重的盔甲。</description>
+    <graphicData>
+      <texPath>Things/Item/Equipment/WeaponRemote/Greatbow</texPath> <!-- 暫代 -->
+      <graphicClass>Graphic_Single</graphicClass>
+      <color>(100, 80, 50)</color>
+    </graphicData>
+    <soundInteract>Interact_Bow</soundInteract>
+    <statBases>
+      <WorkToMake>8000</WorkToMake>
+      <Mass>4</Mass>
+      <AccuracyTouch>0.60</AccuracyTouch>
+      <AccuracyShort>0.75</AccuracyShort>
+      <AccuracyMedium>0.85</AccuracyMedium>
+      <AccuracyLong>0.70</AccuracyLong>
+      <RangedWeapon_Cooldown>2.5</RangedWeapon_Cooldown>
+    </statBases>
+    <weaponTags>
+      <li>Medieval_Crossbow_Heavy</li>
+    </weaponTags>
+    <verbs>
+      <li>
+        <verbClass>Verb_LaunchProjectile</verbClass>
+        <hasStandardCommand>true</hasStandardCommand>
+        <defaultProjectile>MyMod_Projectile_Bolt</defaultProjectile>
+        <warmupTime>2.0</warmupTime>
+        <range>30</range>
+        <soundCast>Bow_Large</soundCast>
+      </li>
+    </verbs>
+    <tools>
+      <li>
+        <label>弩身</label>
+        <capacities>
+          <li>Blunt</li>
+        </capacities>
+        <power>8</power>
+        <cooldownTime>2</cooldownTime>
+      </li>
+    </tools>
+  </ThingDef>
+
+  <ThingDef ParentName="BaseProjectile">
+    <defName>MyMod_Projectile_Bolt</defName>
+    <label>重弩矢</label>
+    <graphicData>
+      <texPath>Things/Projectile/Arrow_Small</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+    </graphicData>
+    <projectile>
+      <damageDef>Stab</damageDef>
+      <damageAmountBase>22</damageAmountBase>
+      <armorPenetrationBase>0.45</armorPenetrationBase>
+      <speed>65</speed>
+    </projectile>
+  </ThingDef>
+
+  <!-- 3. 背景故事定義 (示範格式) -->
+  <!-- 注意：原版背景故事通常在代碼或特定的 XML 類別中，這裡展示如何透過 Def 映射 -->
+  <BackstoryDef>
+    <defName>MyMod_Backstory_CaravanChild</defName>
+    <title>商隊孤兒</title>
+    <titleShort>孤兒</titleShort>
+    <baseDescription>[PAWN_nameDef] 在顛簸的牛車上長大，學會了如何識別香料的真偽以及在雨天保護貨物。</baseDescription>
+    <bodyTypeMale>Thin</bodyTypeMale>
+    <bodyTypeFemale>Thin</bodyTypeFemale>
+    <slot>Childhood</slot>
+    <skillGains>
+      <li><key>Social</key><value>4</value></li>
+      <li><key>Animals</key><value>2</value></li>
+    </skillGains>
+    <spawnCategories>
+      <li>MedievalMerchant_Backstory</li>
+    </spawnCategories>
+  </BackstoryDef>
+
+</Defs>

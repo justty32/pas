@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 定義 Job：盟友建造掩體 -->
+  <JobDef>
+    <defName>MyMod_Job_AllyBuildBarricade</defName>
+    <driverClass>MyMod.Examples.JobDriver_AllyBuildBarricade</driverClass>
+    <reportString>正在修築臨時陣地。</reportString>
+    <casualInterruptible>true</casualInterruptible>
+  </JobDef>
+
+  <!-- 2. 定義 Duty：防守並加固 -->
+  <DutyDef>
+    <defName>MyMod_Duty_AllyFortify</defName>
+    <thinkNode Class="ThinkNode_Priority">
+      <subNodes>
+        <!-- A. 優先進行戰鬥（如果敵人在附近） -->
+        <li Class="JobGiver_AIDefendPawn">
+          <targetAcquireRadius>30</targetAcquireRadius>
+        </li>
+        <!-- B. 核心：尋找位置並建造掩體 -->
+        <li Class="MyMod.Examples.JobGiver_FortifyArea" />
+        <!-- C. 沒事做時就待在原地 -->
+        <li Class="JobGiver_WanderNearDutyLocation" />
+      </subNodes>
+    </thinkNode>
+  </DutyDef>
+
+</Defs>

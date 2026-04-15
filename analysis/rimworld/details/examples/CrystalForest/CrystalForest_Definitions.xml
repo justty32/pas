@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 生態系定義 -->
+  <BiomeDef>
+    <defName>MyMod_CrystalForest</defName>
+    <label>晶礦森林</label>
+    <description>一片充滿了神祕光輝的神聖森林。這裡的大地被藍色的晶體覆蓋，樹木結出的果實散發著微弱的熱量。</description>
+    <workerClass>MyMod.Examples.BiomeWorker_CrystalForest</workerClass>
+    <animalDensity>0.8</animalDensity>
+    <plantDensity>2.5</plantDensity>
+    <terrestrial>true</terrestrial>
+    <texturePath>World/Biomes/IceSheet</texturePath> <!-- 借用貼圖 -->
+    
+    <!-- 環境顏色設置 -->
+    <baseWeatherCommonalities>
+      <Clear>100</Clear>
+      <Rain>10</Rain>
+      <Fog>40</Fog>
+    </biomes_baseWeatherCommonalities>
+    
+    <!-- 植被與動物清單 -->
+    <wildPlants>
+      <MyMod_CrystalTree>10</MyMod_CrystalTree>
+      <Plant_Grass>50</Plant_Grass>
+      <Plant_TallGrass>20</Plant_TallGrass>
+    </wildPlants>
+    
+    <wildAnimals>
+      <Muffalo>5</Muffalo>
+      <Squirrel>10</Squirrel>
+      <Thrumbo>1</Thrumbo>
+    </wildAnimals>
+    
+    <!-- 地形分佈：主要為藍色晶土地 -->
+    <terrainsByFertility>
+      <li>
+        <terrain>MyMod_CrystalSoil</terrain>
+        <min>0</min>
+        <max>0.99</max>
+      </li>
+      <li>
+        <terrain>MyMod_CrystalRichSoil</terrain>
+        <min>1.0</min>
+        <max>999</max>
+      </li>
+    </terrainsByFertility>
+  </BiomeDef>
+
+  <!-- 2. 地形定義 -->
+  <TerrainDef ParentName="FloorBase">
+    <defName>MyMod_CrystalSoil</defName>
+    <label>結晶地表</label>
+    <texturePath>Terrain/Surfaces/Soil</texturePath>
+    <color>(100, 150, 255)</color> <!-- 淺藍色 -->
+    <fertility>0.7</fertility>
+  </TerrainDef>
+
+  <TerrainDef ParentName="FloorBase">
+    <defName>MyMod_CrystalRichSoil</defName>
+    <label>晶脈沃土</label>
+    <texturePath>Terrain/Surfaces/Soil</texturePath>
+    <color>(150, 100, 255)</color> <!-- 紫色 -->
+    <fertility>1.4</fertility>
+  </TerrainDef>
+
+  <!-- 3. 植物定義：發光結晶樹 (現在產出紫色水晶) -->
+  <ThingDef ParentName="TreeBase">
+    <defName>MyMod_CrystalTree</defName>
+    <label>結晶樹</label>
+    <description>一種罕見的樹木，其枝葉中含有大量發光礦物質。砍伐後可獲得珍貴的紫色水晶。</description>
+    <graphicData>
+      <texPath>Things/Plant/AnimaTree</texPath>
+      <graphicClass>Graphic_Random</graphicClass>
+      <color>(100, 255, 255)</color>
+    </graphicData>
+    <statBases>
+      <Beauty>15</Beauty>
+    </statBases>
+    <plant>
+      <harvestedThingDef>MyMod_PurpleCrystal</harvestedThingDef>
+      <harvestYield>20</harvestYield>
+    </plant>
+    <comps>
+      <li Class="CompProperties_Glow">
+        <glowRadius>4</glowRadius>
+        <glowColor>(50, 200, 255, 0)</glowColor>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 4. 資源定義：紫色水晶 (Stuff) -->
+  <ThingDef ParentName="ResourceBase">
+    <defName>MyMod_PurpleCrystal</defName>
+    <label>紫色水晶</label>
+    <description>從晶礦森林中採集的高純度晶體。它具有極佳的能量穩定性，是製作高級設備與藝術品的優良材料。</description>
+    <graphicData>
+      <texPath>Things/Item/Resource/Jade</texPath> <!-- 借用翡翠圖示 -->
+      <graphicClass>Graphic_StackCount</graphicClass>
+      <color>(150, 50, 255)</color>
+    </graphicData>
+    <soundInteract>Silver_Drop</soundInteract>
+    <soundDrop>Silver_Drop</soundDrop>
+    <statBases>
+      <MarketValue>5.0</MarketValue>
+      <Mass>0.05</Mass>
+      <SharpArmorPenetration>0.15</SharpArmorPenetration>
+      <Beauty>10</Beauty>
+    </statBases>
+    <stuffProps>
+      <categories>
+        <li>Stony</li>
+        <li>Metallic</li>
+      </categories>
+      <commonality>0.01</commonality>
+      <color>(150, 50, 255)</color>
+      <statOffsets>
+        <MeleeHitChance>2</MeleeHitChance>
+      </statOffsets>
+      <statFactors>
+        <MaxHitPoints>1.2</MaxHitPoints>
+        <Beauty>2.0</Beauty>
+      </statFactors>
+    </stuffProps>
+  </ThingDef>
+
+  <!-- 5. 建築定義：水晶共鳴器 (充電樁) -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>MyMod_CrystalResonator</defName>
+    <label>水晶共鳴器</label>
+    <description>利用紫色水晶的能量共鳴原理，為周圍的無人機兵(Mechanoids)進行無線能量補充。</description>
+    <thingClass>Building</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Misc/RelicAltar</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+      <color>(200, 100, 255)</color>
+    </graphicData>
+    <altitudeLayer>Building</altitudeLayer>
+    <statBases>
+      <MaxHitPoints>500</MaxHitPoints>
+      <WorkToBuild>5000</WorkToBuild>
+      <Flammability>0</Flammability>
+    </statBases>
+    <costList>
+      <MyMod_PurpleCrystal>150</MyMod_PurpleCrystal>
+      <Steel>100</Steel>
+      <ComponentIndustrial>5</ComponentIndustrial>
+    </costList>
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>200</basePowerConsumption>
+      </li>
+      <li Class="MyMod.Examples.CompProperties_CrystalResonator">
+        <radius>6</radius>
+        <chargeRatePerTick>0.05</chargeRatePerTick>
+      </li>
+      <li Class="CompProperties_Glow">
+        <glowRadius>6</glowRadius>
+        <glowColor>(150, 50, 255, 0)</glowColor>
+      </li>
+    </comps>
+    <selectable>true</selectable>
+    <tickerType>Normal</tickerType>
+  </ThingDef>
+
+  <!-- 6. 特殊物品：水晶吊墜 -->
+  <ThingDef ParentName="ApparelMakeableBase">
+    <defName>MyMod_CrystalPendant</defName>
+    <label>結晶共鳴吊墜</label>
+    <description>一顆精心打磨的紫色水晶，被編織在銀質底座上。它能與配戴者的神經系統產生共鳴，顯著提升肢體的協調性與操作精確度。</description>
+    <graphicData>
+      <texPath>Things/Pawn/Humanlike/Apparel/Amulet/Amulet</texPath> <!-- 借用飾品圖示 -->
+      <graphicClass>Graphic_Single</graphicClass>
+      <color>(180, 100, 255)</color>
+    </graphicData>
+    <costList>
+      <MyMod_PurpleCrystal>30</MyMod_PurpleCrystal>
+      <Silver>10</Silver>
+    </costList>
+    <recipeMaker>
+      <recipeUsers>
+        <li>ElectricSmithy</li>
+        <li>FueledSmithy</li>
+      </recipeUsers>
+      <skillRequirements>
+        <Crafting>6</Crafting>
+      </skillRequirements>
+    </recipeMaker>
+    <statBases>
+      <MaxHitPoints>80</MaxHitPoints>
+      <WorkToMake>3000</WorkToMake>
+      <Mass>0.1</Mass>
+      <EquipDelay>1.5</EquipDelay>
+    </statBases>
+    <equippedStatOffsets>
+      <Manipulation>0.20</Manipulation> <!-- 提升 20% 操作力 -->
+    </equippedStatOffsets>
+    <apparel>
+      <bodyPartGroups>
+        <li>Neck</li>
+      </bodyPartGroups>
+      <layers>
+        <li>Belt</li> <!-- 飾品層，不與普通衣物衝突 -->
+      </layers>
+      <tags>
+        <li>RoyalTier1</li>
+      </tags>
+    </apparel>
+  </ThingDef>
+
+</Defs>
+
+</Defs>

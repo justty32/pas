@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Simple Item Mod</name>
+  <author>You</author>
+  <supportedVersions>
+    <li>1.3</li>
+  </supportedVersions>
+  <packageId>You.SimpleItemMod</packageId>
+  <description>This is a simple mod that adds a new item.</description>
+</ModMetaData>

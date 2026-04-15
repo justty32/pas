@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ThingDef ParentName="ResourceBase">
+    <defName>ShinyRock</defName>
+    <label>shiny rock</label>
+    <description>A pretty, shiny rock. Doesn't do much, but it's nice to look at.</description>
+    <graphicData>
+      <texPath>Things/Item/Resource/Gold</texPath>
+      <graphicClass>Graphic_StackCount</graphicClass>
+    </graphicData>
+    <statBases>
+      <MarketValue>10.0</MarketValue>
+      <Mass>0.5</Mass>
+    </statBases>
+    <thingCategories>
+      <li>Items</li>
+    </thingCategories>
+    <stackLimit>50</stackLimit>
+    <comps>
+      <li>
+        <compClass>SimpleItemMod.CompShinyRock</compClass>
+      </li>
+    </comps>
+  </ThingDef>
+</Defs>

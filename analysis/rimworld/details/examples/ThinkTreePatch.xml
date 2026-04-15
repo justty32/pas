@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+  <!-- 
+    1. 找到小人的主思考樹 (MainColonistBehaviorCore)
+    2. 定位到「閒暇行為 (Idle)」之前
+    3. 插入我們的自定義 JobGiver
+  -->
+  <Operation Class="PatchOperationInsert">
+    <xpath>
+      /Defs/ThinkTreeDef[defName="MainColonistBehaviorCore"]/thinkRoot/subNodes/li[@Class="ThinkNode_Tagger"]
+      [tag="Idle"]/subNodes/li[last()]
+    </xpath>
+    <order>Prepend</order> <!-- 在閒晃之前先清潔 -->
+    <value>
+      <li Class="MyMod.Examples.JobGiver_AutoCleanNearSelf" />
+    </value>
+  </Operation>
+</Patch>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 定義 Job：盟友區域建設 -->
+  <JobDef>
+    <defName>MyMod_Job_AllyBuildInZone</defName>
+    <driverClass>MyMod.Examples.JobDriver_AllyBuildInZone</driverClass>
+    <reportString>正在利用區域資源進行建設。</reportString>
+    <casualInterruptible>true</casualInterruptible>
+  </JobDef>
+
+  <!-- 2. 定義 Duty：區域建設與防守者 -->
+  <DutyDef>
+    <defName>MyMod_Duty_AllyZoneBuilder</defName>
+    <thinkNode Class="ThinkNode_Priority">
+      <subNodes>
+        <!-- A. 遇到敵人時主動迎擊與防守 (保護建設區) -->
+        <li Class="JobGiver_AIFightEnemies">
+          <targetAcquireRadius>40</targetAcquireRadius>
+          <targetKeepRadius>50</targetKeepRadius>
+        </li>
+        <!-- B. 核心：執行區域內的建設任務 -->
+        <li Class="MyMod.Examples.JobGiver_AllyBuildInZone" />
+        <!-- C. 閒置時在區域內巡邏防守 -->
+        <li Class="MyMod.Examples.JobGiver_WanderInAllyZone" />
+      </subNodes>
+    </thinkNode>
+  </DutyDef>
+
+  <!-- 3. 定義區域的設計器 (Designator) -->
+  <!-- 為了簡化，我們可以直接在代碼中建立 Zone 類別 -->
+
+</Defs>

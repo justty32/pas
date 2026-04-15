@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 大地圖物件：商貿驛站 -->
+  <WorldObjectDef>
+    <defName>MyMod_MerchantOutpost</defName>
+    <label>商貿驛站</label>
+    <description>一個由商貿同盟建立的永久性貿易據點。它會為周邊地區提供穩定的貿易流，並作為中轉站維護道路安全。</description>
+    <worldObjectClass>MyMod.Examples.WorldObject_MerchantOutpost</worldObjectClass>
+    <texturePath>World/WorldObjects/Expanding/Town</texturePath>
+    <expandingIcon>true</expandingIcon>
+    <expandingIconTexturePath>World/WorldObjects/Expanding/Town</expandingIconTexturePath>
+    <expandingIconPriority>50</expandingIconPriority>
+  </WorldObjectDef>
+
+  <!-- 2. 事件定義：受困的商隊 -->
+  <IncidentDef>
+    <defName>MyMod_Incident_MerchantDistress</defName>
+    <label>受困的商隊</label>
+    <category>ThreatBig</category> <!-- 視為中大型威脅 -->
+    <targetTags>
+      <li>Map_PlayerHome</li>
+    </targetTags>
+    <workerClass>MyMod.Examples.IncidentWorker_MerchantDistress</workerClass>
+    <baseChance>0.3</baseChance>
+    <letterLabel>商隊求援</letterLabel>
+    <letterText>一支中世紀商隊正倉皇逃往你的領地！他們身後跟著一群窮兇極惡的劫匪。如果你能保護商人，他們承諾會給予豐厚的回報。</letterText>
+    <letterDef>ThreatBig</letterDef>
+  </IncidentDef>
+
+  <!-- 3. 高級貿易清單 (解鎖用) -->
+  <TraderKindDef>
+    <defName>MyMod_TraderKind_Medieval_Elite</defName>
+    <label>同盟高級商務團</label>
+    <stockGenerators>
+      <li Class="StockGenerator_SingleDef">
+        <thingDef>Silver</thingDef>
+        <countRange>3000~6000</countRange>
+      </li>
+      <li Class="StockGenerator_SingleDef">
+        <thingDef>Gold</thingDef>
+        <countRange>50~150</countRange>
+      </li>
+      <!-- 稀有藍圖與遺物 -->
+      <li Class="StockGenerator_Techprints">
+        <countRange>1~3</countRange>
+      </li>
+      <li Class="StockGenerator_Artifacts" />
+      <li Class="StockGenerator_Category">
+        <categoryDef>Apparel</categoryDef>
+      </li>
+    </stockGenerators>
+  </TraderKindDef>
+
+</Defs>

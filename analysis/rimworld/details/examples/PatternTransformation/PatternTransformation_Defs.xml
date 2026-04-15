@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 儀式地板：符文銀磚 -->
+  <TerrainDef ParentName="FloorBase">
+    <defName>MyMod_RunicFloor</defName>
+    <label>符文銀磚</label>
+    <description>刻有神祕導能符文的地板，是發動煉金儀式的基礎。</description>
+    <texturePath>Terrain/Surfaces/TileSilver</texturePath> <!-- 借用銀色地板貼圖 -->
+    <edgeVisuals>
+      <li Class="TerrainEdgeVisuals_Curb">
+        <color>(100, 150, 255)</color>
+      </li>
+    </edgeVisuals>
+    <statBases>
+      <WorkToBuild>1000</WorkToBuild>
+      <Beauty>5</Beauty>
+    </statBases>
+    <costList>
+      <Silver>20</Silver>
+      <Steel>5</Steel>
+    </costList>
+  </TerrainDef>
+
+  <!-- 2. 核心物體：點金雕像 (可由各種材質建造) -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>MyMod_AlchemicalAltar</defName>
+    <label>煉金核心雕像</label>
+    <description>一座看似平凡的雕像。傳說當它被放置在正確的符文陣列中央時，凡物將昇華為金。</description>
+    <thingClass>Building</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Misc/RelicAltar</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.5,1.5)</drawSize>
+      <shadowData>
+        <volume>(1, 0.5, 1)</volume>
+      </shadowData>
+    </graphicData>
+    <altitudeLayer>Building</altitudeLayer>
+    <statBases>
+      <MaxHitPoints>250</MaxHitPoints>
+      <WorkToBuild>2000</WorkToBuild>
+      <Flammability>0.5</Flammability>
+      <Beauty>10</Beauty>
+    </statBases>
+    <stuffCategories>
+      <li>Metallic</li>
+      <li>Stony</li>
+      <li>Woody</li>
+    </stuffCategories>
+    <costStuffCount>100</costStuffCount>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_PatternTransformation" />
+    </comps>
+    <selectable>true</selectable>
+  </ThingDef>
+
+</Defs>

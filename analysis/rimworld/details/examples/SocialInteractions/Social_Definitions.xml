@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 定義 Job：撓癢癢 -->
+  <JobDef>
+    <defName>MyMod_Job_Tickle</defName>
+    <driverClass>MyMod.Examples.JobDriver_Tickle</driverClass>
+    <reportString>正在給 TargetA 撓癢癢。</reportString>
+    <casualInterruptible>true</casualInterruptible>
+  </JobDef>
+
+  <!-- 2. 定義心情反饋 (Thought) -->
+  <ThoughtDef>
+    <defName>MyMod_Thought_Tickled</defName>
+    <durationDays>0.5</durationDays>
+    <stackLimit>3</stackLimit>
+    <stages>
+      <li>
+        <label>被撓癢癢了</label>
+        <description>嘿嘿，剛才有人跟我鬧著玩，撓我癢癢，真開心。</description>
+        <baseMoodEffect>5</baseMoodEffect>
+      </li>
+    </stages>
+  </ThoughtDef>
+
+  <!-- 3. 定義一個簡單的「大笑」特效 (Fleck) -->
+  <FleckDef ParentName="FleckBase_Text">
+    <defName>MyMod_Fleck_HaHa</defName>
+    <text>Hahaha!</text>
+    <color>(1, 0.8, 0.2)</color>
+  </FleckDef>
+
+</Defs>

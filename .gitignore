@@ -1,0 +1,15 @@
+# 忽略克隆的專案原始碼，僅託管分析結果
+projects/*
+!projects/.gitkeep
+
+# 忽略 Agent 的臨時檔案
+**/gemini_temp/*
+!**/gemini_temp/session_resume.md
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+project_analysis

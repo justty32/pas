@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 定義可被偷襲的戰略據點 -->
+  <WorldObjectDef>
+    <defName>MyMod_StrategicOutpost</defName>
+    <label>戰略前哨站</label>
+    <description>一個防禦嚴密的派系據點。如果你正面進攻，會面臨巨大的傷亡；但如果你選擇偷襲，或許能打他們個措手不及。</description>
+    <worldObjectClass>MyMod.Examples.WorldObject_StrategicOutpost</worldObjectClass>
+    <texturePath>World/WorldObjects/Expanding/Sites/Outpost</texturePath>
+    <expandingIcon>true</expandingIcon>
+    <expandingIconTexturePath>World/WorldObjects/Expanding/Sites/Outpost</expandingIconTexturePath>
+  </WorldObjectDef>
+
+  <!-- 2. 偷襲專用地圖生成器 -->
+  <MapGeneratorDef>
+    <defName>MyMod_SneakAttackMapGen</defName>
+    <label>偷襲地圖生成器</label>
+    <genSteps>
+      <li>Terrain</li>
+      <li>RocksFromGrid</li>
+      <li>MyMod_GenStep_OutpostBase</li> <!-- 生成基礎建築 -->
+      <li>MyMod_GenStep_SneakAttackSetup</li> <!-- 關鍵：設置偷襲狀態 -->
+      <li>Fog</li>
+    </genSteps>
+  </MapGeneratorDef>
+
+  <!-- 3. 偷襲專用狀態：驚愕 -->
+  <HediffDef>
+    <defName>MyMod_SneakAttackSurprise</defName>
+    <label>驚愕</label>
+    <description>因為被突如其來的夜襲驚醒而陷入混亂。反應速度極慢，且難以組織有效的反擊。</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <comps>
+      <li Class="HediffCompProperties_Disappears">
+        <disappearsAfterTicks>2500~5000</disappearsAfterTicks> <!-- 持續約 1 小時 -->
+        <showRemainingTime>true</showRemainingTime>
+      </li>
+    </comps>
+    <stages>
+      <li>
+        <capMods>
+          <li>
+            <capacity>Consciousness</capacity>
+            <offset>-0.2</offset>
+          </li>
+          <li>
+            <capacity>Manipulation</capacity>
+            <offset>-0.4</offset>
+          </li>
+        </capMods>
+        <statOffsets>
+          <MeleeHitChance>-5</MeleeHitChance>
+          <ShootingAccuracyPawn>-5</ShootingAccuracyPawn>
+          <MoveSpeed>-1.0</MoveSpeed>
+        </statOffsets>
+      </li>
+    </stages>
+  </HediffDef>
+</Defs>

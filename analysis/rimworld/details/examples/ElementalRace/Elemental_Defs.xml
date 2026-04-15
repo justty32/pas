@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 基因定義：元素使者 -->
+  <GeneDef>
+    <defName>MyMod_Gene_Elementalist</defName>
+    <label>元素使者</label>
+    <description>攜帶此基因的人能與自然元素產生共鳴，施放強大的破壞性技能。</description>
+    <iconPath>UI/Icons/Genes/Gene_TailTerror</iconPath> <!-- 暫代圖示 -->
+    <displayCategory>Archite</displayCategory>
+    <biostatCpx>3</biostatCpx>
+    <biostatMet>-3</biostatMet>
+    <abilities>
+      <li>MyMod_Ability_LightningStrike</li>
+      <li>MyMod_Ability_IceWall</li>
+      <li>MyMod_Ability_FireWall</li>
+      <li>MyMod_Ability_ThrowBomb</li>
+      <li>MyMod_Ability_ChaosBreath</li>
+    </abilities>
+  </GeneDef>
+
+  <!-- E. 吐出混沌火焰 -->
+  <AbilityDef>
+    <defName>MyMod_Ability_ChaosBreath</defName>
+    <label>吐出混沌火焰</label>
+    <description>向前方錐形區域噴射不穩定的混沌火焰，造成傷害並引發隨機的異能反應。</description>
+    <iconPath>UI/Icons/Psycasts/Psycast_ChaosSkip</iconPath>
+    <cooldownTicksRange>1800</cooldownTicksRange>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>8.9</range>
+      <warmupTime>1.0</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AbilityChaosBreath">
+        <range>8</range>
+        <coneAngle>45</coneAngle>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- 4. 混沌火焰狀態效果 (Hediff) -->
+  <HediffDef>
+    <defName>MyMod_Hediff_ChaosBurn</defName>
+    <label>混沌侵蝕</label>
+    <description>來自異界的火焰正在侵蝕肉體與精神，引發不可預測的痛苦。</description>
+    <hediffClass>MyMod.Examples.Hediff_ChaosBurn</hediffClass>
+    <defaultLabelColor>(0.7, 0.2, 0.9)</defaultLabelColor> <!-- 紫色文字 -->
+    <comps>
+      <li Class="HediffCompProperties_Disappears">
+        <disappearsAfterTicks>5000~10000</disappearsAfterTicks>
+        <showRemainingTime>true</showRemainingTime>
+      </li>
+    </comps>
+    <stages>
+      <li>
+        <painOffset>0.2</painOffset>
+        <capMods>
+          <li>
+            <capacity>Consciousness</capacity>
+            <offset>-0.1</offset>
+          </li>
+        </capMods>
+      </li>
+    </stages>
+  </HediffDef>
+
+  <!-- 2. 技能定義 -->
+  
+  <!-- A. 召喚閃電 -->
+  <AbilityDef>
+    <defName>MyMod_Ability_LightningStrike</defName>
+    <label>召喚閃電</label>
+    <description>在目標位置召喚一道毀滅性的落雷。</description>
+    <iconPath>UI/Icons/Psycasts/Psycast_Flashstorm</iconPath>
+    <cooldownTicksRange>600</cooldownTicksRange> <!-- 10秒冷卻 -->
+    <targetRequired>true</targetRequired>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>25.9</range>
+      <warmupTime>1.0</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AbilityLightningStrike" />
+    </comps>
+  </AbilityDef>
+
+  <!-- B. 冰牆 -->
+  <AbilityDef>
+    <defName>MyMod_Ability_IceWall</defName>
+    <label>凝結冰牆</label>
+    <description>在目標位置升起一道由堅冰構成的屏障，阻擋敵人的去路。</description>
+    <iconPath>UI/Icons/Psycasts/Psycast_ChunkSkip</iconPath>
+    <cooldownTicksRange>1200</cooldownTicksRange>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>15.9</range>
+      <warmupTime>0.5</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AbilitySpawnWall">
+        <wallDef>MyMod_IceWallThing</wallDef>
+        <width>3</width>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- C. 火牆 -->
+  <AbilityDef>
+    <defName>MyMod_Ability_FireWall</defName>
+    <label>烈焰火牆</label>
+    <description>召喚一道燃燒的火牆，點燃任何靠近的生物。</description>
+    <iconPath>UI/Icons/Psycasts/Psycast_Focus</iconPath>
+    <cooldownTicksRange>1200</cooldownTicksRange>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>15.9</range>
+      <warmupTime>0.5</warmupTime>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AbilitySpawnWall">
+        <wallDef>MyMod_FireWallThing</wallDef>
+        <width>5</width>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- D. 投擲炸彈 (使用原版拋射機制) -->
+  <AbilityDef>
+    <defName>MyMod_Ability_ThrowBomb</defName>
+    <label>熔岩炸彈</label>
+    <description>凝聚一顆不穩定的熔岩炸彈並投擲出去，造成大範圍爆炸。</description>
+    <iconPath>UI/Icons/Psycasts/Psycast_Neuroquake</iconPath>
+    <cooldownTicksRange>300</cooldownTicksRange>
+    <verbProperties>
+      <verbClass>Verb_CastAbility</verbClass>
+      <range>19.9</range>
+      <warmupTime>1.5</warmupTime>
+      <soundCast>ThrowGrenade</soundCast>
+      <targetParams>
+        <canTargetLocations>true</canTargetLocations>
+        <canTargetPawns>true</canTargetPawns>
+      </targetParams>
+    </verbProperties>
+    <comps>
+      <li Class="CompProperties_AbilityLaunchProjectile">
+        <projectileDef>MyMod_ElementalBomb</projectileDef>
+      </li>
+    </comps>
+  </AbilityDef>
+
+  <!-- 3. 實體定義 (牆壁與炸彈) -->
+
+  <!-- 冰牆實體 -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>MyMod_IceWallThing</defName>
+    <label>冰牆</label>
+    <description>堅硬的冰塊。會隨著時間融化。</description>
+    <thingClass>Building</thingClass>
+    <category>Building</category>
+    <graphicData>
+      <texPath>Things/Building/Linked/Wall</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <color>(150, 200, 255, 200)</color> <!-- 半透明淡藍色 -->
+    </graphicData>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>Impassable</passability>
+    <blockWind>true</blockWind>
+    <fillPercent>1</fillPercent>
+    <coversFloor>true</coversFloor>
+    <statBases>
+      <MaxHitPoints>300</MaxHitPoints>
+      <Flammability>0</Flammability>
+    </statBases>
+    <tickerType>Normal</tickerType>
+    <comps>
+      <li Class="CompProperties_DestroyAfterDelay">
+        <delayTicks>1500</delayTicks> <!-- 25秒後自動消失 -->
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 火牆實體 -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>MyMod_FireWallThing</defName>
+    <label>火牆</label>
+    <description>熊熊燃燒的火焰屏障。</description>
+    <thingClass>Building</thingClass>
+    <category>Building</category>
+    <graphicData>
+      <texPath>Things/Building/Linked/Wall</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <color>(255, 100, 0, 200)</color>
+    </graphicData>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>PassThroughOnly</passability> <!-- 可以穿過，但會被燒 -->
+    <pathCost>150</pathCost>
+    <fillPercent>0.2</fillPercent>
+    <statBases>
+      <MaxHitPoints>100</MaxHitPoints>
+      <Flammability>0</Flammability>
+    </statBases>
+    <tickerType>Normal</tickerType>
+    <comps>
+      <li Class="CompProperties_DestroyAfterDelay">
+        <delayTicks>900</delayTicks> <!-- 15秒後消失 -->
+      </li>
+      <li Class="CompProperties_Glow">
+        <glowRadius>4</glowRadius>
+        <glowColor>(255,100,0,0)</glowColor>
+      </li>
+      <li Class="MyMod.Examples.CompProperties_FireWallBurn" />
+    </comps>
+  </ThingDef>
+
+  <!-- 炸彈拋射物 -->
+  <ThingDef ParentName="BaseProjectile">
+    <defName>MyMod_ElementalBomb</defName>
+    <label>熔岩炸彈</label>
+    <graphicData>
+      <texPath>Things/Projectile/Bullet_Incendiary</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>1.5</drawSize>
+    </graphicData>
+    <projectile>
+      <damageDef>Bomb</damageDef>
+      <damageAmountBase>40</damageAmountBase>
+      <armorPenetrationBase>0.5</armorPenetrationBase>
+      <speed>40</speed>
+      <explosionRadius>2.9</explosionRadius>
+      <postExplosionSpawnThingDef>Filth_RubbleRock</postExplosionSpawnThingDef>
+    </projectile>
+  </ThingDef>
+
+</Defs>

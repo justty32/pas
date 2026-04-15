@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 祭壇基礎類別 (抽象) -->
+  <ThingDef Name="MyMod_AltarBase" Abstract="True">
+    <thingClass>Building</thingClass>
+    <category>Building</category>
+    <surfaceType>Item</surfaceType>
+    <altitudeLayer>Building</altitudeLayer>
+    <pathCost>50</pathCost>
+    <blockWind>true</blockWind>
+    <fillPercent>0.5</fillPercent>
+    <statBases>
+      <MaxHitPoints>1000</MaxHitPoints>
+      <WorkToBuild>3000</WorkToBuild>
+      <Flammability>0</Flammability>
+    </statBases>
+    <tickerType>Normal</tickerType>
+    <selectable>true</selectable>
+    <rotatable>false</rotatable>
+    <drawGUIOverlay>true</drawGUIOverlay>
+    <comps>
+      <li Class="CompProperties_Glow">
+        <glowRadius>3</glowRadius>
+        <glowColor>(150, 150, 255, 0)</glowColor>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 治癒之祭壇 -->
+  <ThingDef ParentName="MyMod_AltarBase">
+    <defName>MyMod_Altar_Healing</defName>
+    <label>古老治癒祭壇</label>
+    <description>一座散發著溫和綠光的祭壇，據說能洗滌所有生物的傷痛。</description>
+    <graphicData>
+      <texPath>Things/Building/Misc/RelicAltar</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(3,3)</drawSize>
+      <color>(100, 255, 100)</color>
+    </graphicData>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AltarPower">
+        <type>Healing</type>
+        <maxEnergy>200</maxEnergy>
+        <fleckDef>PsycastAreaEffect</fleckDef>
+        <ritualLetterLabel>治癒祭禮</ritualLetterLabel>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 毀滅之祭壇 -->
+  <ThingDef ParentName="MyMod_AltarBase">
+    <defName>MyMod_Altar_Destruction</defName>
+    <label>古老毀滅祭壇</label>
+    <description>一座刻滿禁忌符文的祭壇，引導其能量將引發恐怖的天災。</description>
+    <graphicData>
+      <texPath>Things/Building/Misc/RelicAltar</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(3,3)</drawSize>
+      <color>(255, 50, 50)</color>
+    </graphicData>
+    <comps>
+      <li Class="MyMod.Examples.CompProperties_AltarPower">
+        <type>Destruction</type>
+        <maxEnergy>300</maxEnergy>
+        <fleckDef>ExplosionFlash</fleckDef>
+        <ritualLetterLabel>毀滅祭禮</ritualLetterLabel>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 2. 靈能植物 -->
+  <ThingDef ParentName="PlantBase">
+    <defName>MyMod_PsychicPlant</defName>
+    <label>靈能流光草</label>
+    <description>生長在祭壇周圍的發光植物，似乎在吸收環境中的多餘靈能。</description>
+    <statBases>
+      <MaxHitPoints>50</MaxHitPoints>
+    </statBases>
+    <graphicData>
+      <texPath>Things/Plant/Grass</texPath>
+      <graphicClass>Graphic_Random</graphicClass>
+      <color>(100, 200, 255)</color>
+    </graphicData>
+    <selectable>true</selectable>
+    <comps>
+      <li Class="CompProperties_Glow">
+        <glowRadius>1.5</glowRadius>
+        <glowColor>(50, 100, 255, 0)</glowColor>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- 3. 儀式工作定義 -->
+  <JobDef>
+    <defName>MyMod_PerformAltarRitual</defName>
+    <driverClass>MyMod.Examples.JobDriver_PerformAltarRitual</driverClass>
+    <reportString>正在執行靈能祭禮。</reportString>
+    <casualInterruptible>false</casualInterruptible>
+  </JobDef>
+
+  <!-- 4. 祭壇狀態效果 (Hediff) -->
+  <HediffDef>
+    <defName>MyMod_AltarBlessing</defName>
+    <label>祭壇祝禱</label>
+    <description>來自古老祭壇的能量灌注，提升了身體的自癒能力與精神抗性。</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <stages>
+      <li>
+        <capMods>
+          <li>
+            <capacity>Consciousness</capacity>
+            <offset>0.1</offset>
+          </li>
+        </capMods>
+        <statOffsets>
+          <InjuryHealingFactor>2.0</InjuryHealingFactor>
+          <PsychicSensitivity>0.5</PsychicSensitivity>
+        </statOffsets>
+      </li>
+    </stages>
+  </HediffDef>
+
+  <!-- 5. 任務與地點定義 (更新以包含變體) -->
+  <WorldObjectDef>
+    <defName>MyMod_UniqueAltarSite</defName>
+    <label>神祕的祭壇遺跡</label>
+    <description>一座古老的遺跡，散發著神祕氣息。</description>
+    <worldObjectClass>MyMod.Examples.UniqueAltarSite</worldObjectClass>
+    <texturePath>World/WorldObjects/Sites/GenericSite</texturePath>
+  </WorldObjectDef>
+
+  <MapGeneratorDef>
+    <defName>MyMod_UniqueAltarMapGen</defName>
+    <label>祭壇地點生成器</label>
+    <genSteps>
+      <li>Terrain</li>
+      <li>RocksFromGrid</li>
+      <li>MyMod_UniqueAltarStep</li>
+      <li>Fog</li>
+    </genSteps>
+  </MapGeneratorDef>
+
+  <GenStepDef>
+    <defName>MyMod_UniqueAltarStep</defName>
+    <linkWithMapGenerator>MyMod_UniqueAltarMapGen</linkWithMapGenerator>
+    <genStep Class="MyMod.Examples.GenStep_UniqueAltar" />
+  </GenStepDef>
+
+</Defs>

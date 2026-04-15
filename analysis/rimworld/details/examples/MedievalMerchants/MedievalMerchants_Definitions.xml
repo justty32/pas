@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- 1. 派系定義 -->
+  <FactionDef>
+    <defName>MyMod_MedievalMerchantFaction</defName>
+    <label>商貿同盟</label>
+    <description>一個由中世紀城邦組成的鬆散同盟，致力於在荒野中建立貿易路線。他們崇尚金錢與契約，雖然技術落後，但擁有精良的冷兵器裝備。</description>
+    <pawnSingular>同盟成員</pawnSingular>
+    <pawnsPlural>同盟成員</pawnsPlural>
+    <categoryTag>Civil</categoryTag> <!-- 中立平民派系 -->
+    <techLevel>Medieval</techLevel> <!-- 中世紀技術等級 -->
+    <backstoryFilters>
+      <li>
+        <categories>
+          <li>Offworld</li>
+          <li>Outlander</li>
+        </categories>
+      </li>
+    </backstoryFilters>
+    <leaderTitle>大商首</leaderTitle>
+    <fixedName>商貿同盟</fixedName>
+    <factionIconPath>World/WorldObjects/Expanding/Town</factionIconPath>
+    <colorSpectrum>
+      <li>(0.8, 0.6, 0.2)</li>
+      <li>(0.6, 0.4, 0.1)</li>
+    </colorSpectrum>
+    
+    <!-- 生成機制：商隊組成 -->
+    <pawnGroupMakers>
+      <li>
+        <kindDef>Trader</kindDef>
+        <commonality>100</commonality>
+        <options>
+          <MyMod_Medieval_Merchant>1</MyMod_Medieval_Merchant>
+          <MyMod_Medieval_Guard>3</MyMod_Medieval_Guard>
+          <MyMod_Medieval_HeavyGuard>1.5</MyMod_Medieval_HeavyGuard>
+        </options>
+      </li>
+      <li>
+        <kindDef>Combat</kindDef> <!-- 戰鬥小隊（如果被激怒） -->
+        <options>
+          <MyMod_Medieval_Guard>10</MyMod_Medieval_Guard>
+          <MyMod_Medieval_HeavyGuard>5</MyMod_Medieval_HeavyGuard>
+          <MyMod_Medieval_Leader>1</MyMod_Medieval_Leader>
+        </options>
+      </li>
+    </pawnGroupMakers>
+    
+    <caravanTraderKinds>
+      <li>MyMod_TraderKind_Medieval</li>
+    </caravanTraderKinds>
+  </FactionDef>
+
+  <!-- 2. 小人模板 (PawnKindDefs) -->
+  
+  <!-- 基礎模板 -->
+  <PawnKindDef Name="MyMod_MedievalBaseKind" Abstract="True">
+    <defaultFactionType>MyMod_MedievalMerchantFaction</defaultFactionType>
+    <baseEL>5</baseEL>
+    <chemicalAddictionChance>0.05</chemicalAddictionChance>
+    <invNutrition>2.5</invNutrition>
+    <itemQuality>Normal</itemQuality>
+    <apparelTags>
+      <li>MedievalApparel</li>
+    </apparelTags>
+  </PawnKindDef>
+
+  <!-- 商人本體：現在穿著華袍 -->
+  <PawnKindDef ParentName="MyMod_MedievalBaseKind">
+    <defName>MyMod_Medieval_Merchant</defName>
+    <label>巡迴商人</label>
+    <trader>true</trader>
+    <combatPower>40</combatPower>
+    <itemQuality>Good</itemQuality>
+    <apparelRequired>
+      <li>MyMod_Apparel_MerchantRobes</li>
+    </apparelRequired>
+    <weaponTags>
+      <li>MedievalMeleeDecent</li>
+    </weaponTags>
+    <initialResistanceRange>10~15</initialResistanceRange>
+    <backstoryFiltersOverride>
+      <li>
+        <categories>
+          <li>MedievalMerchant_Backstory</li>
+        </categories>
+      </li>
+    </backstoryFiltersOverride>
+  </PawnKindDef>
+
+  <!-- 普通護衛：現在使用重弩 -->
+  <PawnKindDef ParentName="MyMod_MedievalBaseKind">
+    <defName>MyMod_Medieval_Guard</defName>
+    <label>同盟弩衛</label>
+    <combatPower>70</combatPower>
+    <apparelTags>
+      <li>MedievalArmorLight</li>
+    </apparelTags>
+    <weaponTags>
+      <li>Medieval_Crossbow_Heavy</li>
+    </weaponTags>
+  </PawnKindDef>
+
+  <!-- 4. 特殊事件：大市集 -->
+  <IncidentDef>
+    <defName>MyMod_Incident_GreatMedievalFair</defName>
+    <label>中世紀大市集</label>
+    <category>Misc</category>
+    <targetTags>
+      <li>Map_PlayerHome</li>
+    </targetTags>
+    <workerClass>MyMod.Examples.IncidentWorker_MedievalFair</workerClass>
+    <baseChance>0.5</baseChance> <!-- 出現機率較低 -->
+    <minRefireDays>30</minRefireDays>
+    <letterLabel>商貿盛典</letterLabel>
+    <letterText>一場罕見的中世紀大市集抵達了你的地圖。這支商隊不僅規模宏大，還攜帶了許多珍稀的古代典籍與高級工藝品。</letterText>
+    <letterDef>PositiveEvent</letterDef>
+  </IncidentDef>
+
+  <!-- 重裝騎士 -->
+  <PawnKindDef ParentName="MyMod_MedievalBaseKind">
+    <defName>MyMod_Medieval_HeavyGuard</defName>
+    <label>同盟騎士</label>
+    <combatPower>120</combatPower>
+    <itemQuality>Excellent</itemQuality>
+    <apparelRequired>
+      <li>Apparel_PlateArmor</li>
+    </apparelRequired>
+    <weaponTags>
+      <li>MedievalMeleeAdvanced</li>
+    </weaponTags>
+    <skills>
+      <li>
+        <skill>Melee</skill>
+        <range>8~14</range>
+      </li>
+    </skills>
+  </PawnKindDef>
+
+  <!-- 派系領袖 -->
+  <PawnKindDef ParentName="MyMod_MedievalBaseKind">
+    <defName>MyMod_Medieval_Leader</defName>
+    <label>大商首</label>
+    <factionLeader>true</factionLeader>
+    <combatPower>150</combatPower>
+    <itemQuality>Excellent</itemQuality>
+    <weaponTags>
+      <li>MedievalMeleeAdvanced</li>
+    </weaponTags>
+    <apparelRequired>
+      <li>Apparel_PlateArmor</li>
+    </apparelRequired>
+  </PawnKindDef>
+
+  <!-- 3. 貿易內容定義 -->
+  <TraderKindDef>
+    <defName>MyMod_TraderKind_Medieval</defName>
+    <label>中世紀商隊</label>
+    <stockGenerators>
+      <li Class="StockGenerator_SingleDef">
+        <thingDef>Silver</thingDef>
+        <countRange>500~1500</countRange>
+      </li>
+      <li Class="StockGenerator_Animals">
+        <checkCurrentCompassion>true</checkCurrentCompassion>
+        <tradeTagsSell>
+          <li>AnimalFarm</li>
+        </tradeTagsSell>
+      </li>
+      <li Class="StockGenerator_Artifacts" />
+      <li Class="StockGenerator_Category">
+        <categoryDef>Apparel</categoryDef>
+      </li>
+      <li Class="StockGenerator_Category">
+        <categoryDef>FoodRaw</categoryDef>
+      </li>
+    </stockGenerators>
+  </TraderKindDef>
+
+</Defs>
