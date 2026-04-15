@@ -65,6 +65,7 @@
 - [x] **MC Mod (Millenaire-Reborn)** (已遷移 - 2026-04-15)
 - [x] **Hy (Lisp-Python)** (已遷移 - 2026-04-15)
 - [x] **LispC** (已遷移 - 2026-04-15)
+- [x] **C-mera (Lisp-to-C++ Generator)** (已遷移 - 2026-04-15)
 
 ---
 *註：其餘如 `agent_server`, `arxiv_crawler`, `mylang`, `nlisp` 等非分析類專案已跳過。*

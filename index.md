@@ -21,6 +21,7 @@
 | **Slay-the-Robot** | 遊戲教學 | 基礎 (Tutorial) | 已遷移 | 提供新手與進階的開發引導指南。 |
 | **Hy (Lisp-Python)** | 程式語言 | 教學導向 | 已遷移 | Lisp 與 Python 互操作性、元編程與非同步教學。 |
 | **LispC** | 編譯器 | 教學導向 | 已遷移 | Lisp-to-C 轉換邏輯、宏系統與 C 語言嵌入教學。 |
+| **C-mera** | 代碼生成器 | 高 (Architecture) | 已遷移 | 基於 Lisp 的 C/C++/CUDA 生成器、AST 轉換與宏系統分析。 |
 
 ---
 ## 統計摘要
