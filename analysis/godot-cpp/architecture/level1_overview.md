@@ -1,30 +1,27 @@
-# godot-cpp Level 1: Initial Exploration
+# Level 1 Analysis: godot-cpp 初始探索
 
-## 專案基本資訊 (Project Overview)
-- **GitHub 專案名稱**：godot-cpp
-- **專案目標**：提供 Godot 引擎 GDExtension 的 C++ 語言綁定。它是原有的 GDNative 的現代化後繼者，允許開發者使用 C++ 編寫高性能的遊戲邏輯、自定義節點或整合外部庫，而無需重新編譯整個 Godot 引擎。
-- **核心技術棧**：C++, Python (用於生成綁定代碼), SCons/CMake (構建系統)。
+## 1. 專案概述
+`godot-cpp` 是 Godot 4 官方提供的 C++ 綁定庫。它允許開發者以接近引擎內核的效能撰寫遊戲邏輯，同時保持與 GDScript 相似的開發體驗。
 
-## 目錄結構初探 (Directory Structure)
-| 路徑 | 職責 |
-| :--- | :--- |
-| `include/` | 綁定庫的頭文件，包含 `godot_cpp/core/`, `godot_cpp/classes/` 等。 |
-| `src/` | 綁定庫的 C++ 實現。 |
-| `gdextension/` | 包含核心的 GDExtension 介面標頭 (GDExtension Interface)，由 Godot 引擎主倉庫提供或更新。 |
-| `binding_generator.py` | 核心自動化工具，解析 Godot 導出的 `extension_api.json` 並生成 C++ 類別。 |
-| `SConstruct` | SCons 構建指令碼，是 Godot 官方推薦的編譯方式。 |
-| `test/` | 單元測試與範例代碼。 |
+## 2. 核心架構組件
+### 2.1 綁定生成器 (Binding Generator)
+- **核心腳本**: `binding_generator.py`
+- **輸入**: `gdextension/extension_api.json` (由 Godot 引擎 `dump` 產出)。
+- **輸出**: 自動生成的 C++ 類別標頭檔與源碼，封裝了所有引擎 API 調用。
 
-## 核心工作流程 (Core Workflow)
-1. **API 導出**：從 Godot 引擎執行檔中導出 `extension_api.json`。
-2. **綁定生成**：運行 `binding_generator.py` 根據 JSON 生成對應的 C++ 類別與方法包裝器 (Wrapper)。
-3. **靜態庫編譯**：使用 SCons 將生成的代碼與靜態部分（`core/`）編譯為 `libgodot-cpp.a` (或 `.lib`)。
-4. **開發 Extension**：開發者將此庫鏈接到自己的 GDExtension 專案。
+### 2.2 變量與類型系統 (Variant System)
+- 位於 `include/godot_cpp/variant/`。
+- 完美映射了 Godot 的 `Variant` 類型，提供 C++ 風格的操作符重載與類型轉換。
 
-## 下一步分析建議 (Next Steps)
-- **Level 2**：深入 `binding_generator.py` 的代碼生成邏輯。
-- **Level 3**：探究 `ClassDB` 在 C++ 端如何映射 Godot 的反射系統。
-- **Level 4**：分析 C++ 虛擬函數 (Virtual Functions) 的註冊與回調機制。
+### 2.3 註冊與綁定 (ClassDB)
+- 位於 `include/godot_cpp/core/class_db.hpp`。
+- 提供靜態介面，用於在 GDExtension 初始化時向引擎註冊自定義類別、方法、屬性與信號。
 
----
-*由 Gemini CLI 分析於 2026-04-15。*
+## 3. 開發模式摘要 (Boilerplate)
+一個典型的 GDExtension 類別包含：
+1. **GDCLASS 宏**: 定義類型元數據。
+2. **_bind_methods**: 註冊對外介面。
+3. **initialize_module / uninitialize_module**: 定義插件的啟動與關閉邏輯。
+
+## 4. 初始探索結論
+`godot-cpp` 是一個**高度自動化且結構嚴謹**的框架。它的核心挑戰在於理解 C++ 與 Godot 虛擬機器之間的數據傳遞（Marshal）與引用計數（RefCounting）機制。對於效能敏感型模組（如 AI 計算、物理模擬），它是 Godot 生態中的首選方案。
