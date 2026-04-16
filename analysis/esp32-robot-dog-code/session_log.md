@@ -1,0 +1,15 @@
+- [2026-04-16 21:26:46] 初始化分析環境與目錄結構。
+- [2026-04-16 21:29:55] 完成 Level 1 分析並建立 level1_overview.md。
+- [2026-04-16 21:31:12] 完成 Level 2 分析並建立 level2_core_modules.md。
+- [2026-04-16 21:32:15] 完成 Level 3 分析並建立 level3_mechanisms.md。
+- [2026-04-16 22:15:00] 重新剖析原始碼，識別出分段線性舵機校準 (Segmented Linear Mapping) 技術。
+- [2026-04-16 22:18:00] 深化多核心任務調度與 I2C 競爭分析，更新 Level 2。
+- [2026-04-16 22:20:00] 識別 IK 邊界檢查缺失與三段式線性路徑的缺陷，更新 Level 3。
+- [2026-04-16 22:22:00] 撰寫 precision_engineering.md 與 failure_analysis.md，釐清專案失效原因。
+- [2026-04-16 22:30:00] 撰寫 esp_idf_migration_strategy.md 以規劃 ESP-IDF 遷移架構。
+- [2026-04-16 22:32:00] 撰寫 01_esp_idf_migration_guide.md，提供具體的 ESP-IDF 移植教學與代碼範例。
+- [2026-04-16 22:45:00] 建立 architecture/software_stack.md，定義系統層次與數據流向。
+- [2026-04-16 22:48:00] 建立 details/source_code_manifest.md，逐一分析所有原始碼檔案的具體職責。
+- [2026-04-16 22:55:00] 針對 IK、Gait、Planner、Transition、Balance、Communication 等六大核心模組撰寫深度剖析文件，存放於 details 目錄。
+- [2026-04-16 23:05:00] 建立 others 目錄下的知識庫，涵蓋數學、機器人學、嵌入式系統與電子電路基礎知識。
+- [2026-04-16 23:15:00] 為資深軟體工程師撰寫 02-05 號教學文件，專注於嵌入式架構、硬體控制、併發調度與遷移策略。

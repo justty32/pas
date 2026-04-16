@@ -1,0 +1,8 @@
+- [2026-04-16] 建立 ESP32_ISR_Servo 分析目錄結構。
+- [2026-04-16] 完成 Level 1 分析：初始探索 README 並產出 `architecture/overview.md`。
+- [2026-04-16] 完成 Level 2 分析：核心模組權責與 PWM 邏輯分析並產出 `architecture/subsystems.md`。
+- [2026-04-16] 完成 Level 3 分析：進階硬體定時器抽象機制分析並產出 `details/hardware_timer.md`。
+- [2026-04-16] 完成基礎使用教學：撰寫 `tutorial/basic_usage.md`。
+- [2026-04-16] 重新確認並熟悉專案結構，同步 Level 1-3 分析進度。
+- [2026-04-16] 解答關於 Arduino 框架依賴性的問題，並建立分析文件 `answers/dependency_analysis.md`。
+- [2026-04-16] 完成 Level 4 與 Level 5 分析：整合模式、並發安全與數據流剖析。
