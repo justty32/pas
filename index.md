@@ -24,11 +24,12 @@
 | **C-mera** | 代碼生成器 | 高 (Architecture) | 已遷移 | 基於 Lisp 的 C/C++/CUDA 生成器、AST 轉換與宏系統分析。 |
 | **godot-cpp** | 遊戲引擎組件 | Level 1 (Initial) | 分析中 | Godot 引擎的 C++ 綁定庫，用於開發 GDExtension。 |
 | **Godot-GameTemplate** | 遊戲範本 | 極高 (Level 1-6) | 已完成 | 高度解耦的俯視角射擊框架，含資源驅動 AI 與 Shader 轉場。 |
+| **godot-open-rpg** | 遊戲示範 (JRPG) | Level 1-2 | 分析中 | GDQuest 出品 Godot 4.5 回合制 RPG 教學示範，Signal Bus + Resource 驅動設計。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：18 個
-- **最近更新日期**: 2026-04-15
+- **總計分析專案**：19 個
+- **最近更新日期**: 2026-04-18
 - **維護 Agent**: Gemini CLI
 
 ---
