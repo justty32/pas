@@ -32,8 +32,11 @@ return {
 
   -- 2. 核心修正：徹底禁用 vim-sexp (世界太平版)
   -- 這樣你就再也不會遇到「無法貼上」或「括號跳轉」的問題了
-  { "guns/vim-sexp", enabled = false },
-  { "tpope/vim-sexp-mappings-for-regular-people", enabled = false },
+  { "guns/vim-sexp", ft = { "lisp" }, enabled = false },
+  { "tpope/vim-sexp-mappings-for-regular-people",
+    ft = { "lisp" },
+    dependencies = { "guns/vim-sexp" },
+   enabled = false },
 
   -- 3. 修正 autopairs 行為，防止它在你輸入右括號時亂跳
   {
@@ -49,6 +52,9 @@ return {
     ft = { "lisp" },
     init = function()
       vim.g["conjure#filetype#lisp"] = "conjure.client.common-lisp.swank"
+      vim.g["conjure#client#common_lisp#swank#connection#default_host"] = "127.0.0.1"
+      vim.g["conjure#client#common_lisp#swank#connection#default_port"] = 4005
+
     end,
   },
 
