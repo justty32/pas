@@ -16,4 +16,16 @@
 - **Level 5D CarryableComponent**：深度閱讀 CarryableComponent.gd（hold/leave/throw流程/浮動物理linear_velocity/手動旋轉camera_basis/超距自動丟下/add_exception管理）；撰寫 `architecture/level5d_carryable.md`。
 - **Level 5E 玩家完整移動系統**：深度閱讀 cogito_player.gd 完整 _physics_process（蹲伏/滑行/slide_jump/跳躍/bunny_hop/空中控制/自由視角/樓梯三次body_test_motion/坐下四種離開模式/梯子/落地音效/apply_external_force/override_gravity/RigidBody推力）；撰寫 `architecture/level5e_player_movement.md`。
 - **Level 5F 對話整合**：閱讀 DialogicInteraction.gd（全注解/Dialogic.start/timeline_ended/toggled_interface協議）、DialogueNodesInteraction.gd（全注解/dialogue_bubble.start/dialogue_ended/menu_pressed中斷）；撰寫 `architecture/level5f_dialogue.md`。
-- **整體架構速查表 + 小組件補全**：閱讀所有未深度分析的小組件（BasicInteraction/HoldInteraction/DualInteraction/ExtendedPickupInteraction/CustomInteraction/ReadableComponent/BackpackComponent/SafezoneComponent/AutoPickUpZone/LightzoneComponent/LightzoneSwitchComponent/cogito_attribute_zone/hazard_zone/gravity_zone/scene_transition_zone/door_setter_zone/ladder_area/AutoPickUpZone/ImpactSounds/cogito_spawnzone/inventory_checker/FootstepSurfaceDetector/CogitoSecurityCamera/CogitoStaticInteractable/CogitoVehicle/CogitoButton/AutoConsume）；撰寫 `architecture/quick_reference.md`，涵蓋七大章節：技術棧、所有核心類別速查表、關鍵信號流、存讀檔架構、互動組件規則、所有小組件逐一說明、常用設計模式索引。
+- **整體架構速查表 + 小組件補全**：閱讀所有未深度分析的小組件（BasicInteraction/HoldInteraction/DualInteraction/ExtendedPickupInteraction/CustomInteraction/ReadableComponent/BackpackComponent/SafezoneComponent/AutoPickUpZone/LightzoneComponent/LightzoneSwitchComponent/cogito_attribute_zone/hazard_zone/gravity_zone/scene_transition_zone/door_setter_zone/ladder_area/AutoPickUpZone/ImpactSounds/cogito_spawnzone/inventory_checker/FootstepSurfaceDetector/CogitoSecurityCamera/CogitoStaticInteractable/CogitoVehicle/CogitoButton/AutoConsume）；撰寫 `architecture/quick_reference.md`。
+- **撰寫 UI 修改教學**：根據使用者需求，撰寫了三份教學文件：`tutorial/ui_modification_inventory.md`（物品欄 UI）、`tutorial/ui_modification_interaction.md`（互動提示與 HUD）、`tutorial/ui_modification_dialogue.md`（對話介面整合），涵蓋原始碼導航、實作步驟與驗證方式。
+- **撰寫角色動作教學**：撰寫了 `tutorial/adding_character_actions.md`，引導如何為玩家添加衝刺 (Dash) 功能以及為 NPC 建立新的隨機遊走 (Wander) 狀態，詳解了 `cogito_player.gd` 的擴充與 NPC 狀態機的掛載模式。
+- **撰寫 3D 物件與特效教學**：撰寫了 `tutorial/adding_objects_and_vfx.md`，涵蓋了靜態擺設、可互動物件、物理物件的 Physics Layer 設定，以及如何透過 `CogitoProperties` 與 `CogitoProjectile` 觸發視覺特效 (VFX)。
+- **撰寫進階動作教學**：撰寫了 `tutorial/advanced_action_movement.md`，詳解了如何微調內建的快跑、蹲下、滑步，以及如何手動實作趴下 (Prone)、手動翻滾 (Dodge Roll) 與瞄準減速 (ADS Speed reduction) 等動作遊戲機制。
+- **撰寫局部時間緩速教學**：撰寫了 `tutorial/selective_time_dilation.md`，引導如何透過 `local_time_scale` 變數與 `TimeSlowComponent` 實現特定 NPC、物理物件或特效的慢動作效果，而不影響全域遊戲速度。
+- **撰寫進階系統教學 (四大主題)**：根據需求撰寫了四份教學文件：`tutorial/elemental_mechanics.md`、`tutorial/destructible_objects.md`、`tutorial/npc_ai_behavior.md`、`tutorial/dynamic_generation.md`。
+- **深度剖析動態生成持久化**：撰寫了 `details/dynamic_generation_implementation.md`，詳解 `CogitoSceneManager` 如何處理 `Persist` 群組、存讀檔流程及常見陷阱。
+- **撰寫視覺表現與渲染教學**：撰寫了 `tutorial/visual_presentation_and_rendering.md`（天空盒、光影、渲染選項）與 `tutorial/genshin_style_rendering.md`（三渲二、描邊、風格化環境設定）。
+- **撰寫開放世界架構指南**：撰寫了 `tutorial/open_world_architecture.md`，說明在 Godot 4 結合 Cogito 開發開放世界時的挑戰與解決方案。
+- **撰寫 LOD 教學與 Skyrim 復刻藍圖**：撰寫了 `tutorial/lod_implementation.md` 與 `details/skyrim_clone_roadmap.md`。
+- **撰寫 Skyrim 深度機制教學 (四大主題)**：根據復刻目標，撰寫了 `tutorial/skyrim_combat_mechanics.md` (格擋/重擊/失衡)、`tutorial/skyrim_leveling_system.md` (做中學等級系統)、`tutorial/npc_radiant_ai_schedule.md` (NPC 作息排程) 與 `tutorial/magic_and_magicka_system.md` (魔力屬性與法術持用物件)。
+
