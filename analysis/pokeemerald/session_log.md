@@ -1,0 +1,13 @@
+# pokeemerald 分析工作日誌
+
+## 2026-04-30
+
+- **[Level 1-2 初始探索]** 建立 `analysis/pokeemerald/` 目錄結構，完成架構概覽文件（`architecture/level1_overview.md`），涵蓋：專案基本資訊、目錄結構、主迴圈/雙Callback、Task系統、Script直譯器、Overworld、戰鬥系統（CB2狀態機+多Controller）、戰鬥AI評分機制、寶可夢資料加密結構、野生遭遇系統、GBA記憶體分佈圖。
+- **[Level 3 戰鬥傷害管線]** 完成 `architecture/level3_battle_damage_pipeline.md`：498個Cmd_*指令詳解、命中率計算（階段比/道具/特性修正）、暴擊判定（查表機制）、CalculateBaseDamage完整公式（徽章/特性/道具修正順序）、屬性相剋（STAB+TYPE_EFFECT三元組表）、腳本控制流指令集。
+- **[Level 3 地圖與存檔]** 完成 `architecture/level3_map_and_save.md`：MapHeader/MapLayout/BackupMapLayout結構、地圖初始化與4方向連接填充、Metatile Behavior 60+種類、Flash 32-Sector佈局（雙槽輪替/扇區旋轉）、SaveBlock1/2/PokemonStorage結構、存檔完整性Checksum驗證機制。
+- **[Level 6 VBlank/Sprite/M4A]** 完成 `architecture/level6_vblank_sprite_sound.md`：VBlank渲染時序（主迴圈準備→VBlank安全寫入OAM）、VCount中斷掃描線150精確音效同步、Sprite結構(0x44bytes)完整欄位、AnimateSprites→BuildOamBuffer→LoadOam三階段管線、插入排序OAM優先序機制、Affine旋轉矩陣0x100定點數、M4A引擎(MKS4AGB/Smsh識別碼)、SoundInfo/ToneData/SongHeader結構、Ping-Pong PCM雙緩衝、叫聲BGM閃避Task、18種Fanfare小曲時長計算公式、BG背景層管理概覽。
+- **[Level 5 RNG/能力值/招式/演化/交換]** 完成 `architecture/level5_rng_stats_evolution_trade.md`：LCG亂數公式（1103515245×val+24691，取高16位）、三組獨立RNG狀態、升等招式表u16打包格式（bits[8:0]=招式,bits[15:9]=等級）、GiveBoxMonInitialMoveset推招式邏輯、Gen III能力值公式（HP/一般/個性修正）、Pomeg Berry漏洞程式碼定位、演化觸發12種條件（含天蠶PID判斷/時鐘好感度/美麗度/交換道具）、連線交換gMain.state機、SendBlock/IsLinkMaster通訊架構、BoxPokemon 4個子結構的功能分區。
+- **[Level 4 野生遭遇&對戰設施]** 完成 `architecture/level4_wild_encounter_and_frontier.md`：完整遭遇流程（Roamer/Outbreak/Feebas/特性影響）、遭遇率公式（自行車/笛子/特性修正）、12槽位機率分佈表、釣竿槽位分配、大量出沒固定招式機制、Feebas獨立RNG。對戰設施架構：Tower(RecordMixing/學徒)、Dome(16人錦標/AI對AI效果計算)、Palace(個性自主)、Arena(Mind/Skill/Body)、Factory(出借換牌)、Pike(房間類型/提示/道具備份)、Pyramid(程序地圖/光照半徑/專用袋)。
+- **[Level 7 腳本指令/天氣/自行車]** 完成 `architecture/level7_scrcmd_weather_bike.md`：220個ScrCmd_*指令分類（控制流/動態位址/旗標/Var/傳送/訓練師戰/special橋接/callnative 4位元組指標）、Flag旗標位元陣列與Var u16陣列存檔位置、天氣系統15種類型×4callback狀態機（initVars/main/initAll/finish）、乾旱預計算調色板LUT(6組×4096色)、Mach Bike速度公式(bikeFrameCounter+counter>>1)、Acro Bike 13轉換×7輸入處理器×4幀跳躍計時、18種強制移動類型。
+- **[Level 8 育嬰屋/孵蛋/視線系統]** 完成 `architecture/level8_daycare_egg_trainer_see.md`：DayCare儲存結構（BoxPokemon+步數+郵件）、費用公式(100+100×升等數)、相性評分4段×對應蛋機率（每256步觸發，最大70%）、個性遺傳Everstone機制（最多2400次重試）、IV遺傳BUG（固定移除i而非selectedIv[i]導致HP/DEF遺傳率偏低）、蛋招式四優先序（升等/蛋招/TM遺傳/雙親共有）、皮卡球→伏特攻擊傳遞、孵蛋動畫CB2_EggHatch 11階段狀態機（搖晃→爆殼→Shard彈射→Fanfare→改名）、訓練師視線系統（4方向距離函數+路徑碰撞檢查+12狀態接近動畫+擬態/埋藏訓練師特殊揭露流程）。
+- **[Level 9 競技大會]** 完成 `architecture/level9_contest_system.md`：5類別×4等級大會架構、ContestPokemon/ContestantStatus/Contest全域資料結構、CalculateAppealMoveImpact評分流程（基礎值→效果函數→Condition加成→Combo組合技→重複懲罰→緊張歸零）、5×5興奮度矩陣（同類+1/衝突-1/中性0）、掌聲表0~4階+溢出閃爍動畫、回合排名Bubble Sort（同分取最佳名次）、下回合順序反轉機制（可被招式效果覆蓋）、最終評分公式（Round1審查分+Round2表演分×2）、平局依Round1→亂數序破平、干擾Jam傳遞與緊張效果、AI評分腳本引擎（moveScores[]）、完整大會流程任務鏈。
