@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from typing import Iterator
 
 
+# dataclass(eq=True) 預設會自動把 __hash__ 設為 None，所以 Hex 是 unhashable。
+# 這是刻意的：地圖儲存用 2D array 不用 hash map，跟 C++ 版的記憶體佈局對齊。
 @dataclass(eq=True, slots=True)
 class Hex:
     q: int
@@ -21,6 +23,7 @@ class Hex:
 
     @property
     def s(self) -> int:
+        # cube 座標的第三軸由 q + r + s = 0 推回；用 property 而非欄位是為了避免一致性問題
         return -self.q - self.r
 
     def __add__(self, other: "Hex") -> "Hex":
@@ -33,19 +36,22 @@ class Hex:
         return Hex(self.q * scalar, self.r * scalar)
 
     def neighbor(self, direction_index: int) -> "Hex":
+        # % 6 讓 ±方向 / 大於 6 的索引都能 wrap 回合法範圍
         return self + DIRECTIONS[direction_index % 6]
 
     def neighbors(self) -> tuple["Hex", "Hex", "Hex", "Hex", "Hex", "Hex"]:
         return tuple(self + d for d in DIRECTIONS)  # type: ignore[return-value]
 
 
+# pointy-top 軸向方向向量，順序鎖死：0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE
+# rivers.EDGE_CORNERS 跟 edge ownership（0..2 自擁、3..5 鄰居擁）都依賴這個順序，不可變動
 DIRECTIONS: tuple[Hex, Hex, Hex, Hex, Hex, Hex] = (
-    Hex(1, 0),
-    Hex(1, -1),
-    Hex(0, -1),
-    Hex(-1, 0),
-    Hex(-1, 1),
-    Hex(0, 1),
+    Hex(1, 0),    # 0: E
+    Hex(1, -1),   # 1: NE
+    Hex(0, -1),   # 2: NW
+    Hex(-1, 0),   # 3: W
+    Hex(-1, 1),   # 4: SW
+    Hex(0, 1),    # 5: SE
 )
 
 
@@ -54,6 +60,8 @@ def direction(index: int) -> Hex:
 
 
 def distance(a: Hex, b: Hex) -> int:
+    # cube distance = (|dq| + |dr| + |ds|) / 2，其中 ds = -(dq + dr)
+    # 展開 |ds| = |dq + dr|，所以可以只用 q/r 兩軸計算，省一個 property 取值
     return (abs(a.q - b.q) + abs(a.q + a.r - b.q - b.r) + abs(a.r - b.r)) // 2
 
 
@@ -84,6 +92,8 @@ def line(start: Hex, end: Hex) -> list[Hex]:
     n = distance(start, end)
     if n == 0:
         return [start]
+    # 在 q/r 浮點空間做線性插值再 hex_round；hex_round 的最大誤差軸修正會
+    # 確保結果是合法的 hex 序列、不會在邊界跳格
     results: list[Hex] = []
     for i in range(n + 1):
         t = i / n
@@ -101,6 +111,8 @@ def ring(center: Hex, radius: int) -> list[Hex]:
         return [center]
 
     results: list[Hex] = []
+    # 標準環形遍歷：從 SW 邊（DIRECTIONS[4]）的角落出發，沿 6 個方向各走 radius 步繞一圈
+    # 起點方向選 4 是為了讓輸出順序固定（從西南角開始順時針），測試可重現
     cube = center + DIRECTIONS[4] * radius
     for i in range(6):
         for _ in range(radius):

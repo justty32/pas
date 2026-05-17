@@ -16,6 +16,8 @@ from typing import Optional
 
 
 def _smoothstep(t: float) -> float:
+    # Perlin 用的 Hermite 平滑曲線：t² × (3 − 2t)
+    # 比起純線性，能讓 grid cell 邊界處看不到「方塊感」（一階導數連續）
     return t * t * (3.0 - 2.0 * t)
 
 
@@ -23,10 +25,12 @@ def _bilinear(coarse: list[list[float]], x: float, y: float) -> float:
     """在 coarse 網格上做 smoothstep + bilinear 取樣；x、y 為 coarse 座標系。"""
     gh = len(coarse)
     gw = len(coarse[0])
+    # 取整數格子座標；x1/y1 用 min 是為了邊界 safety（最右/最下不越界）
     x0 = int(x)
     y0 = int(y)
     x1 = min(x0 + 1, gw - 1)
     y1 = min(y0 + 1, gh - 1)
+    # smoothstep 處理 cell 內位置，雙線性混合 4 個 corner 值
     fx = _smoothstep(x - x0)
     fy = _smoothstep(y - y0)
     top = coarse[y0][x0] * (1.0 - fx) + coarse[y0][x1] * fx
@@ -63,11 +67,14 @@ def generate_heightmap(
     grid: list[list[float]] = [[0.0] * width for _ in range(height)]
     total_weight = 0.0
 
+    # 經典 fBm 疊加：每層頻率 ×2、振幅 ×persistence
+    # 低頻層決定「大陸」形狀，高頻層加細節（小山丘、海岸線抖動）
     for octave in range(octaves):
         freq = base_frequency * (2 ** octave)
         weight = persistence ** octave
         total_weight += weight
 
+        # coarse 用 freq+1 是為了讓最右/最下還能取到 corner（雙線性需要四個 corner）
         gw = freq + 1
         gh = freq + 1
         coarse = [[rng.random() for _ in range(gw)] for _ in range(gh)]
@@ -81,6 +88,7 @@ def generate_heightmap(
                 cx = q * x_scale
                 grid[r][q] += weight * _bilinear(coarse, cx, cy)
 
+    # 用累計權重正規化，確保輸出仍在 [0, 1]，跟 persistence/octaves 無關
     inv = 1.0 / total_weight
     for r in range(height):
         for q in range(width):

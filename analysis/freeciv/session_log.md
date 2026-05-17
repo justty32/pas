@@ -1,0 +1,3 @@
+- 2026-05-17: 啟動「架構深化」計畫。完成城市情感系統與單位活動狀態機剖析。
+- 2026-05-17: 完成「政府體制全域效應修正 (`details/government_effect_system.md`)」源碼級展開，解構 Effect 需求上下文、加權計算流水線與政治標籤約束。
+- 2026-05-17: 完成「拓樸與座標轉換模型 (`details/topology_coordinate_model.md`)」源碼級展開，解構 Isometric 旋轉矩陣、Native/Map 三層座標映射以及多拓樸繞回算術。

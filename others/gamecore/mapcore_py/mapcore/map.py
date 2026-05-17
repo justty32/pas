@@ -17,6 +17,8 @@ from .hex import Hex
 
 
 class TerrainType(IntEnum):
+    # 排序刻意把水（OCEAN/COAST）放最前面，可以用 `terrain <= COAST` 快速判水
+    # 用 IntEnum 是為了 C++ 移植時對應 enum class，也方便序列化
     OCEAN = 0
     COAST = 1
     PLAINS = 2
@@ -27,6 +29,20 @@ class TerrainType(IntEnum):
     FOREST = 7
     HILL = 8
     MOUNTAIN = 9
+
+
+class Hilliness(IntEnum):
+    """地勢起伏 5 級。對齊 projects/rimworld/.../Hilliness.cs。
+
+    跟 TerrainType 是兩個獨立軸：例如「丘陵森林」= terrain=FOREST + hilliness=SMALL_HILLS。
+    OCEAN/COAST 通常 hilliness=UNDEFINED 或 FLAT。
+    """
+    UNDEFINED = 0
+    FLAT = 1
+    SMALL_HILLS = 2
+    LARGE_HILLS = 3
+    MOUNTAINOUS = 4
+    IMPASSABLE = 5
 
 
 # 每地形的基礎移動成本。math.inf 表示不可通行。
@@ -65,21 +81,35 @@ class Tile:
     # 查詢設定請走 rivers.has_river_edge / get/set_river_strength / add_river_flow，自動找到正確的 owner。
     # C++ 移植時對應 uint32_t（其中只用 24 bit）。
     rivers: int = 0
+    # hilliness：5 級地勢，跟 terrain 獨立。對齊 RimWorld Tile.hilliness。
+    # 由 generation.climate 階段填入；UNDEFINED 表示尚未計算。
+    hilliness: Hilliness = Hilliness.UNDEFINED
+    # feature_id：所屬命名大區域（WorldFeatures 索引）。-1 表示不屬於任何 feature。
+    # 對齊 RimWorld Tile.feature（reference），但我們存 int id 以維持 dataclass slot 效能。
+    feature_id: int = -1
 
 
 class TileMap:
-    """軸向座標 (q, r) 的平行四邊形地圖；2D array 儲存。"""
+    """軸向座標 (q, r) 的平行四邊形地圖；2D array 儲存。
 
-    __slots__ = ("width", "height", "_rows")
+    features 屬性：本地圖跑過 features.apply_features() 後的命名大區域容器（WorldFeatures）。
+    沒跑時為 None。掛在這裡方便 visualize / UI 直接從 tile_map 拿。
+    """
+
+    __slots__ = ("width", "height", "_rows", "features")
 
     def __init__(self, width: int, height: int, default_terrain: TerrainType = TerrainType.PLAINS):
         if width <= 0 or height <= 0:
             raise ValueError(f"width and height must be > 0, got ({width}, {height})")
         self.width = width
         self.height = height
+        # 儲存順序刻意 [r][q]（先 row 再 column），讓同一列的格子在記憶體連續，
+        # 符合大多數遍歷模式（for r: for q），快取友善。C++ 版會用 std::vector<Tile> 線性陣列。
         self._rows: list[list[Tile]] = [
             [Tile(default_terrain) for _ in range(width)] for _ in range(height)
         ]
+        # features 故意在這裡初始化而非從 .features import WorldFeatures，避免循環 import
+        self.features = None
 
     def in_bounds(self, h: Hex) -> bool:
         return 0 <= h.q < self.width and 0 <= h.r < self.height

@@ -43,12 +43,15 @@ def find_components(
         for q in range(w_map):
             if visited[r][q]:
                 continue
+            # 不符 predicate 的格子也標 visited，避免後續重複檢查
+            # 這讓函式對「兩種地形交錯」的地圖也是 O(N)
             if not predicate(tile_map.get(Hex(q, r)).terrain):
                 visited[r][q] = True
                 continue
             comp: list[Hex] = []
             stack = [Hex(q, r)]
             visited[r][q] = True
+            # DFS（用 stack 而非 queue）：節省記憶體，順序對結果不影響
             while stack:
                 h = stack.pop()
                 comp.append(h)
@@ -59,6 +62,7 @@ def find_components(
                         visited[n.r][n.q] = True
                         stack.append(n)
                     else:
+                        # 邊界鄰居也標 visited，防止外層 for 又掃進來
                         visited[n.r][n.q] = True
             components.append(comp)
     return components
@@ -94,6 +98,8 @@ def remove_small_lakes(
     for comp in find_components(tile_map, is_water):
         if len(comp) > max_size:
             continue
+        # 「接邊界」是大海被地圖切掉一角的判斷依據：真正的內陸湖不會碰到 q=0/q=W-1/r=0/r=H-1
+        # 沒這個檢查的話，地圖邊上一小塊海會被誤判成湖而填掉
         on_edge = any(
             h.q == 0 or h.q == w_map - 1 or h.r == 0 or h.r == h_map - 1
             for h in comp

@@ -60,6 +60,9 @@ def expand_coast(tile_map: TileMap, coast_depth: int) -> None:
     """
     if coast_depth < 0:
         raise ValueError(f"coast_depth must be >= 0, got {coast_depth}")
+    # 每一圈分兩個 pass（先收集再改）的關鍵：若邊掃邊改，COAST 立即被視為「非 OCEAN」，
+    # 同一圈內就會誤吃掉相鄰格子，導致一次擴張就吃掉整片海。
+    # 兩 pass 確保「半徑剛好 N 圈」的擴張行為穩定。
     for _ in range(coast_depth):
         to_coast: list[Hex] = []
         for r in range(tile_map.height):

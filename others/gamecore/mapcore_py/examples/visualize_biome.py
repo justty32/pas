@@ -11,9 +11,11 @@
     ,/.：調 base_frequency
     PgUp / PgDn：調 sea_level
     ; / '：調 coast_depth
-    1 / 2 / 3 / 4：view = terrain / heightmap / moisture / temperature
+    1 / 2 / 3 / 4 / 5 / 6：view = terrain / heightmap / moisture / temperature / hilliness / features
     P：切換 post_process    9 / 0：調 island_min_size    O / L：調 lake_max_size
     R：切換 rivers 顯示
+    K：循環河流密度預設 (Dense → Medium → Sparse → Rare)
+    B：切換河流分支 (on/off)
     ESC：離開
 """
 
@@ -28,11 +30,12 @@ import pygame
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from mapcore.generation.climate import compute_temperature_celsius
 from mapcore.generation.pipeline import generate_world
 from mapcore.generation.postprocess import find_components, is_land
-from mapcore.hex import Hex
-from mapcore.map import TerrainType
-from mapcore.rivers import EDGE_CORNERS, iter_river_edges
+from mapcore.hex import DIRECTIONS, Hex
+from mapcore.map import Hilliness, TerrainType
+from mapcore.rivers import iter_river_edges
 
 HEX_SIZE = 16
 MAP_W, MAP_H = 80, 50
@@ -59,12 +62,54 @@ TERRAIN_COLOR = {
 }
 
 VIEW_TERRAIN, VIEW_HEIGHT, VIEW_MOISTURE, VIEW_TEMP = "terrain", "height", "moisture", "temp"
+VIEW_HILLINESS, VIEW_FEATURES = "hilliness", "features"
+
+# 河流密度預設：(label, spawn_threshold, degrade_threshold, branch_flow_threshold, branch_chance)
+# 對齊 RW RiverDef tier 概念：
+#   Dense  ≈ 比 RW Creek 更低門檻，溪流到處都是
+#   Medium ≈ RW Creek (600)        ← 預設
+#   Sparse ≈ RW River (2000)
+#   Rare   ≈ RW LargeRiver (4000)，只剩主流
+RIVER_DENSITY_PRESETS = [
+    ("Dense",  200.0,  50.0,  120.0, 0.5),
+    ("Medium", 600.0,  200.0, 400.0, 0.3),
+    ("Sparse", 1500.0, 500.0, 1000.0, 0.2),
+    ("Rare",   3500.0, 1500.0, 2500.0, 0.1),
+]
 VIEW_KEYS = {
     pygame.K_1: VIEW_TERRAIN,
     pygame.K_2: VIEW_HEIGHT,
     pygame.K_3: VIEW_MOISTURE,
     pygame.K_4: VIEW_TEMP,
+    pygame.K_5: VIEW_HILLINESS,
+    pygame.K_6: VIEW_FEATURES,
 }
+
+# 5 級灰階：Flat 亮 → Impassable 暗；UNDEFINED 給藍灰
+HILLINESS_COLOR = {
+    Hilliness.UNDEFINED: (40, 50, 70),
+    Hilliness.FLAT: (220, 220, 200),
+    Hilliness.SMALL_HILLS: (180, 170, 130),
+    Hilliness.LARGE_HILLS: (140, 120, 90),
+    Hilliness.MOUNTAINOUS: (100, 90, 80),
+    Hilliness.IMPASSABLE: (60, 55, 50),
+}
+
+
+def feature_color(feature_id: int) -> tuple[int, int, int]:
+    """穩定哈希到 HSV 中均勻色相，避免相鄰 feature 撞色。"""
+    if feature_id < 0:
+        return (40, 40, 50)
+    # golden-ratio 序列在小整數上分布均勻
+    hue = (feature_id * 0.61803398875) % 1.0
+    # HSV → RGB，S=0.55 V=0.78
+    i = int(hue * 6)
+    f = hue * 6 - i
+    p = int(255 * 0.78 * (1 - 0.55))
+    q = int(255 * 0.78 * (1 - 0.55 * f))
+    t = int(255 * 0.78 * (1 - 0.55 * (1 - f)))
+    v = int(255 * 0.78)
+    return [(v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q)][i % 6]
 
 
 def hex_to_pixel(h: Hex, cam_x: float = 0.0, cam_y: float = 0.0) -> tuple[float, float]:
@@ -87,18 +132,17 @@ def grayscale(v: float) -> tuple[int, int, int]:
     return g, g, g
 
 
-def temperature_at(r: int, q: int, hm: list[list[float]], H: int, sea_level: float,
-                   elevation_temp_factor: float = 0.5) -> float:
-    half = max((H - 1) / 2.0, 1e-9)
-    span = max(1.0 - sea_level, 1e-9)
-    latitude = abs(r - (H - 1) / 2.0) / half
-    elev_above_sea = max(0.0, hm[r][q] - sea_level) / span
-    t = 1.0 - latitude - elevation_temp_factor * elev_above_sea
-    return max(0.0, min(1.0, t))
+def temperature_norm_at(r: int, q: int, hm: list[list[float]], H: int) -> float:
+    """用 climate.compute_temperature_celsius 算真實 °C，再映射到 [0, 1] 給 heatmap_color。
+
+    線性映射：-40°C → 0（冷），30°C → 1（熱）。對齊 RW AvgTempByLatitudeCurve 兩端。
+    """
+    c = compute_temperature_celsius(r, H, hm[r][q])
+    return max(0.0, min(1.0, (c - (-40.0)) / (30.0 - (-40.0))))
 
 
 def heatmap_color(v: float) -> tuple[int, int, int]:
-    """blue (cold) → green → yellow → red (hot)"""
+    """blue (cold) → green → yellow → red (hot); v ∈ [0, 1]"""
     stops = [
         (0.0, (40, 60, 200)),
         (0.4, (80, 200, 200)),
@@ -115,11 +159,26 @@ def heatmap_color(v: float) -> tuple[int, int, int]:
     return stops[-1][1]
 
 
+def _load_cjk_font(size: int) -> "pygame.font.Font":
+    """嘗試載入支援繁中的字體；找不到才退回 SysFont monospace。
+
+    pygame.font.SysFont 可接逗號分隔的多個候選名稱，會依序嘗試。
+    """
+    candidates = [
+        "notosanscjktc", "notosanscjksc", "notosansmonocjktc",
+        "microsoftjhenghei", "msjh", "pingfang", "pingfangtc",
+        "simhei", "simsun", "wqyzenhei", "wqymicrohei",
+        "monospace",
+    ]
+    return pygame.font.SysFont(",".join(candidates), size)
+
+
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("mapcore_py — biome demo")
     font = pygame.font.SysFont("monospace", 16)
+    label_font = _load_cjk_font(15)  # feature 名稱用，需要 CJK 支援
     clock = pygame.time.Clock()
 
     seed = random.randint(0, 99999)
@@ -133,9 +192,12 @@ def main() -> None:
     island_min_size = 3
     lake_max_size = 4
     show_rivers = True
+    river_preset_idx = 1   # 預設 Medium (對齊 RW Creek)
+    river_branches = True
     cam_x, cam_y = 0.0, 0.0
 
     def regen():
+        _, spawn_th, degrade_th, branch_th, branch_ch = RIVER_DENSITY_PRESETS[river_preset_idx]
         return generate_world(
             MAP_W, MAP_H,
             seed=seed, sea_level=sea_level, coast_depth=coast_depth,
@@ -143,6 +205,10 @@ def main() -> None:
             post_process=do_post,
             island_min_size=island_min_size,
             lake_max_size=lake_max_size,
+            river_spawn_flow_threshold=spawn_th,
+            river_degrade_threshold=degrade_th,
+            river_branch_flow_threshold=branch_th,
+            river_branch_chance=branch_ch if river_branches else 0.0,
         )
 
     tile_map, heightmap, moisture = regen()
@@ -196,6 +262,10 @@ def main() -> None:
                     lake_max_size = min(50, lake_max_size + 1); dirty = True
                 elif ev.key == pygame.K_r:
                     show_rivers = not show_rivers
+                elif ev.key == pygame.K_k:
+                    river_preset_idx = (river_preset_idx + 1) % len(RIVER_DENSITY_PRESETS); dirty = True
+                elif ev.key == pygame.K_b:
+                    river_branches = not river_branches; dirty = True
                 elif ev.key == pygame.K_HOME:
                     cam_x, cam_y = 0.0, 0.0
 
@@ -219,26 +289,41 @@ def main() -> None:
                 if cy < -HEX_SIZE or cy > HEIGHT + HEX_SIZE:
                     continue
                 pts = hex_corners(cx, cy)
+                tile = tile_map.get(Hex(q, r))
                 if view == VIEW_TERRAIN:
-                    color = TERRAIN_COLOR[tile_map.get(Hex(q, r)).terrain]
+                    color = TERRAIN_COLOR[tile.terrain]
                 elif view == VIEW_HEIGHT:
                     color = grayscale(heightmap[r][q])
                 elif view == VIEW_MOISTURE:
                     color = grayscale(moisture[r][q])
-                else:  # temperature
-                    color = heatmap_color(
-                        temperature_at(r, q, heightmap, MAP_H, sea_level)
-                    )
+                elif view == VIEW_TEMP:
+                    color = heatmap_color(temperature_norm_at(r, q, heightmap, MAP_H))
+                elif view == VIEW_HILLINESS:
+                    color = HILLINESS_COLOR.get(tile.hilliness, (50, 50, 60))
+                else:  # VIEW_FEATURES
+                    color = feature_color(tile.feature_id)
                 pygame.draw.polygon(screen, color, pts)
 
         if show_rivers:
+            # RimWorld 風：河流走 tile center → tile center（穿過共享邊）。
+            # iter_river_edges 只回 direction 0..2，owner_hex + DIRECTIONS[d] 是另一端 tile。
+            # 同一條多段河流會在 tile 中心自然交會，看得到匯流節點。
             for h, d, strength in iter_river_edges(tile_map):
-                cx, cy = hex_to_pixel(h, cam_x, cam_y)
-                corners = hex_corners(cx, cy)
-                a, b = EDGE_CORNERS[d]
-                # 線寬隨流量遞增，上限避免過粗：1+log2 scale
+                nb = h + DIRECTIONS[d]
+                cx_o, cy_o = hex_to_pixel(h, cam_x, cam_y)
+                cx_n, cy_n = hex_to_pixel(nb, cam_x, cam_y)
                 width = min(2 + (strength - 1) // 2, 7)
-                pygame.draw.line(screen, RIVER_COLOR, corners[a], corners[b], width)
+                pygame.draw.line(screen, RIVER_COLOR, (cx_o, cy_o), (cx_n, cy_n), width)
+
+        # features view 時把每個 feature 名字畫在重心位置
+        if view == VIEW_FEATURES and tile_map.features is not None:
+            for f in tile_map.features:
+                cx, cy = hex_to_pixel(f.center, cam_x, cam_y)
+                if -50 < cx < WIDTH + 50 and -50 < cy < HEIGHT + 50:
+                    label = label_font.render(f.name, True, (250, 250, 250))
+                    shadow = label_font.render(f.name, True, (0, 0, 0))
+                    screen.blit(shadow, (cx - label.get_width() // 2 + 1, cy - label.get_height() // 2 + 1))
+                    screen.blit(label, (cx - label.get_width() // 2, cy - label.get_height() // 2))
 
         counts: dict[TerrainType, int] = {}
         for _, t in tile_map:
@@ -258,16 +343,20 @@ def main() -> None:
         land_components = find_components(tile_map, is_land)
         islands = len(land_components)
         biggest = max((len(c) for c in land_components), default=0)
+        feature_count = len(tile_map.features) if tile_map.features is not None else 0
 
+        edge_count = sum(1 for _ in iter_river_edges(tile_map))
+        preset_name = RIVER_DENSITY_PRESETS[river_preset_idx][0]
         info = [
             f"seed={seed}  octaves={octaves}  persistence={persistence}  base_freq={base_frequency}  cam=({cam_x:.0f},{cam_y:.0f})",
-            f"sea_level={sea_level:.2f} (PgUp/PgDn)   coast_depth={coast_depth} (;/')   view={view} (1-4)   rivers={'ON' if show_rivers else 'OFF'} (R)",
-            f"post={'ON' if do_post else 'OFF'} (P)   island_min={island_min_size} (9/0)   lake_max={lake_max_size} (O/L)   islands={islands}   biggest={biggest}",
+            f"sea_level={sea_level:.2f} (PgUp/PgDn)   coast_depth={coast_depth} (;/')   view={view} (1-6)   rivers={'ON' if show_rivers else 'OFF'} (R)",
+            f"post={'ON' if do_post else 'OFF'} (P)   island_min={island_min_size} (9/0)   lake_max={lake_max_size} (O/L)   islands={islands}   biggest={biggest}   features={feature_count}",
+            f"river_density={preset_name} (K)   branches={'ON' if river_branches else 'OFF'} (B)   river_edges={edge_count}",
             breakdown,
             "Arrows=pan  Home=reset cam  Space=random  N/M=seed  +/-=octaves  [/]=persistence  ,/.=base_freq  ESC=quit",
         ]
         for i, txt in enumerate(info):
-            screen.blit(font.render(txt, True, TEXT), (10, HEIGHT - 110 + i * 20))
+            screen.blit(font.render(txt, True, TEXT), (10, HEIGHT - 130 + i * 20))
 
         pygame.display.flip()
         clock.tick(60)

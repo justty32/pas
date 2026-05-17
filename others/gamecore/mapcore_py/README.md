@@ -8,7 +8,8 @@
 
 ## 設計來源
 
-本實作的設計參考兩個既有的分析成果：
+本實作的設計參考三個既有專案：Unciv（座標 / 地圖容器 / A*）、Wesnoth（A* 細節）、
+RimWorld（河流生成、Hilliness、Feature 命名系統）。
 
 ### Unciv（Kotlin → C++ 教學版）
 - `analysis/unciv/tutorial/cpp_hex_library.md` — 軸向座標、環形擴張、直線遍歷
@@ -32,6 +33,14 @@
 
 原始碼路徑：`projects/wesnoth-master/`
 
+### RimWorld（C# Assembly-CSharp）
+- `projects/rimworld/RimWorld.Planet/WorldGenStep_Rivers.cs` — coastal-seed Dijkstra 反向樹 + flow accumulation + 分主流/支流
+- `projects/rimworld/RimWorld.Planet/WorldGenStep_Terrain.cs` — Hilliness 5 級 + 緯度溫度 / 高程降水 curves
+- `projects/rimworld/RimWorld.Planet/WorldFeature.cs` + `WorldGenStep_Features.cs` + `FeatureWorker*.cs` — 命名大區域系統
+- `analysis/rimworld/` — 二手分析，僅做索引；實作細節以原始碼為準
+
+原始碼路徑：`projects/rimworld/`
+
 ---
 
 ## 設計決策
@@ -52,14 +61,16 @@ mapcore_py/
 │   ├── hex.py                     # Hex 座標、距離、環、螺旋、直線
 │   ├── map.py                     # TerrainType、Tile、TileMap (2D array)
 │   ├── pathfinding.py             # A* (g_score / came_from / closed 全 2D array; 支援河流穿越成本)
-│   ├── rivers.py                  # 河流拓撲 + 流量 + 生成 (3 × 8-bit 打包，匯流自動累加)
+│   ├── rivers.py                  # 河流拓撲 + 流量 + 生成 (RimWorld 風 coastal Dijkstra)
+│   ├── features.py                # WorldFeature 命名大區域 + FeatureWorker（對齊 RimWorld）
 │   └── generation/                # 地圖生成管線
 │       ├── __init__.py
 │       ├── heightmap.py           # Phase 1: value noise + smoothstep + bilinear
 │       ├── classify.py            # Phase 2: heightmap → TileMap (OCEAN/COAST/PLAINS); expand_coast
 │       ├── biome.py               # Phase 3: 緯度+高程+濕度 → 生物群系
 │       ├── postprocess.py         # Phase 4: 連通性、清小島、填小湖、重標 COAST
-│       └── pipeline.py            # generate_world：Phase 1→2→3→4 一站式
+│       ├── climate.py             # Phase 5: °C 溫度 / mm 降雨 / Hilliness 5 級（RimWorld curves）
+│       └── pipeline.py            # generate_world：Phase 1→6 一站式（含 features）
 ├── tests/                         # 單元測試 (stdlib unittest)
 │   ├── test_hex.py
 │   ├── test_map.py
@@ -68,7 +79,10 @@ mapcore_py/
 │   ├── test_classify.py
 │   ├── test_biome.py
 │   ├── test_postprocess.py
-│   └── test_rivers.py
+│   ├── test_rivers.py
+│   ├── test_climate.py
+│   ├── test_features.py
+│   └── test_pipeline_integration.py
 └── examples/                      # 視覺化 / 互動範例
     ├── visualize_hex.py           # 鄰居 / 環 / 螺旋 / 直線
     ├── visualize_map.py           # 地形上色、鄰居 / 可通行鄰居
@@ -102,7 +116,7 @@ python examples/visualize_biome.py          # 生物群系 (Phase 3) + heightmap
 - `visualize_pathfinding.py`：左鍵設起點、右鍵設終點、1-7 按鍵在游標位置直接放地形、Shift+左鍵 或 中鍵循環地形、F/R 整片填、C 清除起終點。
 - `visualize_heightmap.py`：Space 換 seed、+/- 調 octaves、[/] 調 persistence、,/. 調 base_frequency、G 切換漸層/灰階。
 - `visualize_classify.py`：同 heightmap 那組 noise 控制，加上 ↑/↓ 調 sea_level、`;`/`'` 調 coast_depth、H 切換 terrain / heightmap 視圖。HUD 顯示海/海岸/陸地比例。
-- `visualize_biome.py`：同上所有控制 + 1/2/3/4 切換視圖（terrain / heightmap / moisture / temperature 熱圖）+ P 切後處理、9/0 調 island_min_size、O/L 調 lake_max_size、R 切換河流顯示。HUD 顯示島嶼數 / 最大島嶼 / 各地形比例。
+- `visualize_biome.py`：同上所有控制 + 1~6 切換視圖（terrain / heightmap / moisture / temperature / hilliness / features）+ P 切後處理、9/0 調 island_min_size、O/L 調 lake_max_size、R 切換河流顯示。features 視圖會在每個命名區域重心畫名稱。HUD 顯示島嶼數 / 最大島嶼 / features 總數 / 各地形比例。
 - **相機平移**：`visualize_heightmap`、`visualize_classify`、`visualize_biome` 三個大地圖 demo 支援方向鍵 ←→↑↓ 平移視角（持續按住），Home 歸位。`sea_level` 改用 PgUp/PgDn。
 
 ---
@@ -112,12 +126,21 @@ python examples/visualize_biome.py          # 生物群系 (Phase 3) + heightmap
 - ✅ **Hex 座標系統**：軸向 (axial)、`s` 推導、鄰居、距離、方向、環形 / 螺旋 / 直線遍歷
 - ✅ **地圖容器**：`TerrainType`、`Tile`、`TileMap`（2D array、平行四邊形範圍、邊界檢查、鄰居 / 可通行鄰居、整片填充）
 - ✅ **尋路**：`astar`、`path_cost`；`g_score` / `came_from` / `closed` 全 2D array、啟發式 = `hex distance × min_passable_cost`；`river_crossing_cost` 參數可加跨河成本
-- ✅ **河流 + 流量**：`Tile.rivers` 改為 3 × 8-bit 流量打包（owner 制度不變）；`add_river_flow` 累加、`get/set_river_strength` 取/覆寫；多源頭匯入同條主流時下游流量自動累加；A* 跨河成本 = `river_crossing_cost × 流量`；視覺化線寬隨流量遞增
-- 🚧 **地圖生成**（對齊 `plans/002-world-structure.md` 的管線）
+- ✅ **河流 + 流量**：`Tile.rivers` 是 3 × 8-bit 流量打包（每邊 0~255，多源匯入用 `add_river_flow` 累加）。生成改對齊 `projects/rimworld/.../WorldGenStep_Rivers.cs`（RimWorld 風）：
+  - 找 coastal water tiles 當 seeds（鄰接陸地的海/海岸）
+  - 反向 Dijkstra 建下游樹：`cost = ElevationChangeCost(elev_st − elev_ed) × factor`，
+    `factor = 1` 若 ed 的最低鄰居就是 st，否則 2；非起點水不再擴張
+  - DFS 累加 flow = rainfall − evaporation（蒸發用 RW 的 sqrt(flow) × evap_const(temp) × 250 公式）
+  - 從 seed 走樹畫 edge：主流走最大 flow child（≥ `degrade_threshold` 才繼續），
+    其餘 children 中 flow ≥ `branch_flow_threshold` 者按 `branch_chance` 機率分支
+  - flow 經 `flow_strength_scale` 換成 0~255 的邊強度；A* 跨河成本 = `river_crossing_cost × 流量`
+- 🚧 **地圖生成**（對齊 `plans/002-world-structure.md` 的管線；河流與 features 改參考 RimWorld）
   - ✅ Phase 1：高程 noise (`generate_heightmap`，多層 value noise + smoothstep + bilinear)
   - ✅ Phase 2：海平面切割 (`heightmap_to_tilemap`，閾值 → OCEAN / COAST / PLAINS；可調 `coast_depth` 控制淺海帶寬度)
   - ✅ Phase 3：生物群系 (`apply_biomes`：MOUNTAIN/HILL 由高程主導；其餘看溫度（緯度+高程）與濕度（獨立 noise）)；一站式 `generate_world` 串接全部
   - ✅ Phase 4：後處理（`find_components`/`remove_small_islands`/`remove_small_lakes`/`relabel_coast`/`post_process`）；`generate_world` 預設啟用
+  - ✅ Phase 5：氣候 (`apply_climate`，對齊 `WorldGenStep_Terrain.cs`)：°C 溫度（`AvgTempByLatitudeCurve` + 高程降溫）、mm 降雨（noise × latitude curve × 高程乾燥）、`Hilliness` 5 級 (Flat/SmallHills/LargeHills/Mountainous/Impassable)
+  - ✅ Phase 6：命名大區域 (`apply_features`，對齊 `WorldGenStep_Features.cs`)：FeatureWorker 抽象 + 內建 Ocean/MountainRange/BiomeRegion/Island；`tile_map.features` 是 WorldFeatures 容器，每個 Tile 帶 `feature_id` 反查
 
 ---
 

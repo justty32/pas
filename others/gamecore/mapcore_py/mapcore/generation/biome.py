@@ -60,6 +60,8 @@ def apply_biomes(
             continue
         elev = heightmap[h.r][h.q]
 
+        # 高程主導：高 elev 直接是 MOUNTAIN/HILL，不需要看溫度/濕度
+        # （Whittaker 圖在現實裡也是這樣，赤道的高山一樣可以是冰原）
         if elev > mountain_threshold:
             tile.terrain = TerrainType.MOUNTAIN
             continue
@@ -67,6 +69,8 @@ def apply_biomes(
             tile.terrain = TerrainType.HILL
             continue
 
+        # 溫度（normalized 0~1）= 1 − latitude − 高程拉低值；不是真實 °C
+        # 真實 °C 在 climate.py 算，但 biome 故意維持簡化版本以保持自包含
         latitude = abs(h.r - (h_map - 1) / 2.0) / half
         elev_above_sea = max(0.0, elev - sea_level) / span
         temp = 1.0 - latitude - elevation_temp_factor * elev_above_sea
@@ -76,11 +80,13 @@ def apply_biomes(
             temp = 1.0
         moist = moisture[h.r][h.q]
 
+        # 寒區優先（無論濕度都是 SNOW/TUNDRA），熱區跟溫帶才看濕度三分
         if temp < snow_temp:
             tile.terrain = TerrainType.SNOW
         elif temp < tundra_temp:
             tile.terrain = TerrainType.TUNDRA
         elif temp >= hot_temp:
+            # 熱帶：濕度從乾到濕 → DESERT / PLAINS / FOREST（熱帶雨林）
             if moist < dry_moisture:
                 tile.terrain = TerrainType.DESERT
             elif moist > wet_moisture:
@@ -88,6 +94,8 @@ def apply_biomes(
             else:
                 tile.terrain = TerrainType.PLAINS
         else:
+            # 溫帶：濕度從乾到濕 → PLAINS / GRASSLAND / FOREST
+            # 跟熱帶差別在「乾」是 PLAINS（半乾草原）而非 DESERT
             if moist < dry_moisture:
                 tile.terrain = TerrainType.PLAINS
             elif moist > wet_moisture:
