@@ -255,11 +255,13 @@ Civ5 在地球或大型地圖偏好此法，因為真實山脈由板塊擠壓形
 5. 主迴圈 inner 用 `local_w = ridge_weight × boundary_strength` 代替全域 ridge_weight；板塊內部 local_w≈0 自動回到純 fBm。
 
 **參數：**
-- `num_plates` (int, 預設 12) — 越多 → 邊界越密、山脈越短
-- `plate_boundary_width` (float, 預設 0.08) — 邊界帶寬度（以 min(W,H) 為 1）
+- `num_plates` (int, 預設 20) — 越多 → 邊界越密、山脈越短
+- `plate_boundary_width` (float, 預設 0.05) — 邊界帶寬度（以 min(W,H) 為 1）；調小讓山脈線變細
+- `ridge_power` (float, 預設 2.0) — 折疊冪次，對應 Musgrave RidgedNoise^p；1=線性、2~4 越尖銳
+- `ridge_multifractal_gain` (float, 預設 2.0) — Musgrave 多分形增益。每 octave carry = clamp(fold × gain, 0, 1)，下一 octave 折疊乘 carry，讓主脊延伸、支脈分支；0=關閉多分形
 
 **對照舊行為：**
-若要回到「整張地圖橫貫條紋」風格，傳 `ridge_mode="global"`；`ridge_direction` / `ridge_direction_variation` 僅在 global 模式生效。
+若要回到「整張地圖橫貫條紋」風格，傳 `ridge_mode="global"`；`ridge_direction` / `ridge_direction_variation` 僅在 global 模式生效。回到單尺度折疊：`ridge_power=1.0, ridge_multifractal_gain=0.0`。
 
 ---
 

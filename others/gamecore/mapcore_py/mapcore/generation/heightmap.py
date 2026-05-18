@@ -307,8 +307,10 @@ def generate_heightmap(
     ridge_mode: str = "plates",
     ridge_direction: float = 0.0,
     ridge_direction_variation: float = 90.0,
-    num_plates: int = 12,
-    plate_boundary_width: float = 0.08,
+    ridge_power: float = 2.0,
+    ridge_multifractal_gain: float = 2.0,
+    num_plates: int = 20,
+    plate_boundary_width: float = 0.05,
     shape: Optional[str] = None,
     shape_strength: float = 0.85,
     shape_params: Optional[dict] = None,
@@ -331,10 +333,17 @@ def generate_heightmap(
         ridge_direction：基準走向（度，從北方順時針）。0=南北，90=東西。
         ridge_direction_variation：走向擾動幅度（度）。0=固定；90=±45°；180=隨機。
         擾動由低頻 noise 驅動，使全域走向緩慢連續變化。
-    - num_plates：僅 ridge_mode="plates" 使用；板塊數量。預設 12，越多 → 邊界越密、
+    - ridge_power：山脊冪次（Musgrave 風）。對折疊值取 power 次方讓峰更尖、谷更平。
+        1.0 = 純線性三角折疊（最早版本）；2.0 = 平方銳化（預設，類似 RidgedNoise²）；
+        3~4 = 極尖銳但細小山脈會消失。預設 2.0。
+    - ridge_multifractal_gain：Musgrave 多分形增益。控制「高頻細節只在低頻山脊上分支」
+        的強度。每 octave 後 carry = clamp(fold × gain, 0, 1)，下一 octave 的折疊乘以
+        carry。0 = 關閉多分形（每 octave 獨立，舊行為）；2.0 = Musgrave 經典值；
+        越大下一層越受前層山脊主導 → 主脊延伸更長、支脈更明顯。預設 2.0。
+    - num_plates：僅 ridge_mode="plates" 使用；板塊數量。預設 20，越多 → 邊界越密、
                   山脈越短。最小 2。
     - plate_boundary_width：僅 ridge_mode="plates" 使用；邊界帶寬度，以 min(W,H) 為 1。
-                            預設 0.08 → 邊界帶約 8% 短邊；過寬會讓 ridges 又連回大塊。
+                            預設 0.05 → 邊界帶約 5% 短邊；過寬會讓 ridges 又連回大塊。
     - shape：大陸形狀遮罩。None=關；合法值：
         "island"               — 單一大島
         "archipelago"          — 少量中型群島
@@ -360,6 +369,12 @@ def generate_heightmap(
         raise ValueError(f"ridge_weight must be in [0, 1], got {ridge_weight}")
     if ridge_mode not in ("global", "plates"):
         raise ValueError(f"ridge_mode must be 'global' or 'plates', got {ridge_mode!r}")
+    if ridge_power <= 0.0:
+        raise ValueError(f"ridge_power must be > 0, got {ridge_power}")
+    if ridge_multifractal_gain < 0.0:
+        raise ValueError(
+            f"ridge_multifractal_gain must be >= 0, got {ridge_multifractal_gain}"
+        )
     if plate_boundary_width <= 0.0:
         raise ValueError(
             f"plate_boundary_width must be > 0, got {plate_boundary_width}"
@@ -382,6 +397,12 @@ def generate_heightmap(
     _sin_grid: Optional[list[list[float]]] = None
     _gate: Optional[list[list[float]]] = None  # plates 模式下的 boundary_strength
     _cos_a = _sin_a = 0.0  # 固定走向時使用
+    # Musgrave 多分形 carry：每 pixel 一個值，初值 1.0；高頻折疊乘以此值，
+    # 讓低頻有山脊處才會發展出高頻細節 → 主脊明顯、支脈分支、平地保持平滑
+    _ridge_carry: Optional[list[list[float]]] = None
+    _use_multifractal = _use_ridge and ridge_multifractal_gain > 0.0
+    if _use_multifractal:
+        _ridge_carry = [[1.0] * width for _ in range(height)]
 
     if _use_ridge:
         if ridge_mode == "plates":
@@ -460,6 +481,15 @@ def generate_heightmap(
                         raw_dir = _bilinear(coarse, rx * _RIDGE_ANISOTROPY + hx, ry + hy)
                         # 折疊：0.5→峰頂(1), 0/1→谷底(0)；形成尖銳稜線
                         fold = 1.0 - abs(2.0 * raw_dir - 1.0)
+                        # 冪次銳化：power=1 線性、>1 越尖銳；對齊 Musgrave RidgedNoise^p
+                        if ridge_power != 1.0:
+                            fold = fold ** ridge_power
+                        # Musgrave 多分形 carry：高頻折疊乘以前 octave 累積的山脊強度
+                        # 板塊內部 local_w=0 → carry 保持初值不更新，碰到邊界時才開始累積
+                        if _ridge_carry is not None:
+                            fold *= _ridge_carry[r][q]
+                            # clamp 防止 carry 爆衝；gain=2 在 fold≈0.5 時讓 carry≈1 穩定
+                            _ridge_carry[r][q] = min(1.0, fold * ridge_multifractal_gain)
                         raw = raw_dir * (1.0 - local_w) + fold * local_w
                 grid[r][q] += weight * raw
 

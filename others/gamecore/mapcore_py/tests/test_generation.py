@@ -128,6 +128,44 @@ class TestPlateRidge(unittest.TestCase):
         b = generate_heightmap(20, 20, ridge_mode="global", **kw)
         self.assertEqual(a, b)
 
+    def test_ridge_power_invalid(self):
+        with self.assertRaises(ValueError):
+            generate_heightmap(10, 10, seed=0, ridge_weight=0.5, ridge_power=0.0)
+
+    def test_ridge_multifractal_gain_negative(self):
+        with self.assertRaises(ValueError):
+            generate_heightmap(
+                10, 10, seed=0, ridge_weight=0.5, ridge_multifractal_gain=-0.5
+            )
+
+    def test_ridge_power_sharpens(self):
+        # power=4 對折疊取 4 次方，把 [0,1] 值大幅往 0 推（fold⁴ 均值≈0.2 vs fold¹≈0.5），
+        # 整體高度均值應顯著下降。取 ridge_weight=1.0 全套用、無多分形，純比較銳化效果。
+        kw = dict(seed=11, ridge_weight=1.0, ridge_mode="plates",
+                  num_plates=6, plate_boundary_width=0.1,
+                  ridge_multifractal_gain=0.0)
+        flat = generate_heightmap(40, 40, ridge_power=1.0, **kw)
+        sharp = generate_heightmap(40, 40, ridge_power=4.0, **kw)
+
+        def mean(grid):
+            n = 0
+            s = 0.0
+            for row in grid:
+                for v in row:
+                    s += v
+                    n += 1
+            return s / n
+
+        self.assertGreater(mean(flat), mean(sharp))
+
+    def test_multifractal_carry_differs(self):
+        # gain>0 vs gain=0 應產生不同輸出（多分形 carry 才會有差）
+        kw = dict(seed=5, ridge_weight=1.0, ridge_mode="plates",
+                  num_plates=6, plate_boundary_width=0.1, ridge_power=2.0)
+        no_mf = generate_heightmap(30, 30, ridge_multifractal_gain=0.0, **kw)
+        mf = generate_heightmap(30, 30, ridge_multifractal_gain=2.0, **kw)
+        self.assertNotEqual(no_mf, mf)
+
     def test_plate_mode_localizes_ridges(self):
         # 局部化驗證：plates 模式下，地圖內陸有大面積接近 fBm（低 ridge 貢獻），
         # 而 global 模式下所有 tile 都受 ridge fold 影響。
