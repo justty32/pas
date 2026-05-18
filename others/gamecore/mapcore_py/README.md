@@ -147,7 +147,7 @@ python examples/visualize_biome.py          # 生物群系 (Phase 3) + heightmap
   - ✅ Phase 3：生物群系 (`apply_biomes`：MOUNTAIN/HILL 由高程主導；其餘看溫度（緯度+高程）與濕度（獨立 noise）)
   - ✅ Phase 4：後處理（`find_components`/`remove_small_islands`/`remove_small_lakes`/`relabel_coast`/`post_process`）；`generate_world` 預設啟用
   - ✅ Phase 5：氣候 (`apply_climate`，對齊 `WorldGenStep_Terrain.cs`)：°C 溫度（`AvgTempByLatitudeCurve` + 高程降溫）、mm 降雨（noise × latitude curve × 高程乾燥）、`Hilliness` 5 級 (Flat/SmallHills/LargeHills/Mountainous/Impassable)
-  - ✅ Phase 6：命名大區域 (`apply_features`，對齊 `WorldGenStep_Features.cs`)：FeatureWorker 抽象 + 內建 Ocean/MountainRange/BiomeRegion/Island；`tile_map.features` 是 WorldFeatures 容器，每個 Tile 帶 `feature_id` 反查
+  - ✅ Phase 6：命名大區域 (`apply_features`，對齊 `WorldGenStep_Features.cs`)：FeatureWorker 抽象 + 內建 Lake/Coast/Ocean/MountainRange/Icecap(極區 SNOW)/BiomeRegion×5/Island/Continent；`tile_map.features` 是 WorldFeatures 容器，每個 Tile 帶 `feature_id` 反查（Continent 例外：純標籤層，與其他 feature 共存）
   - ✅ Phase 7：衍生地形 overlay (`apply_terrain_patches`，對齊 RimWorld `TerrainPatchMaker`)：`TerrainPatch` 定義生成條件（noise 閾值、氣候範圍、鄰接地形、hilliness、feature 類型、機率），`generate_world` 透過 `extra_noise_specs` 參數產生命名 noise 圖供條件使用；`generate_world` 回傳 `WorldGenResult`（包含所有中間產物與 registry）
 
 ---

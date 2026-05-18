@@ -200,11 +200,72 @@ class FeatureWorker(ABC):
 # ---------------------------------------------------------------------------
 
 class FeatureWorker_Ocean(FeatureWorker):
-    """對齊 FeatureWorker_OuterOcean：找大塊海洋（含 COAST）。"""
+    """對齊 FeatureWorker_OuterOcean：找大塊海洋。
+
+    is_member 使用顯式 OCEAN/COAST 判斷，而非 DEFAULT_REGISTRY.is_water()——
+    因為 LAKE 也是 water，會被誤吃成 "Ocean #N"；分離 LAKE 由 FeatureWorker_Lake 接管。
+    若想讓海岸線獨立成 feature，把 FeatureWorker_Coast 排在本 worker 之前即可。
+    """
     feature_type = "Ocean"
 
     def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
-        return DEFAULT_REGISTRY.is_water(tile.terrain)
+        return tile.terrain == TerrainType.OCEAN or tile.terrain == TerrainType.COAST
+
+
+class FeatureWorker_Lake(FeatureWorker):
+    """內陸湖泊：terrain == LAKE 的連通水體（由 Priority-Flood 窪地填充階段產生）。
+
+    必須排在 FeatureWorker_Ocean 之前；否則 Ocean 階段一旦把這些 tile 標走，
+    本 worker 看到 feature_id >= 0 就會略過，導致內陸湖永遠標不出來。
+    min_size 預設 2（湖可以很小，跟海洋的 20 不同）。
+    """
+    feature_type = "Lake"
+
+    def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
+        return tile.terrain == TerrainType.LAKE
+
+
+class FeatureWorker_Coast(FeatureWorker):
+    """海岸線：terrain == COAST 的連通水域。
+
+    排在 Ocean 之前可讓海岸帶獨立命名（例如 "East Coast"），剩下的 OCEAN 才算深海；
+    若不啟用本 worker，Ocean 會 fallback 把 COAST 一併收進去（is_member 已涵蓋）。
+    """
+    feature_type = "Coast"
+
+    def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
+        return tile.terrain == TerrainType.COAST
+
+
+class FeatureWorker_Icecap(FeatureWorker):
+    """極地冰原：限定地圖南北極帶（r/H 在 polar_band 內）的 SNOW 連通分量。
+
+    跟 BiomeRegion(SNOW) 的差異：後者不分緯度，山頂積雪與極地雪原會混用同一張
+    "Snowfield" 標籤；本 worker 只認緯度極端的 SNOW，讓 "Northern Icecap" 與
+    山頂的 "Snowfield" 在地圖上能拆開命名。
+
+    polar_band：r/(H-1) 落在 [0, polar_band) 或 (1-polar_band, 1] 內視為極區。
+    預設 0.15 → 一張 H=100 的地圖南北各約 15 行屬於極地帶。
+    """
+    feature_type = "Icecap"
+
+    def __init__(
+        self,
+        name_prefix: str,
+        polar_band: float = 0.15,
+        min_size: int = 8,
+        max_size: int = 10_000,
+    ) -> None:
+        super().__init__(name_prefix, min_size, max_size)
+        self.polar_band = polar_band
+
+    def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
+        if tile.terrain != TerrainType.SNOW:
+            return False
+        # 用 H-1 當分母而非 H，讓 r=H-1 時 ratio 確實到達 1.0（不會差一格）。
+        # max(.., 1) 防 H=1 退化地圖除以 0。
+        ratio = h.r / max(tile_map.height - 1, 1)
+        return ratio < self.polar_band or ratio > 1.0 - self.polar_band
 
 
 class FeatureWorker_MountainRange(FeatureWorker):
@@ -252,21 +313,100 @@ class FeatureWorker_Island(FeatureWorker):
         return not DEFAULT_REGISTRY.is_water(tile.terrain)
 
 
+class FeatureWorker_Continent(FeatureWorker):
+    """大陸：跨 biome 的連通陸塊標籤。
+
+    與其他 worker 的關鍵差異：**不寫 tile.feature_id**，也**不檢查現存 feature_id**。
+    其他 worker 是互斥的（一格 tile 只能屬於一個 feature），但「大陸」概念上必須
+    跟 BiomeRegion / MountainRange 共存——玩家要能同時看到 "Aldera" 大陸標籤
+    和裡面的 "Sahara" 沙漠標籤。
+
+    實作方式：覆寫 generate_where_appropriate 用獨立 visited 陣列做 flood-fill，
+    完全繞過 feature_id 互斥機制；只把 Continent 加進 features 容器供 UI 顯示，
+    Tile 端不留任何引用。排序上放最後（順序無實質影響，因為不會搶 tile）。
+    """
+    feature_type = "Continent"
+
+    def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
+        return not DEFAULT_REGISTRY.is_water(tile.terrain)
+
+    def generate_where_appropriate(
+        self,
+        tile_map: TileMap,
+        features: WorldFeatures,
+    ) -> int:
+        W, H = tile_map.width, tile_map.height
+        visited = [[False] * W for _ in range(H)]
+        produced = 0
+        counter = 1
+        for h, tile in tile_map:
+            if visited[h.r][h.q]:
+                continue
+            if not self.is_member(tile_map, h, tile):
+                visited[h.r][h.q] = True
+                continue
+            group = self._flood_fill_landmass(tile_map, h, visited)
+            if len(group) < self.min_size or len(group) > self.max_size:
+                continue
+            name = f"{self.name_prefix} #{counter}"
+            center = _centroid(group)
+            features.add(self.feature_type, name, group, center)
+            # 刻意不寫 tile.feature_id，保留給 BiomeRegion / MountainRange / Island 用
+            produced += 1
+            counter += 1
+        return produced
+
+    def _flood_fill_landmass(
+        self,
+        tile_map: TileMap,
+        root: Hex,
+        visited: list[list[bool]],
+    ) -> list[Hex]:
+        """跟基類 _flood_fill 唯一差異：不檢查 tile.feature_id（允許重疊既有 feature）。"""
+        group: list[Hex] = []
+        stack: list[Hex] = [root]
+        while stack:
+            cur = stack.pop()
+            if not tile_map.in_bounds(cur):
+                continue
+            if visited[cur.r][cur.q]:
+                continue
+            t = tile_map.get(cur)
+            if not self.is_member(tile_map, cur, t):
+                visited[cur.r][cur.q] = True
+                continue
+            visited[cur.r][cur.q] = True
+            group.append(cur)
+            for nb in cur.neighbors():
+                stack.append(nb)
+        return group
+
+
 def default_workers() -> list[FeatureWorker]:
     """預設工作清單；越「特殊」的 feature 排越前面（先 claim tiles）。
 
     name_prefix 統一用英文，避免 pygame 預設字體缺 CJK glyph 變問號；
     要中文時呼叫端可以自行替換 workers 清單。
+
+    順序說明：
+      水域：Lake (LAKE) → Coast (COAST) → Ocean (剩下 OCEAN)
+      陸地特殊：MountainRange (高 hilliness) → Icecap (極區 SNOW) → BiomeRegion×5
+      剩餘：Island (小陸塊)
+      最後：Continent (不搶 tile，純標籤層，與前面 worker 重疊)
     """
     return [
+        FeatureWorker_Lake("Lake", min_size=2),
+        FeatureWorker_Coast("Coast", min_size=8),
         FeatureWorker_Ocean("Ocean", min_size=20),
         FeatureWorker_MountainRange("Range", min_size=5),
-        FeatureWorker_BiomeRegion(TerrainType.SNOW, "Icecap", min_size=8),
+        FeatureWorker_Icecap("Icecap", polar_band=0.15, min_size=8),
+        FeatureWorker_BiomeRegion(TerrainType.SNOW, "Snowfield", min_size=8),
         FeatureWorker_BiomeRegion(TerrainType.TUNDRA, "Tundra", min_size=8),
         FeatureWorker_BiomeRegion(TerrainType.DESERT, "Desert", min_size=8),
         FeatureWorker_BiomeRegion(TerrainType.FOREST, "Forest", min_size=8),
         FeatureWorker_BiomeRegion(TerrainType.GRASSLAND, "Plains", min_size=8),
         FeatureWorker_Island("Island", min_size=3, max_size=40),
+        FeatureWorker_Continent("Continent", min_size=100),
     ]
 
 

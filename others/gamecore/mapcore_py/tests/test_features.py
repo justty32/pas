@@ -8,7 +8,11 @@ from mapcore.hex import Hex
 from mapcore.map import Hilliness, TerrainType, TileMap
 from mapcore.features import (
     FeatureWorker_BiomeRegion,
+    FeatureWorker_Coast,
+    FeatureWorker_Continent,
+    FeatureWorker_Icecap,
     FeatureWorker_Island,
+    FeatureWorker_Lake,
     FeatureWorker_MountainRange,
     FeatureWorker_Ocean,
     WorldFeatures,
@@ -101,6 +105,153 @@ class TestIslandWorker(unittest.TestCase):
         # 應該只有 8 格那塊符合 [5, 20]
         self.assertEqual(len(features), 1)
         self.assertEqual(next(iter(features)).size, 8)
+
+
+class TestLakeWorker(unittest.TestCase):
+    def test_picks_up_lake_block(self):
+        tm = TileMap(8, 8, default_terrain=TerrainType.PLAINS)
+        _set_block(tm, 3, 3, 2, 2, TerrainType.LAKE)
+        features = WorldFeatures()
+        worker = FeatureWorker_Lake("Lake", min_size=2)
+        worker.generate_where_appropriate(tm, features)
+        self.assertEqual(len(features), 1)
+        f = next(iter(features))
+        self.assertEqual(f.feature_type, "Lake")
+        self.assertEqual(f.size, 4)
+
+    def test_ignores_ocean(self):
+        # LAKE 和 OCEAN 都是 is_water=True，但本 worker 只認 LAKE
+        tm = TileMap(8, 8, default_terrain=TerrainType.OCEAN)
+        features = WorldFeatures()
+        worker = FeatureWorker_Lake("Lake", min_size=2)
+        worker.generate_where_appropriate(tm, features)
+        self.assertEqual(len(features), 0)
+
+
+class TestOceanLakeInteraction(unittest.TestCase):
+    """覆寫 Ocean.is_member 後，內陸湖不再被誤標成 Ocean。"""
+
+    def test_ocean_does_not_eat_lake(self):
+        tm = TileMap(10, 10, default_terrain=TerrainType.PLAINS)
+        # 一塊海，一個獨立的湖
+        _set_block(tm, 0, 0, 5, 10, TerrainType.OCEAN)
+        _set_block(tm, 7, 3, 2, 2, TerrainType.LAKE)
+        features = apply_features(
+            tm,
+            workers=[
+                FeatureWorker_Lake("Lake", min_size=2),
+                FeatureWorker_Ocean("Ocean", min_size=10),
+            ],
+        )
+        types = sorted(f.feature_type for f in features)
+        self.assertEqual(types, ["Lake", "Ocean"])
+        # LAKE 格的 feature_id 應對應 Lake，不是 Ocean
+        lake_id = next(f.id for f in features if f.feature_type == "Lake")
+        self.assertEqual(tm.get(Hex(7, 3)).feature_id, lake_id)
+
+    def test_ocean_without_lake_worker_still_works(self):
+        # 即使沒掛 Lake worker，LAKE 也不該被 Ocean 吃掉（顯式 OCEAN/COAST 判斷）
+        tm = TileMap(8, 8, default_terrain=TerrainType.OCEAN)
+        _set_block(tm, 3, 3, 2, 2, TerrainType.LAKE)
+        features = apply_features(tm, workers=[FeatureWorker_Ocean("Ocean", min_size=10)])
+        for f in features:
+            self.assertNotEqual(f.feature_type, "Lake")
+            self.assertEqual(f.feature_type, "Ocean")
+        # LAKE 格 feature_id 應仍是 -1
+        self.assertEqual(tm.get(Hex(3, 3)).feature_id, -1)
+
+
+class TestCoastWorker(unittest.TestCase):
+    def test_separates_coast_from_ocean(self):
+        # COAST 一條帶 + OCEAN 一大塊。Coast 先跑，搶 COAST tiles，Ocean 只剩 OCEAN
+        tm = TileMap(10, 10, default_terrain=TerrainType.PLAINS)
+        _set_block(tm, 0, 0, 10, 3, TerrainType.OCEAN)
+        _set_block(tm, 0, 3, 10, 1, TerrainType.COAST)  # 10 格
+        features = apply_features(
+            tm,
+            workers=[
+                FeatureWorker_Coast("Coast", min_size=5),
+                FeatureWorker_Ocean("Ocean", min_size=10),
+            ],
+        )
+        types = sorted(f.feature_type for f in features)
+        self.assertEqual(types, ["Coast", "Ocean"])
+        coast_id = next(f.id for f in features if f.feature_type == "Coast")
+        ocean_id = next(f.id for f in features if f.feature_type == "Ocean")
+        self.assertEqual(tm.get(Hex(0, 3)).feature_id, coast_id)
+        self.assertEqual(tm.get(Hex(0, 0)).feature_id, ocean_id)
+
+
+class TestIcecapWorker(unittest.TestCase):
+    def test_only_picks_polar_snow(self):
+        tm = TileMap(10, 20, default_terrain=TerrainType.PLAINS)
+        # polar_band=0.15 → ratio < 0.15 或 > 0.85，r in [0..19]，ratio = r/19
+        # 北極 (r=0,1,2)，南極 (r=17,18,19) 算極區
+        _set_block(tm, 0, 0, 10, 3, TerrainType.SNOW)    # 北極帶 30 格
+        _set_block(tm, 0, 8, 10, 4, TerrainType.SNOW)    # 中緯度 40 格（不該被收）
+        features = WorldFeatures()
+        worker = FeatureWorker_Icecap("Icecap", polar_band=0.15, min_size=5)
+        worker.generate_where_appropriate(tm, features)
+        # 只該有一塊（北極帶 30 格）；中緯雪不算 icecap
+        self.assertEqual(len(features), 1)
+        f = next(iter(features))
+        self.assertEqual(f.feature_type, "Icecap")
+        self.assertEqual(f.size, 30)
+
+    def test_ignores_non_snow(self):
+        # 即使在極區，非 SNOW 也不收
+        tm = TileMap(10, 10, default_terrain=TerrainType.TUNDRA)
+        features = WorldFeatures()
+        worker = FeatureWorker_Icecap("Icecap", polar_band=0.5, min_size=5)
+        worker.generate_where_appropriate(tm, features)
+        self.assertEqual(len(features), 0)
+
+
+class TestContinentWorker(unittest.TestCase):
+    def test_spans_multiple_biomes(self):
+        # 大陸：一塊大陸地裡面同時有 forest 和 desert
+        tm = TileMap(15, 15, default_terrain=TerrainType.OCEAN)
+        _set_block(tm, 2, 2, 11, 11, TerrainType.PLAINS)
+        _set_block(tm, 3, 3, 4, 4, TerrainType.FOREST)
+        _set_block(tm, 8, 3, 4, 4, TerrainType.DESERT)
+        features = apply_features(
+            tm,
+            workers=[
+                FeatureWorker_Ocean("Ocean", min_size=10),
+                FeatureWorker_BiomeRegion(TerrainType.FOREST, "Forest", min_size=5),
+                FeatureWorker_BiomeRegion(TerrainType.DESERT, "Desert", min_size=5),
+                FeatureWorker_Continent("Continent", min_size=20),
+            ],
+        )
+        types = sorted(f.feature_type for f in features)
+        self.assertIn("Continent", types)
+        self.assertIn("BiomeRegion:FOREST", types)
+        self.assertIn("BiomeRegion:DESERT", types)
+        # Continent 應該包含整塊陸地 11x11=121 格
+        cont = next(f for f in features if f.feature_type == "Continent")
+        self.assertEqual(cont.size, 121)
+
+    def test_does_not_overwrite_feature_id(self):
+        # 跑 Forest 再跑 Continent：陸地 tile 的 feature_id 應仍指向 Forest，不被 Continent 蓋掉
+        tm = TileMap(12, 12, default_terrain=TerrainType.OCEAN)
+        _set_block(tm, 2, 2, 8, 8, TerrainType.FOREST)
+        features = apply_features(
+            tm,
+            workers=[
+                FeatureWorker_BiomeRegion(TerrainType.FOREST, "Forest", min_size=5),
+                FeatureWorker_Continent("Continent", min_size=20),
+            ],
+        )
+        forest_id = next(f.id for f in features if f.feature_type == "BiomeRegion:FOREST")
+        # 隨便取一個陸地格驗證
+        self.assertEqual(tm.get(Hex(5, 5)).feature_id, forest_id)
+
+    def test_ignores_water(self):
+        tm = TileMap(10, 10, default_terrain=TerrainType.OCEAN)
+        features = WorldFeatures()
+        worker = FeatureWorker_Continent("Continent", min_size=5)
+        worker.generate_where_appropriate(tm, features)
+        self.assertEqual(len(features), 0)
 
 
 class TestApplyFeatures(unittest.TestCase):
