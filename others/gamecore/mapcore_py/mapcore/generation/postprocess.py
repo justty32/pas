@@ -15,23 +15,21 @@ from typing import Callable
 
 from ..hex import Hex
 from ..map import TerrainType, TileMap
+from ..terrain import DEFAULT_REGISTRY
 from .classify import expand_coast
 
 
-WATER = (TerrainType.OCEAN, TerrainType.COAST)
+def is_land(terrain_id: int) -> bool:
+    return not DEFAULT_REGISTRY.is_water(terrain_id)
 
 
-def is_land(t: TerrainType) -> bool:
-    return t not in WATER
-
-
-def is_water(t: TerrainType) -> bool:
-    return t in WATER
+def is_water(terrain_id: int) -> bool:
+    return DEFAULT_REGISTRY.is_water(terrain_id)
 
 
 def find_components(
     tile_map: TileMap,
-    predicate: Callable[[TerrainType], bool],
+    predicate: Callable[[int], bool],
 ) -> list[list[Hex]]:
     """BFS 找出 predicate(terrain) 為真的格子組成的所有連通分量。"""
     h_map = tile_map.height

@@ -7,19 +7,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mapcore.hex import Hex
 from mapcore.map import (
-    TERRAIN_COST,
     TerrainType,
     Tile,
     TileMap,
     is_passable,
     terrain_cost,
 )
+from mapcore.terrain import DEFAULT_REGISTRY
 
 
 class TestTerrainCost(unittest.TestCase):
     def test_all_terrains_have_cost(self):
         for t in TerrainType:
-            self.assertIn(t, TERRAIN_COST)
+            self.assertTrue(DEFAULT_REGISTRY.contains(int(t)))
 
     def test_ocean_and_mountain_impassable(self):
         self.assertFalse(is_passable(TerrainType.OCEAN))

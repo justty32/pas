@@ -14,6 +14,7 @@ from enum import IntEnum
 from typing import Iterator
 
 from .hex import Hex
+from .terrain import DEFAULT_REGISTRY
 
 
 class TerrainType(IntEnum):
@@ -29,6 +30,7 @@ class TerrainType(IntEnum):
     FOREST = 7
     HILL = 8
     MOUNTAIN = 9
+    LAKE = 10  # 內陸湖泊（Priority-Flood 窪地填充產生）；is_water=True，不可通行
 
 
 class Hilliness(IntEnum):
@@ -45,33 +47,19 @@ class Hilliness(IntEnum):
     IMPASSABLE = 5
 
 
-# 每地形的基礎移動成本。math.inf 表示不可通行。
-# 給未來 A* 尋路用；要改規則改這裡，不必改 Tile 結構。
-TERRAIN_COST: dict[TerrainType, float] = {
-    TerrainType.OCEAN: math.inf,
-    TerrainType.COAST: math.inf,
-    TerrainType.PLAINS: 1.0,
-    TerrainType.GRASSLAND: 1.0,
-    TerrainType.DESERT: 1.5,
-    TerrainType.TUNDRA: 1.0,
-    TerrainType.SNOW: 2.0,
-    TerrainType.FOREST: 2.0,
-    TerrainType.HILL: 2.0,
-    TerrainType.MOUNTAIN: math.inf,
-}
+def terrain_cost(terrain_id: int) -> float:
+    """回傳地形的移動成本；透過 DEFAULT_REGISTRY 查詢，支援任意 id。"""
+    return DEFAULT_REGISTRY.move_cost(terrain_id)
 
 
-def terrain_cost(terrain: TerrainType) -> float:
-    return TERRAIN_COST[terrain]
-
-
-def is_passable(terrain: TerrainType) -> bool:
-    return math.isfinite(TERRAIN_COST[terrain])
+def is_passable(terrain_id: int) -> bool:
+    """地形是否可通行（move_cost 有限）。"""
+    return DEFAULT_REGISTRY.is_passable(terrain_id)
 
 
 @dataclass(slots=True)
 class Tile:
-    terrain: TerrainType = TerrainType.PLAINS
+    terrain: int = TerrainType.PLAINS  # terrain id；對應 TerrainRegistry 中的 TerrainDef.id
     # rivers：3 × 8-bit 流量打包進一個 int。
     # bits 0-7   = DIRECTIONS[0] (E)  的流量 (0~255)
     # bits 8-15  = DIRECTIONS[1] (NE) 的流量
@@ -87,6 +75,9 @@ class Tile:
     # feature_id：所屬命名大區域（WorldFeatures 索引）。-1 表示不屬於任何 feature。
     # 對齊 RimWorld Tile.feature（reference），但我們存 int id 以維持 dataclass slot 效能。
     feature_id: int = -1
+    # water_depth：水體深度 = sea_level − elev（僅 OCEAN/COAST 有意義，陸地為 0.0）。
+    # 由 generation.classify 階段填入，供視覺化與 overlay 用；單位與 heightmap 相同 ([0,1])。
+    water_depth: float = 0.0
 
 
 class TileMap:
@@ -124,7 +115,7 @@ class TileMap:
             raise IndexError(f"Hex({h.q}, {h.r}) out of bounds for {self.width}x{self.height}")
         self._rows[h.r][h.q] = tile
 
-    def set_terrain(self, h: Hex, terrain: TerrainType) -> None:
+    def set_terrain(self, h: Hex, terrain: int) -> None:
         if not self.in_bounds(h):
             raise IndexError(f"Hex({h.q}, {h.r}) out of bounds for {self.width}x{self.height}")
         self._rows[h.r][h.q].terrain = terrain
@@ -154,7 +145,7 @@ class TileMap:
     def __len__(self) -> int:
         return self.width * self.height
 
-    def fill(self, terrain: TerrainType) -> None:
+    def fill(self, terrain: int) -> None:
         """整片重設地形。給地圖生成的初始階段用。"""
         for row in self._rows:
             for tile in row:

@@ -25,6 +25,7 @@ from typing import Iterator, Optional
 
 from .hex import Hex
 from .map import Hilliness, TerrainType, Tile, TileMap
+from .terrain import DEFAULT_REGISTRY
 
 
 @dataclass(slots=True)
@@ -198,15 +199,12 @@ class FeatureWorker(ABC):
 # 內建 Worker 子類
 # ---------------------------------------------------------------------------
 
-_WATER = (TerrainType.OCEAN, TerrainType.COAST)
-
-
 class FeatureWorker_Ocean(FeatureWorker):
     """對齊 FeatureWorker_OuterOcean：找大塊海洋（含 COAST）。"""
     feature_type = "Ocean"
 
     def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
-        return tile.terrain in _WATER
+        return DEFAULT_REGISTRY.is_water(tile.terrain)
 
 
 class FeatureWorker_MountainRange(FeatureWorker):
@@ -217,26 +215,26 @@ class FeatureWorker_MountainRange(FeatureWorker):
     feature_type = "MountainRange"
 
     def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
-        if tile.terrain in _WATER:
+        if DEFAULT_REGISTRY.is_water(tile.terrain):
             return False
         return tile.hilliness >= Hilliness.LARGE_HILLS
 
 
 class FeatureWorker_BiomeRegion(FeatureWorker):
-    """對齊 FeatureWorker_Biome.cs：找特定 terrain 的連通分量。"""
+    """對齊 FeatureWorker_Biome.cs：找特定 terrain id 的連通分量。"""
     feature_type = "BiomeRegion"
 
     def __init__(
         self,
-        target_terrain: TerrainType,
+        target_terrain: int,
         name_prefix: str,
         min_size: int = 8,
         max_size: int = 10_000,
     ) -> None:
         super().__init__(name_prefix, min_size, max_size)
         self.target_terrain = target_terrain
-        # 用 terrain 名稱當後綴，方便 UI 過濾
-        self.feature_type = f"BiomeRegion:{target_terrain.name}"
+        terrain_name = DEFAULT_REGISTRY.get(target_terrain).name
+        self.feature_type = f"BiomeRegion:{terrain_name}"
 
     def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
         return tile.terrain == self.target_terrain
@@ -251,7 +249,7 @@ class FeatureWorker_Island(FeatureWorker):
     feature_type = "Island"
 
     def is_member(self, tile_map: TileMap, h: Hex, tile: Tile) -> bool:
-        return tile.terrain not in _WATER
+        return not DEFAULT_REGISTRY.is_water(tile.terrain)
 
 
 def default_workers() -> list[FeatureWorker]:

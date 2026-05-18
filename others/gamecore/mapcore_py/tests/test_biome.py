@@ -113,25 +113,24 @@ class TestValidation(unittest.TestCase):
 
 class TestPipeline(unittest.TestCase):
     def test_generate_world_basic(self):
-        tm, hm, moi = generate_world(20, 12, seed=42)
-        self.assertEqual(tm.width, 20)
-        self.assertEqual(tm.height, 12)
-        self.assertEqual(len(hm), 12)
-        self.assertEqual(len(moi), 12)
+        r = generate_world(20, 12, seed=42)
+        self.assertEqual(r.tile_map.width, 20)
+        self.assertEqual(r.tile_map.height, 12)
+        self.assertEqual(len(r.heightmap), 12)
+        self.assertEqual(len(r.moisture), 12)
 
     def test_generate_world_deterministic(self):
-        tm_a, hm_a, moi_a = generate_world(15, 10, seed=7)
-        tm_b, hm_b, moi_b = generate_world(15, 10, seed=7)
-        self.assertEqual(hm_a, hm_b)
-        self.assertEqual(moi_a, moi_b)
-        terrains_a = [t.terrain for _, t in tm_a]
-        terrains_b = [t.terrain for _, t in tm_b]
+        ra = generate_world(15, 10, seed=7)
+        rb = generate_world(15, 10, seed=7)
+        self.assertEqual(ra.heightmap, rb.heightmap)
+        self.assertEqual(ra.moisture, rb.moisture)
+        terrains_a = [t.terrain for _, t in ra.tile_map]
+        terrains_b = [t.terrain for _, t in rb.tile_map]
         self.assertEqual(terrains_a, terrains_b)
 
     def test_generate_world_height_and_moisture_decorrelated(self):
-        _, hm, moi = generate_world(20, 12, seed=42)
-        # 兩張噪聲不該完全相同（決定性 OK，但內容應不同）。
-        self.assertNotEqual(hm, moi)
+        r = generate_world(20, 12, seed=42)
+        self.assertNotEqual(r.heightmap, r.moisture)
 
 
 if __name__ == "__main__":

@@ -56,7 +56,7 @@ def apply_biomes(
     span = max(1.0 - sea_level, 1e-9)
 
     for h, tile in tile_map:
-        if tile.terrain in (TerrainType.OCEAN, TerrainType.COAST):
+        if tile.terrain in (TerrainType.OCEAN, TerrainType.COAST, TerrainType.LAKE):
             continue
         elev = heightmap[h.r][h.q]
 

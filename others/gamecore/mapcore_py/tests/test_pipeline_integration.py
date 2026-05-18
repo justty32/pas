@@ -17,7 +17,7 @@ class TestFullPipeline(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.tile_map, cls.heightmap, cls.moisture = generate_world(
+        r = generate_world(
             30, 20, seed=42,
             sea_level=0.40,
             post_process=True,
@@ -25,6 +25,7 @@ class TestFullPipeline(unittest.TestCase):
             rivers=True,
             features=True,
         )
+        cls.tile_map, cls.heightmap, cls.moisture = r.tile_map, r.heightmap, r.moisture
 
     def test_returns_tilemap_with_features_attached(self):
         self.assertIsInstance(self.tile_map, TileMap)
@@ -72,8 +73,10 @@ class TestFullPipeline(unittest.TestCase):
         self.assertIsInstance(edges, list)
 
     def test_deterministic_with_same_seed(self):
-        tm1, hm1, _ = generate_world(20, 15, seed=99, post_process=True)
-        tm2, hm2, _ = generate_world(20, 15, seed=99, post_process=True)
+        r1 = generate_world(20, 15, seed=99, post_process=True)
+        r2 = generate_world(20, 15, seed=99, post_process=True)
+        tm1, hm1 = r1.tile_map, r1.heightmap
+        tm2, hm2 = r2.tile_map, r2.heightmap
         self.assertEqual(hm1, hm2)
         # 每格 terrain / hilliness / feature_id 都一致
         for h, t in tm1:
@@ -86,22 +89,20 @@ class TestFullPipeline(unittest.TestCase):
 
 class TestPipelineFlags(unittest.TestCase):
     def test_disable_features_leaves_no_features(self):
-        tm, _, _ = generate_world(15, 10, seed=1, features=False)
+        tm = generate_world(15, 10, seed=1, features=False).tile_map
         self.assertIsNone(tm.features)
-        # tile.feature_id 都該是 -1
         for _, t in tm:
             self.assertEqual(t.feature_id, -1)
 
     def test_disable_climate_leaves_hilliness_undefined(self):
-        tm, _, _ = generate_world(15, 10, seed=1, climate=False, features=False)
-        # 沒跑 climate 時 hilliness 應全為 UNDEFINED
+        tm = generate_world(15, 10, seed=1, climate=False, features=False).tile_map
         undefined_count = sum(
             1 for _, t in tm if t.hilliness == Hilliness.UNDEFINED
         )
         self.assertEqual(undefined_count, 15 * 10)
 
     def test_disable_rivers_leaves_no_river_edges(self):
-        tm, _, _ = generate_world(15, 10, seed=1, rivers=False)
+        tm = generate_world(15, 10, seed=1, rivers=False).tile_map
         self.assertEqual(list(iter_river_edges(tm)), [])
 
 

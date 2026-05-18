@@ -176,6 +176,37 @@ def compute_hilliness(
     return Hilliness.IMPASSABLE
 
 
+def _apply_rain_shadow(
+    rainfall_mm: list[list[float]],
+    heightmap: list[list[float]],
+    hill_threshold: float,
+    strength: float,
+    shadow_decay: float = 0.88,
+) -> None:
+    """西→東掃線雨影效果（in-place 修改 rainfall_mm）。
+
+    迎風面（山脈西側）：高程越高，地形雨加成越大（最多 +40%）。
+    背風面（山脈東側）：shadow 累積值造成降雨衰減，shadow_decay 控制每格衰減速率。
+    strength=0 為 no-op；strength=1 為最強效果。
+    """
+    H = len(rainfall_mm)
+    W = len(rainfall_mm[0])
+    for r in range(H):
+        shadow = 0.0
+        for q in range(W):
+            elev = heightmap[r][q]
+            if elev > hill_threshold:
+                barrier = (elev - hill_threshold) / max(1.0 - hill_threshold, 1e-9)
+                # 迎風面：地形雨加成，上限 +40% per barrier unit
+                rainfall_mm[r][q] = min(4000.0, rainfall_mm[r][q] * (1.0 + 0.4 * barrier * strength))
+                shadow = min(shadow + barrier * strength, 2.5)
+            elif shadow > 0.005:
+                # 背風面：雨影衰減
+                factor = max(0.2, 1.0 - shadow * 0.45 * strength)
+                rainfall_mm[r][q] = max(0.0, rainfall_mm[r][q] * factor)
+            shadow *= shadow_decay
+
+
 def apply_climate(
     tile_map: TileMap,
     heightmap: list[list[float]],
@@ -186,6 +217,7 @@ def apply_climate(
     hill_threshold: float = 0.70,
     mountain_threshold: float = 0.85,
     impassable_threshold: float = 0.95,
+    rain_shadow_strength: float = 0.0,
 ) -> tuple[list[list[float]], list[list[float]]]:
     """對 tile_map 算 temperature(°C) / rainfall(mm) / hilliness。
 
@@ -222,4 +254,10 @@ def apply_climate(
                 impassable_threshold=impassable_threshold,
                 rng=rng,
             )
+    if rain_shadow_strength > 0.0:
+        _apply_rain_shadow(
+            rainfall_mm, heightmap,
+            hill_threshold=hill_threshold,
+            strength=rain_shadow_strength,
+        )
     return temperature, rainfall_mm

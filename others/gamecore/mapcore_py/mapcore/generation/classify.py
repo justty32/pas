@@ -42,11 +42,13 @@ def heightmap_to_tilemap(
 
     tile_map = TileMap(width, height, default_terrain=TerrainType.PLAINS)
 
-    # Pass 1：海陸二分。
+    # Pass 1：海陸二分，同時記錄水深（sea_level - elev，值 ≥ 0）。
     for r in range(height):
         for q in range(width):
             if heightmap[r][q] <= sea_level:
-                tile_map.set_terrain(Hex(q, r), TerrainType.OCEAN)
+                tile = tile_map._rows[r][q]
+                tile.terrain = TerrainType.OCEAN
+                tile.water_depth = sea_level - heightmap[r][q]
 
     expand_coast(tile_map, coast_depth)
     return tile_map

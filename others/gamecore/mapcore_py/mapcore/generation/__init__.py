@@ -10,7 +10,8 @@ from .postprocess import (
     remove_small_islands,
     remove_small_lakes,
 )
-from .pipeline import generate_world
+from .pipeline import generate_world, WorldGenResult
+from .overlay import TerrainPatch, apply_terrain_patches
 
 __all__ = [
     "generate_heightmap",
@@ -25,4 +26,7 @@ __all__ = [
     "remove_small_islands",
     "remove_small_lakes",
     "generate_world",
+    "WorldGenResult",
+    "TerrainPatch",
+    "apply_terrain_patches",
 ]

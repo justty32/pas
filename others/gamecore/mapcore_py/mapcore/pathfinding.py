@@ -18,13 +18,16 @@ import math
 from typing import Optional
 
 from .hex import DIRECTIONS, Hex, distance
-from .map import TERRAIN_COST, TileMap, is_passable, terrain_cost
+from .map import TileMap, is_passable, terrain_cost
 from .rivers import get_river_strength
+from .terrain import DEFAULT_REGISTRY
 
 INF = math.inf
 # 最便宜可通行地形的成本；乘上 hex distance 作為 A* heuristic 的下界，確保 admissibility
-# （絕不高估剩餘成本）。若 TERRAIN_COST 中所有可通行值 >= 1.0，h = hex_distance 即夠 admissible。
-MIN_PASSABLE_COST = min(c for c in TERRAIN_COST.values() if math.isfinite(c))
+# （絕不高估剩餘成本）。若所有可通行地形成本 >= 1.0，h = hex_distance 即夠 admissible。
+MIN_PASSABLE_COST = min(
+    d.move_cost for d in DEFAULT_REGISTRY.all_defs() if math.isfinite(d.move_cost)
+)
 
 
 def astar(

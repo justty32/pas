@@ -142,16 +142,16 @@ class TestPostProcessIntegration(unittest.TestCase):
 
     def test_pipeline_deterministic_with_postprocess(self):
         from mapcore.generation.pipeline import generate_world
-        a, _, _ = generate_world(20, 15, seed=42, post_process=True)
-        b, _, _ = generate_world(20, 15, seed=42, post_process=True)
+        a = generate_world(20, 15, seed=42, post_process=True).tile_map
+        b = generate_world(20, 15, seed=42, post_process=True).tile_map
         terrains_a = [t.terrain for _, t in a]
         terrains_b = [t.terrain for _, t in b]
         self.assertEqual(terrains_a, terrains_b)
 
     def test_pipeline_post_process_off_vs_on(self):
         from mapcore.generation.pipeline import generate_world
-        raw, _, _ = generate_world(30, 20, seed=42, post_process=False)
-        clean, _, _ = generate_world(30, 20, seed=42, post_process=True)
+        raw = generate_world(30, 20, seed=42, post_process=False).tile_map
+        clean = generate_world(30, 20, seed=42, post_process=True).tile_map
         # post-process 後，小於 island_min_size 的陸地應該不存在了
         from mapcore.generation.postprocess import find_components, is_land
         for comp in find_components(clean, is_land):

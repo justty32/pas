@@ -24,15 +24,15 @@ generate_rivers 會用 add_river_flow 在共用邊上累加，讓主流流量自
 
 from __future__ import annotations
 
+import enum
 import heapq
 import math
 import random
 from typing import Iterator, Optional
 
 from .hex import DIRECTIONS, Hex
-from .map import TerrainType, TileMap
-
-WATER = (TerrainType.OCEAN, TerrainType.COAST)
+from .map import TileMap
+from .terrain import DEFAULT_REGISTRY
 
 # 渲染用：direction d 的邊由 hex 上哪兩個 corner 連起來（pointy-top，
 # corners 從 angle -30° 開始順時針：0=右上, 1=右下, 2=下, 3=左下, 4=左上, 5=上）
@@ -48,6 +48,29 @@ EDGE_CORNERS: tuple[tuple[int, int], ...] = (
 RIVER_BITS = 8
 RIVER_MASK = (1 << RIVER_BITS) - 1  # 0xFF
 RIVER_MAX_STRENGTH = RIVER_MASK     # 255
+
+# log scale 常數：strength = log(1 + flow*scale) * _LOG_STRENGTH_SCALE
+# 設計：spawn_threshold 對應 strength ≈ 90（RIVER 低端）；degrade_threshold ≈ 49（CREEK 中段）
+_LOG_STRENGTH_SCALE: float = 45.0
+
+_CREEK_THRESHOLD       = 80   # strength < 80  → CREEK
+_LARGE_RIVER_THRESHOLD = 160  # strength >= 160 → LARGE_RIVER
+
+
+class RiverClass(enum.IntEnum):
+    """河流分類，由 classify_river_strength() 依 strength 值決定。"""
+    CREEK       = 1  # 小溪（strength  1 ~ 79）
+    RIVER       = 2  # 河流（strength 80 ~ 159）
+    LARGE_RIVER = 3  # 大河（strength 160 ~ 255）
+
+
+def classify_river_strength(strength: int) -> RiverClass:
+    """依 strength (1-255) 回傳 RiverClass。strength=0 代表無河，不應呼叫此函式。"""
+    if strength < _CREEK_THRESHOLD:
+        return RiverClass.CREEK
+    if strength < _LARGE_RIVER_THRESHOLD:
+        return RiverClass.RIVER
+    return RiverClass.LARGE_RIVER
 
 
 # ---------------------------------------------------------------------------
@@ -130,8 +153,73 @@ def iter_river_edges(tile_map: TileMap) -> Iterator[tuple[Hex, int, int]]:
                 yield h, slot, s
 
 
-def _is_water(t: TerrainType) -> bool:
-    return t in WATER
+def _is_water(terrain_id: int) -> bool:
+    return DEFAULT_REGISTRY.is_water(terrain_id)
+
+
+def _hex_distance(a: Hex, b: Hex) -> int:
+    """Axial 座標 hex 距離。"""
+    return (abs(a.q - b.q) + abs(a.r - b.r) + abs(a.q + a.r - b.q - b.r)) // 2
+
+
+def _downsample_seeds(
+    seeds: list[Hex],
+    tile_map: TileMap,
+    heightmap: list[list[float]],
+    min_dist: int,
+) -> list[Hex]:
+    """貪心過濾：保留彼此距離 >= min_dist 的 seed。
+
+    優先保留「鄰接陸地最低高程」最小的 seed（最低窪出海口），
+    讓較高位置的 seed 流域被合併到附近低窪 seed，形成自然匯流而非平行河流。
+    """
+    if min_dist <= 1 or not seeds:
+        return seeds
+
+    def _min_adj_elev(h: Hex) -> float:
+        vals = [
+            heightmap[nb.r][nb.q]
+            for nb in h.neighbors()
+            if tile_map.in_bounds(nb) and not _is_water(tile_map.get(nb).terrain)
+        ]
+        return min(vals) if vals else 1.0
+
+    ordered = sorted(seeds, key=_min_adj_elev)  # 最低高程的 seed 最先保留
+    kept: list[Hex] = []
+    for s in ordered:
+        if all(_hex_distance(s, k) >= min_dist for k in kept):
+            kept.append(s)
+    return kept
+
+
+def _compute_water_component_sizes(tile_map: TileMap) -> dict[tuple[int, int], int]:
+    """BFS 找所有水體連通分量，回傳 {(q, r): 分量格數}（僅水格）。"""
+    visited: set[tuple[int, int]] = set()
+    result: dict[tuple[int, int], int] = {}
+    for h, tile in tile_map:
+        key = (h.q, h.r)
+        if key in visited or not _is_water(tile.terrain):
+            continue
+        comp: list[tuple[int, int]] = []
+        stack = [key]
+        while stack:
+            qr = stack.pop()
+            if qr in visited:
+                continue
+            visited.add(qr)
+            comp.append(qr)
+            for nb in Hex(qr[0], qr[1]).neighbors():
+                if not tile_map.in_bounds(nb):
+                    continue
+                nb_key = (nb.q, nb.r)
+                if nb_key not in visited:
+                    nb_tile = tile_map.get(nb)
+                    if nb_tile is not None and _is_water(nb_tile.terrain):
+                        stack.append(nb_key)
+        size = len(comp)
+        for qr in comp:
+            result[qr] = size
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +424,9 @@ def _hex_direction(a: Hex, b: Hex) -> Optional[int]:
 
 
 def _paint_edge(tile_map: TileMap, cur: Hex, direction: int, flow_value: float, scale: float) -> None:
-    strength = max(1, min(RIVER_MAX_STRENGTH, int(flow_value * scale)))
+    # log scale 壓縮：讓小溪到大河的 strength 均勻分布在 1-255，不會全部飽和到最大值
+    ref = flow_value * scale
+    strength = max(1, min(RIVER_MAX_STRENGTH, int(math.log1p(ref) * _LOG_STRENGTH_SCALE)))
     add_river_flow(tile_map, cur, direction, strength)
 
 
@@ -416,6 +506,8 @@ def generate_rivers(
     branch_chance: float = 0.3,
     flow_strength_scale: float = 0.05,
     evaporation_scale: float = 1.0,
+    min_sea_size: int = 1,
+    min_seed_spacing: int = 1,
 ) -> int:
     """RimWorld 風河流生成（對齊 projects/rimworld/.../WorldGenStep_Rivers.cs:30-210）。
 
@@ -436,6 +528,10 @@ def generate_rivers(
       branch_chance          分支機率（0~1）
       flow_strength_scale    flow → 0~255 strength 的比例（畫面寬度直接受影響）
       evaporation_scale      蒸發整體強度倍率
+      min_sea_size           水體連通分量 < 此格數的不作為 seed（過濾孤立小內海）
+      min_seed_spacing       相鄰 seed 的最小 hex 距離（1=不過濾）；
+                             距離不足時保留「鄰接最低高程」的 seed（低窪河優先），
+                             被捨棄 seed 的流域自動合併到最近保留 seed，形成匯流支流而非平行河流
 
     回傳：標記的河流邊數量（不去重，多源匯流時同條邊會被多次 add_river_flow 累加流量）。
     """
@@ -458,6 +554,20 @@ def generate_rivers(
     seeds = _get_coastal_water_tiles(tile_map)
     if not seeds:
         return 0
+
+    # 過濾孤立小水體：連通面積 < min_sea_size 的不作為 seed，
+    # 避免地圖邊緣的小內陸湖被大量河流灌入
+    if min_sea_size > 1:
+        comp_sizes = _compute_water_component_sizes(tile_map)
+        seeds = [s for s in seeds if comp_sizes.get((s.q, s.r), 0) >= min_sea_size]
+        if not seeds:
+            return 0
+
+    # 間距過濾：保留最低窪出海口，讓鄰近流域自然合併為匯流而非平行河
+    if min_seed_spacing > 1:
+        seeds = _downsample_seeds(seeds, tile_map, heightmap, min_seed_spacing)
+        if not seeds:
+            return 0
 
     parent = _flood_paths_with_cost_for_tree(tile_map, heightmap, seeds)
     children = _build_children(tile_map, parent)

@@ -8,9 +8,14 @@ from .hex import (
     ring,
     spiral,
 )
+from .terrain import (
+    TerrainDef,
+    TerrainRegistry,
+    DEFAULT_REGISTRY,
+    gen_default,
+)
 from .map import (
     TerrainType,
-    TERRAIN_COST,
     Tile,
     TileMap,
     is_passable,
@@ -28,7 +33,15 @@ from .rivers import (
     set_river_edge,
     set_river_strength,
 )
-from .generation import apply_biomes, generate_heightmap, generate_world, heightmap_to_tilemap
+from .generation import (
+    apply_biomes,
+    apply_terrain_patches,
+    generate_heightmap,
+    generate_world,
+    heightmap_to_tilemap,
+    TerrainPatch,
+    WorldGenResult,
+)
 
 __all__ = [
     "Hex",
@@ -39,8 +52,11 @@ __all__ = [
     "line",
     "ring",
     "spiral",
+    "TerrainDef",
+    "TerrainRegistry",
+    "DEFAULT_REGISTRY",
+    "gen_default",
     "TerrainType",
-    "TERRAIN_COST",
     "Tile",
     "TileMap",
     "is_passable",
@@ -59,5 +75,8 @@ __all__ = [
     "generate_heightmap",
     "heightmap_to_tilemap",
     "apply_biomes",
+    "apply_terrain_patches",
     "generate_world",
+    "TerrainPatch",
+    "WorldGenResult",
 ]
