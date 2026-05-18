@@ -241,16 +241,25 @@ MountainStrength(x, y) = (1.0 - |Noise(x, y)|) ^ p
 
 ---
 
-#### 斷層線板塊構造法 (Fault Line / Tectonic Plates)
+#### ✅ 斷層線板塊構造法 (Fault Line / Tectonic Plates)
+
+**已實作於 `mapcore/generation/heightmap.py:_make_plate_field`，是 `ridge_mode="plates"`（預設）的核心算法。**
 
 Civ5 在地球或大型地圖偏好此法，因為真實山脈由板塊擠壓形成，結果具備大局觀，能將大陸自然切分成數個地理區塊。
 
-**實作步驟：**
-1. 隨機撒 10～20 個核心點，用 Voronoi 圖將地圖劃分成多個「板塊」
-2. 找出所有相鄰板塊的交界線（一連串格子座標）
-3. 隨機挑選幾條邊界線作為「擠壓帶」（斷層線）
-4. 以交界線為中心，越靠近線的格子給越高的「山脈權重」
-5. 在山脈權重上疊加低幅度柏林噪聲，讓邊緣自然破碎起伏
+**實作細節（與一般描述的差異）：**
+1. 隨機撒 `num_plates`（預設 12）個 Voronoi 種子；對每格 tile 找最近與第二近的種子 (d1, d2)。
+2. 到 perpendicular bisector 的距離 = (d2 − d1) / 2；不需顯式建邊界線。
+3. `boundary_strength = smoothstep(1 − bd / plate_boundary_width_pixels)`，邊界中心為 1、遠端為 0。
+4. 走向：山脊沿邊界 = perpendicular 到 plate1→plate2 連線；推導出 `ca = -vy/|v|, sa = vx/|v|` 直接餵旋轉矩陣，繞過 heading 度數轉換。
+5. 主迴圈 inner 用 `local_w = ridge_weight × boundary_strength` 代替全域 ridge_weight；板塊內部 local_w≈0 自動回到純 fBm。
+
+**參數：**
+- `num_plates` (int, 預設 12) — 越多 → 邊界越密、山脈越短
+- `plate_boundary_width` (float, 預設 0.08) — 邊界帶寬度（以 min(W,H) 為 1）
+
+**對照舊行為：**
+若要回到「整張地圖橫貫條紋」風格，傳 `ridge_mode="global"`；`ridge_direction` / `ridge_direction_variation` 僅在 global 模式生效。
 
 ---
 

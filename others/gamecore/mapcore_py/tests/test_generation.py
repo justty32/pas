@@ -75,6 +75,89 @@ class TestParameterValidation(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_heightmap(10, 10, base_frequency=0)
 
+    def test_ridge_mode_invalid(self):
+        with self.assertRaises(ValueError):
+            generate_heightmap(10, 10, seed=0, ridge_weight=0.5, ridge_mode="bogus")
+
+    def test_num_plates_too_small(self):
+        with self.assertRaises(ValueError):
+            generate_heightmap(
+                10, 10, seed=0, ridge_weight=0.5, ridge_mode="plates", num_plates=1
+            )
+
+    def test_plate_boundary_width_must_be_positive(self):
+        with self.assertRaises(ValueError):
+            generate_heightmap(
+                10, 10, seed=0, ridge_weight=0.5,
+                ridge_mode="plates", plate_boundary_width=0.0,
+            )
+
+
+class TestPlateRidge(unittest.TestCase):
+    """ridge_mode='plates' 把山脊鎖在 Voronoi 邊界帶，山脈長度有限。"""
+
+    def test_plate_mode_in_unit_interval(self):
+        hm = generate_heightmap(
+            40, 30, seed=42, ridge_weight=1.0,
+            ridge_mode="plates", num_plates=8, plate_boundary_width=0.1,
+        )
+        for row in hm:
+            for v in row:
+                self.assertGreaterEqual(v, 0.0)
+                self.assertLessEqual(v, 1.0)
+
+    def test_plate_mode_deterministic(self):
+        kw = dict(seed=7, ridge_weight=0.8, ridge_mode="plates",
+                  num_plates=6, plate_boundary_width=0.1)
+        a = generate_heightmap(30, 30, **kw)
+        b = generate_heightmap(30, 30, **kw)
+        self.assertEqual(a, b)
+
+    def test_plate_mode_differs_from_global(self):
+        # 同 seed 下，plates 與 global 應產生不同結果（plate field 對山脊空間調制）
+        kw = dict(seed=7, ridge_weight=1.0)
+        gp = generate_heightmap(30, 30, ridge_mode="plates", num_plates=6, **kw)
+        gg = generate_heightmap(30, 30, ridge_mode="global", **kw)
+        self.assertNotEqual(gp, gg)
+
+    def test_plate_mode_no_ridge_when_weight_zero(self):
+        # ridge_weight=0 時不該觸發 plate field 計算路徑差異：
+        # 兩種模式輸出必須完全一致（純 fBm）
+        kw = dict(seed=3, ridge_weight=0.0)
+        a = generate_heightmap(20, 20, ridge_mode="plates", **kw)
+        b = generate_heightmap(20, 20, ridge_mode="global", **kw)
+        self.assertEqual(a, b)
+
+    def test_plate_mode_localizes_ridges(self):
+        # 局部化驗證：plates 模式下，地圖內陸有大面積接近 fBm（低 ridge 貢獻），
+        # 而 global 模式下所有 tile 都受 ridge fold 影響。
+        # 取「ridge_weight=1 與 ridge_weight=0 的差」絕對值最大值作指標：
+        # plates 應產生大量接近 0 的 tile（板塊內部），global 不會。
+        seed = 11
+        w, h = 50, 50
+        base = generate_heightmap(w, h, seed=seed, ridge_weight=0.0)
+        plates = generate_heightmap(
+            w, h, seed=seed, ridge_weight=1.0,
+            ridge_mode="plates", num_plates=6, plate_boundary_width=0.05,
+        )
+        glob = generate_heightmap(
+            w, h, seed=seed, ridge_weight=1.0, ridge_mode="global",
+        )
+
+        def near_base_ratio(grid):
+            # 比例：本格與純 fBm 相差不到 0.02 的 tile 數
+            n = 0
+            for r in range(h):
+                for q in range(w):
+                    if abs(grid[r][q] - base[r][q]) < 0.02:
+                        n += 1
+            return n / (w * h)
+
+        # plates：板塊內部佔多數，"接近 fBm" 的格子應佔相當比例（>20%）
+        # global：每格都被 ridge 改動，幾乎沒有接近 fBm 的格子（<10%）
+        self.assertGreater(near_base_ratio(plates), 0.20)
+        self.assertLess(near_base_ratio(glob), 0.10)
+
 
 if __name__ == "__main__":
     unittest.main()

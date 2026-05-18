@@ -19,6 +19,87 @@ from typing import Optional
 # 0.1 = 沿稜線只看 10% coarse grid → 幾乎純 1D 橫向 noise → 形成清晰條帶
 _RIDGE_ANISOTROPY = 0.1
 
+# plate seed 衍生用 XOR 常數；跟 ridge_direction_variation 的 0x9E3779B9 區隔
+# 避免兩個獨立 rng 共用同個衍生 seed 造成關聯
+_PLATE_SEED_XOR = 0x517CC1B7
+
+
+def _make_plate_field(
+    width: int,
+    height: int,
+    num_plates: int,
+    boundary_width_pixels: float,
+    rng: random.Random,
+) -> tuple[list[list[float]], list[list[float]], list[list[float]]]:
+    """以 Voronoi 方式生成板塊邊界場，供 ridge_mode="plates" 局部化山脊使用。
+
+    對齊現實構造地質：地圖切成 num_plates 個 Voronoi cell（板塊），對每格 tile：
+      1. 找最近與第二近的 plate 種子 (d1, d2)
+      2. 邊界距離 = (d2 - d1) / 2（到 perpendicular bisector）
+      3. boundary_strength = smoothstep falloff（邊界中心 1、遠端 0）
+      4. 本地山脊走向 = perpendicular 到 plate1→plate2 連線
+
+    旋轉矩陣對齊現有 `rx = dx*ca + dy*sa, ry = -dx*sa + dy*ca` 慣例：
+    要讓 rx（壓縮軸）對齊 perpendicular(v)，推導出 ca = -vy/|v|, sa = vx/|v|。
+    這樣不需走「heading 度數→math angle→cos/sin」三段轉換，數值上也更穩定。
+
+    Returns:
+        boundary_strength [H][W] ∈ [0, 1]
+        cos_grid, sin_grid [H][W]（每格獨立的旋轉矩陣）
+    """
+    if num_plates < 2:
+        raise ValueError(f"num_plates must be >= 2 for plates mode, got {num_plates}")
+
+    margin = max(min(width, height) * 0.02, 1.0)
+    seeds: list[tuple[float, float]] = [
+        (
+            rng.uniform(margin, max(width - 1 - margin, margin + 1.0)),
+            rng.uniform(margin, max(height - 1 - margin, margin + 1.0)),
+        )
+        for _ in range(num_plates)
+    ]
+
+    bs = [[0.0] * width for _ in range(height)]
+    cg = [[0.0] * width for _ in range(height)]
+    sg = [[0.0] * width for _ in range(height)]
+
+    inv_bw = 1.0 / boundary_width_pixels if boundary_width_pixels > 0.0 else 0.0
+
+    for r in range(height):
+        for q in range(width):
+            d1_sq = d2_sq = float("inf")
+            i1 = i2 = 0
+            for i, (sx, sy) in enumerate(seeds):
+                d = (q - sx) * (q - sx) + (r - sy) * (r - sy)
+                if d < d1_sq:
+                    d2_sq, i2 = d1_sq, i1
+                    d1_sq, i1 = d, i
+                elif d < d2_sq:
+                    d2_sq, i2 = d, i
+            d1 = d1_sq ** 0.5
+            d2 = d2_sq ** 0.5
+            bd = (d2 - d1) * 0.5
+            if inv_bw > 0.0:
+                t = 1.0 - bd * inv_bw
+                if t > 0.0:
+                    # smoothstep：邊界中心快速上升，遠端平滑歸零，避免硬邊
+                    bs[r][q] = t * t * (3.0 - 2.0 * t)
+
+            sx1, sy1 = seeds[i1]
+            sx2, sy2 = seeds[i2]
+            vx = sx2 - sx1
+            vy = sy2 - sy1
+            vlen = (vx * vx + vy * vy) ** 0.5
+            if vlen < 1e-9:
+                # 退化情況（兩種子重疊）：用任意方向，反正 boundary_strength 接近 0
+                cg[r][q] = 1.0
+                sg[r][q] = 0.0
+            else:
+                cg[r][q] = -vy / vlen
+                sg[r][q] = vx / vlen
+
+    return bs, cg, sg
+
 # 所有合法的 shape 名稱；同時作為文件與驗證用
 _VALID_SHAPES: frozenset[str] = frozenset({
     "island",                 # 單一大島（原有）
@@ -223,8 +304,11 @@ def generate_heightmap(
     persistence: float = 0.5,
     base_frequency: int = 4,
     ridge_weight: float = 0.0,
+    ridge_mode: str = "plates",
     ridge_direction: float = 0.0,
     ridge_direction_variation: float = 90.0,
+    num_plates: int = 12,
+    plate_boundary_width: float = 0.08,
     shape: Optional[str] = None,
     shape_strength: float = 0.85,
     shape_params: Optional[dict] = None,
@@ -238,11 +322,19 @@ def generate_heightmap(
     - persistence：每往細一層振幅乘以多少 (0~1)。0.5 是常用值。
     - base_frequency：最粗那層的網格邊長 (cells)；2 表示 3×3 的 coarse grid。
     - ridge_weight：0=純 fBm 平滑山丘，1=純山脊 noise 尖銳稜線；0.5 為混合。
-    - ridge_direction：山脈主走向（度，從北方順時針）。0=南北，90=東西。
-      作為 ridge_direction_variation 擾動的基準中心。
-    - ridge_direction_variation：走向擾動總幅度（度）。0=固定走向；90=隨機偏移 ±45°；
-      180=完全隨機（ridge_direction 無效）。預設 90.0，讓山脈自然彎曲。
-      擾動由低頻 noise 驅動，確保走向變化緩慢連續，而非像素級跳變。
+    - ridge_mode：山脊空間分布模式
+        "plates"（預設）— 板塊邊界局部化：Voronoi 切板塊，僅邊界帶套用 ridge fold，
+                          山脈長度自然有限、走向沿邊界，最接近現實構造地質。
+        "global"        — 全域：每格 tile 都套 ridge fold，山脊跨整張地圖（舊行為，
+                          適合做純條紋風格的地圖）。
+    - ridge_direction / ridge_direction_variation：僅 ridge_mode="global" 使用。
+        ridge_direction：基準走向（度，從北方順時針）。0=南北，90=東西。
+        ridge_direction_variation：走向擾動幅度（度）。0=固定；90=±45°；180=隨機。
+        擾動由低頻 noise 驅動，使全域走向緩慢連續變化。
+    - num_plates：僅 ridge_mode="plates" 使用；板塊數量。預設 12，越多 → 邊界越密、
+                  山脈越短。最小 2。
+    - plate_boundary_width：僅 ridge_mode="plates" 使用；邊界帶寬度，以 min(W,H) 為 1。
+                            預設 0.08 → 邊界帶約 8% 短邊；過寬會讓 ridges 又連回大塊。
     - shape：大陸形狀遮罩。None=關；合法值：
         "island"               — 單一大島
         "archipelago"          — 少量中型群島
@@ -266,6 +358,12 @@ def generate_heightmap(
         raise ValueError(f"base_frequency must be >= 1, got {base_frequency}")
     if not 0.0 <= ridge_weight <= 1.0:
         raise ValueError(f"ridge_weight must be in [0, 1], got {ridge_weight}")
+    if ridge_mode not in ("global", "plates"):
+        raise ValueError(f"ridge_mode must be 'global' or 'plates', got {ridge_mode!r}")
+    if plate_boundary_width <= 0.0:
+        raise ValueError(
+            f"plate_boundary_width must be > 0, got {plate_boundary_width}"
+        )
     if shape is not None and shape not in _VALID_SHAPES:
         raise ValueError(
             f"shape must be one of {sorted(_VALID_SHAPES)} or None, got {shape!r}"
@@ -282,10 +380,21 @@ def generate_heightmap(
     _use_ridge = ridge_weight > 0.0
     _cos_grid: Optional[list[list[float]]] = None
     _sin_grid: Optional[list[list[float]]] = None
+    _gate: Optional[list[list[float]]] = None  # plates 模式下的 boundary_strength
     _cos_a = _sin_a = 0.0  # 固定走向時使用
 
     if _use_ridge:
-        if ridge_direction_variation > 0.0:
+        if ridge_mode == "plates":
+            # 用獨立 rng（XOR seed）防止污染主 octave 隨機序列；
+            # 跟 ridge_direction_variation 的 0x9E3779B9 採不同常數避免衍生關聯
+            _plate_rng = random.Random(
+                None if seed is None else seed ^ _PLATE_SEED_XOR
+            )
+            bw_px = plate_boundary_width * min(width, height)
+            _gate, _cos_grid, _sin_grid = _make_plate_field(
+                width, height, num_plates, bw_px, _plate_rng
+            )
+        elif ridge_direction_variation > 0.0:
             # 方向擾動：低頻 noise 讓每格走向緩緩漂移，形成自然彎曲山脈
             # 使用獨立 rng（XOR seed），不污染主 octave 的隨機序列
             dir_freq = max(2, base_frequency // 2)
@@ -328,22 +437,30 @@ def generate_heightmap(
                 cx = q * x_scale
                 raw = _bilinear(coarse, cx, cy)
                 if _use_ridge:
-                    # 取局部（或全局）走向的旋轉矩陣
-                    if _cos_grid is not None:
-                        _ca = _cos_grid[r][q]
-                        _sa = _sin_grid[r][q]
+                    # plates 模式：local_w = ridge_weight × boundary_strength
+                    # 板塊內部 _gate≈0 → local_w≈0 → 純 fBm，自然形成低地
+                    # 邊界帶 _gate≈1 → local_w≈ridge_weight → 套 ridge fold
+                    if _gate is not None:
+                        local_w = ridge_weight * _gate[r][q]
                     else:
-                        _ca = _cos_a
-                        _sa = _sin_a
-                    # 各向異性採樣：rx=沿稜線（壓縮）, ry=跨稜線（全幅）
-                    dx = cx - hx
-                    dy = cy - hy
-                    rx = dx * _ca + dy * _sa
-                    ry = -dx * _sa + dy * _ca
-                    raw_dir = _bilinear(coarse, rx * _RIDGE_ANISOTROPY + hx, ry + hy)
-                    # 折疊：0.5→峰頂(1), 0/1→谷底(0)；形成尖銳稜線
-                    fold = 1.0 - abs(2.0 * raw_dir - 1.0)
-                    raw = raw_dir * (1.0 - ridge_weight) + fold * ridge_weight
+                        local_w = ridge_weight
+                    if local_w > 0.0:
+                        # 取局部（或全局）走向的旋轉矩陣
+                        if _cos_grid is not None:
+                            _ca = _cos_grid[r][q]
+                            _sa = _sin_grid[r][q]
+                        else:
+                            _ca = _cos_a
+                            _sa = _sin_a
+                        # 各向異性採樣：rx=沿稜線（壓縮）, ry=跨稜線（全幅）
+                        dx = cx - hx
+                        dy = cy - hy
+                        rx = dx * _ca + dy * _sa
+                        ry = -dx * _sa + dy * _ca
+                        raw_dir = _bilinear(coarse, rx * _RIDGE_ANISOTROPY + hx, ry + hy)
+                        # 折疊：0.5→峰頂(1), 0/1→谷底(0)；形成尖銳稜線
+                        fold = 1.0 - abs(2.0 * raw_dir - 1.0)
+                        raw = raw_dir * (1.0 - local_w) + fold * local_w
                 grid[r][q] += weight * raw
 
     # 用累計權重正規化，確保輸出仍在 [0, 1]，跟 persistence/octaves 無關
