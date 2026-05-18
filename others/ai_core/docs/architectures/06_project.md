@@ -40,6 +40,29 @@ ai_core/
 └── tests/
 ```
 
+### §10.1 `protocol/` —— function 作者與 manager 作者的共用 helper
+
+`src/ai_core/protocol/` 是**內部 helper 的集中出口**。所有 function 作者（含 ai_core 自身元件）在實作 `--metadata`、`--json-errors`、token 處理、queue / rate-limit / graceful shutdown 等樣板時，**都應該優先 import 此模組**而非自己重抄。
+
+設計動機（出自 `thinking.md` 第 4–5 行）：
+
+> 「以後在製作 function 時，處理那些 metadata 的常用操作如檢查某個 key 存不存在之類，可以弄成一個 python module 方便使用。server 之類也是。」
+
+| 子模組 | 已存在 | 內容 | 主要服務對象 |
+|---|---|---|---|
+| `metadata.py` | ✅ | `fetch_metadata(path) -> MetadataView`、`make_json_error` / `print_json_error` / `should_use_json_errors`（§4.6 / §5.1） | 所有 function、hub、caller |
+| `env.py` | ✅ | 全系統共用環境變數名稱常數（`AI_CORE_TOKEN` / `AI_CORE_FUNCS_DIR` / …） | 所有元件 |
+| `server.py` | ⏳ 規劃 | Singleton Resource Manager Pattern 的 server 樣板：token 產生 / 讀檔（§6.13）、FastAPI app 工廠、graceful shutdown、`--metadata` / `--entry-metadata` 端點骨架 | 任何 server-backed function、第二個以後的 singleton manager |
+| `queue.py` | ⏳ 規劃 | 通用 per-entry FIFO queue + worker + `time_to_wait_ms` 逾時處理（從 `entry_manager/queue.py` 抽離通用部分） | 任何 entry-managing singleton |
+| `ratelimit.py` | ⏳ 規劃 | rpm / tokens / cost 三軸限額的通用實作（從 `entry_manager/ratelimit.py` 抽離通用部分） | 同上 |
+
+**抽取時機（YAGNI）**：⏳ 規劃中的三項**不在第一版做**，而是等**第二個 singleton manager 出現**時才從 `entry_manager/` 抽出，避免過早抽象。但目錄位置先預留，docstring 也指向此處，讓未來抽取時不需要改 import path 大手術。
+
+**對 function 作者的承諾**：
+- `protocol/` 的 API 一旦穩定就盡量不破壞性變更
+- 所有 helper 都允許 graceful 降級（缺欄位用合理預設、不丟例外給 caller），與 §4.6 / §5 的容錯原則一致
+- function 作者**不需要也不應該** import `entry_manager/` / `hub/` / 其他元件內部，只應使用 `protocol/`
+
 ---
 
 ## §11. CLI 入口（`pyproject.toml`）
