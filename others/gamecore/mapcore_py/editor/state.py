@@ -27,6 +27,14 @@ class EditorState:
     current_tool: ToolName = "raise"
     brush_size: int = 3
     brush_strength: float = 0.05
+    brush_rate: float = 10.0   # applications per second while button held
+    brush_falloff: float = 2.0  # ridge/rift radial falloff exponent (1=linear, higher=steeper)
+    brush_chaos: float = 0.0    # ridge/rift shape noise (0=smooth circle, 1=jagged)
+    brush_spokes: int = 0            # ridge/rift radial arms (fixed count when rand=False)
+    brush_spokes_rand: bool = False  # randomise spoke count each stamp
+    brush_spokes_min: int = 2        # random lower bound
+    brush_spokes_max: int = 6        # random upper bound
+    brush_spokes_invert: bool = False  # True = spokes go opposite direction to base tool
 
     # 顯示選項
     overlay: OverlayName = "height"

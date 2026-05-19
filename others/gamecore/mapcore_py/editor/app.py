@@ -6,13 +6,14 @@ Launch: python run_editor.py
 from __future__ import annotations
 
 import pickle
+import time
 from pathlib import Path
 
 import dearpygui.dearpygui as dpg
 
 from .state import EditorState
 from .hex_layout import hex_to_pixel, pixel_to_hex, hex_corners
-from .tools import apply_brush, apply_ridge, apply_rift, toggle_water_source
+from .tools import apply_brush, apply_ridge_stamp, apply_rift_stamp, toggle_water_source
 from .sim.hydrology import run_flood_fill
 from .sim.climate import run_climate
 
@@ -25,24 +26,34 @@ _CAM_INIT = 40.0   # initial camera offset (pixels)
 
 _BORDER = (0, 0, 0, 25)
 
+# Height overlay: each band fades from a light colour (band start) to a dark colour (band end).
+# At the threshold the next band starts bright again, creating visible elevation zones.
+_HEIGHT_BANDS = (
+    # (h_end, colour_at_t=0,          colour_at_t=1         )
+    (0.35,  ( 40,  95, 195),  ( 10,  30,  90)),  # ocean
+    (0.40,  (205, 185, 120),  (165, 148,  95)),  # beach
+    (0.58,  (100, 178,  62),  ( 55, 120,  30)),  # lowland
+    (0.72,  (148, 132,  84),  ( 95,  85,  50)),  # highland
+    (0.87,  (132, 122, 116),  ( 85,  78,  74)),  # mountain
+    (1.00,  (242, 242, 246),  (185, 183, 190)),  # snow
+)
+
 # ── Color helpers ────────────────────────────────────────────────────────────
 
 def _height_color(h: float, is_ocean: bool) -> tuple[int, int, int, int]:
-    if is_ocean:
-        t = h * 2.5
-        return (int(20 + 40 * t), int(50 + 90 * t), int(120 + 80 * t), 255)
-    if h < 0.10:
-        return (180, 155, 100, 255)
-    if h < 0.38:
-        return (int(90 + 40*h*3), int(170 - 20*h*3), int(70 + 10*h*3), 255)
-    if h < 0.58:
-        return (int(110 + 30*h*2), int(140 + 10*h*2), int(55 + 10*h*2), 255)
-    if h < 0.72:
-        return (int(140 + 30*h), int(110 + 20*h), int(55 + 10*h), 255)
-    if h < 0.87:
-        return (110, 100, 95, 255)
-    v = int(195 + 60 * (h - 0.87) / 0.13)
-    return (v, v, v, 255)
+    prev = 0.0
+    for h_end, c0, c1 in _HEIGHT_BANDS:
+        if h <= h_end:
+            bw = h_end - prev
+            t  = (h - prev) / bw if bw > 0.0 else 0.0
+            return (
+                int(c0[0] + (c1[0] - c0[0]) * t),
+                int(c0[1] + (c1[1] - c0[1]) * t),
+                int(c0[2] + (c1[2] - c0[2]) * t),
+                255,
+            )
+        prev = h_end
+    return (242, 242, 246, 255)
 
 
 def _temp_color(t: float) -> tuple[int, int, int, int]:
@@ -62,9 +73,11 @@ def _rain_color(rv: float) -> tuple[int, int, int, int]:
 class App:
     def __init__(self, width: int = 60, height: int = 40) -> None:
         self.state   = EditorState(width=width, height=height)
-        self._dirty  = True
-        self._drag_start: tuple[int, int] | None = None
-        self._last_hex:   tuple[int, int] | None = None
+        self._dirty         = True
+        self._pan_last:      tuple[float, float] | None = None
+        self._last_tool_hex: tuple[int, int]   | None = None
+        self._rtool_active   = False
+        self._last_tick_t    = 0.0
         self._cam_x  = _CAM_INIT
         self._cam_y  = _CAM_INIT
         # Cached screen-space origin of the canvas drawlist.
@@ -88,6 +101,7 @@ class App:
         self.redraw_canvas()
 
         while dpg.is_dearpygui_running():
+            self._tick()
             if self._dirty:
                 self.redraw_canvas()
                 self._dirty = False
@@ -128,6 +142,47 @@ class App:
                 label="Strength", tag="brush_str",
                 min_value=0.01, max_value=0.25, default_value=self.state.brush_strength,
                 callback=lambda s, a: setattr(self.state, "brush_strength", a),
+            )
+            dpg.add_slider_float(
+                label="Rate/s", tag="brush_rate",
+                min_value=1.0, max_value=60.0, default_value=self.state.brush_rate,
+                callback=lambda s, a: setattr(self.state, "brush_rate", a),
+            )
+            dpg.add_text("Ridge / Rift", color=(160, 160, 160))
+            dpg.add_slider_float(
+                label="Falloff", tag="brush_falloff",
+                min_value=1.0, max_value=4.0, default_value=self.state.brush_falloff,
+                callback=lambda s, a: setattr(self.state, "brush_falloff", a),
+            )
+            dpg.add_slider_float(
+                label="Chaos", tag="brush_chaos",
+                min_value=0.0, max_value=1.0, default_value=self.state.brush_chaos,
+                callback=lambda s, a: setattr(self.state, "brush_chaos", a),
+            )
+            dpg.add_slider_int(
+                label="Spokes", tag="brush_spokes",
+                min_value=0, max_value=8, default_value=self.state.brush_spokes,
+                callback=lambda s, a: setattr(self.state, "brush_spokes", a),
+            )
+            dpg.add_checkbox(
+                label="Random", tag="brush_spokes_rand",
+                default_value=self.state.brush_spokes_rand,
+                callback=lambda s, a: setattr(self.state, "brush_spokes_rand", a),
+            )
+            dpg.add_slider_int(
+                label="  Min", tag="brush_spokes_min",
+                min_value=0, max_value=8, default_value=self.state.brush_spokes_min,
+                callback=lambda s, a: setattr(self.state, "brush_spokes_min", a),
+            )
+            dpg.add_slider_int(
+                label="  Max", tag="brush_spokes_max",
+                min_value=0, max_value=8, default_value=self.state.brush_spokes_max,
+                callback=lambda s, a: setattr(self.state, "brush_spokes_max", a),
+            )
+            dpg.add_checkbox(
+                label="Invert Spokes", tag="brush_spokes_invert",
+                default_value=self.state.brush_spokes_invert,
+                callback=lambda s, a: setattr(self.state, "brush_spokes_invert", a),
             )
 
             dpg.add_spacing(count=2)
@@ -327,58 +382,57 @@ class App:
 
     # ── Event handlers ────────────────────────────────────────────────────────
 
-    def _on_mouse_move(self, sender, app_data) -> None:
-        if not dpg.is_item_hovered("canvas_window"):
+    def _tick(self) -> None:
+        """Called every frame. Continuously applies the active tool while right button is held."""
+        if not self._rtool_active or not dpg.is_mouse_button_down(1):
+            self._last_tool_hex = None
             return
-        if self.state.current_tool not in ("raise", "lower"):
+        now = time.monotonic()
+        if now - self._last_tick_t < 1.0 / self.state.brush_rate:
             return
-        if not (dpg.is_mouse_button_down(0) or dpg.is_mouse_button_down(1)):
-            return
+        self._last_tick_t = now
         q, r = self._get_hex()
-        if (q, r) == self._last_hex or not self.state.in_bounds(q, r):
+        if not self.state.in_bounds(q, r):
             return
-        self._last_hex = (q, r)
-        delta = self.state.brush_strength
-        if dpg.is_mouse_button_down(1) or self.state.current_tool == "lower":
-            delta = -delta
-        apply_brush(self.state, q, r, delta)
+        tool = self.state.current_tool
+        if tool in ("raise", "lower"):
+            delta = self.state.brush_strength if tool == "raise" else -self.state.brush_strength
+            apply_brush(self.state, q, r, delta)
+            self._dirty = True
+        elif tool in ("ridge", "rift"):
+            (apply_ridge_stamp if tool == "ridge" else apply_rift_stamp)(self.state, q, r)
+            self._dirty = True
+        elif tool == "water_source":
+            if (q, r) != self._last_tool_hex:
+                self._last_tool_hex = (q, r)
+                toggle_water_source(self.state, q, r)
+                self._dirty = True
+
+    def _on_mouse_move(self, sender, app_data) -> None:
+        """Left button drag = pan camera."""
+        if not dpg.is_mouse_button_down(0) or self._pan_last is None:
+            return
+        mx, my = dpg.get_mouse_pos(local=False)
+        self._cam_x += mx - self._pan_last[0]
+        self._cam_y += my - self._pan_last[1]
+        self._pan_last = (mx, my)
         self._dirty = True
 
     def _on_mouse_click(self, sender, app_data) -> None:
         if not dpg.is_item_hovered("canvas_window"):
             return
-        button = app_data
-        q, r   = self._get_hex()
-        if not self.state.in_bounds(q, r):
-            return
-        tool = self.state.current_tool
-        if tool in ("raise", "lower"):
-            delta = self.state.brush_strength * (1 if tool == "raise" and button == 0 else -1)
-            apply_brush(self.state, q, r, delta)
-            self._last_hex = (q, r)
-            self._dirty = True
-        elif tool == "water_source" and button == 0:
-            toggle_water_source(self.state, q, r)
-            self._dirty = True
-        elif tool in ("ridge", "rift") and button == 0:
-            self._drag_start = (q, r)
+        if app_data == 0:
+            mx, my = dpg.get_mouse_pos(local=False)
+            self._pan_last = (mx, my)
+        elif app_data == 1:
+            self._rtool_active = True
 
     def _on_mouse_release(self, sender, app_data) -> None:
-        if app_data != 0:
-            return
-        self._last_hex = None
-        if self._drag_start is None:
-            return
-        q, r = self._get_hex()
-        q0, r0 = self._drag_start
-        self._drag_start = None
-        if not self.state.in_bounds(q, r):
-            return
-        if self.state.current_tool == "ridge":
-            apply_ridge(self.state, q0, r0, q, r)
-        elif self.state.current_tool == "rift":
-            apply_rift(self.state, q0, r0, q, r)
-        self._dirty = True
+        if app_data == 0:
+            self._pan_last = None
+        elif app_data == 1:
+            self._rtool_active = False
+            self._last_tool_hex = None
 
     def _on_mouse_wheel(self, sender, app_data) -> None:
         if not dpg.is_item_hovered("canvas_window"):
