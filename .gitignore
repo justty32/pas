@@ -12,6 +12,13 @@ Thumbs.db
 node_modules/
 dist/
 build/
+**/build*/
 project_analysis
 
 .venv
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# 實驗性/暫存專案目錄
+*_square/

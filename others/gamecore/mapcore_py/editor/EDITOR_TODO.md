@@ -1,32 +1,14 @@
 # Editor 待辦功能
 
-## 待實作
+## 已完成
 
-### A. 隨機 Rate/s（平滑插值）
+### A. 隨機 Rate/s（平滑插值）— 完成
 
-目標：讓筆刷每秒影響次數可以在隨機模式下平滑波動，而非跳變。
-
-**需要的狀態欄位（`state.py`）：**
-- `brush_rate_rand: bool = False`
-- `brush_rate_min: float = 5.0`
-- `brush_rate_max: float = 30.0`
-
-**`_tick()` 邏輯（`app.py`）：**
-- 維護 `_rate_current`（當前實際 rate）和 `_rate_target`（目標 rate）
-- 每隔 `_rate_change_interval`（例如 1–2 秒，可用另一個隨機值）重新抽一個新的 `_rate_target`
-- 每幀將 `_rate_current` 朝 `_rate_target` lerp，或用 cos 曲線過渡：
-  ```
-  # 方案一：lerp
-  _rate_current += (target - current) * dt * smooth_factor
-  # 方案二：cos 過渡（段內 t 從 0→1）
-  actual_rate = rate_a + (rate_b - rate_a) * 0.5 * (1 - cos(t * π))
-  ```
-
-**UI 控件：**
-- `Random Rate` 勾選框
-- `Rate Min` / `Rate Max` 滑條（1.0–60.0）
+`state.py` 加 `brush_rate_rand` / `brush_rate_min` / `brush_rate_max`；`app.py` 在 `_tick()` 透過 `_effective_rate(now)` 做 cos 過渡，每 1–2 秒（隨機）切下一段，UI 加 `Random Rate` 勾選框與 Min/Max 兩條滑條。
 
 ---
+
+## 待實作
 
 ### B. 草繪式山脈生成（Sketch-to-Ridge）
 

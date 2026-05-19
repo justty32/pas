@@ -58,13 +58,20 @@ def pixel_to_hex(
     ox: float = 0.0,
     oy: float = 0.0,
 ) -> tuple[int, int]:
-    """像素 → (q, r) offset 座標，使用 cube rounding 精確處理格邊界。"""
+    """像素 → (q, r) offset 座標，使用 cube rounding 精確處理格邊界。
+
+    走 axial fractional → cube_round → odd-r offset，避免依賴 round(r_f) 的奇偶判定
+    （那會在 .5 邊界吃到 banker's rounding）。
+    """
     lx = (px - ox) / size
     ly = (py - oy) / size
-    r_f = ly / 1.5
-    xf  = lx / SQRT3 - 0.5 * (round(r_f) & 1)
-    zf  = r_f
-    yf  = -xf - zf
+    # Pointy-top axial inverse (Red Blob): q_ax = √3/3·x − 1/3·y, r_ax = 2/3·y
+    qf_ax = (SQRT3 / 3.0) * lx - (1.0 / 3.0) * ly
+    rf_ax = (2.0 / 3.0) * ly
+    # axial → cube: x=q, z=r, y=-x-z
+    xf = qf_ax
+    zf = rf_ax
+    yf = -xf - zf
     return _from_cube(*_cube_round(xf, yf, zf))
 
 

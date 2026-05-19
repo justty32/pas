@@ -5,7 +5,9 @@ Launch: python run_editor.py
 """
 from __future__ import annotations
 
+import math
 import pickle
+import random as _random
 import time
 from pathlib import Path
 
@@ -23,6 +25,7 @@ PANEL_W   = 240
 CANVAS_W  = 1140   # fixed drawlist width
 CANVAS_H  = 790    # fixed drawlist height
 _CAM_INIT = 40.0   # initial camera offset (pixels)
+_TARGET_FRAME_DT = 1.0 / 60.0   # cap render loop at ~60 FPS to stop CPU spinning
 
 _BORDER = (0, 0, 0, 25)
 
@@ -40,18 +43,38 @@ _HEIGHT_BANDS = (
 
 # ── Color helpers ────────────────────────────────────────────────────────────
 
-def _height_color(h: float, is_ocean: bool) -> tuple[int, int, int, int]:
+_OCEAN_BAND = _HEIGHT_BANDS[0]   # (h_end, light, dark)
+_LAND_BANDS = _HEIGHT_BANDS[1:]
+
+
+def _lerp_rgb(c0: tuple[int, int, int], c1: tuple[int, int, int], t: float) -> tuple[int, int, int, int]:
+    return (
+        int(c0[0] + (c1[0] - c0[0]) * t),
+        int(c0[1] + (c1[1] - c0[1]) * t),
+        int(c0[2] + (c1[2] - c0[2]) * t),
+        255,
+    )
+
+
+def _height_color(h: float, is_ocean: bool, sea_level: float = 0.35) -> tuple[int, int, int, int]:
+    """高程著色。
+
+    - `is_ocean=True`：強制使用 ocean band 漸層（用 sea_level 算深度），即使
+      h > sea_level —— 用來顯示「flood fill 認定連通到海，但 h 被後續 raise 抬高」
+      的異常格。
+    - 其餘：依 _HEIGHT_BANDS 線性查表（h ≤ sea_level 自然落在 ocean band）。
+    """
+    if is_ocean:
+        _, c0, c1 = _OCEAN_BAND
+        t = max(0.0, min(1.0, h / max(sea_level, 1e-6)))
+        return _lerp_rgb(c0, c1, t)
+
     prev = 0.0
     for h_end, c0, c1 in _HEIGHT_BANDS:
         if h <= h_end:
             bw = h_end - prev
             t  = (h - prev) / bw if bw > 0.0 else 0.0
-            return (
-                int(c0[0] + (c1[0] - c0[0]) * t),
-                int(c0[1] + (c1[1] - c0[1]) * t),
-                int(c0[2] + (c1[2] - c0[2]) * t),
-                255,
-            )
+            return _lerp_rgb(c0, c1, t)
         prev = h_end
     return (242, 242, 246, 255)
 
@@ -78,6 +101,15 @@ class App:
         self._last_tool_hex: tuple[int, int]   | None = None
         self._rtool_active   = False
         self._last_tick_t    = 0.0
+        # Set whenever heightmap mutates after the last Flood Fill / Climate run;
+        # cleared when those simulations run again. Lets the UI warn that the
+        # Ocean / Temperature / Rainfall overlays are stale.
+        self._sim_dirty:        bool  = False
+        # Smooth-random rate state: cosine-interpolate between _rate_prev and _rate_target
+        self._rate_prev:        float = self.state.brush_rate
+        self._rate_target:      float = self.state.brush_rate
+        self._rate_phase_start: float = 0.0
+        self._rate_phase_dur:   float = 1.5
         self._cam_x  = _CAM_INIT
         self._cam_y  = _CAM_INIT
         # Cached screen-space origin of the canvas drawlist.
@@ -101,11 +133,15 @@ class App:
         self.redraw_canvas()
 
         while dpg.is_dearpygui_running():
+            frame_start = time.monotonic()
             self._tick()
             if self._dirty:
                 self.redraw_canvas()
                 self._dirty = False
             dpg.render_dearpygui_frame()
+            slack = _TARGET_FRAME_DT - (time.monotonic() - frame_start)
+            if slack > 0.0:
+                time.sleep(slack)
 
         dpg.destroy_context()
 
@@ -147,6 +183,21 @@ class App:
                 label="Rate/s", tag="brush_rate",
                 min_value=1.0, max_value=60.0, default_value=self.state.brush_rate,
                 callback=lambda s, a: setattr(self.state, "brush_rate", a),
+            )
+            dpg.add_checkbox(
+                label="Random Rate", tag="brush_rate_rand",
+                default_value=self.state.brush_rate_rand,
+                callback=self._cb_rate_rand,
+            )
+            dpg.add_slider_float(
+                label="Rate Min", tag="brush_rate_min",
+                min_value=1.0, max_value=60.0, default_value=self.state.brush_rate_min,
+                callback=lambda s, a: setattr(self.state, "brush_rate_min", a),
+            )
+            dpg.add_slider_float(
+                label="Rate Max", tag="brush_rate_max",
+                min_value=1.0, max_value=60.0, default_value=self.state.brush_rate_max,
+                callback=lambda s, a: setattr(self.state, "brush_rate_max", a),
             )
             dpg.add_text("Ridge / Rift", color=(160, 160, 160))
             dpg.add_slider_float(
@@ -348,7 +399,7 @@ class App:
                 elif s.overlay == "ocean":
                     color = (30, 90, 180, 255) if is_ocean else (120, 170, 80, 255)
                 else:
-                    color = _height_color(h, is_ocean)
+                    color = _height_color(h, is_ocean, s.sea_level)
 
                 dpg.draw_polygon(hex_corners(cx, cy, size),
                                  fill=color, color=_BORDER, parent="hex_canvas")
@@ -388,7 +439,8 @@ class App:
             self._last_tool_hex = None
             return
         now = time.monotonic()
-        if now - self._last_tick_t < 1.0 / self.state.brush_rate:
+        rate = self._effective_rate(now)
+        if now - self._last_tick_t < 1.0 / max(0.1, rate):
             return
         self._last_tick_t = now
         q, r = self._get_hex()
@@ -398,15 +450,43 @@ class App:
         if tool in ("raise", "lower"):
             delta = self.state.brush_strength if tool == "raise" else -self.state.brush_strength
             apply_brush(self.state, q, r, delta)
-            self._dirty = True
+            self._dirty = self._sim_dirty = True
         elif tool in ("ridge", "rift"):
             (apply_ridge_stamp if tool == "ridge" else apply_rift_stamp)(self.state, q, r)
-            self._dirty = True
+            self._dirty = self._sim_dirty = True
         elif tool == "water_source":
             if (q, r) != self._last_tool_hex:
                 self._last_tool_hex = (q, r)
                 toggle_water_source(self.state, q, r)
                 self._dirty = True
+
+    def _refresh_sim_warning(self) -> None:
+        """If the current overlay depends on simulation results, warn when stale."""
+        if self._sim_dirty and self.state.overlay in ("ocean", "temperature", "rainfall"):
+            dpg.set_value(
+                "status_bar",
+                "⚠ Heightmap changed since last sim — re-run Flood Fill / Climate.",
+            )
+
+    def _effective_rate(self, now: float) -> float:
+        """Return the rate (Hz) used for the current frame; cosine-interpolate when random mode is on."""
+        s = self.state
+        if not s.brush_rate_rand:
+            return s.brush_rate
+        lo = min(s.brush_rate_min, s.brush_rate_max)
+        hi = max(s.brush_rate_min, s.brush_rate_max)
+        if hi <= lo:
+            return lo
+        elapsed = now - self._rate_phase_start
+        if elapsed >= self._rate_phase_dur:
+            self._rate_prev        = self._rate_target
+            self._rate_target      = _random.uniform(lo, hi)
+            self._rate_phase_dur   = _random.uniform(1.0, 2.0)
+            self._rate_phase_start = now
+            elapsed = 0.0
+        t = max(0.0, min(1.0, elapsed / self._rate_phase_dur))
+        eased = 0.5 * (1.0 - math.cos(t * math.pi))
+        return self._rate_prev + (self._rate_target - self._rate_prev) * eased
 
     def _on_mouse_move(self, sender, app_data) -> None:
         """Left button drag = pan camera."""
@@ -422,9 +502,16 @@ class App:
         if not dpg.is_item_hovered("canvas_window"):
             return
         if app_data == 0:
+            # Don't start panning while a brush stroke is active — would warp
+            # the cursor's hex coordinate while stamps are being placed.
+            if self._rtool_active:
+                return
             mx, my = dpg.get_mouse_pos(local=False)
             self._pan_last = (mx, my)
         elif app_data == 1:
+            # Don't start a brush stroke while panning, same reason in reverse.
+            if self._pan_last is not None:
+                return
             self._rtool_active = True
 
     def _on_mouse_release(self, sender, app_data) -> None:
@@ -503,18 +590,37 @@ class App:
     def _cb_overlay(self, sender, app_data) -> None:
         self.state.overlay = self._OVERLAY_MAP.get(app_data, "height")
         self._dirty = True
+        self._refresh_sim_warning()
+
+    def _cb_rate_rand(self, sender, app_data) -> None:
+        self.state.brush_rate_rand = bool(app_data)
+        # Re-seed the smooth-random state so the next tick starts a fresh segment.
+        lo = min(self.state.brush_rate_min, self.state.brush_rate_max)
+        hi = max(self.state.brush_rate_min, self.state.brush_rate_max)
+        if hi <= lo:
+            self._rate_prev = self._rate_target = lo
+        else:
+            self._rate_prev   = _random.uniform(lo, hi)
+            self._rate_target = _random.uniform(lo, hi)
+        self._rate_phase_start = time.monotonic()
+        self._rate_phase_dur   = _random.uniform(1.0, 2.0)
 
     def _cb_flood_fill(self, sender, app_data) -> None:
         run_flood_fill(self.state)
         dpg.set_value("overlay_radio", "Ocean")
         self.state.overlay = "ocean"
+        self._sim_dirty = False
         self._dirty = True
         dpg.set_value("status_bar", "Flood fill done.")
 
     def _cb_climate(self, sender, app_data) -> None:
+        # Climate uses ocean_mask as the moisture source; refresh it first so
+        # Run Climate is correct on its own without a prior Flood Fill click.
+        run_flood_fill(self.state)
         run_climate(self.state)
         dpg.set_value("overlay_radio", "Temperature")
         self.state.overlay = "temperature"
+        self._sim_dirty = False
         self._dirty = True
         dpg.set_value("status_bar", "Climate simulation done.")
 
@@ -523,11 +629,13 @@ class App:
         self.state.new_map(w, h)
         self._cam_x = _CAM_INIT
         self._cam_y = _CAM_INIT
+        self._sim_dirty = False
         self._dirty = True
         dpg.set_value("status_bar", f"New map {w}x{h}")
 
     def _cb_reset(self, sender, app_data) -> None:
         self.state.reset()
+        self._sim_dirty = False
         self._dirty = True
         dpg.set_value("status_bar", "Heights reset.")
 
@@ -570,6 +678,13 @@ class App:
             for r in range(s.height):
                 for q in range(s.width):
                     s.heightmap[r][q] = blend * s.heightmap[r][q] + (1 - blend) * new_hm[r][q]
+
+        # Wipe stale simulation results so Ocean/Temperature/Rainfall overlays
+        # don't show the previous heightmap's data.
+        s.ocean_mask  = [[False] * s.width for _ in range(s.height)]
+        s.temperature = [[0.5]   * s.width for _ in range(s.height)]
+        s.rainfall    = [[0.5]   * s.width for _ in range(s.height)]
+        self._sim_dirty = True
 
         s.overlay = "height"
         dpg.set_value("overlay_radio", "Height")

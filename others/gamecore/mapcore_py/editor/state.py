@@ -28,6 +28,9 @@ class EditorState:
     brush_size: int = 3
     brush_strength: float = 0.05
     brush_rate: float = 10.0   # applications per second while button held
+    brush_rate_rand: bool = False    # smoothly oscillate rate between min/max
+    brush_rate_min: float = 5.0
+    brush_rate_max: float = 30.0
     brush_falloff: float = 2.0  # ridge/rift radial falloff exponent (1=linear, higher=steeper)
     brush_chaos: float = 0.0    # ridge/rift shape noise (0=smooth circle, 1=jagged)
     brush_spokes: int = 0            # ridge/rift radial arms (fixed count when rand=False)

@@ -38,3 +38,11 @@ endif()
 
 add_executable(mapcore_tests tests/main.cpp)
 target_link_libraries(mapcore_tests PRIVATE mapcore)
+
+# ── Viewer (raylib + Dear ImGui) ───────────────────────────────────────────
+# 預設關閉，避免一般 build 拉 raylib/imgui。開啟方式：
+#   cmake -B build -DMAPCORE_BUILD_VIEWER=ON
+option(MAPCORE_BUILD_VIEWER "Build the raylib-based world sculptor viewer" OFF)
+if(MAPCORE_BUILD_VIEWER)
+    add_subdirectory(viewer)
+endif()

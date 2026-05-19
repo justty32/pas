@@ -9,6 +9,7 @@
 //   DEFAULT_REGISTRY → Meyer's singleton，透過 get_default_registry() 取用
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <unordered_map>
