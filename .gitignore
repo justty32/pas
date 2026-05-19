@@ -19,6 +19,3 @@ project_analysis
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-
-# 實驗性/暫存專案目錄
-*_square/
