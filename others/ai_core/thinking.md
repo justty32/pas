@@ -1,25 +1,48 @@
-> **狀態（2026-05-18）：本文件所有設計點皆已進入 `docs/architectures/`，僅保留為歷史紀錄，不再作為設計來源。**
->
-> 對應表：
-> - 第 1 行（metadata 與 entrydata 的關係） → `02_protocol.md` §4.7 entrydata 介面宣告（`has_entries` key）
-> - 第 2 行（其他 manager 不一定管 entry） → `01_overview.md` §1「Entry-managing vs Simple singleton server」兩種亞型表
-> - 第 4–5 行（metadata / server 常用操作抽 python module） → `06_project.md` §10.1 `protocol/` 共用 helper 出口（含 YAGNI 抽取時機）
-> - 第 7–9 行（entry 忙線 + time to wait 逾時） → `03_entry_manager.md` §6.4 `time_to_wait_ms`
-> - 第 11 行（entry manager、hub 都要 wrapper CLI） → `pyproject.toml` 已列 `ai-core-server` / `ai-core-call` / `ai-core-hub` / `ai-core-hub-server`
-> - 第 13 行（agent.md 更詳細） → `07_agents.md`
+# thinking.md
+
+設計靈感與尚未進入正式文件的想法。
 
 ---
 
-docs/architecture.md中，關於metadata與entrydata的敘述，應該是說，metadata仍然是了解這東西的唯一介面，只是說，可以從metadata中知道，這東西還有一個介面叫做entrydata可以用。
-然後其他類似的manager，有時候不一定是管理entry的，他們有可能就是普通的類似MCP伺服器那樣的工具，不需要管理entry。
+## 專案定位（2026-05-20 更新）
 
-我能預想到，以後在製作function時，處理那些metadata的常用操作如檢查某個key存不存在之類，可以弄成一個python module方便使用。
-server之類也是。
+**ai_core 的用途是為 Heuristic Learning 提供基礎設施。**
 
-然後關於LLM entry manager這部分，他應該是說，當某個entry正在處理某個請求時，他可能沒空理會其他請求。
-這時若其他請求有設置time to wait，那麼可以直接回應他說：超時。
-對，這是時間管理，也是重要的一部分。
+Heuristic Learning（HL）是一種替代梯度更新的迭代範式：coding agent 直接編輯策略程式碼，環境回饋驅動下一輪改進，舊能力固化為測試與版本差異，而非消失在模型權重裡。
 
-LLM entry manager, hub記得也都要做一個wrapper cli
+參考：[Learning Beyond Gradients](https://trinkle23897.github.io/learning-beyond-gradients/#zh)
 
-agent.md應該要說明的更詳細，講述這個框架的理念、細節。因為就算講了也不會占用太多token(應該吧，或許少講一點，就講精髓就好)。
+ai_core 各元件對應的 HL 角色：
+
+| ai_core 元件 | HL 角色 |
+|---|---|
+| `entry_manager` + `client` | LLM 監督者的呼叫介面 |
+| `author` | agent 產生 / 修改策略函式 |
+| `hub` + `funcs/` | 策略函式庫（Heuristic System） |
+| `author` dry-run + retry | 環境回饋驅動的改進迴圈 |
+| `--metadata` 介面 | agent 理解工具的唯一入口 |
+
+---
+
+## Metadata 設計補充（2026-05-20）
+
+> 朝 coding agent 一側看，能接受多少耦合複雜度，取決於模型能力、上下文長度、memory 質量、工具質量、整體迭代速度。
+
+**metadata 的職責是把認知負擔從 agent 身上搬走。** 這意味著 metadata 不只是描述「函式是什麼」，還要描述「agent 使用這個函式時需要多少認知資源」。
+
+目前 `MetadataView` 的缺口：
+
+| 缺失欄位 | 對應維度 | 說明 |
+|---|---|---|
+| `complexity` / `cognitive_load` | 模型能力 | 這個函式有多難用對？影響 agent 是否應拆解或迴避 |
+| `memory_hints` | memory 質量 | 成功執行後哪些輸出值得跨輪次記住——**最優先補的欄位** |
+| `idempotent` / `retry_safe` | 迭代速度 | 重跑有副作用嗎？agent 判斷是否重試時不能靠猜 |
+| `semantic_coupling` | 工具質量 | 使用模式上常與哪些函式搭配——與 `dependencies`（技術依賴）不同 |
+
+`memory_hints` 最關鍵：HL 的價值建立在跨輪次積累上，若函式不宣告哪些輸出值得記，agent 只能靠猜，memory 質量就會不穩定。
+
+---
+
+## 歷史紀錄
+
+2026-05-18 之前的所有設計點已遷移至 `docs/architectures/`，對應表見舊版 `thinking.md`（git history）。
