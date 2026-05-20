@@ -82,6 +82,11 @@ pip install pygame
 python examples/visualize_map.py          # 基本地形 + 鄰居
 python examples/visualize_pathfinding.py  # A* 尋路
 python examples/visualize_world.py        # 完整 pipeline 世界生成
+
+# 互動式編輯器（需要 dearpygui）
+pip install dearpygui
+python run_editor.py                      # 預設 80×50
+python run_editor.py --width 120 --height 80
 ```
 
 ## 一站式生成
@@ -131,3 +136,4 @@ result = generate_world(
 - ✅ Phase 7 features：FeatureWorker 8 種 + apply_features
 - ✅ Pipeline：`generate_world()` 串接所有 phase
 - ✅ 視覺化範例：`visualize_map.py`、`visualize_pathfinding.py`、`visualize_world.py`
+- ✅ 互動式編輯器：`editor/`（Square Sculptor）+ `run_editor.py`

@@ -1,4 +1,4 @@
-"""World Sculptor — Dear PyGui interactive hex map editor.
+"""Square Sculptor — Dear PyGui interactive square map editor.
 
 Requirements: pip install dearpygui
 Launch: python run_editor.py
@@ -14,7 +14,7 @@ from pathlib import Path
 import dearpygui.dearpygui as dpg
 
 from .state import EditorState
-from .hex_layout import hex_to_pixel, pixel_to_hex, hex_corners
+from .grid_layout import tile_center, pixel_to_tile
 from .tools import apply_brush, apply_ridge_stamp, apply_rift_stamp, toggle_water_source
 from .sim.hydrology import run_flood_fill
 from .sim.climate import run_climate
@@ -22,17 +22,14 @@ from .sim.climate import run_climate
 # ── Constants ────────────────────────────────────────────────────────────────
 
 PANEL_W   = 240
-CANVAS_W  = 1140   # fixed drawlist width
-CANVAS_H  = 790    # fixed drawlist height
-_CAM_INIT = 40.0   # initial camera offset (pixels)
-_TARGET_FRAME_DT = 1.0 / 60.0   # cap render loop at ~60 FPS to stop CPU spinning
+CANVAS_W  = 1140
+CANVAS_H  = 790
+_CAM_INIT = 20.0
+_TARGET_FRAME_DT = 1.0 / 60.0
 
 _BORDER = (0, 0, 0, 25)
 
-# Height overlay: each band fades from a light colour (band start) to a dark colour (band end).
-# At the threshold the next band starts bright again, creating visible elevation zones.
 _HEIGHT_BANDS = (
-    # (h_end, colour_at_t=0,          colour_at_t=1         )
     (0.35,  ( 40,  95, 195),  ( 10,  30,  90)),  # ocean
     (0.40,  (205, 185, 120),  (165, 148,  95)),  # beach
     (0.58,  (100, 178,  62),  ( 55, 120,  30)),  # lowland
@@ -41,13 +38,11 @@ _HEIGHT_BANDS = (
     (1.00,  (242, 242, 246),  (185, 183, 190)),  # snow
 )
 
+_OCEAN_BAND = _HEIGHT_BANDS[0]
+
 # ── Color helpers ────────────────────────────────────────────────────────────
 
-_OCEAN_BAND = _HEIGHT_BANDS[0]   # (h_end, light, dark)
-_LAND_BANDS = _HEIGHT_BANDS[1:]
-
-
-def _lerp_rgb(c0: tuple[int, int, int], c1: tuple[int, int, int], t: float) -> tuple[int, int, int, int]:
+def _lerp_rgb(c0: tuple, c1: tuple, t: float) -> tuple[int, int, int, int]:
     return (
         int(c0[0] + (c1[0] - c0[0]) * t),
         int(c0[1] + (c1[1] - c0[1]) * t),
@@ -57,18 +52,10 @@ def _lerp_rgb(c0: tuple[int, int, int], c1: tuple[int, int, int], t: float) -> t
 
 
 def _height_color(h: float, is_ocean: bool, sea_level: float = 0.35) -> tuple[int, int, int, int]:
-    """高程著色。
-
-    - `is_ocean=True`：強制使用 ocean band 漸層（用 sea_level 算深度），即使
-      h > sea_level —— 用來顯示「flood fill 認定連通到海，但 h 被後續 raise 抬高」
-      的異常格。
-    - 其餘：依 _HEIGHT_BANDS 線性查表（h ≤ sea_level 自然落在 ocean band）。
-    """
     if is_ocean:
         _, c0, c1 = _OCEAN_BAND
         t = max(0.0, min(1.0, h / max(sea_level, 1e-6)))
         return _lerp_rgb(c0, c1, t)
-
     prev = 0.0
     for h_end, c0, c1 in _HEIGHT_BANDS:
         if h <= h_end:
@@ -94,26 +81,20 @@ def _rain_color(rv: float) -> tuple[int, int, int, int]:
 # ── App ───────────────────────────────────────────────────────────────────────
 
 class App:
-    def __init__(self, width: int = 60, height: int = 40) -> None:
-        self.state   = EditorState(width=width, height=height)
-        self._dirty         = True
-        self._pan_last:      tuple[float, float] | None = None
-        self._last_tool_hex: tuple[int, int]   | None = None
-        self._rtool_active   = False
-        self._last_tick_t    = 0.0
-        # Set whenever heightmap mutates after the last Flood Fill / Climate run;
-        # cleared when those simulations run again. Lets the UI warn that the
-        # Ocean / Temperature / Rainfall overlays are stale.
-        self._sim_dirty:        bool  = False
-        # Smooth-random rate state: cosine-interpolate between _rate_prev and _rate_target
-        self._rate_prev:        float = self.state.brush_rate
-        self._rate_target:      float = self.state.brush_rate
-        self._rate_phase_start: float = 0.0
-        self._rate_phase_dur:   float = 1.5
-        self._cam_x  = _CAM_INIT
-        self._cam_y  = _CAM_INIT
-        # Cached screen-space origin of the canvas drawlist.
-        # Initialized to a reasonable default; refreshed every time rect_min is available.
+    def __init__(self, width: int = 80, height: int = 50) -> None:
+        self.state               = EditorState(width=width, height=height)
+        self._dirty              = True
+        self._pan_last:          tuple[float, float] | None = None
+        self._last_tool_tile:    tuple[int, int]     | None = None
+        self._rtool_active       = False
+        self._last_tick_t        = 0.0
+        self._sim_dirty:         bool  = False
+        self._rate_prev:         float = self.state.brush_rate
+        self._rate_target:       float = self.state.brush_rate
+        self._rate_phase_start:  float = 0.0
+        self._rate_phase_dur:    float = 1.5
+        self._cam_x = _CAM_INIT
+        self._cam_y = _CAM_INIT
         self._canvas_origin: list[float] = [float(PANEL_W + 8), 8.0]
 
     # ── Entry point ──────────────────────────────────────────────────────────
@@ -122,9 +103,8 @@ class App:
         dpg.create_context()
         self._build_ui()
         self._register_handlers()
-
         dpg.create_viewport(
-            title="World Sculptor — mapcore_py Editor",
+            title="Square Sculptor — mapcore_py_square Editor",
             width=PANEL_W + CANVAS_W + 20,
             height=CANVAS_H + 30,
         )
@@ -171,7 +151,7 @@ class App:
             dpg.add_separator()
             dpg.add_slider_int(
                 label="Size", tag="brush_size",
-                min_value=1, max_value=10, default_value=self.state.brush_size,
+                min_value=1, max_value=12, default_value=self.state.brush_size,
                 callback=lambda s, a: setattr(self.state, "brush_size", a),
             )
             dpg.add_slider_float(
@@ -235,6 +215,36 @@ class App:
                 default_value=self.state.brush_spokes_invert,
                 callback=lambda s, a: setattr(self.state, "brush_spokes_invert", a),
             )
+            dpg.add_slider_float(
+                label="Spoke Jitter°", tag="brush_spoke_jitter",
+                min_value=0.0, max_value=90.0,
+                default_value=self.state.brush_spoke_jitter,
+                callback=lambda s, a: setattr(self.state, "brush_spoke_jitter", a),
+            )
+            dpg.add_text("±Jitter per spoke", color=(160, 160, 160))
+            dpg.add_slider_float(
+                label="Wheel Angle°", tag="brush_wheel_angle",
+                min_value=0.0, max_value=360.0,
+                default_value=self.state.brush_wheel_angle,
+                callback=lambda s, a: setattr(self.state, "brush_wheel_angle", a),
+            )
+            dpg.add_checkbox(
+                label="Random Wheel", tag="brush_wheel_rand",
+                default_value=self.state.brush_wheel_rand,
+                callback=lambda s, a: setattr(self.state, "brush_wheel_rand", a),
+            )
+            dpg.add_slider_float(
+                label="  Wheel Min°", tag="brush_wheel_min",
+                min_value=0.0, max_value=360.0,
+                default_value=self.state.brush_wheel_min,
+                callback=lambda s, a: setattr(self.state, "brush_wheel_min", a),
+            )
+            dpg.add_slider_float(
+                label="  Wheel Max°", tag="brush_wheel_max",
+                min_value=0.0, max_value=360.0,
+                default_value=self.state.brush_wheel_max,
+                callback=lambda s, a: setattr(self.state, "brush_wheel_max", a),
+            )
 
             dpg.add_spacing(count=2)
             dpg.add_text("VIEW", color=(255, 220, 80))
@@ -280,11 +290,11 @@ class App:
             dpg.add_spacing(count=2)
             dpg.add_text("MAP", color=(255, 220, 80))
             dpg.add_separator()
-            dpg.add_input_int(label="Width",  tag="new_w", default_value=60,
+            dpg.add_input_int(label="Width",  tag="new_w", default_value=80,
+                              min_value=10, max_value=400)
+            dpg.add_input_int(label="Height", tag="new_h", default_value=50,
                               min_value=10, max_value=300)
-            dpg.add_input_int(label="Height", tag="new_h", default_value=40,
-                              min_value=10, max_value=300)
-            dpg.add_button(label="New Map",      width=-1, callback=self._cb_new_map)
+            dpg.add_button(label="New Map",       width=-1, callback=self._cb_new_map)
             dpg.add_button(label="Reset Heights", width=-1, callback=self._cb_reset)
 
             dpg.add_spacing(count=2)
@@ -372,51 +382,53 @@ class App:
             no_scrollbar=True,
             no_scroll_with_mouse=True,
         ):
-            dpg.add_drawlist(tag="hex_canvas", width=CANVAS_W, height=CANVAS_H)
+            dpg.add_drawlist(tag="square_canvas", width=CANVAS_W, height=CANVAS_H)
 
     # ── Canvas rendering ──────────────────────────────────────────────────────
 
     def redraw_canvas(self) -> None:
-        dpg.delete_item("hex_canvas", children_only=True)
+        dpg.delete_item("square_canvas", children_only=True)
         s    = self.state
-        size = s.hex_size
+        size = s.cell_size
         ox   = self._cam_x
         oy   = self._cam_y
 
-        for r in range(s.height):
-            for q in range(s.width):
-                cx, cy = hex_to_pixel(q, r, size, ox, oy)
-                # Viewport culling
-                if cx + size < 0 or cy + size < 0 or cx - size > CANVAS_W or cy - size > CANVAS_H:
+        for y in range(s.height):
+            for x in range(s.width):
+                x0 = x * size + ox
+                y0 = y * size + oy
+                x1 = x0 + size
+                y1 = y0 + size
+                if x1 < 0 or y1 < 0 or x0 > CANVAS_W or y0 > CANVAS_H:
                     continue
-                h        = s.get_h(q, r)
-                is_ocean = s.ocean_mask[r][q]
+                h        = s.get_h(x, y)
+                is_ocean = s.ocean_mask[y][x]
 
                 if s.overlay == "temperature":
-                    color = _temp_color(s.temperature[r][q])
+                    color = _temp_color(s.temperature[y][x])
                 elif s.overlay == "rainfall":
-                    color = _rain_color(s.rainfall[r][q])
+                    color = _rain_color(s.rainfall[y][x])
                 elif s.overlay == "ocean":
                     color = (30, 90, 180, 255) if is_ocean else (120, 170, 80, 255)
                 else:
                     color = _height_color(h, is_ocean, s.sea_level)
 
-                dpg.draw_polygon(hex_corners(cx, cy, size),
-                                 fill=color, color=_BORDER, parent="hex_canvas")
+                dpg.draw_rectangle((x0, y0), (x1, y1),
+                                   fill=color, color=_BORDER,
+                                   parent="square_canvas")
 
-        for sq, sr in s.water_sources:
-            cx, cy = hex_to_pixel(sq, sr, size, ox, oy)
-            dpg.draw_circle((cx, cy), radius=size * 0.35,
+        for sx, sy in s.water_sources:
+            cx, cy = tile_center(sx, sy, size, ox, oy)
+            dpg.draw_circle((cx, cy), radius=size * 0.3,
                             color=(60, 180, 255, 255),
                             fill=(60, 180, 255, 180),
-                            parent="hex_canvas")
+                            parent="square_canvas")
 
     # ── Mouse & keyboard helpers ──────────────────────────────────────────────
 
     def _refresh_canvas_origin(self) -> None:
-        """Try to update the cached canvas screen-space origin from DPG state."""
         try:
-            state = dpg.get_item_state("hex_canvas")
+            state = dpg.get_item_state("square_canvas")
             rm = state.get("rect_min")
             if rm is not None:
                 self._canvas_origin[0] = float(rm[0])
@@ -424,44 +436,42 @@ class App:
         except Exception:
             pass
 
-    def _get_hex(self) -> tuple[int, int]:
+    def _get_tile(self) -> tuple[int, int]:
         self._refresh_canvas_origin()
         mx, my = dpg.get_mouse_pos(local=False)
         lx = mx - self._canvas_origin[0]
         ly = my - self._canvas_origin[1]
-        return pixel_to_hex(lx, ly, self.state.hex_size, self._cam_x, self._cam_y)
+        return pixel_to_tile(lx, ly, self.state.cell_size, self._cam_x, self._cam_y)
 
     # ── Event handlers ────────────────────────────────────────────────────────
 
     def _tick(self) -> None:
-        """Called every frame. Continuously applies the active tool while right button is held."""
         if not self._rtool_active or not dpg.is_mouse_button_down(1):
-            self._last_tool_hex = None
+            self._last_tool_tile = None
             return
-        now = time.monotonic()
+        now  = time.monotonic()
         rate = self._effective_rate(now)
         if now - self._last_tick_t < 1.0 / max(0.1, rate):
             return
         self._last_tick_t = now
-        q, r = self._get_hex()
-        if not self.state.in_bounds(q, r):
+        x, y = self._get_tile()
+        if not self.state.in_bounds(x, y):
             return
         tool = self.state.current_tool
         if tool in ("raise", "lower"):
             delta = self.state.brush_strength if tool == "raise" else -self.state.brush_strength
-            apply_brush(self.state, q, r, delta)
+            apply_brush(self.state, x, y, delta)
             self._dirty = self._sim_dirty = True
         elif tool in ("ridge", "rift"):
-            (apply_ridge_stamp if tool == "ridge" else apply_rift_stamp)(self.state, q, r)
+            (apply_ridge_stamp if tool == "ridge" else apply_rift_stamp)(self.state, x, y)
             self._dirty = self._sim_dirty = True
         elif tool == "water_source":
-            if (q, r) != self._last_tool_hex:
-                self._last_tool_hex = (q, r)
-                toggle_water_source(self.state, q, r)
+            if (x, y) != self._last_tool_tile:
+                self._last_tool_tile = (x, y)
+                toggle_water_source(self.state, x, y)
                 self._dirty = True
 
     def _refresh_sim_warning(self) -> None:
-        """If the current overlay depends on simulation results, warn when stale."""
         if self._sim_dirty and self.state.overlay in ("ocean", "temperature", "rainfall"):
             dpg.set_value(
                 "status_bar",
@@ -469,7 +479,6 @@ class App:
             )
 
     def _effective_rate(self, now: float) -> float:
-        """Return the rate (Hz) used for the current frame; cosine-interpolate when random mode is on."""
         s = self.state
         if not s.brush_rate_rand:
             return s.brush_rate
@@ -484,12 +493,11 @@ class App:
             self._rate_phase_dur   = _random.uniform(1.0, 2.0)
             self._rate_phase_start = now
             elapsed = 0.0
-        t = max(0.0, min(1.0, elapsed / self._rate_phase_dur))
+        t     = max(0.0, min(1.0, elapsed / self._rate_phase_dur))
         eased = 0.5 * (1.0 - math.cos(t * math.pi))
         return self._rate_prev + (self._rate_target - self._rate_prev) * eased
 
     def _on_mouse_move(self, sender, app_data) -> None:
-        """Left button drag = pan camera."""
         if not dpg.is_mouse_button_down(0) or self._pan_last is None:
             return
         mx, my = dpg.get_mouse_pos(local=False)
@@ -502,14 +510,11 @@ class App:
         if not dpg.is_item_hovered("canvas_window"):
             return
         if app_data == 0:
-            # Don't start panning while a brush stroke is active — would warp
-            # the cursor's hex coordinate while stamps are being placed.
             if self._rtool_active:
                 return
             mx, my = dpg.get_mouse_pos(local=False)
             self._pan_last = (mx, my)
         elif app_data == 1:
-            # Don't start a brush stroke while panning, same reason in reverse.
             if self._pan_last is not None:
                 return
             self._rtool_active = True
@@ -518,19 +523,18 @@ class App:
         if app_data == 0:
             self._pan_last = None
         elif app_data == 1:
-            self._rtool_active = False
-            self._last_tool_hex = None
+            self._rtool_active   = False
+            self._last_tool_tile = None
 
     def _on_mouse_wheel(self, sender, app_data) -> None:
         if not dpg.is_item_hovered("canvas_window"):
             return
-        delta    = app_data   # positive = scroll up = zoom in
-        old_size = self.state.hex_size
+        delta    = app_data
+        old_size = self.state.cell_size
         step     = 1 if old_size < 16 else 2
         new_size = max(4, min(40, old_size + (step if delta > 0 else -step)))
         if new_size == old_size:
             return
-        # Zoom toward the pixel under cursor
         self._refresh_canvas_origin()
         mx, my = dpg.get_mouse_pos(local=False)
         lx     = mx - self._canvas_origin[0]
@@ -538,12 +542,12 @@ class App:
         scale  = new_size / old_size
         self._cam_x = lx - (lx - self._cam_x) * scale
         self._cam_y = ly - (ly - self._cam_y) * scale
-        self.state.hex_size = new_size
+        self.state.cell_size = new_size
         self._dirty = True
 
     def _on_key_down(self, sender, app_data) -> None:
         key  = app_data
-        step = max(20, self.state.hex_size * 2)
+        step = max(20, self.state.cell_size * 3)
         if   key == dpg.mvKey_Left:  self._cam_x += step
         elif key == dpg.mvKey_Right: self._cam_x -= step
         elif key == dpg.mvKey_Up:    self._cam_y += step
@@ -594,7 +598,6 @@ class App:
 
     def _cb_rate_rand(self, sender, app_data) -> None:
         self.state.brush_rate_rand = bool(app_data)
-        # Re-seed the smooth-random state so the next tick starts a fresh segment.
         lo = min(self.state.brush_rate_min, self.state.brush_rate_max)
         hi = max(self.state.brush_rate_min, self.state.brush_rate_max)
         if hi <= lo:
@@ -614,8 +617,6 @@ class App:
         dpg.set_value("status_bar", "Flood fill done.")
 
     def _cb_climate(self, sender, app_data) -> None:
-        # Climate uses ocean_mask as the moisture source; refresh it first so
-        # Run Climate is correct on its own without a prior Flood Fill click.
         run_flood_fill(self.state)
         run_climate(self.state)
         dpg.set_value("overlay_radio", "Temperature")
@@ -675,12 +676,10 @@ class App:
         if blend <= 0.0:
             s.heightmap = new_hm
         else:
-            for r in range(s.height):
-                for q in range(s.width):
-                    s.heightmap[r][q] = blend * s.heightmap[r][q] + (1 - blend) * new_hm[r][q]
+            for y in range(s.height):
+                for x in range(s.width):
+                    s.heightmap[y][x] = blend * s.heightmap[y][x] + (1 - blend) * new_hm[y][x]
 
-        # Wipe stale simulation results so Ocean/Temperature/Rainfall overlays
-        # don't show the previous heightmap's data.
         s.ocean_mask  = [[False] * s.width for _ in range(s.height)]
         s.temperature = [[0.5]   * s.width for _ in range(s.height)]
         s.rainfall    = [[0.5]   * s.width for _ in range(s.height)]
@@ -695,7 +694,7 @@ class App:
         try:
             from .export import export_to_worldgen_result
             result = export_to_worldgen_result(self.state)
-            out = Path("exported_world.pkl")
+            out = Path("exported_world_square.pkl")
             with open(out, "wb") as f:
                 pickle.dump(result, f)
             dpg.set_value("status_bar", f"Exported to {out.resolve()}")
