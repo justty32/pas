@@ -1,8 +1,11 @@
+// TileMap 成員實作：矩形方格地圖的儲存與存取。
+// Tile 以 flat std::vector 連續存放，索引一律 y*width+x (row-major)。
 #include "mapcore/map.hpp"
 #include <stdexcept>
 
 namespace mapcore {
 
+// 建構時即配置 width*height 個 Tile，並把全部地形設為 default_terrain。
 TileMap::TileMap(int width, int height, uint16_t default_terrain)
     : width_(width), height_(height), tiles_(static_cast<size_t>(width * height))
 {
@@ -11,6 +14,7 @@ TileMap::TileMap(int width, int height, uint16_t default_terrain)
     for (auto& t : tiles_) t.terrain = default_terrain;
 }
 
+// 邊界外回傳 nullptr (不丟例外)，方便迴圈中以指標判空略過界外格。
 Tile* TileMap::get(const Coord& c) noexcept {
     if (!in_bounds(c)) return nullptr;
     return &tiles_[c.y * width_ + c.x];
@@ -21,12 +25,14 @@ const Tile* TileMap::get(const Coord& c) const noexcept {
     return &tiles_[c.y * width_ + c.x];
 }
 
+// 寫入地形；與 get 不同，界外視為程式錯誤而丟 out_of_range。
 void TileMap::set_terrain(const Coord& c, uint16_t terrain) {
     if (!in_bounds(c))
         throw std::out_of_range("Coord out of bounds");
     tiles_[c.y * width_ + c.x].terrain = terrain;
 }
 
+// 回傳界內的鄰格 (邊緣/角落會少於 4 個)。
 std::vector<Coord> TileMap::neighbors(const Coord& c) const {
     std::vector<Coord> out;
     out.reserve(4);

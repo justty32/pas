@@ -1,3 +1,11 @@
+// 河流系統實作。分兩層：
+//   1) 存儲層 — 把河流流量打包進 Tile.rivers 的 bit 欄位 (見 rivers.hpp 的擁有權說明)。
+//   2) 生成層 — 由高度圖 + 降雨量推導河網，整體流程：
+//        海岸水格找出海口 (seeds)
+//          → 反向 Dijkstra 從出海口往內陸建「下游樹」(_flood_paths)
+//          → 沿樹後序累積流量、扣蒸發 (_accumulate_flow)
+//          → 從流量足夠的出海口往上游描繪主流與支流 (_create_rivers_from_seed)
+//      設計參考 RimWorld 的河流生成，改為方格 4 鄰居版。
 #include "mapcore/rivers.hpp"
 #include <algorithm>
 #include <cmath>
