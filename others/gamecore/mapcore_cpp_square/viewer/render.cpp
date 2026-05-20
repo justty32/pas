@@ -61,10 +61,34 @@ Color height_color(float h, float sea_level) noexcept {
     return Color{242, 242, 246, 255};
 }
 
+namespace {
+
+[[nodiscard]] inline Color temp_color(float t) noexcept {
+    t = std::clamp(t, 0.0f, 1.0f);
+    return Color{
+        static_cast<unsigned char>(std::min(1.0f, t * 2.0f) * 255.0f),
+        30,
+        static_cast<unsigned char>(std::min(1.0f, (1.0f - t) * 2.0f) * 255.0f),
+        255
+    };
+}
+
+[[nodiscard]] inline Color rain_color(float v) noexcept {
+    v = std::clamp(v, 0.0f, 1.0f);
+    return Color{
+        static_cast<unsigned char>(20.0f * (1.0f - v)),
+        static_cast<unsigned char>(80.0f + 120.0f * v),
+        static_cast<unsigned char>(100.0f + 155.0f * v),
+        255
+    };
+}
+
+} // anonymous
+
 void draw_world(const EditorState& s, const Camera2D& camera) {
     const float size = s.cell_size;
 
-    // Viewport culling：算出畫面四角在 world-space 的 AABB（含一格 margin）
+    // Viewport culling
     const Vector2 tl = GetScreenToWorld2D({0.0f, 0.0f}, camera);
     const Vector2 br = GetScreenToWorld2D(
         {static_cast<float>(GetScreenWidth()),
@@ -75,16 +99,30 @@ void draw_world(const EditorState& s, const Camera2D& camera) {
     const float min_y = std::min(tl.y, br.y);
     const float max_y = std::max(tl.y, br.y);
 
-    // 把 world AABB 換成 cell 範圍，避免逐格 culling
-    const int x_lo = std::max(0,             static_cast<int>(std::floor(min_x / size)));
+    const int x_lo = std::max(0,              static_cast<int>(std::floor(min_x / size)));
     const int x_hi = std::min(s.width()  - 1, static_cast<int>(std::floor(max_x / size)));
-    const int y_lo = std::max(0,             static_cast<int>(std::floor(min_y / size)));
+    const int y_lo = std::max(0,              static_cast<int>(std::floor(min_y / size)));
     const int y_hi = std::min(s.height() - 1, static_cast<int>(std::floor(max_y / size)));
 
     for (int y = y_lo; y <= y_hi; ++y) {
         for (int x = x_lo; x <= x_hi; ++x) {
-            const float h    = s.get_h(x, y);
-            const Color fill = height_color(h, s.sea_level);
+            Color fill;
+            switch (s.overlay) {
+                case Overlay::Ocean:
+                    fill = s.get_ocean(x, y)
+                           ? Color{30,  90, 180, 255}
+                           : Color{120, 170, 80, 255};
+                    break;
+                case Overlay::Temperature:
+                    fill = temp_color(s.get_temp(x, y));
+                    break;
+                case Overlay::Rainfall:
+                    fill = rain_color(s.get_rain(x, y));
+                    break;
+                default:  // Height
+                    fill = height_color(s.get_h(x, y), s.sea_level);
+                    break;
+            }
             const float px = static_cast<float>(x) * size;
             const float py = static_cast<float>(y) * size;
             DrawRectangle(static_cast<int>(px), static_cast<int>(py),

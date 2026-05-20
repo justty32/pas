@@ -1,6 +1,5 @@
 #pragma once
 // 編輯器狀態：對應 mapcore_cpp/viewer/editor_state.hpp 的方格版本。
-// 不含 ocean_mask/temperature/rainfall overlay。
 
 #include "grid_layout.hpp"
 
@@ -16,6 +15,13 @@ enum class Tool {
     Ridge,
     Rift,
     WaterSource,
+};
+
+enum class Overlay {
+    Height      = 0,
+    Ocean       = 1,
+    Temperature = 2,
+    Rainfall    = 3,
 };
 
 class EditorState {
@@ -50,8 +56,9 @@ public:
     void reset_heights(float h = 0.5f);
 
     // ── 場景參數 ──
-    float cell_size = 16.0f;
-    float sea_level = 0.35f;
+    float cell_size    = 16.0f;  // 2D 像素用（grid_layout 相容）
+    float sea_level    = 0.35f;
+    float height_scale = 10.0f;  // 3D 高度縮放倍數
 
     // ── 工具狀態 ──
     Tool  current_tool   = Tool::Raise;
@@ -67,11 +74,24 @@ public:
     int   brush_spokes_min    = 0;
     int   brush_spokes_max    = 0;
     bool  brush_spokes_invert = false;
+    float brush_spoke_jitter  = 0.0f;   // ±jitter per spoke（度）
+    float brush_wheel_angle   = 0.0f;   // 輪盤固定旋轉角度（度）
+    bool  brush_wheel_rand    = false;  // 是否隨機輪盤角度
+    float brush_wheel_min     = 0.0f;   // 隨機輪盤下限（度）
+    float brush_wheel_max     = 360.0f; // 隨機輪盤上限（度）
 
     // ── 平滑隨機 rate ──
     bool  brush_rate_rand     = false;
     float brush_rate_min      = 5.0f;
     float brush_rate_max      = 40.0f;
+
+    // ── View overlay ──
+    Overlay overlay = Overlay::Height;
+
+    // ── 氣候模擬參數 ──
+    float sun_angle   = 23.5f;  // 黃道傾角（度），控制緯度受熱
+    float wind_dir    = 270.0f; // 風向（度）：0=N 90=E 180=S 270=W
+    float evaporation = 0.5f;   // 水氣越山損失係數
 
     // ── Noise 生成參數 ──
     int   noise_seed             = 42;
@@ -87,6 +107,25 @@ public:
 
     // ── 水源 marker ──
     std::vector<GridCoord> water_sources;
+
+    // ── 模擬結果（Flood Fill + Climate） ──
+    std::vector<bool>  ocean_mask;   // flat W*H
+    std::vector<float> temperature;  // flat W*H，0=冷 1=熱
+    std::vector<float> rainfall;     // flat W*H，0=乾 1=濕
+
+    // 重置模擬結果為預設值（resize 或 new map 後呼叫）
+    void clear_sim_results();
+
+    // 便捷取值（避免 render.cpp 重複計算索引）
+    [[nodiscard]] bool  get_ocean(int x, int y) const noexcept {
+        return ocean_mask[static_cast<std::size_t>(y) * static_cast<std::size_t>(width_) + x];
+    }
+    [[nodiscard]] float get_temp(int x, int y) const noexcept {
+        return temperature[static_cast<std::size_t>(y) * static_cast<std::size_t>(width_) + x];
+    }
+    [[nodiscard]] float get_rain(int x, int y) const noexcept {
+        return rainfall[static_cast<std::size_t>(y) * static_cast<std::size_t>(width_) + x];
+    }
 
 private:
     int width_;

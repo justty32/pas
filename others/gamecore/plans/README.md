@@ -13,6 +13,7 @@
 | 005 | [演員與模擬](005-actors-and-simulation.md) | 玩家身分、分層 AI、NPC 生活、敘事範例 | 待細化 |
 | 006 | [技術實作](006-technical-implementation.md) | GDExtension 架構、資料流、路線圖 | 基礎定稿 |
 | 007 | [體驗與呈現](007-experience-and-presentation.md) | UX 流程、美術音效、無障礙、術語表 | 待細化 |
+| 008 | [奇幻地圖編輯器](008-fantasy-map-editor.md) | 沉浸式創世設定、世界起源、創世者身分、水源筆刷 | 初稿構想 |
 
 ## 整理說明
 -   **Open Questions**：每個主題檔案底部都附有該領域尚未解決的問題。

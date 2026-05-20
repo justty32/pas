@@ -54,7 +54,9 @@ add_executable(world_sculptor_square
     grid_layout.cpp
     editor_state.cpp
     render.cpp
+    render3d.cpp
     tools.cpp
+    sim.cpp
 )
 target_link_libraries(world_sculptor_square PRIVATE mapcore_square rlImGui imgui raylib)
 target_compile_features(world_sculptor_square PRIVATE cxx_std_17)
