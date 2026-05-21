@@ -2,13 +2,73 @@
 
 ## §4. metadata 協議（極簡版）
 
+### 4.0 metadata 資料格式定義
+
+**metadata 是一個 JSON 物件。** 這是它的根本定義，一切約束由此推導。
+
+#### 文字形式（text form）
+
+metadata 在文字狀態下的表現形式是**標準 JSON**，且**鎖定 UTF-8 編碼**。
+任何以文字輸出的 metadata 都必須：
+- 可被 JSON parser 無錯誤解析為物件（object，不是 array 或 scalar）
+- 以 UTF-8 編碼（含或不含 BOM 均可，但建議不含）
+
+#### 程式內形式（in-code form）
+
+metadata 在程式中的表現形式**無統一規定**——可以是：
+- class 上的 `gen_metadata()` 方法（Python dict、C++ map 等）
+- 靜態函式（`gen_metadata<T>()`）
+- struct 加上 `marshal()` / `to_json()` 方法
+- 任何語言原生的字典型別
+
+**唯一的約束**：無論用哪種形式，最終必須能序列化為符合上述文字形式規格的 JSON 字串。程式碼中的 metadata 表示與 JSON 格式之間的轉換，由實作者自行負責。
+
+#### 命令行介面（CLI contract）
+
+在終端機（純文字介面）中，產出 metadata 的方式是：
+
+```
+<...> --metadata
+```
+
+`<...>` 是**任何能執行的東西**——單一程式、shell script、**或一串 pipe**。例如：
+
+```bash
+# 單一程式：全域 metadata
+my_tool --metadata
+
+# 單一程式：subcommand-scoped metadata（類比 git remote --help）
+my_tool subcommand --metadata
+```
+
+觸發後，metadata JSON 輸出到 **stdout**，exit code 為 0。
+
+**Pipe 對 metadata 是透明的。** `professor.sh | code_linter.sh --metadata` 中，`--metadata` 只屬於 `code_linter.sh`；stdout 輸出的是 `code_linter.sh` 自己的 metadata，與單獨呼叫 `code_linter.sh --metadata` 結果相同。Pipe 的上游不影響 metadata 的內容。
+
+**`--metadata` 的上下文限制（重要）：**
+
+`--metadata` 前只允許**位置引數（positional arguments，不以 `-` 或 `--` 開頭）**出現，例如 subcommand 名稱。以 `-` 或 `--` 開頭的 flag 不得與 `--metadata` 混用——遇到這種情況，程式**必須報錯（exit code 非 0，stderr 說明原因）**。
+
+```bash
+my_tool --metadata                    # ✓ 合法：全域 metadata
+my_tool subcommand --metadata         # ✓ 合法：subcommand-scoped metadata
+my_tool --file main.c --metadata      # ✗ 錯誤：flag 不可出現在 --metadata 之前
+my_tool -f main.c --metadata          # ✗ 錯誤：同上
+```
+
+這條規則確保 metadata 只能依 subcommand 結構（靜態的命令層次）改變，而不能依執行期資料（動態的 flag 值）改變。Hub 因此可以安全地用 `tool --metadata` 或 `tool subcommand --metadata` 掃描，無需知道任何運行時參數的存在。
+
+> **注意**：`<...> --metadata` 是終端機世界的標準入口，但不限制程式**內部**如何表示或產生 metadata。命令行 `--metadata` 旗標只是把程式內部的 metadata 物件序列化為文字、跨越行程邊界輸出的橋樑。
+
+---
+
 唯一強制：
 
 1. 函式接受 `--metadata` 旗標
-2. 觸發時 stdout 輸出**合法 JSON**（任意 key-value）
+2. 觸發時 stdout 輸出**合法 JSON 物件**（`{}` 也完全合法）
 3. exit code 0
 
-下列為**慣例 key**（自願遵守、有就用、沒就略），但**強烈建議寫入** — 否則 caller / Hub 無法智慧化呼叫，且 AI 學習成本大增。
+metadata 的 key 沒有任何硬性規定。下列為**慣例 key**（自願遵守、有就用、沒就略），但**強烈建議寫入** — 否則 caller / Hub 無法智慧化呼叫，且 AI 學習成本大增。
 
 ### 4.1 描述類
 
