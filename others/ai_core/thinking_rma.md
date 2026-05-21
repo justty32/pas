@@ -46,22 +46,6 @@ code_senior.sh --lang c                   # 普通執行（無資源管理）
 
 ---
 
-### 開放設計問題
-
-**`--metadata` 要怎麼處理？**
-
-```bash
-rma --exec code_senior.sh --metadata
-```
-
-兩條路：
-- **透傳模式**：等同於呼叫 `code_senior.sh --metadata`，rma 不插手——rma 是透明包裝器
-- **包裝模式**：回傳 rma 自己的 metadata（包含此 rma 實例設定的資源限制）——rma 是有身份的工具
-
-這個決定影響 rma 在 hub 裡的定位。尚未決定。
-
----
-
 ### 與 `thinking_layers.md` 的關係
 
 rma 對應 `thinking_layers.md` 執行模型表格中「管資源」的一格：
