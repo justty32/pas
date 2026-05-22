@@ -21,3 +21,5 @@
 - 更新 godot_lowpoly/CONCEPT.md：標記已決定採用 3D（2026-05-22）；補充規避工業感技法實作狀態對照；列出已實作系統索引（地形/procgen/材質/散佈/鏡頭/選取）；更新未決定事項完成狀態
 - 實作 godot_anim_agent Phase 1：新增 anim_inspector.py（summary/tracks/set-key/scale-time 四個指令，解析 Godot .tres/.animlib 文字格式）、anim_metadata.py（init/show/set-tag/rm-tag/compat，旁置 .anim.meta.json 管理動畫組合 metadata）；更新 VISION.md 進度
 - 實作 2D 俯視世界地圖：新增 C++ MapCoreWorldMap2DRenderer（RefCounted，generate_terrain_image 每格 cell_px²像素 fill_rect + 地形色盤、draw_rivers 依四方向邊 clamp-thick 藍色線段）；GDScript WorldMap2D（Sprite2D centered=false + Camera2D pan/zoom/左鍵格子查詢）；更新 register_types.cpp；新增 tutorial/gdextension_world_map_2d.md
+- 2026-05-22: 提交 godot 目錄重整（others/godot_* → others/godot/，14 子目錄純 rename）。
+- 2026-05-22: 補強 godot_anim_agent Phase 1 編輯能力——anim_inspector.py 值解析改為結構化分量（_parse_value_item 辨別 float/Vector2/3/4/Quaternion/other）；set-key 支援向量值軌道（型別檢查，如 ".:position" Vector2）；新增 offset（整條逐分量平移）與 scale-value（整條乘純量）兩指令；Quaternion 逐分量運算加防呆警告。序列化對齊引擎：向量分量與 PackedFloat32Array 元素走 _fmt_real（整數不帶 .0），value Array 的 float 仍補 .0；移除死碼 _float_list_to_array。實測 fighter.tres 副本：單 key 編輯整檔僅一行 diff、向量插入排序正確、型別不符/method 軌道正確拒絕。

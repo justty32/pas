@@ -135,9 +135,10 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 ## 目前進度
 
 - [x] Phase 1 工具架構（此目錄）
-- [x] Phase 1 工具實作：`anim_inspector.py`（讀取/摘要/set-key/scale-time）
+- [x] Phase 1 工具實作：`anim_inspector.py`（summary/tracks/set-key/scale-time/offset/scale-value）
+- [x] set-key 支援向量值軌道（Vector2/3/4、Quaternion），補上 `offset`/`scale-value` 批次數值操作
 - [x] Metadata 格式定案：`anim_metadata.py`（init/show/set-tag/compat）
-- [x] Phase 1 實際測試（範例：`examples/fighter.tres`；inspector 四指令 + metadata 全指令跑通）
+- [x] Phase 1 實際測試（範例：`examples/fighter.tres`；inspector 六指令 + metadata 全指令跑通）
 - [ ] Phase 2 設計（自然語言動作組合）
 - [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
 
@@ -161,6 +162,30 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - `cmd_set_key` 偵測到非 float 軌道（Vector2/method）時明確拒絕，插入新 key 時同步
   插入 `transitions=1.0`。
 - `cmd_scale_time` 只縮放 `times` 與 `length`，不碰 values。
+
+### 2026-05-22 補強編輯能力（向量值軌道 + 批次操作）
+
+把 Phase 1 的編輯能力從「只能改純量 float」補齊到向量，作為 Phase 2 的前置基礎：
+
+1. **值解析改為結構化分量**：新增 `_parse_value_item`，把每個 key 解析成
+   `(vtype, comps)`，自動辨別 `float` / `Vector2` / `Vector3` / `Vector4` /
+   `Quaternion` / `other`（method dict 等）。`_parse_values` 回傳 `{vtype, comps, items}`，
+   取代原本的 `(kind, floats, items)` 三元組。
+2. **`set-key` 支援向量**：輸入如 `".:position" 0.3 "Vector2(12, -4)"`，型別需與
+   軌道一致（不一致明確拒絕）；method/dict 軌道仍拒絕。
+3. **新增 `offset`**：整條軌道逐分量平移（delta 型別需與軌道一致）。
+4. **新增 `scale-value`**：整條軌道數值乘上純量。
+5. **Quaternion 防呆**：offset/scale-value 對 Quaternion 逐分量運算會破壞單位長度，
+   印出警告（仍執行）；3D 旋轉建議用 set-key 指定完整四元數。
+
+序列化格式對齊引擎以減少無謂 diff：
+- 向量分量與 **PackedFloat32Array 元素**（times/transitions）走 `_fmt_real`，
+  整數值不帶 `.0`（比照 Godot `rtos`）。
+- value Array 裡的 float 仍用 `_fmt_float` 保留 `.0`（比照 Variant float 序列化）。
+
+實測（`examples/fighter.tres` 副本）：單一 key 編輯整檔僅一行 diff；向量
+set-key 插入後 times/transitions 維持整數風格且正確排序；offset/scale-value
+數值正確；型別不符與 method 軌道皆正確拒絕。
 
 ---
 

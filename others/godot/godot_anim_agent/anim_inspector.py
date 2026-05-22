@@ -5,23 +5,34 @@ Phase 1 工作流程工具：
   讀取 → 摘要輸出 → 供 Claude 理解結構 → 修改指令 → 寫回
 
 使用方式：
-  python anim_inspector.py summary  <file.tres>
-  python anim_inspector.py tracks   <file.tres> <animation_name>
-  python anim_inspector.py set-key  <file.tres> <anim> <track_path> <time> <value>
-  python anim_inspector.py scale-time <file.tres> <anim> <factor>
+  python anim_inspector.py summary     <file.tres>
+  python anim_inspector.py tracks      <file.tres> <anim>
+  python anim_inspector.py set-key     <file.tres> <anim> <track_path> <time> <value>
+  python anim_inspector.py scale-time  <file.tres> <anim> <factor>
+  python anim_inspector.py offset      <file.tres> <anim> <track_path> <delta>
+  python anim_inspector.py scale-value <file.tres> <anim> <track_path> <factor>
 
 範例：
-  python anim_inspector.py summary  player.tres
-  python anim_inspector.py tracks   player.tres walk
-  python anim_inspector.py set-key  player.tres walk "Body/Bone2D:rotation" 0.15 1.8
-  python anim_inspector.py scale-time player.tres punch 0.7
+  python anim_inspector.py summary     player.tres
+  python anim_inspector.py tracks      player.tres walk
+  python anim_inspector.py set-key     player.tres walk "Body/Bone2D:rotation" 0.15 1.8
+  python anim_inspector.py set-key     player.tres punch ".:position" 0.3 "Vector2(12, -4)"
+  python anim_inspector.py scale-time  player.tres punch 0.7
+  python anim_inspector.py offset      player.tres punch ".:position" "Vector2(5, 0)"
+  python anim_inspector.py scale-value player.tres punch "Armature/UpperArm:rotation" 1.2
 
 備註：
   Godot 的 value 軌道把 "values" 存成一般 Array（例如 [0.0, 1.8] 或
-  [Vector2(0, 0), ...]），不是 PackedFloat32Array。解析器會自動辨別純量
-  float 與非純量（Vector2/Quaternion/method 等）值類型。set-key 只能改
-  純量 float 軌道（如 rotation）；scale-time 對所有軌道都安全，因為它
-  只縮放時間、保留 values/transitions/update。
+  [Vector2(0, 0), ...]），不是 PackedFloat32Array。解析器會把每個 key 解析成
+  結構化分量，自動辨別 float / Vector2 / Vector3 / Vector4 / Quaternion 與
+  非數值（method dict 等）。
+    - set-key     ：插入/更新單一 key，輸入型別需與軌道一致（float 或 Vector*）。
+    - offset      ：整條軌道逐分量平移（delta 型別需與軌道一致）。
+    - scale-value ：整條軌道數值乘上純量。
+    - scale-time  ：只縮放時間軸，保留 values/transitions/update，對任何軌道都安全。
+  向量分量以 Godot 風格輸出（整數不帶 .0），float Array 維持 1.0 風格，
+  與引擎序列化一致以減少無謂 diff。Quaternion 逐分量平移/縮放會破壞單位長度，
+  工具會警告——3D 旋轉建議用 set-key 指定完整四元數。
 """
 
 import re
@@ -176,33 +187,56 @@ def _packed_floats(raw: str):
     return [float(x) for x in _split_top_level(inner)]
 
 
+# 支援的數值型別與分量數
+_VEC_RE = re.compile(r'(Vector2|Vector3|Vector4|Quaternion)\s*\(([^)]*)\)\s*$')
+_COMPONENT_COUNT = {"Vector2": 2, "Vector3": 3, "Vector4": 4, "Quaternion": 4}
+
+
+def _parse_value_item(item: str):
+    """
+    解析單一 value 項目，回傳 (vtype, comps)：
+      vtype : 'float' | 'Vector2' | 'Vector3' | 'Vector4' | 'Quaternion' | 'other'
+      comps : 數值型別 → 分量浮點列表；'other'（method dict / 字串等）→ None
+    """
+    item = item.strip()
+    m = _VEC_RE.match(item)
+    if m:
+        comps = [float(x.strip()) for x in m.group(2).split(',') if x.strip() != '']
+        return (m.group(1), comps)
+    try:
+        return ('float', [float(item)])
+    except ValueError:
+        return ('other', None)
+
+
 def _parse_values(raw: str):
     """
-    解析 value 軌道的 "values"。回傳 (kind, floats_or_None, items)：
-      kind   : "float"（純量浮點）或 "other"（Vector2 / dict / 字串 等）
-      floats : kind=="float" 時的浮點列表，否則 None
-      items  : 各個 key 對應的原始值字串列表（供顯示用）
+    解析 value 軌道的 "values"，回傳 dict：
+      vtype : 'float' / 'Vector2' / 'Vector3' / 'Vector4' / 'Quaternion'
+              / 'other'（含 method dict 等）/ 'mixed'（型別不一致，理論上不該發生）
+      comps : 數值型軌道 → 每個 key 的分量列表 list[list[float]]；非數值 → None
+      items : 各 key 的原始字串（顯示用）
     """
     raw = raw.strip()
+    # PackedFloat32Array(...)（blend shape 等少見格式）視為純量 float
     pf = _packed_floats(raw)
     if pf is not None:
-        return ("float", pf, [str(x) for x in pf])
+        return {"vtype": "float", "comps": [[x] for x in pf],
+                "items": [_fmt_float(x) for x in pf]}
     if raw.startswith('[') and raw.endswith(']'):
         items = _split_top_level(raw[1:-1].strip())
-        floats, ok = [], True
-        for it in items:
-            try:
-                floats.append(float(it))
-            except ValueError:
-                ok = False
-                break
-        if ok:
-            return ("float", floats, items)
-        return ("other", None, items)
-    try:
-        return ("float", [float(raw)], [raw])
-    except ValueError:
-        return ("other", None, [raw])
+    else:
+        items = [raw]
+    if not items:
+        return {"vtype": "float", "comps": [], "items": []}
+    parsed = [_parse_value_item(it) for it in items]
+    vtypes = {p[0] for p in parsed}
+    if 'other' in vtypes:
+        return {"vtype": "other", "comps": None, "items": items}
+    if len(vtypes) == 1:
+        return {"vtype": next(iter(vtypes)),
+                "comps": [p[1] for p in parsed], "items": items}
+    return {"vtype": "mixed", "comps": None, "items": items}
 
 
 def _clean_path(raw: str) -> str:
@@ -243,12 +277,14 @@ def _extract_tracks(sub_res: dict) -> list[dict]:
             sp = _field_value_span(keys_raw, "values")
             if sp:
                 raw_v = keys_raw[sp[0]:sp[1]]
-                kind, floats, items = _parse_values(raw_v)
-                track["values_kind"] = kind
-                track["values_raw"]  = raw_v.strip()
-                track["values_items"] = items
-                if kind == "float":
-                    track["values"] = floats
+                pv = _parse_values(raw_v)
+                track["vtype"]        = pv["vtype"]
+                track["comps"]        = pv["comps"]
+                track["values_items"] = pv["items"]
+                track["values_raw"]   = raw_v.strip()
+                # 相容：純量 float 軌道仍提供 values 為浮點列表
+                if pv["vtype"] == "float" and pv["comps"] is not None:
+                    track["values"] = [c[0] for c in pv["comps"]]
         result.append(track)
     return result
 
@@ -277,9 +313,9 @@ def cmd_summary(filepath: str) -> None:
             times_str = ""
             if t.get("times"):
                 times_str = f"  [{', '.join(f'{v:.3f}' for v in t['times'])}]"
-            kind = t.get("values_kind")
-            kind_str = f"  值={kind}" if kind and kind != "float" else ""
-            print(f"   [{t['index']}] {t['type']:7s} path={t['path']}{times_str}{kind_str}")
+            vt = t.get("vtype")
+            vt_str = f"  值={vt}" if vt and vt != "float" else ""
+            print(f"   [{t['index']}] {t['type']:7s} path={t['path']}{times_str}{vt_str}")
         print()
 
 
@@ -303,14 +339,16 @@ def cmd_tracks(filepath: str, anim_name: str) -> None:
         if not times:
             print("  （無 times 資料）")
             continue
-        kind  = t.get("values_kind")
+        vt    = t.get("vtype")
+        comps = t.get("comps")
         items = t.get("values_items")
-        if kind == "float" and t.get("values") is not None:
-            print(f"  {'時間':>8}  {'數值':>14}")
-            for time, val in zip(times, t["values"]):
-                print(f"  {time:>8.4f}  {val:>14.6f}")
+        if comps is not None and len(comps) == len(times):
+            label = "數值" if vt == "float" else f"數值（{vt}）"
+            print(f"  {'時間':>8}  {label}")
+            for time, c in zip(times, comps):
+                print(f"  {time:>8.4f}  {_format_value_item(vt, c)}")
         elif items and len(items) == len(times):
-            print(f"  {'時間':>8}  數值（{kind}）")
+            print(f"  {'時間':>8}  數值（{vt}）")
             for time, val in zip(times, items):
                 print(f"  {time:>8.4f}  {val}")
         else:
@@ -324,38 +362,33 @@ def cmd_tracks(filepath: str, anim_name: str) -> None:
 def cmd_set_key(filepath: str, anim_name: str,
                 track_path: str, time_str: str, value_str: str) -> None:
     """
-    設定指定 track 在指定時間點的數值（僅支援純量 float 值軌，如 rotation）。
+    設定指定 track 在指定時間點的數值。支援純量 float（如 rotation）與
+    Vector2/Vector3/Vector4/Quaternion（如 position）。輸入型別需與軌道一致。
     若時間點不存在則插入（保持時間排序，並同步插入 transition=1）。
     寫回原始檔案；保留 transitions / update 等其他欄位。
     """
-    target_time  = float(time_str)
-    target_value = float(value_str)
+    target_time = float(time_str)
+    try:
+        in_vtype, in_comps = _parse_input_value(value_str)
+    except ValueError as ex:
+        print(ex)
+        return
+
     text = Path(filepath).read_text(encoding="utf-8")
     data = parse_tres(text)
-
-    anim = _find_anim(data, anim_name)
-    if anim is None:
-        print(f"找不到動畫：{anim_name}")
+    anim, track = _resolve_track(data, anim_name, track_path)
+    if track is None:
         return
 
-    tracks = _extract_tracks(anim)
-    matched = [t for t in tracks if t["path"] == track_path]
-    if not matched:
-        print(f"找不到 track：{track_path}")
-        print("可用 track：")
-        for t in tracks:
-            print(f"  {t['path']}")
+    vtype, comps = _editable_comps(track, track_path)
+    if comps is None:
         return
-
-    track = matched[0]
-    if track.get("values_kind") != "float" or track.get("values") is None:
-        kind = track.get("values_kind") or "未知"
-        print(f"[{track_path}] 的值類型為 {kind}，set-key 目前僅支援純量 float 值軌"
-              f"（例如 rotation）。Vector2/Quaternion/method 等請手動編輯或待 Phase 2。")
+    if in_vtype != vtype:
+        print(f"[{track_path}] 是 {vtype} 軌道，你輸入的是 {in_vtype}；型別需一致。")
         return
 
     times       = list(track["times"])
-    values      = list(track["values"])
+    comps       = [list(c) for c in comps]
     transitions = list(track.get("transitions") or [1.0] * len(times))
     has_transitions = "transitions" in track
 
@@ -363,23 +396,24 @@ def cmd_set_key(filepath: str, anim_name: str,
     updated = False
     for i, t in enumerate(times):
         if abs(t - target_time) < 1e-5:
-            print(f"更新 [{track_path}] t={target_time}: {values[i]:.6f} → {target_value:.6f}")
-            values[i] = target_value
+            print(f"更新 [{track_path}] t={target_time}: "
+                  f"{_format_value_item(vtype, comps[i])} → {_format_value_item(vtype, in_comps)}")
+            comps[i] = in_comps
             updated = True
             break
     if not updated:
         insert_idx = next((i for i, t in enumerate(times) if t > target_time), len(times))
         times.insert(insert_idx, target_time)
-        values.insert(insert_idx, target_value)
+        comps.insert(insert_idx, in_comps)
         if insert_idx <= len(transitions):
             transitions.insert(insert_idx, 1.0)
-        print(f"插入 [{track_path}] t={target_time}: {target_value:.6f}")
+        print(f"插入 [{track_path}] t={target_time}: {_format_value_item(vtype, in_comps)}")
 
     # 逐欄位外科式替換（保留 update 等其他欄位）
     new_text = _replace_keys_field(text, anim["id"], track["index"],
                                    "times", _float_list_to_packed(times))
     new_text = _replace_keys_field(new_text, anim["id"], track["index"],
-                                   "values", _float_list_to_array(values))
+                                   "values", _format_values_array(vtype, comps))
     if has_transitions:
         new_text = _replace_keys_field(new_text, anim["id"], track["index"],
                                        "transitions", _float_list_to_packed(transitions))
@@ -426,6 +460,71 @@ def cmd_scale_time(filepath: str, anim_name: str, factor_str: str) -> None:
     print(f"時間縮放 ×{factor}，已儲存：{filepath}")
 
 
+# ── 修改指令：整條軌道數值平移 ───────────────────────────────────────────────
+
+def cmd_offset(filepath: str, anim_name: str,
+               track_path: str, delta_str: str) -> None:
+    """
+    對指定 track 的每個 key 數值加上 delta（型別需與軌道一致）。
+    float 軌道：delta=0.2；Vector2 軌道：delta="Vector2(5, 0)"。
+    只動 values，保留 times/transitions/update。
+    """
+    try:
+        d_vtype, d_comps = _parse_input_value(delta_str)
+    except ValueError as ex:
+        print(ex)
+        return
+
+    text = Path(filepath).read_text(encoding="utf-8")
+    data = parse_tres(text)
+    anim, track = _resolve_track(data, anim_name, track_path)
+    if track is None:
+        return
+    vtype, comps = _editable_comps(track, track_path)
+    if comps is None:
+        return
+    if d_vtype != vtype:
+        print(f"[{track_path}] 是 {vtype} 軌道，delta 是 {d_vtype}；型別需一致。")
+        return
+    if vtype == "Quaternion":
+        print("⚠ Quaternion 逐分量平移會破壞單位長度；3D 旋轉建議改用 set-key 指定完整四元數。")
+
+    new_comps = [[round(c + d, 6) for c, d in zip(key, d_comps)] for key in comps]
+    new_text = _replace_keys_field(text, anim["id"], track["index"],
+                                   "values", _format_values_array(vtype, new_comps))
+    Path(filepath).write_text(new_text, encoding="utf-8")
+    print(f"[{track_path}] {len(comps)} 個 key 平移 {_format_value_item(vtype, d_comps)}，"
+          f"已儲存：{filepath}")
+
+
+# ── 修改指令：整條軌道數值縮放 ───────────────────────────────────────────────
+
+def cmd_scale_value(filepath: str, anim_name: str,
+                    track_path: str, factor_str: str) -> None:
+    """
+    對指定 track 的每個 key 數值（所有分量）乘上純量 factor。
+    例如出拳幅度加大 20%：scale-value punch "Armature/UpperArm:rotation" 1.2。
+    只動 values，保留 times/transitions/update。
+    """
+    factor = float(factor_str)
+    text = Path(filepath).read_text(encoding="utf-8")
+    data = parse_tres(text)
+    anim, track = _resolve_track(data, anim_name, track_path)
+    if track is None:
+        return
+    vtype, comps = _editable_comps(track, track_path)
+    if comps is None:
+        return
+    if vtype == "Quaternion":
+        print("⚠ Quaternion 逐分量縮放會破壞單位長度；3D 旋轉建議改用 set-key 指定完整四元數。")
+
+    new_comps = [[round(c * factor, 6) for c in key] for key in comps]
+    new_text = _replace_keys_field(text, anim["id"], track["index"],
+                                   "values", _format_values_array(vtype, new_comps))
+    Path(filepath).write_text(new_text, encoding="utf-8")
+    print(f"[{track_path}] {len(comps)} 個 key 數值 ×{factor}，已儲存：{filepath}")
+
+
 # ── 內部工具函數 ─────────────────────────────────────────────────────────────
 
 def _find_anim(data: dict, name: str):
@@ -439,6 +538,44 @@ def _find_anim(data: dict, name: str):
     return None
 
 
+def _resolve_track(data: dict, anim_name: str, track_path: str):
+    """找動畫與指定 path 的 track；找不到時印出提示並回傳 (None, None)。"""
+    anim = _find_anim(data, anim_name)
+    if anim is None:
+        print(f"找不到動畫：{anim_name}")
+        return None, None
+    tracks = _extract_tracks(anim)
+    matched = [t for t in tracks if t["path"] == track_path]
+    if not matched:
+        print(f"找不到 track：{track_path}")
+        print("可用 track：")
+        for t in tracks:
+            print(f"  {t['path']}")
+        return None, None
+    return anim, matched[0]
+
+
+def _editable_comps(track: dict, track_path: str):
+    """取得可編輯數值軌道 (vtype, comps)；非數值（method/dict）回傳 (None, None)。"""
+    vtype = track.get("vtype")
+    comps = track.get("comps")
+    if vtype in (None, "other", "mixed") or comps is None:
+        print(f"[{track_path}] 的值類型為 {vtype or '未知'}，僅支援 "
+              f"float / Vector2/Vector3/Vector4 / Quaternion 數值軌道"
+              f"（method/dict 等請手動編輯）。")
+        return None, None
+    return vtype, comps
+
+
+def _parse_input_value(s: str):
+    """解析使用者輸入：'1.8' 或 'Vector2(12, -4)' → (vtype, comps)。失敗 raise ValueError。"""
+    vtype, comps = _parse_value_item(s)
+    if vtype == 'other':
+        raise ValueError(
+            f"無法解析數值：{s}（支援 float 或 Vector2/Vector3/Vector4/Quaternion(...)）")
+    return vtype, comps
+
+
 def _fmt_float(v: float) -> str:
     """以 Godot 風格輸出浮點數（整數值保留 .0，避免科學記號）"""
     s = repr(float(v))
@@ -446,13 +583,29 @@ def _fmt_float(v: float) -> str:
 
 
 def _float_list_to_packed(values: list[float]) -> str:
-    """浮點數列表 → Godot PackedFloat32Array(...) 字串"""
-    return f"PackedFloat32Array({', '.join(_fmt_float(v) for v in values)})"
+    """浮點數列表 → Godot PackedFloat32Array(...) 字串。
+    元素比照引擎 rtos：整數值不帶 .0（與 value Array 的 float 不同）。"""
+    return f"PackedFloat32Array({', '.join(_fmt_real(v) for v in values)})"
 
 
-def _float_list_to_array(values: list[float]) -> str:
-    """浮點數列表 → Godot 一般 Array 字串 [v0, v1, ...]（value 軌道用）"""
-    return f"[{', '.join(_fmt_float(v) for v in values)}]"
+def _fmt_real(v: float) -> str:
+    """Godot 風格實數（向量分量用）：整數值不帶 .0，與引擎序列化一致。"""
+    v = float(v)
+    if v == int(v) and abs(v) < 1e16:
+        return str(int(v))
+    return repr(v)
+
+
+def _format_value_item(vtype: str, comps: list) -> str:
+    """單一 value 還原成 Godot 字面值：float→'1.8'，Vector2→'Vector2(12, -4)'。"""
+    if vtype == "float":
+        return _fmt_float(comps[0])
+    return f"{vtype}({', '.join(_fmt_real(c) for c in comps)})"
+
+
+def _format_values_array(vtype: str, comps: list) -> str:
+    """整個 values 陣列還原：[v0, v1, ...]。"""
+    return "[" + ", ".join(_format_value_item(vtype, c) for c in comps) + "]"
 
 
 def _sub_block_span(text: str, sub_id: str):
@@ -554,6 +707,16 @@ def main():
             print("用法：anim_inspector.py scale-time <file> <anim> <factor>")
             sys.exit(1)
         cmd_scale_time(file, sys.argv[3], sys.argv[4])
+    elif cmd == "offset":
+        if len(sys.argv) < 6:
+            print("用法：anim_inspector.py offset <file> <anim> <track_path> <delta>")
+            sys.exit(1)
+        cmd_offset(file, sys.argv[3], sys.argv[4], sys.argv[5])
+    elif cmd == "scale-value":
+        if len(sys.argv) < 6:
+            print("用法：anim_inspector.py scale-value <file> <anim> <track_path> <factor>")
+            sys.exit(1)
+        cmd_scale_value(file, sys.argv[3], sys.argv[4], sys.argv[5])
     else:
         print(f"未知指令：{cmd}")
         print(__doc__)
