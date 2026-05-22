@@ -150,6 +150,24 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [ ] 3D transform 軌道（`rotation_3d`/`position_3d`/`scale_3d`，平坦 PackedFloat 格式）支援
       —— **阻塞**：需真實 Godot 3D 匯出確認格式（與 value 軌道的 dict 格式不同）
 
+### 解鎖 3D 所需（待使用者提供）
+
+工具鏈無法憑空猜 3D transform 軌道的確切文字格式（Godot 版本間也可能有差）。要往下做，
+請提供以下**真實檔案內容**（直接放進 `examples/` 或貼給我即可）：
+
+1. **一份含 3D 骨骼動畫的 `.tres` / `.animlib` 文字檔**——在 Godot 編輯器把帶 `Skeleton3D`
+   的動畫存成（或從 `.glb` 匯入後另存）文字格式。關鍵是要看到 `tracks/N/type` 為
+   `rotation_3d` / `position_3d` / `scale_3d` 的真實 `keys` 寫法。
+2. **最好有 2 段以上、且共用骨骼的動畫**（例如 `idle_3d` 與 `attack_3d` 都動同一根骨骼）
+   —— 這樣才能驗證 3D 的 concat 與 cross-fade。
+3. **其中一段帶根骨骼位移**（root motion；根骨骼的 `position_3d` 軌道有淨位移）
+   —— 驗證 3D root motion 累加。
+4. 順帶確認 **Godot 版本**（4.x 的次版本），因為 transform 軌道格式曾隨版本演進
+   （壓縮/非壓縮）。
+
+拿到後我會：先用 `anim_inspector` 確認能正確解析這些軌道型別 → 擴充解析/寫回 →
+把 concat 的 cross-fade（SLERP 已備好）/ root motion 套用到 3D → 用你的檔實測。
+
 ### 2026-05-22 首次實測修 bug 紀錄
 
 工具撰寫時假設 value 軌道的 `values` 也是 `PackedFloat32Array`，但 Godot 實際存成
