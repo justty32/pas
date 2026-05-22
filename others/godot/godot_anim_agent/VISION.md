@@ -147,6 +147,11 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [x] Phase 2 seam 診斷 `check-seams`：速度突變/瞬跳報告（限制：無法自動區分刻意俐落與頓挫）
 - [x] Quaternion cross-fade 用 SLERP（value 軌道四元數，單位長度驗證；合成 fixture 實測）
 - [x] **Phase 2（2D / value 軌道範疇）完成**：concat + cross-fade + root motion + check-seams
+- [ ] **Phase 3**（VISION 原無定義；2026-05-23 與使用者議定三個與 3D 無關的新能力層）：
+  - [x] ① 動畫事件 / method 軌道 `anim_events.py`（list/add/rm/scaffold；fighter.tres 實測，
+        產出 `examples/fighter_events.gd` 示範）
+  - [ ] ③ 程序化擺位 / IK（2-bone IK 解關節旋轉）—— 待使用者提供 fighter 骨骼長度與基準朝向
+  - [ ] ② AnimationTree / 狀態機（最大層；最好有真實狀態機 `.tres` 範本對格式）
 - [ ] 3D transform 軌道（`rotation_3d`/`position_3d`/`scale_3d`，平坦 PackedFloat 格式）支援
       —— **阻塞**：需真實 Godot 3D 匯出確認格式（與 value 軌道的 dict 格式不同）
 
