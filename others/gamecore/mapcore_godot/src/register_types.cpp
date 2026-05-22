@@ -3,6 +3,7 @@
 #include "map_generator.h"
 #include "terrain_mesh_builder.h"
 #include "procgen_mesh_builder.h"
+#include "world_map_2d_renderer.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
@@ -17,6 +18,7 @@ void initialize_mapcore_module(ModuleInitializationLevel p_level) {
     GDREGISTER_CLASS(MapCoreGenerator);
     GDREGISTER_CLASS(MapCoreTerrainMeshBuilder);
     GDREGISTER_CLASS(MapCoreProcGenMeshBuilder);
+    GDREGISTER_CLASS(MapCoreWorldMap2DRenderer);
 }
 
 void uninitialize_mapcore_module(ModuleInitializationLevel p_level) {

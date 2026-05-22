@@ -20,3 +20,4 @@
 - 實作 godot_selection_highlight（2D）：新增 selection_outline_2d.gdshader（canvas_item，8鄰透明像素採樣描邊）、selection_manager_2d.gd（SelectionManager2D，保存/還原 CanvasItem.material，_SelectionCircle 內部類別 draw_arc 程序繪製選取圓圈不需貼圖）；新增 tutorial/gdextension_selection_highlight_2d.md
 - 更新 godot_lowpoly/CONCEPT.md：標記已決定採用 3D（2026-05-22）；補充規避工業感技法實作狀態對照；列出已實作系統索引（地形/procgen/材質/散佈/鏡頭/選取）；更新未決定事項完成狀態
 - 實作 godot_anim_agent Phase 1：新增 anim_inspector.py（summary/tracks/set-key/scale-time 四個指令，解析 Godot .tres/.animlib 文字格式）、anim_metadata.py（init/show/set-tag/rm-tag/compat，旁置 .anim.meta.json 管理動畫組合 metadata）；更新 VISION.md 進度
+- 實作 2D 俯視世界地圖：新增 C++ MapCoreWorldMap2DRenderer（RefCounted，generate_terrain_image 每格 cell_px²像素 fill_rect + 地形色盤、draw_rivers 依四方向邊 clamp-thick 藍色線段）；GDScript WorldMap2D（Sprite2D centered=false + Camera2D pan/zoom/左鍵格子查詢）；更新 register_types.cpp；新增 tutorial/gdextension_world_map_2d.md
