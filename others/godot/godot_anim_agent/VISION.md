@@ -140,9 +140,12 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [x] Metadata 格式定案：`anim_metadata.py`（init/show/set-tag/compat）
 - [x] Phase 1 實際測試（範例：`examples/fighter.tres`；inspector 六指令 + metadata 全指令跑通）
 - [x] Phase 2 設計：`PHASE2_DESIGN.md`（角色分工：人/Claude/工具；組合演算法；工具介面）
-- [x] Phase 2 機械原語：`anim_compose.py concat`（序列拼接 + `--blend` 時間重疊；idle+punch 實測）
-- [ ] Phase 2 進階：cross-fade 值混合烘焙、銜接連續性補正（fix-seam）、root motion 累加
-- [ ] Phase 2 端到端：Claude 自然語言 → metadata 配對 → compose 指令的實際走查
+- [x] Phase 2 機械原語：`anim_compose.py concat`（序列拼接；`--blend` 做 cross-fade 值混合烘焙）
+- [x] Phase 2 cross-fade：重疊窗內逐分量線性混合（fighter.tres 加 `guard` 範例，guard→punch 實測）
+- [x] Phase 2 端到端走查：自然語言 → 查 metadata → Phase 1 編輯 + concat（idle+punch）跑通
+- [ ] Phase 2 銜接連續性補正 `fix-seam`（缺席軌道 hold / 起手姿勢對齊）
+- [ ] Phase 2 root motion 累加（避免拼接後滑回原點）
+- [ ] Quaternion cross-fade 改 SLERP（目前逐分量線性近似）
 - [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
 
 ### 2026-05-22 首次實測修 bug 紀錄

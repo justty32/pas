@@ -72,14 +72,21 @@ clip 順序、blend 長度、root motion 補正量等明確參數。
 補 hold key，Godot 會在跨段 key 之間直接插值——可能造成該骨骼在缺席段落「漂移」。
 這正是 §3.3 銜接修正要處理的；MVP 先接受，並在輸出時印出警告列出「非全程出現」的軌道。
 
-### 3.2 過渡混合 cross-fade（後續）
+### 3.2 過渡混合 cross-fade（已實作：資料層烘焙）
 
-seam 兩側值不連續時，在重疊區做線性/緩動混合。兩種實作路徑：
+seam 兩側值不連續時，在重疊區做線性混合。採**資料層烘焙**路徑（確定性，不動場景）：
 
-- **資料層烘焙**：在 `.tres` 直接把重疊區的 key 值算成混合結果（工具可做，確定性）。
-- **AnimationTree 層**：改用 `AnimationNodeBlend` / `Transition`，不動 clip 資料（需動場景）。
+- 重疊窗 `W = [offset[i+1], offset[i]+len[i]]`，寬度為夾過的 `eff_blend[i]`。
+- 對**兩相鄰 clip 都有、且型別一致的數值軌道**：取兩段在 W 內 key 時間的聯集 + 端點，
+  逐點線性混合 `value(t) = lerp(sampleA(t), sampleB(t), w)`，`w = (t - W.start) / 寬度`；
+  `sampleA/B` 各自在該 clip 的 key 上線性插值（端點外夾住）。
+- 混出的 key 取代窗內兩段原 key；窗外維持各自原 key。
+- 只出現於單邊、型別不一致、或 method 軌道：不混合，沿用純拼接（§3.1）。
 
-MVP 的 `--blend` 先只做**時間重疊 + seam 去重**，尚未做值的混合烘焙；留待 3.2 正式版。
+實作於 `anim_compose.py`（`_sample` + cmd_concat 的 blendable 分支）。
+**已知限制**：Quaternion 目前逐分量線性混合（非 SLERP），大旋轉會失真——工具會警告，
+列入待辦改用真正的球面插值。AnimationTree 層（`AnimationNodeBlend`/`Transition`）為另一條
+不動 clip 資料的路徑，本工具暫不採用。
 
 ### 3.3 銜接修正（後續）
 

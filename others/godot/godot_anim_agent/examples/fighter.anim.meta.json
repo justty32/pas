@@ -33,6 +33,26 @@
       "y": 0.0
     },
     "compatible_after": [
+      "idle",
+      "guard"
+    ],
+    "compatible_before": []
+  },
+  "guard": {
+    "name": "guard",
+    "tags": [
+      "guard",
+      "defensive",
+      "upper_body"
+    ],
+    "entry_frame": 0,
+    "exit_frame": -1,
+    "exit_velocity": {},
+    "root_motion_delta": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "compatible_after": [
       "idle"
     ],
     "compatible_before": []

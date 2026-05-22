@@ -24,8 +24,29 @@ from pathlib import Path
 
 from anim_inspector import (
     parse_tres, _extract_tracks, _find_anim,
-    _float_list_to_packed, _fmt_real,
+    _float_list_to_packed, _fmt_real, _format_value_item,
 )
+
+NUMERIC = {"float", "Vector2", "Vector3", "Vector4", "Quaternion"}
+
+
+def _sample(keys, t: float):
+    """keys = 已排序 [(time, comps)]，回傳 t 處線性插值的 comps；端點外夾住。"""
+    if not keys:
+        return []
+    if t <= keys[0][0]:
+        return list(keys[0][1])
+    if t >= keys[-1][0]:
+        return list(keys[-1][1])
+    for i in range(len(keys) - 1):
+        t0, c0 = keys[i]
+        t1, c1 = keys[i + 1]
+        if t0 <= t <= t1:
+            if t1 == t0:
+                return list(c1)
+            w = (t - t0) / (t1 - t0)
+            return [a + (b - a) * w for a, b in zip(c0, c1)]
+    return list(keys[-1][1])
 
 
 def _sanitize_id(name: str) -> str:
@@ -46,10 +67,10 @@ def _build_anim_block(new_id: str, new_name: str,
     ]
     for i, (path, entry) in enumerate(merged.items()):
         rp = entry["raw_props"]
-        keys = entry["keys"]                       # [(time, clip_idx, transition, item), ...]
+        keys = entry["keys"]                       # [(time, transition, item), ...]
         times  = _float_list_to_packed([k[0] for k in keys])
-        trans  = _float_list_to_packed([k[2] for k in keys])
-        values = "[" + ", ".join(k[3] for k in keys) + "]"
+        trans  = _float_list_to_packed([k[1] for k in keys])
+        values = "[" + ", ".join(k[2] for k in keys) + "]"
         lines += [
             f'tracks/{i}/type = "{entry["type"]}"',
             f'tracks/{i}/imported = {rp.get("imported", "false")}',
@@ -103,45 +124,101 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
         print("concat 至少需要 2 段動畫。")
         return
 
-    # 各段起始偏移（blend>0 時相鄰段重疊）
+    # 各段起始偏移；相鄰段有效重疊夾在兩段長度內（避免負偏移）
+    n = len(clips)
+    lengths = [c["length"] for c in clips]
+    eff_blend = [min(blend, lengths[i], lengths[i + 1]) for i in range(n - 1)]
     offsets, acc = [], 0.0
-    for i, clip in enumerate(clips):
+    for i in range(n):
         offsets.append(round(acc, 6))
-        acc += clip["length"] - (blend if i < len(clips) - 1 else 0.0)
-    total_length = round(offsets[-1] + clips[-1]["length"], 6)
+        if i < n - 1:
+            acc += lengths[i] - eff_blend[i]
+    total_length = round(offsets[-1] + lengths[-1], 6)
+    # 全域重疊窗 windows[i] = (start, end) 介於 clip i 與 i+1
+    windows = [(offsets[i + 1], round(offsets[i] + lengths[i], 6)) for i in range(n - 1)]
 
-    # 依 path 合併軌道
-    merged = {}          # path -> {type, raw_props, update, keys}
-    present = {}         # path -> set(clip_idx)
+    # 蒐集每條軌道在各 clip 的段落（payload：數值軌道→comps list；其餘→原始字串）
+    info_by_path = {}    # path -> {type, raw_props, update, vtypes, segs:{ci:[(t,trans,payload)]}}
     for ci, clip in enumerate(clips):
         for tr in clip["tracks"]:
-            path = tr["path"]
-            entry = merged.get(path)
-            if entry is None:
-                entry = {"type": tr["type"], "raw_props": tr["raw_props"],
-                         "update": tr.get("update"), "keys": []}
-                merged[path] = entry
-                present[path] = set()
-            present[path].add(ci)
+            path  = tr["path"]
+            vtype = tr.get("vtype")
+            comps = tr.get("comps")
+            is_num = comps is not None and vtype in NUMERIC
+            info = info_by_path.get(path)
+            if info is None:
+                info = {"type": tr["type"], "raw_props": tr["raw_props"],
+                        "update": tr.get("update"), "vtypes": set(), "segs": {}}
+                info_by_path[path] = info
+            info["vtypes"].add(vtype)
             times = tr.get("times") or []
             trans = tr.get("transitions") or [1.0] * len(times)
             items = tr.get("values_items") or []
+            seg = []
             for k in range(len(times)):
                 t  = round(times[k] + offsets[ci], 6)
                 tv = trans[k] if k < len(trans) else 1.0
-                it = items[k] if k < len(items) else "0.0"
-                entry["keys"].append((t, ci, tv, it))
+                payload = (list(comps[k]) if is_num and k < len(comps)
+                           else (items[k] if k < len(items) else "0.0"))
+                seg.append((t, tv, payload))
+            info["segs"][ci] = seg
 
-    # 每條軌道：依 (時間, clip 序) 排序，再對近乎同時的 key 去重（保留較後段）
-    for entry in merged.values():
-        entry["keys"].sort(key=lambda x: (x[0], x[1]))
+    # 逐軌道組裝最終 keys：可混合的數值軌道在重疊窗內烘焙 cross-fade
+    merged = {}          # path -> {type, raw_props, update, keys:[(t,trans,item)]}
+    present = {}         # path -> set(clip_idx)
+    blended_quat = False
+    crossfaded = set()   # 實際發生 cross-fade 的軌道
+    for path, info in info_by_path.items():
+        segs = info["segs"]
+        present[path] = set(segs.keys())
+        only = next(iter(info["vtypes"])) if len(info["vtypes"]) == 1 else None
+        blendable = (only in NUMERIC and
+                     all((not s) or isinstance(s[0][2], list) for s in segs.values()))
+        keys = []
+        if blendable and blend > 0:
+            active = [(windows[i][0], windows[i][1], i) for i in range(n - 1)
+                      if eff_blend[i] > 1e-9 and i in segs and (i + 1) in segs]
+
+            def _in_active(t, _a=active):
+                return any(s - 1e-6 <= t <= e + 1e-6 for (s, e, _) in _a)
+
+            # 非重疊區的原始 key
+            for seg in segs.values():
+                for (t, tr, comps) in seg:
+                    if not _in_active(t):
+                        keys.append((t, tr, _format_value_item(only, comps)))
+            # 重疊區：取兩段在窗內 key 時間的聯集 + 端點，逐點線性混合
+            for (s, e, i) in active:
+                a_keys = [(t, c) for (t, _, c) in segs[i]]
+                b_keys = [(t, c) for (t, _, c) in segs[i + 1]]
+                sample_ts = {round(s, 6), round(e, 6)}
+                for (t, _, _) in segs[i] + segs[i + 1]:
+                    if s - 1e-6 <= t <= e + 1e-6:
+                        sample_ts.add(t)
+                for t in sorted(sample_ts):
+                    w = 0.0 if e <= s else max(0.0, min(1.0, (t - s) / (e - s)))
+                    a, b = _sample(a_keys, t), _sample(b_keys, t)
+                    blended = [round(av + (bv - av) * w, 6) for av, bv in zip(a, b)]
+                    keys.append((round(t, 6), 1.0, _format_value_item(only, blended)))
+            if active:
+                crossfaded.add(path)
+                if only == "Quaternion":
+                    blended_quat = True
+        else:
+            for seg in segs.values():
+                for (t, tr, payload) in seg:
+                    item = payload if isinstance(payload, str) else _format_value_item(only, payload)
+                    keys.append((t, tr, item))
+
+        keys.sort(key=lambda x: x[0])
         deduped = []
-        for k in entry["keys"]:
+        for k in keys:
             if deduped and abs(deduped[-1][0] - k[0]) < 1e-5:
                 deduped[-1] = k
             else:
                 deduped.append(k)
-        entry["keys"] = deduped
+        merged[path] = {"type": info["type"], "raw_props": info["raw_props"],
+                        "update": info["update"], "keys": deduped}
 
     # 組出新區塊並寫回三處（load_steps / sub_resource / _data）
     new_id = _sanitize_id(new_anim)
@@ -163,10 +240,15 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
           f"{f'（blend {blend}s）' if blend else ''}")
     print(f"  length = {total_length}s，{len(merged)} 條軌道")
     for i, clip in enumerate(clips):
-        print(f"  [{i}] {clip['name']:16s} 起始 {offsets[i]}s  長度 {clip['length']}s")
+        print(f"  [{i}] {clip['name']:16s} 起始 {offsets[i]}s  長度 {lengths[i]}s")
+    if crossfaded:
+        print(f"  cross-fade 軌道（{len(crossfaded)}）：{', '.join(sorted(crossfaded))}")
+    if blended_quat:
+        print("⚠ Quaternion 軌道以逐分量線性混合（非 SLERP），大幅旋轉時可能不準。")
     partial = [p for p, s in present.items() if len(s) < len(clips)]
     if partial:
-        print("⚠ 下列軌道非全程出現，缺席段落不補 hold key（可能漂移，見 PHASE2_DESIGN §3.1）：")
+        print("ℹ 下列軌道非全程出現；缺席段落 Godot 會 hold 最近的關鍵幀（非循環不外插），"
+              "多半停在靜止姿勢。若該軌起手/收尾不在靜止值，可能需要 fix-seam（待實作）：")
         for p in partial:
             seg = sorted(clips[i]["name"] for i in present[p])
             print(f"    {p}  （僅出現於：{', '.join(seg)}）")
