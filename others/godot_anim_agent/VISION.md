@@ -137,9 +137,30 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [x] Phase 1 工具架構（此目錄）
 - [x] Phase 1 工具實作：`anim_inspector.py`（讀取/摘要/set-key/scale-time）
 - [x] Metadata 格式定案：`anim_metadata.py`（init/show/set-tag/compat）
-- [ ] Phase 1 實際測試（需要一個 Godot 動畫檔案）
+- [x] Phase 1 實際測試（範例：`examples/fighter.tres`；inspector 四指令 + metadata 全指令跑通）
 - [ ] Phase 2 設計（自然語言動作組合）
 - [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
+
+### 2026-05-22 首次實測修 bug 紀錄
+
+工具撰寫時假設 value 軌道的 `values` 也是 `PackedFloat32Array`，但 Godot 實際存成
+一般 Array（`[0.0, 0.5, ...]` 或 `[Vector2(...), ...]`）。拿 `examples/fighter.tres`
+首測時暴露三個問題，已修：
+
+1. **`tracks` 全軌道印「無法解析 keys 資料」** — values 解析只認 `PackedFloat32Array`，
+   不認 `[...]` 一般 Array。
+2. **`scale-time` 清空所有 values + 丟掉 `transitions`/`update`**
+   （`_replace_track_keys` 用未解析到的 `values=[]` 重建整個 keys dict，等於資料毀損）。
+3. **`set-key` 直接 `IndexError`**（values 為空但 times 有內容）。
+
+修法：
+- 用括號感知的 `_field_value_span` 定位欄位，能處理 `PackedFloat32Array(...)`、
+  `[...]`、巢狀 `{...}` 與純量。
+- 改外科式替換 `_replace_keys_field`：只動目標欄位，`transitions`/`update`/其他欄位
+  原封不動，對任何軌道類型都安全。
+- `cmd_set_key` 偵測到非 float 軌道（Vector2/method）時明確拒絕，插入新 key 時同步
+  插入 `transitions=1.0`。
+- `cmd_scale_time` 只縮放 `times` 與 `length`，不碰 values。
 
 ---
 

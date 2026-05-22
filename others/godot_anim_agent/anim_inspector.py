@@ -15,12 +15,17 @@ Phase 1 工作流程工具：
   python anim_inspector.py tracks   player.tres walk
   python anim_inspector.py set-key  player.tres walk "Body/Bone2D:rotation" 0.15 1.8
   python anim_inspector.py scale-time player.tres punch 0.7
+
+備註：
+  Godot 的 value 軌道把 "values" 存成一般 Array（例如 [0.0, 1.8] 或
+  [Vector2(0, 0), ...]），不是 PackedFloat32Array。解析器會自動辨別純量
+  float 與非純量（Vector2/Quaternion/method 等）值類型。set-key 只能改
+  純量 float 軌道（如 rotation）；scale-time 對所有軌道都安全，因為它
+  只縮放時間、保留 values/transitions/update。
 """
 
 import re
 import sys
-import ast
-import copy
 from pathlib import Path
 
 
@@ -102,34 +107,122 @@ def _parse_props(block: str) -> dict:
     return props
 
 
-def _extract_float_array(godot_array_str: str) -> list[float]:
+# ── 括號感知的數值解析 ────────────────────────────────────────────────────────
+
+def _split_top_level(s: str) -> list[str]:
+    """以頂層逗號切分字串，括號/中括號/大括號內的逗號不切。"""
+    parts, cur, depth = [], '', 0
+    for c in s:
+        if c in '([{':
+            depth += 1
+            cur += c
+        elif c in ')]}':
+            depth -= 1
+            cur += c
+        elif c == ',' and depth == 0:
+            if cur.strip():
+                parts.append(cur.strip())
+            cur = ''
+        else:
+            cur += c
+    if cur.strip():
+        parts.append(cur.strip())
+    return parts
+
+
+def _field_value_span(keys_raw: str, field: str):
     """
-    從 Godot PackedFloat32Array(0, 0.2, 0.5) 或 Array[float](...)
-    提取浮點數列表。
+    在 keys dict 原始字串中定位 "field": <value> 的 <value> 範圍 (start, end)。
+    括號感知：能正確處理 PackedFloat32Array(...)、[...]、巢狀 {...} 與純量。
+    找不到回傳 None。
     """
-    m = re.search(r'PackedFloat32Array\(([^)]*)\)', godot_array_str)
+    token = f'"{field}"'
+    ki = keys_raw.find(token)
+    if ki == -1:
+        return None
+    ci = keys_raw.find(':', ki + len(token))
+    if ci == -1:
+        return None
+    j = ci + 1
+    while j < len(keys_raw) and keys_raw[j] in ' \t\n\r':
+        j += 1
+    start = j
+    depth = 0
+    while j < len(keys_raw):
+        c = keys_raw[j]
+        if c in '([{':
+            depth += 1
+        elif c in ')]}':
+            if depth == 0:        # 觸到外層 dict 的結尾 }
+                break
+            depth -= 1
+        elif c == ',' and depth == 0:
+            break
+        j += 1
+    # 不把值後面的空白/換行算進範圍，替換時才能保留原本的排版（例如 ]\n}）
+    while j > start and keys_raw[j - 1] in ' \t\n\r':
+        j -= 1
+    return (start, j)
+
+
+def _packed_floats(raw: str):
+    """PackedFloat32Array(0, 0.5, 1) → [0.0, 0.5, 1.0]；非此格式回傳 None。"""
+    m = re.match(r'PackedFloat(?:32|64)Array\((.*)\)\s*$', raw.strip(), re.DOTALL)
     if not m:
-        m = re.search(r'Array\[float\]\(([^)]*)\)', godot_array_str)
+        return None
+    inner = m.group(1).strip()
+    if not inner:
+        return []
+    return [float(x) for x in _split_top_level(inner)]
+
+
+def _parse_values(raw: str):
+    """
+    解析 value 軌道的 "values"。回傳 (kind, floats_or_None, items)：
+      kind   : "float"（純量浮點）或 "other"（Vector2 / dict / 字串 等）
+      floats : kind=="float" 時的浮點列表，否則 None
+      items  : 各個 key 對應的原始值字串列表（供顯示用）
+    """
+    raw = raw.strip()
+    pf = _packed_floats(raw)
+    if pf is not None:
+        return ("float", pf, [str(x) for x in pf])
+    if raw.startswith('[') and raw.endswith(']'):
+        items = _split_top_level(raw[1:-1].strip())
+        floats, ok = [], True
+        for it in items:
+            try:
+                floats.append(float(it))
+            except ValueError:
+                ok = False
+                break
+        if ok:
+            return ("float", floats, items)
+        return ("other", None, items)
+    try:
+        return ("float", [float(raw)], [raw])
+    except ValueError:
+        return ("other", None, [raw])
+
+
+def _clean_path(raw: str) -> str:
+    """NodePath("Armature/Torso:rotation") → Armature/Torso:rotation"""
+    raw = raw.strip()
+    m = re.search(r'NodePath\("([^"]*)"\)', raw)
     if m:
-        raw = m.group(1).strip()
-        if not raw:
-            return []
-        return [float(x.strip()) for x in raw.split(',') if x.strip()]
-    return []
+        return m.group(1)
+    return raw.strip('"')
 
 
 def _extract_tracks(sub_res: dict) -> list[dict]:
-    """從 sub_resource 的 props 中提取 tracks/N/* 結構"""
+    """從 sub_resource 的 props 中提取 tracks/N/* 結構（含 times/transitions/values）"""
     props = sub_res["props"]
     tracks = {}
     for key, val in props.items():
         m = re.match(r'tracks/(\d+)/(.*)', key)
         if m:
             idx = int(m.group(1))
-            field = m.group(2)
-            if idx not in tracks:
-                tracks[idx] = {}
-            tracks[idx][field] = val
+            tracks.setdefault(idx, {})[m.group(2)] = val
 
     result = []
     for idx in sorted(tracks.keys()):
@@ -137,17 +230,25 @@ def _extract_tracks(sub_res: dict) -> list[dict]:
         track = {
             "index": idx,
             "type":  t.get("type", "").strip('"'),
-            "path":  t.get("path", "").strip('"').replace("NodePath(\"", "").rstrip("\")")
+            "path":  _clean_path(t.get("path", "")),
         }
-        # 嘗試提取 keys/times
         keys_raw = t.get("keys", "")
         if keys_raw:
-            times_m = re.search(r'"times":\s*(PackedFloat32Array\([^)]*\))', keys_raw)
-            vals_m  = re.search(r'"values":\s*(PackedFloat32Array\([^)]*\))', keys_raw)
-            if times_m:
-                track["times"]  = _extract_float_array(times_m.group(1))
-            if vals_m:
-                track["values"] = _extract_float_array(vals_m.group(1))
+            sp = _field_value_span(keys_raw, "times")
+            if sp:
+                track["times"] = _packed_floats(keys_raw[sp[0]:sp[1]]) or []
+            sp = _field_value_span(keys_raw, "transitions")
+            if sp:
+                track["transitions"] = _packed_floats(keys_raw[sp[0]:sp[1]]) or []
+            sp = _field_value_span(keys_raw, "values")
+            if sp:
+                raw_v = keys_raw[sp[0]:sp[1]]
+                kind, floats, items = _parse_values(raw_v)
+                track["values_kind"] = kind
+                track["values_raw"]  = raw_v.strip()
+                track["values_items"] = items
+                if kind == "float":
+                    track["values"] = floats
         result.append(track)
     return result
 
@@ -174,9 +275,11 @@ def cmd_summary(filepath: str) -> None:
         print(f"── 動畫：{name}  長度={length}s  tracks={len(tracks)}")
         for t in tracks:
             times_str = ""
-            if "times" in t:
+            if t.get("times"):
                 times_str = f"  [{', '.join(f'{v:.3f}' for v in t['times'])}]"
-            print(f"   [{t['index']}] {t['type']:12s}  path={t['path']}{times_str}")
+            kind = t.get("values_kind")
+            kind_str = f"  值={kind}" if kind and kind != "float" else ""
+            print(f"   [{t['index']}] {t['type']:7s} path={t['path']}{times_str}{kind_str}")
         print()
 
 
@@ -196,13 +299,24 @@ def cmd_tracks(filepath: str, anim_name: str) -> None:
     print(f"=== {anim_name} ===")
     for t in tracks:
         print(f"\n[{t['index']}] type={t['type']}  path={t['path']}")
-        if "times" in t and "values" in t:
-            pairs = list(zip(t["times"], t["values"]))
-            print(f"  {'時間':>8}  {'數值':>12}")
-            for time, val in pairs:
-                print(f"  {time:>8.4f}  {val:>12.6f}")
+        times = t.get("times")
+        if not times:
+            print("  （無 times 資料）")
+            continue
+        kind  = t.get("values_kind")
+        items = t.get("values_items")
+        if kind == "float" and t.get("values") is not None:
+            print(f"  {'時間':>8}  {'數值':>14}")
+            for time, val in zip(times, t["values"]):
+                print(f"  {time:>8.4f}  {val:>14.6f}")
+        elif items and len(items) == len(times):
+            print(f"  {'時間':>8}  數值（{kind}）")
+            for time, val in zip(times, items):
+                print(f"  {time:>8.4f}  {val}")
         else:
-            print("  （無法解析 keys 資料）")
+            print(f"  時間：{', '.join(f'{x:.4f}' for x in times)}")
+            if t.get("values_raw"):
+                print(f"  values（原始）：{t['values_raw']}")
 
 
 # ── 修改指令：設定單個 key ───────────────────────────────────────────────────
@@ -210,9 +324,9 @@ def cmd_tracks(filepath: str, anim_name: str) -> None:
 def cmd_set_key(filepath: str, anim_name: str,
                 track_path: str, time_str: str, value_str: str) -> None:
     """
-    設定指定 track 在指定時間點的數值。
-    若時間點不存在則插入（保持時間排序）。
-    寫回原始檔案。
+    設定指定 track 在指定時間點的數值（僅支援純量 float 值軌，如 rotation）。
+    若時間點不存在則插入（保持時間排序，並同步插入 transition=1）。
+    寫回原始檔案；保留 transitions / update 等其他欄位。
     """
     target_time  = float(time_str)
     target_value = float(value_str)
@@ -234,26 +348,42 @@ def cmd_set_key(filepath: str, anim_name: str,
         return
 
     track = matched[0]
-    times  = list(track.get("times",  []))
-    values = list(track.get("values", []))
+    if track.get("values_kind") != "float" or track.get("values") is None:
+        kind = track.get("values_kind") or "未知"
+        print(f"[{track_path}] 的值類型為 {kind}，set-key 目前僅支援純量 float 值軌"
+              f"（例如 rotation）。Vector2/Quaternion/method 等請手動編輯或待 Phase 2。")
+        return
+
+    times       = list(track["times"])
+    values      = list(track["values"])
+    transitions = list(track.get("transitions") or [1.0] * len(times))
+    has_transitions = "transitions" in track
 
     # 找到已存在的時間點或插入新的
-    inserted = False
+    updated = False
     for i, t in enumerate(times):
         if abs(t - target_time) < 1e-5:
             print(f"更新 [{track_path}] t={target_time}: {values[i]:.6f} → {target_value:.6f}")
             values[i] = target_value
-            inserted = True
+            updated = True
             break
-    if not inserted:
-        # 找到插入位置（保持時間排序）
+    if not updated:
         insert_idx = next((i for i, t in enumerate(times) if t > target_time), len(times))
         times.insert(insert_idx, target_time)
         values.insert(insert_idx, target_value)
+        if insert_idx <= len(transitions):
+            transitions.insert(insert_idx, 1.0)
         print(f"插入 [{track_path}] t={target_time}: {target_value:.6f}")
 
-    # 寫回檔案：替換對應 track 的 keys 區塊
-    new_text = _replace_track_keys(text, anim["id"], track["index"], times, values)
+    # 逐欄位外科式替換（保留 update 等其他欄位）
+    new_text = _replace_keys_field(text, anim["id"], track["index"],
+                                   "times", _float_list_to_packed(times))
+    new_text = _replace_keys_field(new_text, anim["id"], track["index"],
+                                   "values", _float_list_to_array(values))
+    if has_transitions:
+        new_text = _replace_keys_field(new_text, anim["id"], track["index"],
+                                       "transitions", _float_list_to_packed(transitions))
+
     Path(filepath).write_text(new_text, encoding="utf-8")
     print(f"已儲存：{filepath}")
 
@@ -263,6 +393,7 @@ def cmd_set_key(filepath: str, anim_name: str,
 def cmd_scale_time(filepath: str, anim_name: str, factor_str: str) -> None:
     """
     對指定動畫的所有 track 乘上時間縮放因子，並同步更新 length。
+    只縮放時間，保留 values/transitions/update —— 對任何軌道類型都安全。
     例如 factor=0.7 代表加快到原本的 70%。
     """
     factor = float(factor_str)
@@ -277,28 +408,19 @@ def cmd_scale_time(filepath: str, anim_name: str, factor_str: str) -> None:
     tracks = _extract_tracks(anim)
     new_text = text
 
-    # 縮放所有 track 的 times
+    # 只縮放每個 track 的 times
     for track in tracks:
-        if "times" not in track:
+        if not track.get("times"):
             continue
-        new_times  = [t * factor for t in track["times"]]
-        new_values = track.get("values", [])
-        new_text = _replace_track_keys(new_text, anim["id"], track["index"],
-                                       new_times, new_values)
+        new_times = [round(t * factor, 6) for t in track["times"]]
+        new_text = _replace_keys_field(new_text, anim["id"], track["index"],
+                                       "times", _float_list_to_packed(new_times))
 
     # 更新 length
-    old_length_m = re.search(
-        r'(\[sub_resource[^\]]*id="' + re.escape(anim["id"]) + r'"[^\]]*\].*?)'
-        r'(length\s*=\s*[\d.]+)',
-        new_text, re.DOTALL
-    )
-    if old_length_m:
-        old_len = float(anim["props"].get("length", "1.0"))
-        new_len = old_len * factor
-        new_text = new_text[:old_length_m.start(2)] + \
-                   f"length = {new_len:.6f}" + \
-                   new_text[old_length_m.end(2):]
-        print(f"length: {old_len:.4f} → {new_len:.4f}")
+    old_len = float(anim["props"].get("length", "1.0"))
+    new_len = round(old_len * factor, 6)
+    new_text = _replace_sub_prop(new_text, anim["id"], "length", f"{new_len}")
+    print(f"length: {old_len:.4f} → {new_len:.4f}")
 
     Path(filepath).write_text(new_text, encoding="utf-8")
     print(f"時間縮放 ×{factor}，已儲存：{filepath}")
@@ -317,50 +439,92 @@ def _find_anim(data: dict, name: str):
     return None
 
 
+def _fmt_float(v: float) -> str:
+    """以 Godot 風格輸出浮點數（整數值保留 .0，避免科學記號）"""
+    s = repr(float(v))
+    return s
+
+
 def _float_list_to_packed(values: list[float]) -> str:
-    """將浮點數列表轉為 Godot PackedFloat32Array(...) 字串"""
-    inner = ", ".join(f"{v}" for v in values)
-    return f"PackedFloat32Array({inner})"
+    """浮點數列表 → Godot PackedFloat32Array(...) 字串"""
+    return f"PackedFloat32Array({', '.join(_fmt_float(v) for v in values)})"
 
 
-def _replace_track_keys(text: str, sub_id: str, track_idx: int,
-                        new_times: list[float], new_values: list[float]) -> str:
+def _float_list_to_array(values: list[float]) -> str:
+    """浮點數列表 → Godot 一般 Array 字串 [v0, v1, ...]（value 軌道用）"""
+    return f"[{', '.join(_fmt_float(v) for v in values)}]"
+
+
+def _sub_block_span(text: str, sub_id: str):
+    """回傳指定 sub_resource 區塊在 text 中的 (start, end)。找不到回傳 None。"""
+    start = text.find(f'id="{sub_id}"')
+    if start == -1:
+        return None
+    m = re.search(r'\n\[(?:sub_resource|resource)', text[start:])
+    end = (start + m.start()) if m else len(text)
+    return (start, end)
+
+
+def _keys_dict_span(block: str, track_idx: int):
+    """在 sub_resource 區塊中定位 tracks/<idx>/keys 的 {...} 範圍 (start, end)。"""
+    m = re.search(r'tracks/' + str(track_idx) + r'/keys\s*=\s*', block)
+    if not m:
+        return None
+    j = m.end()
+    if j >= len(block) or block[j] != '{':
+        return None
+    depth = 0
+    start = j
+    while j < len(block):
+        if block[j] == '{':
+            depth += 1
+        elif block[j] == '}':
+            depth -= 1
+            if depth == 0:
+                return (start, j + 1)
+        j += 1
+    return None
+
+
+def _replace_keys_field(text: str, sub_id: str, track_idx: int,
+                        field: str, new_value_str: str) -> str:
     """
-    在原始文字中找到指定 sub_resource + track 的 keys 屬性並替換。
-    keys 格式：
-      tracks/N/keys = {
-      "times": PackedFloat32Array(...),
-      "values": PackedFloat32Array(...)
-      }
+    外科式替換：在指定 sub_resource 的 tracks/<idx>/keys dict 中，
+    把 "field" 的值換成 new_value_str，其餘欄位與格式原封不動。
     """
-    # 建立新的 keys 值
-    new_keys = (
-        '{\n'
-        f'"times": {_float_list_to_packed(new_times)},\n'
-        f'"values": {_float_list_to_packed(new_values)}\n'
-        '}'
-    )
-
-    # 定位到對應 sub_resource 區塊
-    sub_start = text.find(f'id="{sub_id}"')
-    if sub_start == -1:
+    sub = _sub_block_span(text, sub_id)
+    if sub is None:
         return text
-    # 找到下一個 [sub_resource 或 [resource] 作為區塊結尾
-    sub_end_m = re.search(r'\[(?:sub_resource|resource)\]', text[sub_start:])
-    sub_end = (sub_start + sub_end_m.start()) if sub_end_m else len(text)
-    block = text[sub_start:sub_end]
+    s, e = sub
+    block = text[s:e]
 
-    # 在區塊內找到 tracks/N/keys = { ... }
-    key_pattern = re.compile(
-        r'(tracks/' + str(track_idx) + r'/keys\s*=\s*)(.*?)(\n(?=tracks/|\Z))',
-        re.DOTALL
-    )
-    m = key_pattern.search(block)
+    kspan = _keys_dict_span(block, track_idx)
+    if kspan is None:
+        return text
+    ds, de = kspan
+    dict_str = block[ds:de]
+
+    vspan = _field_value_span(dict_str, field)
+    if vspan is None:
+        return text
+    vs, ve = vspan
+    new_dict = dict_str[:vs] + new_value_str + dict_str[ve:]
+    new_block = block[:ds] + new_dict + block[de:]
+    return text[:s] + new_block + text[e:]
+
+
+def _replace_sub_prop(text: str, sub_id: str, prop: str, new_val_str: str) -> str:
+    """替換指定 sub_resource 區塊中某個頂層屬性（如 length）的值。"""
+    sub = _sub_block_span(text, sub_id)
+    if sub is None:
+        return text
+    s, e = sub
+    block = text[s:e]
+    m = re.search(r'(?m)^(' + re.escape(prop) + r'\s*=\s*)(.*)$', block)
     if not m:
         return text
-
-    new_block = block[:m.start(2)] + new_keys + block[m.end(2):]
-    return text[:sub_start] + new_block + text[sub_end:]
+    new_block = block[:m.start(2)] + new_val_str + block[m.end(2):]
+    return text[:s] + new_block + text[e:]
 
 
 # ── CLI 入口 ─────────────────────────────────────────────────────────────────
