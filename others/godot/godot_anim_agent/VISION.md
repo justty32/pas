@@ -174,6 +174,26 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 拿到後我會：先用 `anim_inspector` 確認能正確解析這些軌道型別 → 擴充解析/寫回 →
 把 concat 的 cross-fade（SLERP 已備好）/ root motion 套用到 3D → 用你的檔實測。
 
+### 解鎖 AnimationTree / 狀態機（Phase 3 ②）所需（待使用者提供）
+
+狀態機資源（`AnimationNodeStateMachine` 等）的 `.tres` 序列化細節我不敢跨版本保證，
+為避免做出 Godot 載不進去的檔，需要一份**最小真實範本**：
+
+1. 在 Godot 加一個 `AnimationTree` 節點，`Tree Root` 設成新的 `AnimationNodeStateMachine`，
+   Anim Player 指到含 `fighter.tres`（或任意）的 AnimationPlayer。
+2. 狀態機裏放 **2 個狀態**（例如 idle、punch，各為引用 library 動畫的 `AnimationNodeAnimation`），
+   連 **1～2 條轉場**（idle→punch、punch→idle）。
+3. **把其中一條轉場的設定調離預設**（例如 Xfade Time=0.2、Switch Mode 換一個、
+   設個 Advance Condition），這樣我才看得到那些欄位怎麼序列化。
+4. 存檔：在 Inspector 對 `AnimationNodeStateMachine` 按右鍵 → Save As →
+   `examples/state_machine_sample.tres`（最關鍵）；若方便，連含 AnimationTree 節點的
+   `.tscn` 也一起給（看節點接線）。
+5. 確認 **Godot 版本**（4.x 次版本）。
+
+拿到後我會：用 `anim_inspector` 解析確認 → 寫 `anim_tree.py`（解析/生成狀態機，
+add-state / add-transition / set-blend），把 Phase 2 烘焙連招當狀態、metadata 的
+compatible 關係轉成轉場 → 用你的檔實測。
+
 ### 2026-05-22 首次實測修 bug 紀錄
 
 工具撰寫時假設 value 軌道的 `values` 也是 `PackedFloat32Array`，但 Godot 實際存成
