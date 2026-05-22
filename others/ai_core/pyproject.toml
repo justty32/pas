@@ -5,25 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "ai-core"
 version = "0.1.0"
-description = "以函式概念統一管理 LLM 呼叫與工具集的輕量框架"
+description = "register() + --metadata 攔截 library，供函式宣告自身 metadata"
 requires-python = ">=3.11"
-dependencies = [
-    "fastapi>=0.110.0",
-    "uvicorn>=0.29.0",
-    "litellm>=1.35.0",
-    "platformdirs>=4.2.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
-
-[project.scripts]
-ai-core-server     = "ai_core.entry_manager.cli:main"
-ai-core-call       = "ai_core.client.cli:main"
-ai-core-hub        = "ai_core.hub.cli:main"
-ai-core-hub-server = "ai_core.hub.server:main"
-ai-core-sfc        = "ai_core.small_funcs.cli:main"
-ai-core-author     = "ai_core.author.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_core"]

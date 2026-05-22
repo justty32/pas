@@ -1,0 +1,3 @@
+[submodule "others/gamecore/mapcore_godot/godot-cpp"]
+	path = others/gamecore/mapcore_godot/godot-cpp
+	url = https://github.com/godotengine/godot-cpp.git
