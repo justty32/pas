@@ -150,7 +150,8 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [ ] **Phase 3**（VISION 原無定義；2026-05-23 與使用者議定三個與 3D 無關的新能力層）：
   - [x] ① 動畫事件 / method 軌道 `anim_events.py`（list/add/rm/scaffold；fighter.tres 實測，
         產出 `examples/fighter_events.gd` 示範）
-  - [ ] ③ 程序化擺位 / IK（2-bone IK 解關節旋轉）—— 待使用者提供 fighter 骨骼長度與基準朝向
+  - [x] ③ 程序化擺位 / IK `anim_pose.py aim`（2-bone IK；骨長/基準朝向當參數收，
+        FK 反算誤差 0、邊界夾住、bend up/down 兩解皆驗）
   - [ ] ② AnimationTree / 狀態機（最大層；最好有真實狀態機 `.tres` 範本對格式）
 - [ ] 3D transform 軌道（`rotation_3d`/`position_3d`/`scale_3d`，平坦 PackedFloat 格式）支援
       —— **阻塞**：需真實 Godot 3D 匯出確認格式（與 value 軌道的 dict 格式不同）
