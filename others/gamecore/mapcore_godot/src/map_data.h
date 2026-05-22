@@ -58,6 +58,8 @@ public:
     // ── 尋路 ─────────────────────────────────────────────────────────────────
     TypedArray<Vector2i> find_path(Vector2i start, Vector2i goal,
                                   float river_crossing_cost = 0.0f) const;
+    // 路徑各步的地形 move_cost 總和（不含河流跨越加成）；path 為 find_path 的回傳
+    float path_cost(const TypedArray<Vector2i>& path) const;
 
     // ── 地形 ID 常數（GDScript 用 MapCoreMapData.TERRAIN_OCEAN 存取）────────
     static constexpr int TERRAIN_OCEAN     = 0;

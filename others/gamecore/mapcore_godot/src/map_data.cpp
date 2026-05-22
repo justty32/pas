@@ -50,6 +50,7 @@ void MapCoreMapData::_bind_methods() {
     // 尋路
     ClassDB::bind_method(D_METHOD("find_path", "start", "goal", "river_crossing_cost"),
                          &MapCoreMapData::find_path, DEFVAL(0.0f));
+    ClassDB::bind_method(D_METHOD("path_cost", "path"), &MapCoreMapData::path_cost);
 
     // 地形 ID 常數
     BIND_CONSTANT(TERRAIN_OCEAN);
@@ -229,4 +230,15 @@ TypedArray<Vector2i> MapCoreMapData::find_path(Vector2i start, Vector2i goal,
     for (int i = 0; i < static_cast<int>(path->size()); ++i)
         out[i] = Vector2i((*path)[i].x, (*path)[i].y);
     return out;
+}
+
+float MapCoreMapData::path_cost(const TypedArray<Vector2i>& path) const {
+    if (!result_ || path.size() <= 1) return 0.0f;
+    std::vector<mapcore::Coord> v;
+    v.reserve(path.size());
+    for (int i = 0; i < path.size(); ++i) {
+        Vector2i p = path[i];
+        v.push_back(mapcore::Coord(p.x, p.y));
+    }
+    return mapcore::path_cost(result_->tile_map, v);
 }

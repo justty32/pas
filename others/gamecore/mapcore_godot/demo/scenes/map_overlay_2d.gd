@@ -26,6 +26,10 @@ var path: Array = []
 var labels: Array = []
 var show_labels: bool = false
 
+# 單位：[{ cell: Vector2i, color: Color, name: String, queue: Array(Vector2i) }]
+var units: Array = []
+var selected_unit: int = -1
+
 const COL_FEATURE := Color(1.0, 0.6, 0.1, 0.95)
 const COL_PATH    := Color(1.0, 1.0, 1.0, 0.95)
 const COL_START   := Color(0.2, 1.0, 0.3, 1.0)
@@ -59,6 +63,25 @@ func _draw() -> void:
 	# ── 懸停框（細；與選取格重疊時不重畫）────────────────────────────────────
 	if hover_cell.x >= 0 and hover_cell != selected_cell:
 		draw_rect(Rect2(hover_cell.x * cp, hover_cell.y * cp, cp, cp), COL_HOVER, false, 1.0)
+
+	# ── 單位：選取單位的剩餘路線 + 各單位標記 ────────────────────────────────
+	for i in range(units.size()):
+		var u = units[i]
+		var cell: Vector2i = u["cell"]
+		var center := Vector2((cell.x + 0.5) * cp, (cell.y + 0.5) * cp)
+		# 選取單位的剩餘移動路線（以單位顏色畫）
+		if i == selected_unit and not u["queue"].is_empty():
+			var rp := PackedVector2Array()
+			rp.append(center)
+			for q in u["queue"]:
+				rp.append(Vector2((q.x + 0.5) * cp, (q.y + 0.5) * cp))
+			draw_polyline(rp, u["color"], maxf(1.5, cp * 0.18), true)
+		# 單位標記：白色選取環 → 深色外框 → 單位色
+		var r := cp * 0.36
+		if i == selected_unit:
+			draw_circle(center, r + maxf(2.0, cp * 0.18), Color.WHITE)
+		draw_circle(center, r, Color(0, 0, 0, 0.9))
+		draw_circle(center, r * 0.78, u["color"])
 
 	# ── feature 標籤（畫於各區域中心，帶深色陰影增加可讀性）──────────────────
 	if show_labels:

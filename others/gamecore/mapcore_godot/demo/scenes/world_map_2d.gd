@@ -11,9 +11,10 @@
 ##
 ## 互動操作：
 ##   滑鼠移動         懸停高亮 + 資訊面板即時更新
-##   左鍵             選取格子 + 高亮所屬 feature + 顯示區域名
-##   Shift+左鍵       設路徑起點；再一次設終點 → 畫出 A* 路徑
-##   右鍵             清除選取 / 路徑 / 高亮
+##   左鍵             點單位→選取；已選單位再點格→下移動令（成本感知 A*，逐格走）；
+##                    點空地→選格 + 高亮所屬 feature
+##   Shift+左鍵       路徑預覽：點起點再點終點 → 畫出 A* 路徑並顯示步數/成本
+##   右鍵             取消選取 / 清除路徑與高亮
 ##   L                切換全地圖 feature 標籤
 ##   中鍵拖曳 / 滾輪  平移 / 縮放
 class_name WorldMap2D
@@ -24,6 +25,8 @@ extends Node2D
 @export var cell_px: int = 8
 ## 河流最小強度：低於此值的細流(creek)不繪製。0=完整水系；80=濾掉 creek（預設）
 @export var river_min_strength: int = 80
+## 尋路跨越河流的額外成本（乘上河流強度）。0=不影響；越大越會繞開大河
+@export var river_crossing_cost: float = 0.05
 ## feature 標籤只顯示面積 ≥ 此格數的區域（避免小區域標籤過密）
 @export var label_min_size: int = 40
 ## feature 標籤數量上限（取面積最大的前幾個）
@@ -42,6 +45,9 @@ var _mh: int = 0
 var _hover: Vector2i = Vector2i(-1, -1)
 var _selected: Vector2i = Vector2i(-1, -1)
 var _path_pending_start: Vector2i = Vector2i(-1, -1)  # Shift+左鍵已設起點、待設終點
+var _selected_unit: int = -1
+var _units: Array = []        # [{ cell:Vector2i, color:Color, name:String, queue:Array }]
+var _move_accum: float = 0.0  # 單位逐格移動的步進計時
 
 const _ZOOM_MIN := Vector2(0.25, 0.25)
 const _ZOOM_MAX := Vector2(16.0, 16.0)
@@ -52,7 +58,7 @@ const _TERRAIN_NAMES := {
 	8: "丘陵", 9: "山脈", 10: "湖泊",
 }
 
-const _LEGEND := "左鍵:選取  Shift+左鍵:路徑起/終點  右鍵:清除  L:標籤  中鍵拖曳:平移  滾輪:縮放"
+const _LEGEND := "左鍵:選單位/下移動令  Shift+左鍵:路徑預覽  右鍵:取消選取  L:標籤  中鍵拖曳:平移  滾輪:縮放"
 
 
 func _ready() -> void:
@@ -79,6 +85,7 @@ func _on_generated(data: MapCoreMapData) -> void:
 	_overlay.map_data = data
 	_build_feature_grid()
 	_build_feature_labels()
+	_spawn_units(3)
 	_overlay.queue_redraw()
 	_update_info()
 	print("WorldMap2D: 地圖渲染完成，size=%dx%d  seed=%d  features=%d" % [
@@ -108,6 +115,70 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_L:
 			_overlay.show_labels = not _overlay.show_labels
 			_overlay.queue_redraw()
+
+# ── 單位（生成 / 選取 / 移動）─────────────────────────────────────────────────
+
+const _STEP_TIME := 0.12          # 每格移動間隔（秒）
+const _IMPASSABLE := [0, 1, 9, 10]  # OCEAN / COAST / MOUNTAIN / LAKE（不可通行）
+
+# 逐格推進所有單位的移動佇列（turn-based World 層的雛形：一步一步走）
+func _process(delta: float) -> void:
+	if _units.is_empty():
+		return
+	_move_accum += delta
+	if _move_accum < _STEP_TIME:
+		return
+	_move_accum = 0.0
+	var moved := false
+	for u in _units:
+		if not u["queue"].is_empty():
+			u["cell"] = u["queue"].pop_front()
+			moved = true
+	if moved:
+		_overlay.queue_redraw()
+		_update_info()
+
+func _unit_at(c: Vector2i) -> int:
+	for i in range(_units.size()):
+		if _units[i]["cell"] == c:
+			return i
+	return -1
+
+func _is_walkable(x: int, y: int) -> bool:
+	return not _IMPASSABLE.has(_map_data.get_terrain(x, y))
+
+func _spawn_units(count: int) -> void:
+	_units.clear()
+	var colors := [Color(0.95, 0.3, 0.3), Color(0.3, 0.55, 0.95), Color(0.95, 0.8, 0.25), Color(0.6, 0.35, 0.9)]
+	var unit_names := ["部隊 A", "部隊 B", "部隊 C", "部隊 D"]
+	var spawned := 0
+	var tries := 0
+	while spawned < count and tries < 5000:
+		tries += 1
+		var x := randi() % _mw
+		var y := randi() % _mh
+		if not _is_walkable(x, y) or _unit_at(Vector2i(x, y)) >= 0:
+			continue
+		_units.append({
+			"cell": Vector2i(x, y),
+			"color": colors[spawned % colors.size()],
+			"name": unit_names[spawned % unit_names.size()],
+			"queue": [],
+		})
+		spawned += 1
+	_overlay.units = _units
+
+# 對單位下達移動指令：用成本感知 find_path 規劃路線，逐格走過去
+func _order_move(idx: int, goal: Vector2i) -> void:
+	var u = _units[idx]
+	var p := _map_data.find_path(u["cell"], goal, river_crossing_cost)
+	if p.is_empty():
+		_info.text = "%s 無法移動到 (%d, %d)（不可通行或被阻隔）\n%s" % [u["name"], goal.x, goal.y, _LEGEND]
+		return
+	u["queue"] = p.slice(1)  # p[0] 為目前所在格，其餘為要走的格
+	_info.text = "%s → (%d, %d)　步數 %d　地形成本 %.1f\n%s" % [
+		u["name"], goal.x, goal.y, p.size() - 1, _map_data.path_cost(p), _LEGEND]
+	_overlay.queue_redraw()
 
 # ── 座標換算 ──────────────────────────────────────────────────────────────────
 
@@ -139,9 +210,22 @@ func _on_select_click() -> void:
 	var c := _cell_at_mouse()
 	if c.x < 0:
 		return
-	_selected = c
-	_overlay.selected_cell = c
-	_highlight_feature(c)
+	var ui := _unit_at(c)
+	if ui >= 0:
+		# 點到單位 → 選取它（清掉格子選取/高亮）
+		_selected_unit = ui
+		_overlay.selected_unit = ui
+		_selected = Vector2i(-1, -1)
+		_overlay.selected_cell = Vector2i(-1, -1)
+		_overlay.feature_outline = PackedVector2Array()
+	elif _selected_unit >= 0:
+		# 已選單位 → 對該格下移動指令
+		_order_move(_selected_unit, c)
+	else:
+		# 沒選單位 → 一般格子選取 + feature 高亮
+		_selected = c
+		_overlay.selected_cell = c
+		_highlight_feature(c)
 	_overlay.queue_redraw()
 	_update_info()
 
@@ -180,12 +264,15 @@ func _on_path_click() -> void:
 	else:
 		# 設終點並求路徑
 		_overlay.path_goal = c
-		var p := _map_data.find_path(_path_pending_start, c, 0.0)
+		var p := _map_data.find_path(_path_pending_start, c, river_crossing_cost)
 		_overlay.path = p
 		_path_pending_start = Vector2i(-1, -1)
 		if p.is_empty():
 			_info.text = "(%d,%d)→(%d,%d) 找不到路徑（可能被水域阻隔）\n%s" % [
 				_overlay.path_start.x, _overlay.path_start.y, c.x, c.y, _LEGEND]
+		else:
+			_info.text = "路徑預覽: %d 步　地形成本 %.1f\n%s" % [
+				p.size() - 1, _map_data.path_cost(p), _LEGEND]
 	_overlay.queue_redraw()
 
 # ── 清除 ──────────────────────────────────────────────────────────────────────
@@ -193,6 +280,8 @@ func _on_path_click() -> void:
 func _clear_interactions() -> void:
 	_selected = Vector2i(-1, -1)
 	_path_pending_start = Vector2i(-1, -1)
+	_selected_unit = -1
+	_overlay.selected_unit = -1
 	_overlay.selected_cell = Vector2i(-1, -1)
 	_overlay.feature_outline = PackedVector2Array()
 	_overlay.path_start = Vector2i(-1, -1)
@@ -233,6 +322,12 @@ func _build_feature_labels() -> void:
 # ── 資訊面板 ──────────────────────────────────────────────────────────────────
 
 func _update_info() -> void:
+	# 沒有懸停目標但有選取單位時，顯示單位狀態
+	if _hover.x < 0 and _selected_unit >= 0:
+		var u = _units[_selected_unit]
+		_info.text = "%s　位置(%d, %d)　待走 %d 格\n%s" % [
+			u["name"], u["cell"].x, u["cell"].y, u["queue"].size(), _LEGEND]
+		return
 	var c := _hover if _hover.x >= 0 else _selected
 	if not _map_data or c.x < 0:
 		_info.text = _LEGEND
