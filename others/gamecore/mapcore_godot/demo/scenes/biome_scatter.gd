@@ -77,6 +77,8 @@ func _scatter_rocks(data: MapCoreMapData) -> void:
 	for i in transforms.size():
 		mm.set_instance_transform(i, transforms[i])
 	rocks_multi_node.multimesh = mm
+	# C++ 生成的 mesh 帶頂點色，需要讀 ARRAY_COLOR 的材質才會上色
+	rocks_multi_node.material_override = MaterialLibrary.make_vertex_color()
 
 # ── 樹木 ──────────────────────────────────────────────────────────────────────
 
@@ -123,6 +125,8 @@ func _scatter_trees(data: MapCoreMapData) -> void:
 	for i in transforms.size():
 		mm.set_instance_transform(i, transforms[i])
 	trees_multi_node.multimesh = mm
+	# C++ 生成的 mesh 帶頂點色，需要讀 ARRAY_COLOR 的材質才會上色
+	trees_multi_node.material_override = MaterialLibrary.make_vertex_color()
 
 # ── 合併兩個 ArrayMesh 的第一個 surface（純 GDScript，不需 C++）─────────────
 

@@ -1,0 +1,62 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/map_renderer_3d.gd" id="1_renderer3d"]
+[ext_resource type="Script" path="res://scenes/biome_scatter.gd" id="2_biomescatter"]
+[ext_resource type="Script" path="res://scenes/camera_rig_3d.gd" id="3_camerarig"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.55, 0.73, 0.92, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.65, 0.75, 1)
+ambient_light_energy = 1.0
+
+[node name="WorldMap3D" type="Node3D"]
+
+[node name="MapCoreGenerator" type="MapCoreGenerator" parent="."]
+width = 128
+height = 96
+shape = "continents"
+ridge_mode = "plates"
+ridge_weight = 0.6
+
+[node name="MapRenderer3D" type="Node3D" parent="." node_paths=PackedStringArray("generator", "terrain_mesh_node", "water_plane_node", "biome_layer", "biome_scatter")]
+script = ExtResource("1_renderer3d")
+generator = NodePath("../MapCoreGenerator")
+terrain_mesh_node = NodePath("TerrainMesh")
+water_plane_node = NodePath("WaterPlane")
+biome_layer = NodePath("BiomeLayer")
+biome_scatter = NodePath("BiomeLayer")
+tile_size = 1.0
+height_scale = 3.0
+jitter_amp = 0.05
+sea_level_y = 1.2
+
+[node name="TerrainMesh" type="MeshInstance3D" parent="MapRenderer3D"]
+
+[node name="WaterPlane" type="MeshInstance3D" parent="MapRenderer3D"]
+
+[node name="BiomeLayer" type="Node3D" parent="MapRenderer3D" node_paths=PackedStringArray("rocks_multi_node", "trees_multi_node")]
+script = ExtResource("2_biomescatter")
+rocks_multi_node = NodePath("RocksMultiMesh")
+trees_multi_node = NodePath("TreesMultiMesh")
+tile_size = 1.0
+height_scale = 3.0
+
+[node name="RocksMultiMesh" type="MultiMeshInstance3D" parent="MapRenderer3D/BiomeLayer"]
+
+[node name="TreesMultiMesh" type="MultiMeshInstance3D" parent="MapRenderer3D/BiomeLayer"]
+
+[node name="CameraRig3D" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 64, 0, 48)
+script = ExtResource("3_camerarig")
+map_width = 128.0
+map_depth = 96.0
+
+[node name="CameraArm" type="Node3D" parent="CameraRig3D"]
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig3D/CameraArm"]
+current = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")

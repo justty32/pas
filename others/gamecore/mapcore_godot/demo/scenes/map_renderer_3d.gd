@@ -53,7 +53,11 @@ func _build_terrain(data: MapCoreMapData) -> void:
 	terrain_mesh_node.mesh = builder.generate_terrain_mesh(
 		data, tile_size, height_scale, jitter_amp
 	)
-	terrain_mesh_node.material_override = MaterialLibrary.make_vertex_color()
+	# 地形 mesh 三角面繞序使正面朝下，俯視會被背面剔除而「看穿」；
+	# 改成雙面渲染（duplicate 避免動到 MaterialLibrary 的共享快取，岩石/樹維持單面）。
+	var mat: StandardMaterial3D = MaterialLibrary.make_vertex_color().duplicate()
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	terrain_mesh_node.material_override = mat
 
 # ── 水面 ──────────────────────────────────────────────────────────────────────
 
