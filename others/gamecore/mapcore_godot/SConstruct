@@ -6,6 +6,12 @@
 
 import os
 
+# godot-cpp 預設以 -fno-exceptions 編譯；但核心邏輯沿用 mapcore_cpp_square 的
+# 獨立 CMake 程式碼，當中大量以 throw std::invalid_argument 做參數驗證。
+# 在載入 godot-cpp 建置環境前先打開例外支援（官方選項，跨平台），
+# 否則會出現 "exception handling disabled, use '-fexceptions'" 編譯錯誤。
+ARGUMENTS.setdefault("disable_exceptions", "no")
+
 env = SConscript("godot-cpp/SConstruct")
 
 env.Append(CPPPATH=[

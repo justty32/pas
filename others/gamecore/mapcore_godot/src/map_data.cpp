@@ -215,9 +215,9 @@ Dictionary MapCoreMapData::get_feature_info(int feature_id) const {
 
 // ── 尋路 ─────────────────────────────────────────────────────────────────────
 
-PackedVector2iArray MapCoreMapData::find_path(Vector2i start, Vector2i goal,
+TypedArray<Vector2i> MapCoreMapData::find_path(Vector2i start, Vector2i goal,
                                                float river_crossing_cost) const {
-    PackedVector2iArray out;
+    TypedArray<Vector2i> out;
     if (!result_) return out;
     auto path = mapcore::astar(
         result_->tile_map,

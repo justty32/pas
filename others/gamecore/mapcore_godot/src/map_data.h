@@ -3,7 +3,6 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
-#include <godot_cpp/variant/packed_vector2i_array.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
 #include <optional>
@@ -57,7 +56,7 @@ public:
     Dictionary get_feature_info(int feature_id)    const;  // {name,type,center,size}
 
     // ── 尋路 ─────────────────────────────────────────────────────────────────
-    PackedVector2iArray find_path(Vector2i start, Vector2i goal,
+    TypedArray<Vector2i> find_path(Vector2i start, Vector2i goal,
                                   float river_crossing_cost = 0.0f) const;
 
     // ── 地形 ID 常數（GDScript 用 MapCoreMapData.TERRAIN_OCEAN 存取）────────
