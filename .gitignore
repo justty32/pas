@@ -19,3 +19,16 @@ project_analysis
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# SCons (GDExtension 建置產物)
+.sconsign.dblite
+**/.scons_temp/
+
+# Godot 編輯器快取（不應提交）
+**/.godot/
+
+# GDExtension 編譯產出二進制
+others/gamecore/mapcore_godot/demo/bin/*.dll
+others/gamecore/mapcore_godot/demo/bin/*.so
+others/gamecore/mapcore_godot/demo/bin/*.dylib
+others/gamecore/mapcore_godot/demo/bin/*.framework

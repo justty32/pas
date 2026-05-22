@@ -70,10 +70,10 @@ void MyPlayer::_physics_process(double delta) {
         velocity.y -= gravity * local_delta;
     }
     
-    // 注意：move_and_slide 內部會自動處理全域 delta
-    // 如果要實現局部慢動作，通常需要手動處理移動
+    // 注意：Godot 4 的 move_and_slide() 使用 velocity 屬性 + 引擎物理步長，
+    // 無法直接套用局部 delta。改用 move_and_collide() 手動控制位移量。
     Vector3 motion = velocity * local_delta;
-    move_and_collide(motion); 
+    move_and_collide(motion);
 }
 ```
 

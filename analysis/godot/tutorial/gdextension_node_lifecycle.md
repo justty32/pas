@@ -61,3 +61,80 @@ void MyNode3D::safe_delete_child(Node *p_child) {
    ```
 2. **所有權**：一旦 `add_child` 被呼叫，場景樹將接管該節點。當父節點被刪除時，子節點也會被自動刪除。
 3. **重複加入**：一個節點實例同時只能有一個父節點。
+
+---
+
+## 6. 完整生命週期通知順序
+
+以下是一個節點從建立到銷毀所會經歷的通知（NOTIFICATION）順序，以及對應的虛擬函數：
+
+| 順序 | NOTIFICATION 常數 | 對應虛擬函數 | 觸發時機 |
+|------|-------------------|-------------|----------|
+| 1 | `NOTIFICATION_POSTINITIALIZE` | `_init()` (內部) | 物件建立後立即觸發 |
+| 2 | `NOTIFICATION_ENTER_TREE` | `_enter_tree()` | 節點被加入場景樹 |
+| 3 | `NOTIFICATION_READY` | `_ready()` | 節點與所有子節點都已完成 `_enter_tree` |
+| 4 | `NOTIFICATION_PROCESS` | `_process(delta)` | 每幀更新（需 `set_process(true)`） |
+| 5 | `NOTIFICATION_PHYSICS_PROCESS` | `_physics_process(delta)` | 每個物理幀（需 `set_physics_process(true)`） |
+| 6 | `NOTIFICATION_EXIT_TREE` | `_exit_tree()` | 節點從場景樹移除 |
+| 7 | `NOTIFICATION_PREDELETE` | `~Destructor` | 即將被 `memdelete` 前 |
+
+### `_enter_tree()` vs `_ready()` 的核心差異
+
+```
+父節點 _enter_tree()
+  └── 子節點 _enter_tree()   ← 所有節點依序進入場景樹
+        └── 孫節點 _enter_tree()
+
+孫節點 _ready()              ← 由深至淺（葉節點先）
+  └── 子節點 _ready()
+        └── 父節點 _ready()  ← 最後執行，此時子樹已完全就緒
+```
+
+**關鍵原則**：
+- `_enter_tree()` 適合「自身初始化」，此時子節點**可能尚未就緒**。
+- `_ready()` 適合「依賴子節點」的初始化，子樹已完全建立。
+
+### C++ 實作示範
+
+```cpp
+void MyNode3D::_enter_tree() {
+    // 適合：訂閱訊號、設定自身屬性
+    // 不適合：存取子節點（可能尚未就緒）
+    set_process(true);
+    set_physics_process(true);
+}
+
+void MyNode3D::_ready() {
+    // 安全：此時可以存取子節點
+    MeshInstance3D *mesh = get_node<MeshInstance3D>("Mesh");
+    if (mesh) {
+        // 安全地操作子節點
+    }
+}
+
+void MyNode3D::_exit_tree() {
+    // 適合：取消訂閱訊號、清理跨節點引用
+    // 此函數在 ~Destructor 之前執行，此時場景樹仍可存取
+}
+```
+
+### 自訂通知處理
+
+```cpp
+void MyNode3D::_notification(int p_what) {
+    switch (p_what) {
+        case NOTIFICATION_ENTER_TREE:
+            _enter_tree();
+            break;
+        case NOTIFICATION_READY:
+            _ready();
+            break;
+        case NOTIFICATION_EXIT_TREE:
+            _exit_tree();
+            break;
+        case NOTIFICATION_PREDELETE:
+            // 緊急清理（避免在此存取其他節點，場景樹狀態不確定）
+            break;
+    }
+}
+```

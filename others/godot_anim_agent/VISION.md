@@ -1,0 +1,146 @@
+# AI 動畫代理人：設計構想
+
+## 核心問題
+
+動作編輯耗時且需要大量反覆調整。傳統流程：人工逐幀調整 → 在編輯器預覽 → 再調整。
+目標：讓 AI agent 接手繁瑣的數值調整，人只負責意圖層面的指示。
+
+---
+
+## Phase 1：基礎讀寫工作流程
+
+**前提**：Godot 的 `.tres` / `.animlib` 動畫資源是純文字格式，可直接讀寫。
+
+**流程**：
+
+```
+使用者在 Godot 編輯器中製作動畫雛形（幾個關鍵幀）
+    ↓
+存檔 → .tres / .animlib 文字檔
+    ↓
+開啟 Claude Code session，指向動畫檔案
+    ↓
+Agent 讀取 + 輸出摘要（哪些骨骼、時間點、數值範圍）
+    ↓
+使用者給出指示（CLI 直接輸入 或 提供 text 描述）
+    ↓
+Agent 修改 .tres 檔案
+    ↓
+使用者在 Godot 重新載入場景，預覽結果
+    ↓
+重複迭代
+```
+
+**使用者指示的形式**：
+- CLI 直說：「把出拳速度加快 30%，在 0.1s 達到最大角度」
+- 文字文件：描述動作的風格或參考（「像蝴蝶拳，柔和快速」）
+- 數值直接指定：「UpperArm 在 0.15s 時 rotation 要到 1.8 rad」
+
+---
+
+## Phase 2：程序生成與動作組合
+
+### 2a. 簡單程序生成（直接調整 Node 屬性）
+
+最基礎：依據出拳目標位置，用反向運動學計算骨骼旋轉，直接在 GDScript 中操作 `Bone2D.rotation`。
+這不需要 AI，純數學即可。
+
+### 2b. 複雜連串動作的 AI 組合
+
+目標：給出一個自然語言動作描述，agent 能自動：
+
+1. **解構**：把「迅速閃避出殘影，之後跳躍下劈」拆成子動作列表
+2. **查詢動畫庫**：對應到現有基礎動畫（dodge, jump, down-slash）
+3. **組合排序**：決定時序，插入過渡幀
+4. **銜接修正**：
+   - 檢查銜接點各骨骼狀態是否連續
+   - 必要時插入 cross-fade blend 或修改 AnimationTree
+   - 「殘影」效果 → 觸發 shader/後製，需動到 GDScript
+5. **輸出**：修改後的 `.animlib` + 可能修改的 `.gd` 腳本
+
+### 2c. 動畫 Metadata 系統（關鍵基礎設施）
+
+為讓 Phase 2 可靠運作，每個基礎動畫需要旁置一份 metadata：
+
+```json
+{
+  "name": "upper_cut",
+  "tags": ["attack", "upper_body", "air_ok"],
+  "entry_frame": 0,
+  "exit_frame": 12,
+  "exit_velocity": { "UpperArm": 0.0, "ForeArm": -0.5 },
+  "root_motion_delta": { "x": 0.0, "y": -8.0 },
+  "compatible_after": ["dash", "idle", "crouch"],
+  "compatible_before": ["landing", "idle", "any_ground"]
+}
+```
+
+Agent 做組合時先查 metadata 配對，不是靠猜骨骼狀態。
+
+---
+
+## 技術挑戰
+
+| 挑戰 | 說明 | 解法 |
+|------|------|------|
+| 銜接點狀態一致性 | A 動畫結束與 B 動畫開始的骨骼位置/速度可能不連續 | Metadata + cross-fade blend |
+| 根位移連續性 | 角色在世界空間的位置需要連貫 | 追蹤 root motion delta |
+| 視覺特效整合 | 殘影、衝擊波等是 shader，不在動畫資料裡 | 動畫事件 (method track) 觸發 GDScript |
+| Godot `.tres` 格式複雜度 | AnimationLibrary 巢狀 sub_resource，值類型多樣 | anim_inspector.py 做格式轉換 |
+
+---
+
+## 3D 版本的差異
+
+核心概念（Phase 1 讀寫、Phase 2 組合）在 3D 完全適用，差異在資料格式與 track 類型。
+
+### 資源格式
+
+| 面向 | 2D | 3D |
+|-----|----|----|
+| 動畫儲存 | `.tres` / `.animlib` | `.animlib`（同）；mesh + skeleton 在 `.glb` |
+| Bone2D track | `position: Vector2`, `rotation: float` | `position: Vector3`, `rotation: Quaternion` |
+| Root motion | 2D position 偏移 | 3D 根骨骼 transform 偏移 |
+| 模型來源 | 自建 Sprite2D 樹 | Blender → `.glb` 導入，包含 AnimationLibrary |
+
+### `.glb` 動畫導入
+
+Blender 匯出 `.glb` 時可以包含多個 Action（動畫片段），Godot 導入後自動放進 AnimationLibrary。
+Agent Phase 1 要能讀取這些動畫，需要處理 `.glb` 或 Godot 導入後產生的 `.animlib`。
+
+建議 Phase 1 workflow：
+1. 在 Godot 編輯器把 `.glb` 動畫匯出成獨立 `.animlib` 文字檔
+2. Agent 對 `.animlib` 做讀寫（同 2D 流程）
+3. 修改完匯回場景
+
+### Root Motion（3D 更重要）
+
+3D 中 root motion 是讓角色在世界空間自然移動的關鍵（避免滑步）。
+Metadata 的 `root_motion_delta` 在 3D 需擴展為 Vector3：
+
+```json
+"root_motion_delta": { "x": 0.2, "y": 0.0, "z": 0.0 }
+```
+
+AnimationTree 的 `root_motion_track` 需指向根骨骼的 position track。
+
+### Quaternion Interpolation
+
+3D 骨骼旋轉用 Quaternion，不是 float。
+Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）計算中間幀。
+實作上可先轉換為 Euler 角處理，最後再轉回 Quaternion 存檔。
+
+---
+
+## 目前進度
+
+- [x] Phase 1 工具架構（此目錄）
+- [x] Phase 1 工具實作：`anim_inspector.py`（讀取/摘要/set-key/scale-time）
+- [x] Metadata 格式定案：`anim_metadata.py`（init/show/set-tag/compat）
+- [ ] Phase 1 實際測試（需要一個 Godot 動畫檔案）
+- [ ] Phase 2 設計（自然語言動作組合）
+- [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
+
+---
+
+*記錄時間：2026-05-22*

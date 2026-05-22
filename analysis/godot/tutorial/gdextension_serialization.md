@@ -49,7 +49,8 @@ void MyNode3D::load_game_data(String p_path) {
     }
 
     // 2. 轉型回您的自定義類別
-    Ref<MyDataResource> data = Object::cast_to<MyDataResource>(res.ptr());
+    // cast_to 返回裸指標，需用 Ref<> 包裹（RefCounted 物件引用計數會自動管理）
+    Ref<MyDataResource> data(Object::cast_to<MyDataResource>(res.ptr()));
     if (data.is_valid()) {
         UtilityFunctions::print("歡迎回來，", data->get_player_name());
     }
@@ -62,14 +63,31 @@ void MyNode3D::load_game_data(String p_path) {
 ```cpp
 void MyNode3D::manual_save(String p_path) {
     Dictionary save_dict;
-    save_game_data["health"] = 100;
-    save_game_data["pos"] = get_position();
+    save_dict["health"] = 100;
+    save_dict["pos"] = get_position();
 
-    // 轉為 JSON 或文字
+    // 轉為 JSON 字串
     String json_str = JSON::stringify(save_dict);
-    
+
     Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::WRITE);
-    file->store_string(json_str);
+    if (file.is_valid()) {
+        file->store_string(json_str);
+    }
+}
+
+void MyNode3D::manual_load(String p_path) {
+    Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+    if (file.is_null()) return;
+
+    String json_str = file->get_as_text();
+    Variant result = JSON::parse_string(json_str);
+
+    if (result.get_type() == Variant::DICTIONARY) {
+        Dictionary d = result;
+        int health = d.get("health", 0);
+        Vector3 pos = d.get("pos", Vector3());
+        set_position(pos);
+    }
 }
 ```
 

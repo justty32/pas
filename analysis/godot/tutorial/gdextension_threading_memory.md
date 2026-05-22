@@ -70,15 +70,21 @@ void MyNode3D::_expensive_calculation() {
 ### 5.2 執行群組任務 (Group Task)
 適合將一個大任務拆分成多個小塊並行處理（例如：處理大量頂點數據）。
 
+**重要**：godot-cpp 的 `add_group_task` 只接受 `Callable`，不接受 C 函數指標。Callable 會以 `int64_t` 接收目前的任務索引。
+
 ```cpp
-void process_data_chunk(void *userdata, uint32_t index) {
-    // 根據 index 處理對應的資料塊
+// 宣告接收索引的成員函數
+void MyNode3D::process_data_chunk(int64_t p_index) {
+    // 根據 p_index 處理對應的資料塊
+    // 注意：此函數在工作執行緒中執行，禁止直接操作場景樹
 }
 
 void MyNode3D::run_parallel_process(int count) {
     WorkerThreadPool::GroupID group_id = WorkerThreadPool::get_singleton()->add_group_task(
-        process_data_chunk, nullptr, count
+        callable_mp(this, &MyNode3D::process_data_chunk),
+        count  // 群組元素數量，每個元素對應一次 callable 呼叫
     );
+    // 阻塞主執行緒直到所有子任務完成
     WorkerThreadPool::get_singleton()->wait_for_group_task_completion(group_id);
 }
 ```

@@ -140,11 +140,86 @@ GDExtensionBool GDE_EXPORT my_extension_library_init(GDExtensionInterfaceGetProc
 }
 ```
 
-## 5. 驗證方式
-1. **編譯**：使用 SCons 編譯您的 C++ 專案，產出動態連結庫檔案。
-2. **配置**：建立一個 `.gdextension` 檔案，指向編譯出的庫檔案。
+## 5. 建置與配置
+
+### 步驟 D：專案目錄結構
+建議的工作目錄佈局（Extension 獨立於 Godot 專案外）：
+```
+my_extension/
+├── godot-cpp/          # git submodule：官方 C++ 綁定
+├── src/
+│   ├── my_node.h
+│   ├── my_node.cpp
+│   └── register_types.cpp
+├── SConstruct          # 建置腳本
+└── demo/               # Godot 專案
+    ├── project.godot
+    └── bin/
+        └── my_extension.gdextension
+```
+
+### 步驟 E：建置腳本 (`SConstruct`)
+最簡化的 SCons 腳本（詳細版本參考 godot-cpp 官方範本）：
+
+```python
+#!/usr/bin/env python
+import os
+
+# godot-cpp 提供的建置環境設定
+env = SConscript("godot-cpp/SConstruct")
+
+# 加入您的原始碼
+env.Append(CPPPATH=["src/"])
+sources = Glob("src/*.cpp")
+
+# 建置共享函式庫
+library = env.SharedLibrary(
+    "demo/bin/libmy_extension{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+    source=sources,
+)
+Default(library)
+```
+
+執行建置：
+```bash
+# Debug 版本
+scons
+
+# Release 版本
+scons target=template_release
+```
+
+### 步驟 F：`.gdextension` 設定檔
+在 Godot 專案的 `res://bin/` 下建立 `my_extension.gdextension`：
+
+```ini
+[configuration]
+entry_symbol = "my_extension_library_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+# Windows
+windows.debug.x86_64   = "res://bin/libmy_extension.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/libmy_extension.windows.template_release.x86_64.dll"
+
+# Linux
+linux.debug.x86_64     = "res://bin/libmy_extension.linux.template_debug.x86_64.so"
+linux.release.x86_64   = "res://bin/libmy_extension.linux.template_release.x86_64.so"
+
+# macOS (使用 framework bundle)
+macos.debug             = "res://bin/libmy_extension.macos.template_debug.framework"
+macos.release           = "res://bin/libmy_extension.macos.template_release.framework"
+```
+
+## 6. 驗證方式
+1. **編譯**：執行 `scons` 產出動態連結庫，確認 `demo/bin/` 下出現對應的 `.dll` / `.so` 檔案。
+2. **配置確認**：`.gdextension` 的 `entry_symbol` 必須與 `register_types.cpp` 中 `GDE_EXPORT` 函數名稱完全一致。
 3. **檢查編輯器**：
-    - 開啟 Godot 編輯器。
+    - 開啟 Godot 編輯器（`demo/` 目錄）。
     - 在「建立新節點」對話框中搜尋 `MyNode3D`。
+    - 若出現則表示 Extension 載入成功。
     - 檢查右側 Inspector 面板是否出現 `Amplitude` 屬性。
 4. **執行場景**：將 `MyNode3D` 加入場景並執行，觀察其是否根據 `_process` 邏輯進行左右擺動。
+5. **常見問題**：
+    - 若節點不出現：確認 `.gdextension` 路徑正確，且 `entry_symbol` 名稱無誤。
+    - 若引擎崩潰：通常是因為 `_bind_methods()` 中使用了不存在的方法指標，或 `ClassDB::register_class` 呼叫在錯誤的 `InitializationLevel`。

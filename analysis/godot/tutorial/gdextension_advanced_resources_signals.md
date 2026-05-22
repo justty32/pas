@@ -57,6 +57,46 @@ public:
 #endif
 ```
 
+### 步驟 A-2：實作 `MyDataResource::_bind_methods()` (`my_resource.cpp`)
+這一步至關重要，缺少它資源的屬性將無法在編輯器中顯示，也無法序列化。
+
+```cpp
+#include "my_resource.h"
+#include <godot_cpp/core/class_db.hpp>
+
+using namespace godot;
+
+MyDataResource::MyDataResource() {
+    level = 1;
+}
+
+void MyDataResource::_bind_methods() {
+    // 綁定 getter/setter
+    ClassDB::bind_method(D_METHOD("get_player_name"), &MyDataResource::get_player_name);
+    ClassDB::bind_method(D_METHOD("set_player_name", "p_name"), &MyDataResource::set_player_name);
+    ClassDB::bind_method(D_METHOD("get_level"), &MyDataResource::get_level);
+    ClassDB::bind_method(D_METHOD("set_level", "p_level"), &MyDataResource::set_level);
+
+    // 暴露給 Inspector 與序列化系統
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "player_name"), "set_player_name", "get_player_name");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "level", PROPERTY_HINT_RANGE, "1,100,1"), "set_level", "get_level");
+}
+
+void MyDataResource::set_player_name(const String &p_name) { player_name = p_name; }
+String MyDataResource::get_player_name() const { return player_name; }
+void MyDataResource::set_level(int p_level) { level = p_level; }
+int MyDataResource::get_level() const { return level; }
+```
+
+並在 `register_types.cpp` 的 `initialize` 函數中一併註冊：
+```cpp
+void initialize_my_extension_module(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) { return; }
+    ClassDB::register_class<MyDataResource>(); // 必須先於使用它的節點
+    ClassDB::register_class<MyNode3D>();
+}
+```
+
 ### 步驟 B：定義並觸發信號 (`my_node_advanced.h`)
 我們將擴展先前的 `MyNode3D`，加入信號支援。
 

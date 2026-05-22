@@ -12,8 +12,9 @@
 - 基礎的 A* 算法邏輯 (G Score, H Score, F Score)。
 
 ## 3. 原始碼導航 (核心參考)
-- **內建 AStar**: `core/math/a_star.h` (L45: `AStar3D` 類別定義)
+- **引擎內部實作**: `core/math/a_star.h` (`AStar3D` 類別定義，僅供理解引擎原理)
 - **虛擬方法**: `core/math/a_star.cpp` (搜尋 `_compute_cost` 與 `_estimate_cost`)
+- **GDExtension 引入標頭**: `#include <godot_cpp/classes/a_star3d.hpp>`
 - **高效能容器**: `core/templates/local_vector.h`
 
 ## 4. 方案一：擴充內建 AStar3D

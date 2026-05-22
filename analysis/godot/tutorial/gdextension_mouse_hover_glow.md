@@ -40,6 +40,10 @@ class HoverSprite : public Sprite2D {
     GDCLASS(HoverSprite, Sprite2D);
 
 protected:
+    static void _bind_methods() {
+        // 無需暴露額外方法，但 GDCLASS 要求此函數存在
+    }
+
     void _notification(int p_what) {
         switch (p_what) {
             case NOTIFICATION_MOUSE_ENTER:
@@ -56,7 +60,6 @@ protected:
         if (mat.is_null()) return;
 
         // 建立一個 Tween 讓寬度變化更平滑
-        Ref<SceneTreeTimer> timer; 
         Ref<Tween> tween = get_tree()->create_tween();
         
         float target_width = p_active ? 2.0f : 0.0f;
