@@ -34,7 +34,8 @@
     },
     "compatible_after": [
       "idle",
-      "guard"
+      "guard",
+      "step_in"
     ],
     "compatible_before": []
   },
@@ -44,6 +45,25 @@
       "guard",
       "defensive",
       "upper_body"
+    ],
+    "entry_frame": 0,
+    "exit_frame": -1,
+    "exit_velocity": {},
+    "root_motion_delta": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "compatible_after": [
+      "idle"
+    ],
+    "compatible_before": []
+  },
+  "step_in": {
+    "name": "step_in",
+    "tags": [
+      "movement",
+      "ground",
+      "advance"
     ],
     "entry_frame": 0,
     "exit_frame": -1,

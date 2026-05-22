@@ -94,24 +94,35 @@ seam 兩側值不連續時，在重疊區做線性混合。採**資料層烘焙*
 - 插入過渡 key（短時間內補上中間值），或
 - 對後段整體做 `offset`（沿用 Phase 1 的 offset 指令）對齊起始姿態。
 
-### 3.4 Root motion 累加（後續，3D 尤其重要）
+### 3.4 Root motion 累加（已實作）
 
-每段的 `root_motion_delta` 需累加到根骨骼 position 軌道，避免角色在世界空間「滑回原點」。
-2D 為 Vector2、3D 為 Vector3。沿用 Phase 1 的 offset 對根軌道平移即可。
+避免角色在世界空間「滑回原點」：後一段的位移軌道接續前一段的終點。
+
+- 介面：`--root-motion <track_path>`，由 Claude 指定哪條是位移軌道（通常 `.:position`）。
+- 演算法：依 clip 順序累加。第一段不動；之後每段加上
+  `off = 前段終點 - 本段起始值`，使本段起始值對齊前段終點（seam 連續）。
+  終點位移 = 最後一段套用 off 後的末值。
+- 該軌道**不參與 cross-fade**（位移要累加、不是混合）。
+- 2D 為 Vector2、3D 為 Vector3，邏輯相同（逐分量累加）。
+
+實作於 `cmd_concat` 的 root motion 預處理段。對照測試（`step_in → punch`）：不加旗標時
+step 的前踏在 seam 被 punch 歸零的位移吃掉（角色原地）；加旗標後 punch 接續 x=24 前傾，
+位移連續。
 
 ---
 
 ## 4. 工具介面設計（`anim_compose.py`）
 
 ```
-# 本次實作
-python anim_compose.py concat <file> <new_anim> <clip1> <clip2> [...] [--blend <秒>]
+# 已實作
+python anim_compose.py concat <file> <new_anim> <clip1> <clip2> [...] \
+       [--blend <秒>] [--root-motion <track_path>]
     把 clip1, clip2, ... 依序拼成新動畫 <new_anim>，寫回同檔的 AnimationLibrary。
-    --blend 讓相鄰段重疊指定秒數（MVP：僅時間重疊 + seam 去重）。
+    --blend       相鄰段重疊指定秒數，並對共有數值軌道做 cross-fade 值混合烘焙（§3.2）。
+    --root-motion 指定位移軌道，後段接續前段終點累加（§3.4）。
 
 # 後續
-python anim_compose.py fix-seam <file> <anim> <seam_time> ...   # 銜接連續性補正
-python anim_compose.py blend    ...                              # 值混合烘焙
+python anim_compose.py fix-seam <file> <anim> <seam_time> ...   # 缺席軌道 hold / 起手對齊
 ```
 
 `concat` 重用 `anim_inspector.py` 的解析/格式化基礎設施

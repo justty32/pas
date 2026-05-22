@@ -143,8 +143,8 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [x] Phase 2 機械原語：`anim_compose.py concat`（序列拼接；`--blend` 做 cross-fade 值混合烘焙）
 - [x] Phase 2 cross-fade：重疊窗內逐分量線性混合（fighter.tres 加 `guard` 範例，guard→punch 實測）
 - [x] Phase 2 端到端走查：自然語言 → 查 metadata → Phase 1 編輯 + concat（idle+punch）跑通
+- [x] Phase 2 root motion 累加：`--root-motion <track>` 後段接續前段終點（step_in→punch 實測）
 - [ ] Phase 2 銜接連續性補正 `fix-seam`（缺席軌道 hold / 起手姿勢對齊）
-- [ ] Phase 2 root motion 累加（避免拼接後滑回原點）
 - [ ] Quaternion cross-fade 改 SLERP（目前逐分量線性近似）
 - [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
 
