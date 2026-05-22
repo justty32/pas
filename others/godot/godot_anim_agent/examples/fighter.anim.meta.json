@@ -1,0 +1,40 @@
+{
+  "idle": {
+    "name": "idle",
+    "tags": [
+      "idle",
+      "ground",
+      "loopable"
+    ],
+    "entry_frame": 0,
+    "exit_frame": -1,
+    "exit_velocity": {},
+    "root_motion_delta": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "compatible_after": [
+      "punch"
+    ],
+    "compatible_before": []
+  },
+  "punch": {
+    "name": "punch",
+    "tags": [
+      "attack",
+      "upper_body",
+      "ground"
+    ],
+    "entry_frame": 0,
+    "exit_frame": -1,
+    "exit_velocity": {},
+    "root_motion_delta": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "compatible_after": [
+      "idle"
+    ],
+    "compatible_before": []
+  }
+}
