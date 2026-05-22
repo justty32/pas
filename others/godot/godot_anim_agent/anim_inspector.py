@@ -265,6 +265,7 @@ def _extract_tracks(sub_res: dict) -> list[dict]:
             "index": idx,
             "type":  t.get("type", "").strip('"'),
             "path":  _clean_path(t.get("path", "")),
+            "raw_props": t,   # 完整 tracks/N/* 原始字串（interp/loop_wrap/enabled 等）
         }
         keys_raw = t.get("keys", "")
         if keys_raw:
@@ -274,6 +275,9 @@ def _extract_tracks(sub_res: dict) -> list[dict]:
             sp = _field_value_span(keys_raw, "transitions")
             if sp:
                 track["transitions"] = _packed_floats(keys_raw[sp[0]:sp[1]]) or []
+            sp = _field_value_span(keys_raw, "update")
+            if sp:
+                track["update"] = keys_raw[sp[0]:sp[1]].strip()
             sp = _field_value_span(keys_raw, "values")
             if sp:
                 raw_v = keys_raw[sp[0]:sp[1]]
