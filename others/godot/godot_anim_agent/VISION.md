@@ -144,9 +144,11 @@ Agent 修改旋轉時不能直接加減數值，需要用球面插值（SLERP）
 - [x] Phase 2 cross-fade：重疊窗內逐分量線性混合（fighter.tres 加 `guard` 範例，guard→punch 實測）
 - [x] Phase 2 端到端走查：自然語言 → 查 metadata → Phase 1 編輯 + concat（idle+punch）跑通
 - [x] Phase 2 root motion 累加：`--root-motion <track>` 後段接續前段終點（step_in→punch 實測）
-- [ ] Phase 2 銜接連續性補正 `fix-seam`（缺席軌道 hold / 起手姿勢對齊）
-- [ ] Quaternion cross-fade 改 SLERP（目前逐分量線性近似）
-- [ ] 確認 3D .animlib 格式結構（待有 Godot 3D 場景後測試）
+- [x] Phase 2 seam 診斷 `check-seams`：速度突變/瞬跳報告（限制：無法自動區分刻意俐落與頓挫）
+- [x] Quaternion cross-fade 用 SLERP（value 軌道四元數，單位長度驗證；合成 fixture 實測）
+- [x] **Phase 2（2D / value 軌道範疇）完成**：concat + cross-fade + root motion + check-seams
+- [ ] 3D transform 軌道（`rotation_3d`/`position_3d`/`scale_3d`，平坦 PackedFloat 格式）支援
+      —— **阻塞**：需真實 Godot 3D 匯出確認格式（與 value 軌道的 dict 格式不同）
 
 ### 2026-05-22 首次實測修 bug 紀錄
 

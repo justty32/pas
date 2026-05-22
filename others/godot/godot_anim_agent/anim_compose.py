@@ -7,24 +7,29 @@ session 內完成（查 metadata），本工具只做確定性的資料變換。
 使用方式：
   python anim_compose.py concat <file.tres> <new_anim> <clip1> <clip2> [...] \
          [--blend <秒>] [--root-motion <track_path>]
+  python anim_compose.py check-seams <file.tres> <anim> [--at T1,T2,...] [--threshold X]
 
 範例：
   python anim_compose.py concat fighter.tres idle_then_punch idle punch
   python anim_compose.py concat fighter.tres combo guard punch --blend 0.3
   python anim_compose.py concat fighter.tres advance step_in punch --root-motion ".:position"
+  python anim_compose.py check-seams fighter.tres combo --at 0.5
 
 說明：
-  - 依序把 clip1, clip2, ... 拼成新動畫 <new_anim>，寫回同檔的 AnimationLibrary。
-  - 各段 times 位移到對應起始時間；相同 path 的軌道合併、依時間排序、seam 去重。
+  - concat 依序把 clip1, clip2, ... 拼成新動畫 <new_anim>，寫回同檔的 AnimationLibrary。
+    各段 times 位移到對應起始時間；相同 path 的軌道合併、依時間排序、seam 去重。
   - --blend N 讓相鄰段重疊 N 秒，並在重疊窗對「兩段共有、型別一致」的數值軌道
-    做 cross-fade 值混合烘焙（逐分量線性；Quaternion 為近似，會警告）。
+    做 cross-fade 值混合烘焙（純量/向量逐分量線性；Quaternion 用 SLERP）。
   - --root-motion PATH 指定位移軌道：後段接續前段終點累加，避免拼接後角色滑回原點
     （該軌道不參與 cross-fade）。
+  - check-seams 報告數值軌道在指定時間點（或全軌道）的速度突變/瞬跳，協助判斷
+    seam 是否頓挫；修正手段通常是 concat --blend 或手調 key。
   - 序列化風格沿用 anim_inspector（向量/PackedFloat 元素不帶 .0）。
 """
 
 import re
 import sys
+import math
 from pathlib import Path
 
 from anim_inspector import (
@@ -51,6 +56,39 @@ def _sample(keys, t: float):
                 return list(c1)
             w = (t - t0) / (t1 - t0)
             return [a + (b - a) * w for a, b in zip(c0, c1)]
+    return list(keys[-1][1])
+
+
+def _slerp(qa, qb, w: float):
+    """四元數 (x,y,z,w) 球面線性插值，回傳單位四元數；近乎平行時退化為 nlerp。"""
+    dot = sum(a * b for a, b in zip(qa, qb))
+    if dot < 0.0:                      # 取最短弧
+        qb, dot = [-x for x in qb], -dot
+    if dot > 0.9995:                   # 幾乎重合 → 線性後正規化
+        res = [a + (b - a) * w for a, b in zip(qa, qb)]
+    else:
+        theta_0 = math.acos(max(-1.0, min(1.0, dot)))
+        theta = theta_0 * w
+        s0 = math.cos(theta) - dot * math.sin(theta) / math.sin(theta_0)
+        s1 = math.sin(theta) / math.sin(theta_0)
+        res = [s0 * a + s1 * b for a, b in zip(qa, qb)]
+    norm = math.sqrt(sum(x * x for x in res)) or 1.0
+    return [x / norm for x in res]
+
+
+def _sample_quat(keys, t: float):
+    """四元數軌道取樣：clip 內以 SLERP 插值。keys = 已排序 [(time, quat)]。"""
+    if not keys:
+        return []
+    if t <= keys[0][0]:
+        return list(keys[0][1])
+    if t >= keys[-1][0]:
+        return list(keys[-1][1])
+    for i in range(len(keys) - 1):
+        t0, q0 = keys[i]
+        t1, q1 = keys[i + 1]
+        if t0 <= t <= t1:
+            return list(q1) if t1 == t0 else _slerp(q0, q1, (t - t0) / (t1 - t0))
     return list(keys[-1][1])
 
 
@@ -199,7 +237,6 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
     # 逐軌道組裝最終 keys：可混合的數值軌道在重疊窗內烘焙 cross-fade
     merged = {}          # path -> {type, raw_props, update, keys:[(t,trans,item)]}
     present = {}         # path -> set(clip_idx)
-    blended_quat = False
     crossfaded = set()   # 實際發生 cross-fade 的軌道
     for path, info in info_by_path.items():
         segs = info["segs"]
@@ -230,13 +267,15 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
                         sample_ts.add(t)
                 for t in sorted(sample_ts):
                     w = 0.0 if e <= s else max(0.0, min(1.0, (t - s) / (e - s)))
-                    a, b = _sample(a_keys, t), _sample(b_keys, t)
-                    blended = [round(av + (bv - av) * w, 6) for av, bv in zip(a, b)]
+                    if only == "Quaternion":
+                        blended = [round(x, 6) for x in
+                                   _slerp(_sample_quat(a_keys, t), _sample_quat(b_keys, t), w)]
+                    else:
+                        a, b = _sample(a_keys, t), _sample(b_keys, t)
+                        blended = [round(av + (bv - av) * w, 6) for av, bv in zip(a, b)]
                     keys.append((round(t, 6), 1.0, _format_value_item(only, blended)))
             if active:
                 crossfaded.add(path)
-                if only == "Quaternion":
-                    blended_quat = True
         else:
             for seg in segs.values():
                 for (t, tr, payload) in seg:
@@ -278,8 +317,6 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
         print(f"  cross-fade 軌道（{len(crossfaded)}）：{', '.join(sorted(crossfaded))}")
     if rm_total is not None:
         print(f"  root motion 累加（{root_motion_path}）：終點位移 = {_format_value_item(rm_vtype, rm_total)}")
-    if blended_quat:
-        print("⚠ Quaternion 軌道以逐分量線性混合（非 SLERP），大幅旋轉時可能不準。")
     partial = [p for p, s in present.items() if len(s) < len(clips)]
     if partial:
         print("ℹ 下列軌道非全程出現；缺席段落 Godot 會 hold 最近的關鍵幀（非循環不外插），"
@@ -290,38 +327,130 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
     print(f"已儲存：{filepath}")
 
 
+def _fmt_vel(s: list) -> str:
+    """速度向量格式化：單分量→'-2.0/s'，多分量→'(-2.0, 0.0)/s'。"""
+    if len(s) == 1:
+        return f"{round(s[0], 2)}/s"
+    return "(" + ", ".join(f"{round(x, 2)}" for x in s) + ")/s"
+
+
+def cmd_check_seams(filepath: str, anim_name: str,
+                    at_times: list = None, threshold: float = 3.0) -> None:
+    """
+    連續性診斷：報告數值軌道在指定時間點（或全軌道）的速度突變與瞬跳，
+    協助判斷組合後的 seam 是否會頓挫。修正手段通常是 concat --blend 或手調 key。
+    """
+    text = Path(filepath).read_text(encoding="utf-8")
+    data = parse_tres(text)
+    anim = _find_anim(data, anim_name)
+    if anim is None:
+        print(f"找不到動畫：{anim_name}")
+        return
+
+    findings = []
+    for tr in _extract_tracks(anim):
+        vt = tr.get("vtype")
+        comps = tr.get("comps")
+        times = tr.get("times") or []
+        if comps is None or vt not in NUMERIC or len(times) < 2:
+            continue
+
+        def slope(i, j):
+            dt = times[j] - times[i]
+            if dt <= 1e-9:
+                return None
+            return [(comps[j][c] - comps[i][c]) / dt for c in range(len(comps[i]))]
+
+        for i in range(len(times)):
+            if at_times is not None and not any(abs(times[i] - a) < 1e-3 for a in at_times):
+                continue
+            # 瞬跳：與前一 key 幾乎同時但值不同
+            if i > 0 and (times[i] - times[i - 1]) <= 1e-3:
+                jump = max(abs(comps[i][c] - comps[i - 1][c]) for c in range(len(comps[i])))
+                if jump > 1e-6:
+                    findings.append((tr["path"], times[i], "瞬跳", jump,
+                                     _format_value_item(vt, comps[i - 1]),
+                                     _format_value_item(vt, comps[i])))
+                continue
+            # 速度突變：內部 key 的進出斜率變化
+            if 0 < i < len(times) - 1:
+                s_in, s_out = slope(i - 1, i), slope(i, i + 1)
+                if s_in is None or s_out is None:
+                    continue
+                d = max(abs(s_out[c] - s_in[c]) for c in range(len(s_in)))
+                if d > threshold:
+                    findings.append((tr["path"], times[i], "速度突變", d,
+                                     _fmt_vel(s_in), _fmt_vel(s_out)))
+
+    where = (f"（檢查點 {', '.join(_fmt_real(a) for a in at_times)}s）"
+             if at_times else f"（全軌道，閾值 Δ>{threshold}）")
+    print(f"=== seam 連續性檢查：{anim_name} {where} ===")
+    if not findings:
+        print("  ✓ 未發現超過閾值的不連續")
+        return
+    for path, t, kind, mag, a, b in sorted(findings, key=lambda x: (x[1], x[0])):
+        print(f"  t={_fmt_real(t):>6}  {kind}  {path}")
+        print(f"            {a}  →  {b}   (Δ={round(mag, 3)})")
+    print(f"  共 {len(findings)} 處；可用 concat --blend 在組合時平滑，或手調對應 key。")
+
+
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] != "concat":
+    if len(sys.argv) < 2:
         print(__doc__)
-        sys.exit(0 if len(sys.argv) < 2 else 1)
-
+        sys.exit(0)
+    cmd = sys.argv[1]
     args = sys.argv[2:]
-    blend = 0.0
-    if "--blend" in args:
-        bi = args.index("--blend")
-        try:
-            blend = float(args[bi + 1])
-        except (IndexError, ValueError):
-            print("--blend 需要一個秒數，例如 --blend 0.05")
-            sys.exit(1)
-        del args[bi:bi + 2]
 
-    root_motion_path = None
-    if "--root-motion" in args:
-        ri = args.index("--root-motion")
-        if ri + 1 >= len(args):
-            print('--root-motion 需要一個軌道路徑，例如 --root-motion ".:position"')
+    if cmd == "concat":
+        blend = 0.0
+        if "--blend" in args:
+            bi = args.index("--blend")
+            try:
+                blend = float(args[bi + 1])
+            except (IndexError, ValueError):
+                print("--blend 需要一個秒數，例如 --blend 0.05")
+                sys.exit(1)
+            del args[bi:bi + 2]
+        root_motion_path = None
+        if "--root-motion" in args:
+            ri = args.index("--root-motion")
+            if ri + 1 >= len(args):
+                print('--root-motion 需要一個軌道路徑，例如 --root-motion ".:position"')
+                sys.exit(1)
+            root_motion_path = args[ri + 1]
+            del args[ri:ri + 2]
+        if len(args) < 4:
+            print("用法：anim_compose.py concat <file> <new_anim> <clip1> <clip2> [...] "
+                  "[--blend <秒>] [--root-motion <track_path>]")
             sys.exit(1)
-        root_motion_path = args[ri + 1]
-        del args[ri:ri + 2]
+        cmd_concat(args[0], args[1], args[2:], blend, root_motion_path)
 
-    if len(args) < 4:
-        print("用法：anim_compose.py concat <file> <new_anim> <clip1> <clip2> [...] "
-              "[--blend <秒>] [--root-motion <track_path>]")
+    elif cmd == "check-seams":
+        at_times, threshold = None, 3.0
+        if "--at" in args:
+            ai = args.index("--at")
+            try:
+                at_times = [float(x) for x in args[ai + 1].split(",")]
+            except (IndexError, ValueError):
+                print("--at 需要逗號分隔的秒數，例如 --at 0.5,1.1")
+                sys.exit(1)
+            del args[ai:ai + 2]
+        if "--threshold" in args:
+            ti = args.index("--threshold")
+            try:
+                threshold = float(args[ti + 1])
+            except (IndexError, ValueError):
+                print("--threshold 需要一個數值")
+                sys.exit(1)
+            del args[ti:ti + 2]
+        if len(args) < 2:
+            print("用法：anim_compose.py check-seams <file> <anim> [--at T1,T2,...] [--threshold X]")
+            sys.exit(1)
+        cmd_check_seams(args[0], args[1], at_times, threshold)
+
+    else:
+        print(__doc__)
         sys.exit(1)
-
-    filepath, new_anim, clip_names = args[0], args[1], args[2:]
-    cmd_concat(filepath, new_anim, clip_names, blend, root_motion_path)
 
 
 if __name__ == "__main__":

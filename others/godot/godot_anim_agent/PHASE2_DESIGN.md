@@ -84,15 +84,23 @@ seam 兩側值不連續時，在重疊區做線性混合。採**資料層烘焙*
 - 只出現於單邊、型別不一致、或 method 軌道：不混合，沿用純拼接（§3.1）。
 
 實作於 `anim_compose.py`（`_sample` + cmd_concat 的 blendable 分支）。
-**已知限制**：Quaternion 目前逐分量線性混合（非 SLERP），大旋轉會失真——工具會警告，
-列入待辦改用真正的球面插值。AnimationTree 層（`AnimationNodeBlend`/`Transition`）為另一條
-不動 clip 資料的路徑，本工具暫不採用。
+- 純量 / 向量：逐分量線性混合。
+- **Quaternion：用 SLERP**（`_slerp`，clip 內取樣 `_sample_quat` 也走 SLERP），
+  取最短弧、輸出正規化單位四元數。合成 fixture 實測：混合後每個四元數 |q|=1。
+AnimationTree 層（`AnimationNodeBlend`/`Transition`）為另一條不動 clip 資料的路徑，本工具暫不採用。
 
-### 3.3 銜接修正（後續）
+### 3.3 銜接診斷（check-seams，已實作「檢查」半部）
 
-依 metadata 的 `exit_velocity` / 末幀值，檢查 seam 兩側同骨骼是否連續；不連續時：
-- 插入過渡 key（短時間內補上中間值），或
-- 對後段整體做 `offset`（沿用 Phase 1 的 offset 指令）對齊起始姿態。
+`check-seams <file> <anim> [--at T...] [--threshold X]`：對數值軌道計算相鄰 key 的
+速度（斜率），報告**速度突變**（進出斜率差超過閾值）與**瞬跳**（近乎同時的 key 值不同）。
+
+**誠實限制**（實測得出）：
+- concat 的 seam 去重已保證產物**值連續**，所以正常組合不會有「瞬跳」；瞬跳偵測主要
+  對手改/外部檔案有用。
+- 速度突變**無法自動區分「刻意的俐落」與「非預期的頓挫」**——出拳本身就是高速揮動，
+  會被一併標出。因此 check-seams 是**速度總覽供人眼判斷**的輔助，不是自動判定器。
+- 「修」的手段仍是組合時 `concat --blend`（cross-fade）或手調 key；未做自動 offset 對齊，
+  因為它會改變後段絕對姿態，多數情況不如 cross-fade。
 
 ### 3.4 Root motion 累加（已實作）
 
@@ -147,11 +155,17 @@ python anim_compose.py fix-seam <file> <anim> <seam_time> ...   # 缺席軌道 h
 
 ## 6. 限制與未決問題
 
-- **缺席軌道漂移**（§3.1 MVP 限制）：clip 間軌道集合不一致時，缺席段落不補 hold key。
-- **值混合未烘焙**：`--blend` 目前只重疊時間，未算混合值（§3.2）。
-- **同 path 不同 type**：MVP 假設同路徑同軌道型別，未處理衝突。
+- **缺席軌道**（§3.1）：clip 間軌道集合不一致時，缺席段落不補 hold key。實務上 Godot
+  非循環會 hold 最近關鍵幀（不外插），多停在靜止姿勢；只有當邊界值非靜止才需手動補。
+- **同 path 不同 type**：假設同路徑同軌道型別，未處理衝突（型別不一致則不混合）。
 - **NodePath 比對**：以清理後的字串比對；含 `:property` 的子屬性路徑視為不同軌道（正確）。
-- **3D 尚未驗證**：Quaternion 軌道的 concat 機械上可行（原樣串接），但 blend 需 SLERP（後續）。
+- **3D transform 軌道格式（真正的阻塞點）**：本工具鏈只解析 `value` / `method` 軌道的
+  `keys = {times, transitions, values}` dict 格式。Godot 4 的 3D 骨骼動畫用專屬軌道型別
+  `rotation_3d` / `position_3d` / `scale_3d`，keys 存成**平坦 `PackedFloat32Array`**
+  （每個 key 為 `time, 分量...` 連續排列），與 dict 格式不同，目前完全未支援。
+  其確切文字結構需用**真實 Godot 3D 場景匯出**來確認，無實際場景前無法落地。
+  注意：上面 §3.2 的 Quaternion SLERP 是針對「`value` 軌道裏的 Quaternion」（少見但可行），
+  與標準 3D bone 的 `rotation_3d` 軌道是兩回事。
 
 ---
 
