@@ -11,8 +11,8 @@ void MapCoreWorldMap2DRenderer::_bind_methods() {
         D_METHOD("generate_terrain_image", "data", "cell_px"),
         &MapCoreWorldMap2DRenderer::generate_terrain_image, DEFVAL(8));
     ClassDB::bind_method(
-        D_METHOD("draw_rivers", "image", "data", "cell_px"),
-        &MapCoreWorldMap2DRenderer::draw_rivers, DEFVAL(8));
+        D_METHOD("draw_rivers", "image", "data", "cell_px", "min_strength"),
+        &MapCoreWorldMap2DRenderer::draw_rivers, DEFVAL(8), DEFVAL(80));
 }
 
 // ── 地形顏色表 ────────────────────────────────────────────────────────────────
@@ -57,23 +57,28 @@ Ref<Image> MapCoreWorldMap2DRenderer::generate_terrain_image(
 }
 
 void MapCoreWorldMap2DRenderer::draw_rivers(
-        Ref<Image> image, Ref<MapCoreMapData> data, int cell_px) {
+        Ref<Image> image, Ref<MapCoreMapData> data, int cell_px, int min_strength) {
     ERR_FAIL_COND(image.is_null());
     ERR_FAIL_COND(data.is_null());
     ERR_FAIL_COND(cell_px < 1);
 
-    // 河流線段厚度（像素），最少 1px，隨 cell_px 等比縮放（上限 3px）
-    int thick = Math::clamp(cell_px / 4, 1, 3);
+    // 線段厚度依河流分級：小河細、大河粗（對齊 rivers.hpp 的 LARGE_RIVER_THRESHOLD=160）。
+    int thick_minor = Math::clamp(cell_px / 4, 1, 3);   // RIVER
+    int thick_major = Math::clamp(cell_px / 3, 2, 4);   // LARGE_RIVER
     Color river_col(0.12f, 0.30f, 0.72f);
 
     TypedArray<Dictionary> edges = data->get_all_river_edges();
     for (int i = 0; i < edges.size(); ++i) {
         Dictionary d = edges[i];
+        int strength = d["strength"];
+        if (strength < min_strength) continue;  // 濾掉低於門檻的細流
+
         Vector2i pos = d["pos"];
         int dir = d["dir"];
         int x = pos.x * cell_px;
         int y = pos.y * cell_px;
         int cp = cell_px;
+        int thick = (strength >= 160) ? thick_major : thick_minor;
 
         Rect2i rect;
         switch (dir) {
