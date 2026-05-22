@@ -20,6 +20,10 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
+# .NET/MSBuild 建置快取（NuGet 暫存）
+**/obj/
+**/bin/
+
 # SCons (GDExtension 建置產物)
 .sconsign.dblite
 **/.scons_temp/

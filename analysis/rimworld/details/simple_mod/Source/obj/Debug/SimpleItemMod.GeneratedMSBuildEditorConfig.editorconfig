@@ -1,8 +1,0 @@
-is_global = true
-build_property.RootNamespace = SimpleItemMod
-build_property.ProjectDir = C:\code\mine\pas\analysis\rimworld\details\simple_mod\Source\
-build_property.EnableComHosting = 
-build_property.EnableGeneratedComInterfaceComImportInterop = 
-build_property.CsWinRTUseWindowsUIXamlProjections = false
-build_property.EffectiveAnalysisLevelStyle = 
-build_property.EnableCodeStyleSeverity = 
