@@ -7,12 +7,14 @@ session 內完成（查 metadata），本工具只做確定性的資料變換。
 使用方式：
   python anim_compose.py concat <file.tres> <new_anim> <clip1> <clip2> [...] \
          [--blend <秒>] [--root-motion <track_path>]
+  python anim_compose.py fix-seam <file.tres> <anim> --hold "path=val[,path=val...]"
   python anim_compose.py check-seams <file.tres> <anim> [--at T1,T2,...] [--threshold X]
 
 範例：
   python anim_compose.py concat fighter.tres idle_then_punch idle punch
   python anim_compose.py concat fighter.tres combo guard punch --blend 0.3
   python anim_compose.py concat fighter.tres advance step_in punch --root-motion ".:position"
+  python anim_compose.py fix-seam fighter.tres advance --hold "Armature/UpperArm:rotation=0.0,Armature/ForeArm:rotation=0.0"
   python anim_compose.py check-seams fighter.tres combo --at 0.5
 
 說明：
@@ -35,6 +37,7 @@ from pathlib import Path
 from anim_inspector import (
     parse_tres, _extract_tracks, _find_anim,
     _float_list_to_packed, _fmt_real, _format_value_item,
+    cmd_set_key,
 )
 
 NUMERIC = {"float", "Vector2", "Vector3", "Vector4", "Quaternion"}
@@ -320,7 +323,8 @@ def cmd_concat(filepath: str, new_anim: str, clip_names: list[str],
     partial = [p for p, s in present.items() if len(s) < len(clips)]
     if partial:
         print("ℹ 下列軌道非全程出現；缺席段落 Godot 會 hold 最近的關鍵幀（非循環不外插），"
-              "多半停在靜止姿勢。若該軌起手/收尾不在靜止值，可能需要 fix-seam（待實作）：")
+              "多半停在靜止姿勢。若該軌起手/收尾不在靜止值，可用 "
+              "`fix-seam <anim> --hold \"path=rest值\"` 在頭/尾補靜止 key：")
         for p in partial:
             seg = sorted(clips[i]["name"] for i in present[p])
             print(f"    {p}  （僅出現於：{', '.join(seg)}）")
@@ -394,6 +398,56 @@ def cmd_check_seams(filepath: str, anim_name: str,
     print(f"  共 {len(findings)} 處；可用 concat --blend 在組合時平滑，或手調對應 key。")
 
 
+def cmd_fix_seam(filepath: str, anim_name: str, holds: list) -> None:
+    """
+    修補非全程軌道的 seam：對指定軌道，在動畫頭(t=0)/尾(t=length)補一個「靜止值」key，
+    讓該骨骼在它沒被動畫到的段落停在指定的 rest pose，而非沿用相鄰 clip 的起手/收尾值。
+
+    為什麼 rest 值要由呼叫者給：骨骼的靜止姿勢存在 Skeleton/場景，不在動畫檔裡
+    （與 anim_pose.py 骨長同理）。工具不臆測，只做確定性插入。
+
+    holds = [(track_path, value_str), ...]；value_str 比照 set-key（float 或 Vector*）。
+    僅在「該軌道首/末 key 未抵達 0/length」時才補（有缺口才補），並複用 set-key 寫回。
+    """
+    text = Path(filepath).read_text(encoding="utf-8")
+    data = parse_tres(text)
+    anim = _find_anim(data, anim_name)
+    if anim is None:
+        print(f"找不到動畫：{anim_name}")
+        return
+    length = float(anim["props"].get("length", "0"))
+    tracks = {t["path"]: t for t in _extract_tracks(anim)}
+
+    print(f"=== fix-seam：{anim_name}（length={_fmt_real(length)}）===")
+    done = 0
+    for path, val in holds:
+        tr = tracks.get(path)
+        if tr is None:
+            print(f"  跳過 {path}：動畫中無此軌道")
+            continue
+        times = tr.get("times") or []
+        if not times:
+            print(f"  跳過 {path}：無 key")
+            continue
+        acted = False
+        if min(times) > 1e-6:                       # 開頭有缺口 → 補 t=0 的 rest
+            print(f"  {path}：頭部缺口 [0, {_fmt_real(min(times))}] → 補 t=0 = {val}")
+            cmd_set_key(filepath, anim_name, path, "0", val)
+            acted = True
+        if max(times) < length - 1e-6:              # 結尾有缺口 → 補 t=length 的 rest
+            print(f"  {path}：尾部缺口 [{_fmt_real(max(times))}, {_fmt_real(length)}] → 補 t={_fmt_real(length)} = {val}")
+            cmd_set_key(filepath, anim_name, path, _fmt_real(length), val)
+            acted = True
+        if acted:
+            done += 1
+        else:
+            print(f"  {path}：首末 key 已覆蓋 [0, length]，無需修補")
+    print(f"fix-seam 完成：處理 {done} 條軌道。"
+          + ("" if done == 0 else f"（已寫回 {filepath}）"))
+    print("ℹ rest→首key 之間 Godot 會線性插值（自然的預備/收勢）；若要硬 hold，"
+          "可再對 rest 值在首 key 前一刻手動 set-key。")
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -424,6 +478,29 @@ def main():
                   "[--blend <秒>] [--root-motion <track_path>]")
             sys.exit(1)
         cmd_concat(args[0], args[1], args[2:], blend, root_motion_path)
+
+    elif cmd == "fix-seam":
+        if "--hold" not in args:
+            print('用法：anim_compose.py fix-seam <file> <anim> --hold "path=val[,path=val...]"')
+            sys.exit(1)
+        hi = args.index("--hold")
+        try:
+            hold_spec = args[hi + 1]
+        except IndexError:
+            print('--hold 需要 "path=val[,path=val...]"，例如 --hold "Armature/UpperArm:rotation=0.0"')
+            sys.exit(1)
+        del args[hi:hi + 2]
+        if len(args) < 2:
+            print('用法：anim_compose.py fix-seam <file> <anim> --hold "path=val[,path=val...]"')
+            sys.exit(1)
+        holds = []
+        for pair in hold_spec.split(","):
+            if "=" not in pair:
+                print(f"--hold 項目格式錯誤：{pair}（需 path=value）")
+                sys.exit(1)
+            p, v = pair.split("=", 1)
+            holds.append((p.strip(), v.strip()))
+        cmd_fix_seam(args[0], args[1], holds)
 
     elif cmd == "check-seams":
         at_times, threshold = None, 3.0

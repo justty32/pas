@@ -16,47 +16,70 @@
 | Phase 2 | 動作組合（2D / value 軌道） | ✅ 完成 |
 | Phase 3 ① | 動畫事件 / method 軌道 | ✅ 完成 |
 | Phase 3 ③ | 程序化擺位 / 2-bone IK | ✅ 完成 |
-| Phase 3 ② | AnimationTree / 狀態機 | ⏸ **阻塞：等使用者範本** |
+| Phase 3 ② | AnimationTree / 狀態機 | ✅ 完成（合成範本，**待真機驗證**） |
 | 3D 動畫軌道 | rotation_3d/position_3d/scale_3d | ⏸ **阻塞：等使用者匯出** |
 
 ## 現有工具（都在本目錄，實測於 `examples/fighter.tres`）
 
 - **`anim_inspector.py`** — 單一動畫讀/改：`summary` / `tracks` / `set-key`（float 與 Vector2/3/4/Quaternion）/ `scale-time` / `offset` / `scale-value`
 - **`anim_metadata.py`** — 動畫旁置 metadata：`init` / `show` / `set-tag` / `rm-tag` / `compat`
-- **`anim_compose.py`** — 多段組合：`concat`（`--blend` cross-fade，純量/向量線性、Quaternion SLERP；`--root-motion` 位移累加）/ `check-seams`（速度突變/瞬跳診斷）
+- **`anim_compose.py`** — 多段組合：`concat`（`--blend` cross-fade，純量/向量線性、Quaternion SLERP；`--root-motion` 位移累加）/ `fix-seam`（`--hold "path=rest值"` 對非全程軌道頭/尾補靜止 key，rest 值由呼叫者給）/ `check-seams`（速度突變/瞬跳診斷）
 - **`anim_events.py`** — method 軌道（動畫事件）：`list` / `add`（既有插入或新建軌道）/ `rm` / `scaffold`（產 `.gd` handler 樣板）
 - **`anim_pose.py`** — 2-bone IK：`aim`（骨長/基準朝向當參數收，解上臂/前臂 rotation 寫回，FK 反算誤差 0）
+- **`anim_tree.py`** — AnimationNodeStateMachine 解析/生成（解析成模型→改→整檔重生成，load_steps 自動重算）：
+  - `summary`（加 `--lib` 對 library 交叉檢查狀態引用的動畫名是否存在）/ `add-state` / `rm-state` / `add-transition`（`--xfade`/`--switch`/`--advance`/`--cond`/`--end`）/ `rm-transition` / `set-blend`
+  - **`derive`**（招牌：依 library 動畫建狀態 + metadata 的 compatible_after 推導轉場 Y→X + Start→起始）
+  - **`bake-combo`**（招牌願景「烘焙連招當狀態」：複用 anim_compose.cmd_concat 把多段連招烘成 library 新動畫＋接成狀態，支援 `--blend`/`--root-motion`）
+  - **`scaffold-scene`**（產 .tscn 接線範本：骨架依 library 軌道路徑自動建 Node2D+小 Polygon2D、接好 AnimationPlayer+AnimationTree，讓真機驗證變雙擊）
 
 ## 範例素材（`examples/`）
 
 - `fighter.tres` — 2D 格鬥角色，4 段動畫：`idle` / `guard` / `step_in`（前踏 24px）/ `punch`（含 method 軌道 spawn_hit_spark）
 - `fighter.anim.meta.json` — 四段的 tags 與 compatible_after
 - `fighter_events.gd` — scaffold 示範產物
+- `state_machine_sample.tres` — Phase 3 ② 合成範本（idle/punch+Start/End、3 轉場其中 2 條調離預設）；**待真機驗證**
+- `combo.tres` — `anim_tree.py derive` 產物示範（吃 fighter.tres+meta 烘出 4 狀態+6 推導轉場+Start→idle）
+- `fighter_tree.tscn` — `anim_tree.py scaffold-scene` 產物：可載入驗證的場景（root Node2D + AnimationPlayer 掛 fighter.tres + 自動建的 Armature 骨架 + AnimationTree 接 state_machine_sample.tres）。**這就是真機驗證入口**
 
-## ⏸ 兩個阻塞點（回來時要做的事）
+## ✅ A. Phase 3 ② AnimationTree（已自行解鎖，待真機驗證）
 
-### A. Phase 3 ② AnimationTree（這次卡在這）
-**需要你先給一份最小狀態機範本**（VISION.md「解鎖 AnimationTree」有完整步驟）：
-1. Godot 加 `AnimationTree` 節點，`Tree Root` = 新 `AnimationNodeStateMachine`，Anim Player 指到含 fighter.tres 者。
-2. 放 2 狀態（idle、punch）+ 1~2 轉場。
-3. **把一條轉場設定調離預設**（Xfade Time=0.2 / 換 Switch Mode / 填 Advance Condition）。
-4. Inspector 對 StateMachine 右鍵 → Save As → `examples/state_machine_sample.tres`（含 `.tscn` 更好）。
-5. 告訴我 **Godot 4.x 次版本**。
+使用者不便匯出範本，改走「**從引擎原始碼逆向格式**」：
+- 格式逐項有據（鍵名來自 `animation_node_state_machine.cpp`、屬性/預設來自官方文件、
+  Start/End 為內部類別 `AnimationNodeStartState`/`EndState`）。完整 reference 留檔於
+  `../../analysis/godot/details/animation_node_state_machine_tres_format.md`。
+- 已生成 `examples/state_machine_sample.tres`（合成）並寫好 `anim_tree.py`，
+  load→dump→load round-trip 自洽、`derive` 從 fighter.tres+meta 烘出 `examples/combo.tres` 正常。
 
-→ 拿到後我寫 `anim_tree.py`（解析/生成狀態機：`add-state`/`add-transition`/`set-blend`），
-讓**烘焙連招當狀態、metadata 的 compatible 關係自動推導成轉場**。
+**唯一待辦（要你動手，已備好雙擊入口）**：把 `examples/` 的
+`fighter_tree.tscn` + `state_machine_sample.tres` + `fighter.tres` 三檔放進你的 Godot 專案
+（同層；非根目錄則改 .tscn 裏 ext_resource 的 `res://` 路徑），開 `fighter_tree.tscn`：
+1. 選 AnimationTree 節點，看狀態圖能否載入（idle/punch 兩狀態 + 轉場）。
+2. 按播放，看 Armature 骨架的 idle 擺動。
+3. 在 Godot 再存一次，`git diff fighter_tree.tscn state_machine_sample.tres` 看是否有格式差異
+   （uid / 屬性排序 / `&""` 寫法）。
+有差異回報，我據此微調 `anim_tree.py` 生成器。**目前格式可信但未經真機。**
 
-### B. 3D 動畫軌道支援
+## ⏸ B. 3D 動畫軌道支援（仍阻塞）
 **需要你給一份含 `Skeleton3D` 動畫的 `.tres`/`.animlib`**（VISION.md「解鎖 3D 所需」有完整步驟）：
 重點是看 `rotation_3d`/`position_3d`/`scale_3d` 軌道（平坦 PackedFloat 格式，與 value 軌道 dict 不同）的真實寫法；最好 2 段以上共用骨骼、一段帶根骨骼位移、附 Godot 版本。
 → SLERP cross-fade 與 root motion 累加已備好，拿到格式就能套到 3D。
 
 ## 怎麼接上
 
-回來把 **A 的 `state_machine_sample.tres`** 丟進 `examples/` 或貼給我，我就開始寫 `anim_tree.py`。
-（B 的 3D 檔有空再說，兩者獨立、不互相擋。）
+1. **A（AnimationTree）**：開 Godot 用 `state_machine_sample.tres` 做一次真機載入＋回存驗證（見上）。
+   通過就把合成範本換成真機版；不過工具邏輯不受影響，可以直接拿 `anim_tree.py` 來用。
+2. **B（3D 軌道）**：仍等你匯出含 `Skeleton3D` 的 `.tres`（兩者獨立、不互擋）。
+3. **測試**：尚未寫工具鏈自動化測試（這輪 /loop 下一步要做）；目前各功能皆以 fixture 副本手動實測過。
 
-## 本次 session 的 commit（main 分支）
+## 文檔
 
-目錄重整 → set-key 向量化 → Phase 2（設計/concat/cross-fade/root-motion/check-seams/SLERP）
-→ Phase 3 ①事件 / ③IK → 兩份「待提供」清單。最後一筆：`4d7079e`（AnimationTree 範本清單）。
+- 端到端教學：`analysis/godot/tutorial/anim_agent_workflow.md`（讀→標→調→事件→IK→烘→組→驗，指令皆實測）。
+- 狀態機格式 reference：`analysis/godot/details/animation_node_state_machine_tres_format.md`。
+
+## 本次 session 的進度（main 分支）
+
+承前（目錄重整 / set-key 向量化 / Phase 2 / Phase 3①③ / 兩份待提供清單）後，本 session：
+- **Phase 3 ② 自行逆向格式解鎖**：`anim_tree.py`（9 指令：summary[--lib]/add-state/rm-state/add-transition/rm-transition/set-blend/derive/bake-combo/scaffold-scene）+ 合成 `state_machine_sample.tres` + `combo.tres` + `fighter_tree.tscn` + `details/` 格式 reference。
+- **Phase 2 補洞**：`anim_compose fix-seam`（非全程軌道頭/尾補靜止 key，rest 值由呼叫者給）。
+- **文檔**：端到端教學 `tutorial/anim_agent_workflow.md`。
+- **待續**：工具鏈自動化測試（/loop 進行中）。

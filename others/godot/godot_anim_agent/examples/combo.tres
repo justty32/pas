@@ -1,0 +1,46 @@
+[gd_resource type="AnimationNodeStateMachine" load_steps=13 format=3]
+
+[sub_resource type="AnimationNodeStartState" id="AnimationNodeStartState_start"]
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_idle"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_punch"]
+animation = &"punch"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_guard"]
+animation = &"guard"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_step_in"]
+animation = &"step_in"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_punch_idle"]
+xfade_time = 0.12
+switch_mode = 2
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_idle_punch"]
+xfade_time = 0.25
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_guard_punch"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_step_in_punch"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_idle_guard"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_idle_step_in"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Transition_Start_idle"]
+
+[resource]
+states/Start/node = SubResource("AnimationNodeStartState_start")
+states/Start/position = Vector2(40, 50)
+states/idle/node = SubResource("AnimationNodeAnimation_idle")
+states/idle/position = Vector2(200, 160)
+states/punch/node = SubResource("AnimationNodeAnimation_punch")
+states/punch/position = Vector2(420, 160)
+states/guard/node = SubResource("AnimationNodeAnimation_guard")
+states/guard/position = Vector2(640, 160)
+states/step_in/node = SubResource("AnimationNodeAnimation_step_in")
+states/step_in/position = Vector2(860, 160)
+transitions = ["punch", "idle", SubResource("Transition_punch_idle"), "idle", "punch", SubResource("Transition_idle_punch"), "guard", "punch", SubResource("Transition_guard_punch"), "step_in", "punch", SubResource("Transition_step_in_punch"), "idle", "guard", SubResource("Transition_idle_guard"), "idle", "step_in", SubResource("Transition_idle_step_in"), "Start", "idle", SubResource("Transition_Start_idle")]
