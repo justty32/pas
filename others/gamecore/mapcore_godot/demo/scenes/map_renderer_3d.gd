@@ -11,11 +11,17 @@
 class_name MapRenderer3D
 extends Node3D
 
+## 地形 mesh 建好、map_data 可用後發出（互動層接此訊號取得資料與可點選的 mesh）。
+signal terrain_ready(data: MapCoreMapData)
+
 @export var generator: MapCoreGenerator
 @export var terrain_mesh_node: MeshInstance3D
 @export var water_plane_node: MeshInstance3D
 @export var biome_layer: Node3D
 @export var biome_scatter: BiomeScatter
+
+## 生成完成後保存，供互動層查詢（懸停資訊 / 尋路 / feature）。
+var map_data: MapCoreMapData
 
 @export_group("生成參數")
 @export var tile_size: float = 1.0
@@ -38,8 +44,11 @@ func _on_generated(data: MapCoreMapData) -> void:
 	_build_terrain(data)
 	_build_water(data)
 	_populate_biomes(data)
+	map_data = data
 	print("MapRenderer3D: 地圖渲染完成，seed=", data.get_seed_used(),
 		  "  尺寸=", data.get_width(), "×", data.get_height())
+	# 地形 mesh 已就緒（terrain_mesh_node.mesh 已設定），通知互動層接手
+	terrain_ready.emit(data)
 
 func _on_failed(message: String) -> void:
 	push_error("MapRenderer3D: 生成失敗 — ", message)
