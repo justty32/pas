@@ -1,0 +1,11 @@
+{
+  "switch": {
+    "on": "lang",
+    "source": "arg",
+    "rules": [
+      {"equals": "c", "target": {"path": "funcs/c_linter.sh", "type": "exec"}},
+      {"equals": "python", "target": {"path": "funcs/py_linter.sh", "type": "exec"}}
+    ],
+    "default": {"path": "funcs/c_linter.sh", "type": "exec"}
+  }
+}
