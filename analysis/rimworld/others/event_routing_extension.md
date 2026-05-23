@@ -39,14 +39,27 @@
 // 偽代碼：事件目標分流
 [HarmonyPatch(typeof(IncidentWorker), "TryExecute")]
 public static class RedirectEventPatch {
-    static void Prefix(ref IncidentParms parms) {
+    // ❌ 別用 ref IncidentParms：IncidentParms 是參考型別，TryExecute(IncidentParms parms) 傳值
+    //    （IncidentWorker.cs:183），用 ref 會讓 Harmony 比對不到方法、Patch 不生效。
+    // ✅ 想「取消原版執行並改走自己的流程」要回傳 bool 並寫 ref bool __result。
+    static bool Prefix(IncidentParms parms, ref bool __result) {
         if (parms.target is Map mainMap) {
             var hub = Find.WorldObjects.AllWorldObjects
                         .OfType<OutpostWorldObject>()
                         .FirstOrDefault(x => x.IsActiveHubFor(parms.def));
             
             if (hub != null) {
-                parms.target = hub; // 將事件目標改為哨站
+                // ⚠️ 不能直接 parms.target = hub：
+                //   (1) parms.target 型別是 IIncidentTarget (IncidentParms.cs:10)，
+                //       而普通 WorldObject 並未實作它 (WorldObject.cs:11 只有 IExposable/ILoadReferenceable/ISelectable)。
+                //       hub 必須自己實作 IIncidentTarget 全 8 個成員 (IIncidentTarget.cs：Tile/StoryState/
+                //       GameConditionManager/PlayerWealthForStoryteller/...) 才能賦值。
+                //   (2) 即便能賦值，多數 IncidentWorker 內部直接 (Map)parms.target / parms.target as Map
+                //       (如 IncidentWorker_AggressiveAnimals/_Ambush/_ColdSnap...)，對無地圖的封存哨站會 NRE 崩潰。
+                // ✅ 正解：「不重用原版 worker」，取消原本執行、改跑自寫的抽象結算（見本檔 §4.1）。
+                HandleAtHubAbstract(hub, parms); // 你自寫：把訪客/商隊/流浪者以數值方式塞進哨站
+                __result = false;                // 視需求：取消原版在主基地的執行
+                return false;                    // 跳過原方法
             }
         }
     }

@@ -36,7 +36,15 @@
 public static class GeopoliticalManager {
     public static OutpostWorldObject GetInterceptingOutpost(WorldObject source, WorldObject target) {
         // 獲取兩點之間的大地圖路徑
-        var pathTiles = Find.WorldRoutePlanner.GetRoute(source.Tile, target.Tile);
+        // ❌ 原本寫的 Find.WorldRoutePlanner.GetRoute(...) 並不存在。
+        //    WorldRoutePlanner 是「玩家互動式路線規劃 UI」，只有 Start/Stop/TryAddWaypoint 等，無 GetRoute。
+        // ✅ 大地圖尋路要用 PlanetLayer.Pather.FindPath(...)，回傳 WorldPath。
+        //    來源：PlanetLayer.cs:284 (Pather)、WorldPathing.cs:56 (FindPath 簽名)、
+        //          WorldPath.cs:20 (Found) / :26 (NodesReversed)、用例 CaravanExitMapUtility.cs:244。
+        //    註：PlanetTile↔int 有隱式轉換 (PlanetTile.cs:89,94)，但跨星球層務必沿用同一 source.Tile.Layer。
+        WorldPath worldPath = source.Tile.Layer.Pather.FindPath(source.Tile, target.Tile, null);
+        if (!worldPath.Found) return null;
+        var pathTiles = worldPath.NodesReversed; // List<PlanetTile>；用完記得 worldPath.Dispose() 歸還物件池
         
         // 檢查路徑上是否有哨站
         foreach (var tile in pathTiles) {

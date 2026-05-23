@@ -2,12 +2,15 @@
 
 秉持「RimWorld 就是要亂玩」的核心精神，我們將哨站系統的監測邏輯簡化為最直觀的「全地圖狀態變動」。不設防作弊，玩家想怎麼搬資源、怎麼利用機制，都將成為哨站實力的一部分。
 
-## 1. 簡化版產出監測：全地圖資產快照 (Inventory Delta)
+## 1. 簡化版產出監測：儲存區資產快照 (Storage Delta)
 
-不再指定特定儲存區，系統會直接觀察整張地圖的物資消長。
+> ⚠️ **修正（原稱「全地圖資產快照」名實不符）**：`map.resourceCounter.AllCountedAmounts` **只統計儲存格內的物資**，並非整張地圖。依 `RimWorld/ResourceCounter.cs:128-141`，它只遍歷 `haulDestinationManager` 的 SlotGroup，且須 `def.CountAsResource == true`、未腐壞、未霧化 (`ShouldCount`, `:158-168`)，每 204 tick 更新一次 (`:120`)。**漏掉**：地上未入庫物、Pawn 背包、站立作物、活體動物、已安裝建築。
+> 想做到真正「全地圖」，需自行掃 `map.listerThings`；否則就把本機制如實定位為「儲存區 Delta」。諷刺的是 `productivity_profiling_logic.md` §1B 的「理論產出（記錄工作量）」反而更貼近真實產能。
+
+系統觀察的是**儲存區**的物資消長（玩家把東西搬進倉庫才算數，這本身也是一種策略）。
 
 *   **實作機制**:
-    *   **期初快照 (T0 Snapshot)**: 當玩家啟動採樣時，遍歷 `map.resourceCounter.AllCountedAmounts`，紀錄所有可用資源的數量。
+    *   **期初快照 (T0 Snapshot)**: 當玩家啟動採樣時，遍歷 `map.resourceCounter.AllCountedAmounts`，紀錄所有「已入庫且計為資源」的數量（範圍見上方修正）。
     *   **期末快照 (T1 Snapshot)**: 採樣結束時，再次遍歷。
     *   **計算產出**: `(T1 - T0) / 採樣天數 = 日均產出`。
 *   **玩家的自由度**:
