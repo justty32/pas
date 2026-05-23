@@ -1,0 +1,130 @@
+[Message:   BepInEx] BepInEx 5.4.22.0 - 下一站江湖Ⅱ (5/16/2026 9:30:27 AM)
+[Info   :   BepInEx] Running under Unity v2022.1.0.9261453
+[Info   :   BepInEx] CLR runtime version: 4.0.30319.42000
+[Info   :   BepInEx] Supports SRE: True
+[Info   :   BepInEx] System platform: Bits64, Windows
+[Message:   BepInEx] Preloader started
+[Info   :   BepInEx] Loaded 1 patcher method from [BepInEx.Preloader 5.4.22.0]
+[Info   :   BepInEx] 1 patcher plugin loaded
+[Info   :   BepInEx] Patching [UnityEngine.CoreModule] with [BepInEx.Chainloader]
+[Message:   BepInEx] Preloader finished
+[Message:   BepInEx] Chainloader ready
+[Message:   BepInEx] Chainloader started
+[Info   :   BepInEx] 2 plugins to load
+[Info   :   BepInEx] Loading [My First Mod 1.0.0]
+[Info   :My First Mod] Next Station Jianghu II Mod Loaded!
+[Info   :   BepInEx] Loading [Sit On Chair 0.2.0]
+[Info   :Sit On Chair] Sit On Chair（原地坐下版）已載入。F8=傾印 / F9=探測坐姿 clip。
+[Message:   BepInEx] Chainloader startup complete
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature20000276_70313 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController2079 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController31490 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature20000276_70313 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController2079 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature10000364_5987 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController31490 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature20000276_70313 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature10000364_5987 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController31490 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature10000364_5987 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController2079 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature10000364_5987 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController2079 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController31490 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController2079 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160293 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController15041 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150046 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150047 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55512 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] creature10000364_5987 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController31490 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1090 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController150048 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1089 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController55477 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController1107 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController160292 坐下（chusheng_sit）
+[Info   :Sit On Chair] [sit] NpcController6197 坐下（chusheng_sit）

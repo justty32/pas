@@ -30,12 +30,13 @@
 | **mh1j** | PS2 遊戲反組譯 (MIPS/C) | Level 1 | 分析中 | Monster Hunter 1 日版 (SLPM_654.95) 逐位元組匹配反組譯，MetroWerks 編譯器 + splat 拆分，主 ELF + 6 個 Overlay (含 DNAS 加密)。 |
 | **Cogito** | FPS Immersive Sim 模板 (Godot 4.4) | Level 1 | 分析中 | 第一人稱沉浸模擬框架，組件式互動、Resource 驅動物品欄（Grid-based）、NPC 狀態機、Wieldable 基類介面、存讀檔場景管理。 |
 | **pokeemerald** | GBA 遊戲反組譯 (C/ARM) | Level 1-2 | 分析中 | 寶可夢 Emerald pret 反組譯，雙Callback主迴圈、Task協程系統、Script bytecode直譯器、CB2狀態機戰鬥、多Controller架構、AI評分腳本、BoxPokemon XOR加密。 |
+| **下一站江湖Ⅱ (jianghu-2)** | 武俠 RPG / Unity Mono Mod (BepInEx) | 中 (實戰 Mod 完成) | 分析中 | ilspycmd 反編譯 Assembly-CSharp（3004 cs，置於 `projects/jianghu-2/`）。BepInEx 注入環境踩坑全解：MonoBehaviour.Update 不 tick→Harmony patch `AppGame.Update`、plugin fake-null→`ReferenceEquals`、`PlayAnim` 回傳值說謊→`HaveAnim`。首個 mod「閒置 NPC 原地坐下(chusheng_sit)」已上線運作。含通用開發指南＋API 速查＋mod 原始碼（`analysis/jianghu-2/mod_src/`）。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：24 個
-- **最近更新日期**: 2026-04-30
-- **維護 Agent**: Gemini CLI
+- **總計分析專案**：25 個
+- **最近更新日期**: 2026-05-23
+- **維護 Agent**: Gemini CLI / Claude Code
 
 ---
 *註：此清單僅包含已遷移至 `analysis/` 目錄並符合 GitHub 專案分析規範的項目。*
