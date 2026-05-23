@@ -11,12 +11,14 @@
 | **MySwordArt** | 自製劍法「流光劍法」（劇意堆疊特效） | ✅ 實機全綠 | 早先完成；技能顯示/可學/戰鬥特效皆正常 |
 | **MonthlyAiDemo** | 過月補滿太吾全部 8 種資源（含金錢） | ✅ 實機驗證 | `AdvanceMonthFinish` 鉤；原為 +50 金錢，依需求改補滿 |
 | **AbyssManualEvent** | 深淵地格過月撿祕笈（手寫事件） | ✅ 彈窗＋發書已驗 | `TriggerPercent` 仍 **100（測試值）**，待確認後改回 10 |
-| **ChenJiaBao 陳家堡** | 新增第 16 個門派（克隆少林） | ⏳ 大致打通、待最終實機確認武學樹 | 見下方專節 |
+| **ChenJiaBao 陳家堡** | 新增第 16 個門派（克隆少林） | ✅ 過月/名稱/武學樹圖示/**產業（append→取代槽）皆實機驗過** | 見下方專節 |
 | **QolCheats** | 無限行動點 ＋ 開局解鎖驛站 | ⏳ 已部署待實機 | 行動點 Harmony patch `ConsumeActionPoint`；驛站 `OnEnterNewWorld` 設旗標＋逐區 UnlockStation |
 
 ## 陳家堡（第 16 派）— 重點與「三類修正」
 
-落點：**太吾村起始區**（runtime Harmony patch `MapDomain.CreateNormalArea`，在玩家選定的太吾村那一格 append；非靜態，因起始州開局才定）。克隆少林(org 1)→ org **42**。
+落點：**太吾村起始區**（runtime Harmony patch `MapDomain.CreateNormalArea`，在玩家選定的太吾村那一格**取代原城鎮槽**；非靜態，因起始州開局才定）。克隆少林(org 1)→ org **42**。
+
+> ⚠️ **不可 append（2026-05-23 產業 crash 根因）**：太吾村「家園」block/settlement 被前端寫死在 `SettlementInfos[1]`（`WorldMapModel.GetTaiwuVillageBlock`/`GetTaiwuVillageSettlementId`）。起始區聚落順序＝org 填 `[0..Length-1]`、家園永遠 append 最後（原版 Length==1 → 家園恰在 `[1]`）。append 陳家堡使 Length 變 2 → 家園被擠到 `[2]`、`SettlementInfos[1]` 變陳家堡 → 家園身分被劫持，點陳家堡產業時 `BuildingModel.GetBuildingLevel` 誤入家園分支、字典查無 → NRE crash。**修法＝取代 `OrganizationId[0]`（長度維持 1）→ 家園仍在 `[1]`**，代價是原城鎮被取代。詳見 `new_sect_mod/phase2_map_findings.md §10`。
 
 **核心心得：把「新增第 16 個門派」做成功，要對付遊戲各處「只給 15 大派、按門派 id 索引的固定結構」。分三類修：**
 
@@ -48,7 +50,10 @@
 - 需求屬性用造詣（Attainment）非資質（Qualification，後端 GetPropertyValue 不支援會崩）。
 
 ## 待辦 / 下一步
-- [ ] 實機確認陳家堡武學樹可開、整套順（生成/加入/過月/成員名/武學樹/勢力情報）。
+- [x] ~~開新世界驗證產業 crash 修復~~ **✅ 實機正常（2026-05-23）**：取代槽修法生效，點陳家堡產業不再 crash、家園身分不被劫持。
+- [ ] **（使用者要求，下一步要做）給陳家堡添加自製武功並在 UI（武學樹/勢力情報）顯示**。
+- [ ] （非致命，順手觀察）後端 `Organization.CivilianSettlements.7.Members` 監控 WARN 是否仍在（克隆少林多聚落殘留）。
+- [ ] 實機確認陳家堡武學樹可開、整套順（生成/加入/過月/成員名/武學樹/勢力情報/產業）。
 - [ ] QolCheats 實機驗證（行動點不掉、開局驛站可用）；觀察開局極早期解鎖驛站是否干擾引導。
 - [ ] AbyssManualEvent `TriggerPercent` 100 → 改回 10。
 - [ ] 其餘陳家堡殘留大派結構：實機踩到再依三類修。

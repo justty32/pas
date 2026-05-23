@@ -417,3 +417,59 @@ fOrg.SetValue(area, newOrg);  fBlock.SetValue(area, newBlock);
 - **area too small**：太吾村區被強制放大成 `TaiwuVillageForceAreaSize`（`MapDomain.cs:3822/3876`），空間更充裕，多放 1 聚落不會觸發 `:4595`。
 - **config 單例污染**：`MapArea.Instance[TemplateId]` 是跨整局共用的 config 單例；Prefix 改它後該 TemplateId 的 area 永久帶陳家堡。但因冪等防呆 + 只在「該 config 當太吾村第三區」時改，且每局世界生成前 config 由 `ReloadAllConfigData` 重建（plugin Initialize 在其後、patch 在更後的世界生成期）→ 同進程連開多世界時，第二局可能命中已被改過的 config（冪等防呆擋住重複 append，但若第二局太吾村在不同 state，舊被改的 config 仍帶 42）。**殘留風險：同進程連開多個不同 state 的新世界，先前被改的 config 不會還原** → 列為已知限制（單局遊玩無影響；重啟遊戲即還原）。
 - **其他 mod 衝突**：若他 mod 也 patch `CreateNormalArea` 或改同 config，順序未定可能互蓋；冪等只擋「已含 42」。
+
+---
+
+## §10 ⚠️ 推翻 §9「append」決策：太吾村家園寫死 `SettlementInfos[1]` → 改「取代原城鎮槽」（2026-05-23 實機 crash 修復）
+
+**症狀（實機）**：開新世界、玩到主線進度 8，**點擊「陳家堡的產業」→ 前端 Unity NullReferenceException → 遊戲 crash**。
+（門派按鈕、過月、成員名等其餘功能皆正常；唯獨產業會炸。）
+
+**crash 堆疊（前端 Player.log）**：
+```
+NullReferenceException
+  at BuildingModel.GetBuildingLevel(BuildingBlockKey, BuildingBlockData) [0x00094]   ← BuildingModel.cs:560
+  ← UI_BuildingArea.UpdateBlockInfo  (:1389)
+  ← UI_BuildingArea.UpdateBlock      (:1348)
+  ← UI_BuildingArea.InitBuildingArea (:881)
+  ← UI_BuildingArea.OnNotifyGameData (:737)
+（另一條同源：← UI_BuildingArea.SetBuildingLevelText :2120）
+```
+
+**根因（反編譯實裝 0.0.79.60 `Assembly-CSharp.dll`，ilspycmd + ikdasm 雙確認）**：
+`BuildingModel.GetBuildingLevel` 兩分支——
+```csharp
+Location taiwuVillageBlock = WorldMapModel.GetTaiwuVillageBlock();
+BuildingBlockItem cfg = BuildingBlock.Instance[blockData.TemplateId];
+if (taiwuVillageBlock != blockKey)                       // 一般聚落 → 安全
+    return Math.Min(blockData.Level, cfg.MaxLevel);
+// 否則＝這格被判定為「太吾村家園 block」：
+... var ex = _buildingBlockDataExDict.GetValueOrDefault(blockKey);   // class，查無 → null
+return ex.CalcUnlockedLevelCount();                      // IL offset 0x94：對 null callvirt → NRE
+```
+crash 在 offset `0x94` = 家園分支的 `CalcUnlockedLevelCount()`。亦即**看陳家堡產業時 `blockKey` 竟等於 `GetTaiwuVillageBlock()`**。
+
+而 `GetTaiwuVillageBlock()` / `GetTaiwuVillageSettlementId()` 把家園**寫死在 `SettlementInfos[1]`**：
+```csharp
+public Location GetTaiwuVillageBlock()    => new(村區AreaId, Areas[村區].SettlementInfos[1].BlockId);
+public short    GetTaiwuVillageSettlementId() =>          Areas[村區].SettlementInfos[1].SettlementId;
+//   村區AreaId = (TaiwuVillageStateTemplateId-1)*3+2（GetTaiwuVillageAreaId，= 第三區，與 §9 area 判定一致）
+```
+
+**§9「append」的致命錯誤**：起始區聚落填充順序＝org 聚落填 `SettlementInfos[0..Length-1]`、太吾村家園永遠由引擎 append 在**最後**（index `Length`）。原版該區 `OrganizationId.Length==1` → `[0]=原城鎮、[1]=太吾村家園`，**故遊戲寫死讀 `[1]`**。
+我們 append 陳家堡使 `OrganizationId` 變長 2（`[原城鎮, 42]`）→ 聚落變 `[0]=原城鎮、[1]=陳家堡、[2]=家園`：
+- **家園被擠到 `[2]`，`SettlementInfos[1]` 變成陳家堡** → `GetTaiwuVillageBlock()` 回傳的「家園」其實是陳家堡。
+- 點陳家堡產業：`blockKey(陳家堡) == GetTaiwuVillageBlock()(也=陳家堡)` 成立 → 誤入家園分支 → `_buildingBlockDataExDict` 只含真家園 block、查無陳家堡 → null → **NRE crash**。
+- **更嚴重的潛在後果**：家園身分被劫持，`IsAtTaiwuVillage` / 主線進度判定（`MainStoryLineProgress`）/ BGM 等所有讀 `SettlementInfos[1]` 的邏輯全指向陳家堡（crash 只是最先冒出的症狀）。
+
+> §9.3 當時覆核「索引對位」只驗了**太吾村 block 仍在 staticBlockCore 最尾**（位置正確），卻**漏看前端 `GetTaiwuVillageBlock` 把家園寫死在 `SettlementInfos[1]`**——位置正確 ≠ 寫死索引正確。教訓：改動「按固定 index 取用」的陣列前，要把**所有寫死該 index 的取用端**一起 grep（前後端皆是）。
+
+**修法（已實作、已部署）＝改 append 為「取代原城鎮槽」**：覆寫 `OrganizationId[0]`（起始區唯一的 org 城鎮槽）為陳家堡 42 / block 19，**`OrganizationId.Length` 維持 1**：
+- 聚落仍為 `[0]=陳家堡、[1]=太吾村家園` → 所有寫死 `SettlementInfos[1]==家園` 的假設不破。
+- 點陳家堡產業：`blockKey(陳家堡=[0]) != GetTaiwuVillageBlock()(=[1]家園)` → 走安全分支 `Math.Min(level, cfg.MaxLevel)`，不再 NRE。
+- **代價**：起始區原本那個普通城鎮被陳家堡取代（仍在起始區、好找；主題上「太吾村旁有座陳家堡」反而更乾淨）。
+- `Backend/Plugin.cs` 的 `CreateNormalArea_Patch.Prefix` 已將 append/取代雙分支整段換成「取代 index 0」單路徑，移除 `MaxSettlementsPerArea` 常數。`Build 0/0`、已部署。
+
+**通則（補入「第 16 派踩雷」清單）**：把新門派放進「**太吾村起始區**」時，**不可增加該區 `OrganizationId` 長度**（家園寫死 `SettlementInfos[1]`，增長即劫持家園身分）。**必須取代既有 org 城鎮槽**（長度不變）。此限制專屬太吾村起始區；門派區（如 area 16）無此寫死、取代槽是因 `SettlementInfos[3]` 上限。
+
+**待驗證**：須開**新世界**（patch 只影響世界生成；舊存檔家園已被劫持、無法熱修）。新世界中：起始區應見「太吾村家園 + 陳家堡」兩聚落、**點陳家堡產業不再 crash**、家園相關（主線/BGM/IsAtTaiwuVillage）正常。
