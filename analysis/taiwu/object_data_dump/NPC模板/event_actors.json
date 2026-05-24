@@ -1,0 +1,5262 @@
+{
+ "source": "Config/EventActors.cs",
+ "count": 292,
+ "rows": [
+  {
+   "TemplateId": 0,
+   "Name": "恶人谷少年",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    8,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 1,
+   "Name": "恶人谷少女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    8,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 2,
+   "Name": "恶人谷幼童",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    5,
+    8
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 3,
+   "Name": "恶人谷女子",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    25
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 4,
+   "Name": "迷香阵妻子",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    18
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 5,
+   "Name": "迷香阵孩子1",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    5,
+    5
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 6,
+   "Name": "迷香阵丈夫",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    20
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 7,
+   "Name": "迷香阵婆婆",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    50,
+    70
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 8,
+   "Name": "迷香阵孩子2",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    5,
+    5
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 9,
+   "Name": "迷香阵路人1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 10,
+   "Name": "迷香阵路人2",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 11,
+   "Name": "邪人死地援兵1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 19,
+   "IsMonk": true,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 12,
+   "Name": "邪人死地援兵2",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 13,
+   "Name": "邪人死地援兵3",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 25,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 14,
+   "Name": "邪人死地援兵4",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 28,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 15,
+   "Name": "邪人死地援兵5",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 32,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 16,
+   "Name": "邪人死地援兵6",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 35,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 17,
+   "Name": "邪人死地援兵7",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 38,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 18,
+   "Name": "邪人死地援兵8",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 41,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 19,
+   "Name": "邪人死地援兵9",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 44,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 20,
+   "Name": "邪人死地援兵10",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 47,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 21,
+   "Name": "邪人死地援兵11",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 50,
+   "IsMonk": true,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 22,
+   "Name": "邪人死地援兵12",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 53,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 23,
+   "Name": "邪人死地援兵13",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 56,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 24,
+   "Name": "邪人死地援兵14",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 59,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 25,
+   "Name": "邪人死地援兵15",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 62,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 26,
+   "Name": "邪窍花误服毒的路人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 27,
+   "Name": "人面曼陀罗公主",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    20
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 17,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 28,
+   "Name": "人面曼陀罗老者",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    90
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 29,
+   "Name": "人面曼陀罗病人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 30,
+   "Name": "人面曼陀罗樵夫",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 31,
+   "Name": "人面曼陀罗少年",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    16
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 32,
+   "Name": "招亲通用仆从",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 33,
+   "Name": "招亲京城长辈1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    50,
+    90
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 34,
+   "Name": "招亲京城长辈2",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    50,
+    90
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 35,
+   "Name": "招亲京城族弟",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    10,
+    15
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 36,
+   "Name": "招亲京城族妹",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    10,
+    15
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 37,
+   "Name": "招亲京城恶仆",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 38,
+   "Name": "招亲成都翠娥",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    18
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 39,
+   "Name": "招亲辽阳牧民",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 40,
+   "Name": "招亲大理引路人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    16,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 41,
+   "Name": "招亲福州家主",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    90
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 42,
+   "Name": "招亲福州巫者",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 5,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 43,
+   "Name": "招亲福州盗物之人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 44,
+   "Name": "招亲福州恩人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 45,
+   "Name": "招亲福州仇敌",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 46,
+   "Name": "招亲福州妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 47,
+   "Name": "招亲福州孩童",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 48,
+   "Name": "招亲寿春长辈",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    40,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 7,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 49,
+   "Name": "招亲扬州贵人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    35,
+    40
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 50,
+   "Name": "招亲青州老者",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    90,
+    120
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 9,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 51,
+   "Name": "招亲青州算命先生",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 14,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 52,
+   "Name": "招亲青州红娘1",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 53,
+   "Name": "招亲青州红娘2",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 54,
+   "Name": "招亲青州红娘3",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    40,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 55,
+   "Name": "招亲秦州骆驼商队",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 56,
+   "Name": "招亲江陵管家",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 57,
+   "Name": "招亲江陵家仆1",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 58,
+   "Name": "招亲江陵家仆2",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 59,
+   "Name": "招亲江陵家仆3",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 60,
+   "Name": "招亲江陵家仆4",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 61,
+   "Name": "招亲桂州当地人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    50,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 0,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 62,
+   "Name": "拜访引导弟子少林",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 18,
+   "IsMonk": true,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 63,
+   "Name": "拜访引导弟子峨眉",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 21,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 64,
+   "Name": "拜访引导弟子百花",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 24,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 65,
+   "Name": "拜访引导弟子武当",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 27,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 66,
+   "Name": "拜访引导弟子元山",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 31,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 67,
+   "Name": "拜访引导弟子狮相",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 34,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 68,
+   "Name": "拜访引导弟子然山",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 37,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 69,
+   "Name": "拜访引导弟子璇女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 40,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 70,
+   "Name": "拜访引导弟子铸剑",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 71,
+   "Name": "拜访引导弟子空桑",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 46,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 72,
+   "Name": "拜访引导弟子金刚",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 49,
+   "IsMonk": true,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 73,
+   "Name": "拜访引导弟子五仙",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 74,
+   "Name": "拜访引导弟子界青",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 55,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 75,
+   "Name": "拜访引导弟子伏龙",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 58,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 76,
+   "Name": "拜访引导弟子血犼",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 61,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 77,
+   "Name": "建筑引导弟子铸剑",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 78,
+   "Name": "女版招亲婢女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 79,
+   "Name": "江湖人士",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 3,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 80,
+   "Name": "文山书海阁演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 81,
+   "Name": "大武魁商号演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 7,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 82,
+   "Name": "奇货斋演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 83,
+   "Name": "公输坊演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 13,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 84,
+   "Name": "五湖商会演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 85,
+   "Name": "服牛帮演员",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 86,
+   "Name": "促织大会接引人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 87,
+   "Name": "促织商人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 88,
+   "Name": "促织主持人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    40,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 8,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 89,
+   "Name": "任侠会盟弟子少林",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 19,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 90,
+   "Name": "任侠会盟弟子峨眉",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 91,
+   "Name": "任侠会盟弟子百花",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 25,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 92,
+   "Name": "任侠会盟弟子武当",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 28,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 93,
+   "Name": "任侠会盟弟子元山",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 32,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 94,
+   "Name": "任侠会盟弟子狮相",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 35,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 95,
+   "Name": "任侠会盟弟子然山",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 38,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 96,
+   "Name": "任侠会盟弟子璇女",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 41,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 97,
+   "Name": "任侠会盟弟子铸剑",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 44,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 98,
+   "Name": "任侠会盟弟子空桑",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 47,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 99,
+   "Name": "任侠会盟弟子金刚",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 50,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 100,
+   "Name": "任侠会盟弟子五仙",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 53,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 101,
+   "Name": "任侠会盟弟子界青",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 56,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 102,
+   "Name": "任侠会盟弟子伏龙",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 59,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 103,
+   "Name": "任侠会盟弟子血犼",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 62,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 104,
+   "Name": "乞丐",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 9,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 105,
+   "Name": "空桑主线高阶弟子",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 48,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 106,
+   "Name": "璇女主线搭话弟子",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 41,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 107,
+   "Name": "少林主线老和尚",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    55,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 20,
+   "IsMonk": true,
+   "PresetBodyType": 2
+  },
+  {
+   "TemplateId": 108,
+   "Name": "少林主线小和尚",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    19
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 18,
+   "IsMonk": true,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 109,
+   "Name": "血犼主线扬州路人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 110,
+   "Name": "血犼主线小山猪",
+   "Texture": "NpcFace_shanzhuyouzai",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 111,
+   "Name": "武当主线樵夫",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 112,
+   "Name": "武当主线老翁1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    90,
+    120
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 113,
+   "Name": "武当主线少女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    20
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 114,
+   "Name": "武当主线隐士",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    25
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 115,
+   "Name": "武当主线孩童",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 116,
+   "Name": "武当主线老农",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    90,
+    120
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 0,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 117,
+   "Name": "武当主线老翁2",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    90,
+    120
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 14,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 118,
+   "Name": "武当主线妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 119,
+   "Name": "武当主线道人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    90
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 14,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 120,
+   "Name": "武当主线老翁3",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    90,
+    120
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 5,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 121,
+   "Name": "血犼主线村民1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 122,
+   "Name": "血犼主线村民2",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 123,
+   "Name": "血犼主线村民3",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 124,
+   "Name": "然山主线三宗祖师",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 125,
+   "Name": "武当主线云游道士",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    25
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 14,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 126,
+   "Name": "狮相门主线农夫",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 127,
+   "Name": "狮相门主线妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 128,
+   "Name": "空桑代理掌门",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 48,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 129,
+   "Name": "少林修塔和尚",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 19,
+   "IsMonk": true,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 130,
+   "Name": "狮相主线文人",
+   "Texture": "NpcFace_shixiangshiren",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 131,
+   "Name": "狮相主线叛徒",
+   "Texture": "NpcFace_feishitangdizi",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 132,
+   "Name": "狮相主线异族高手",
+   "Texture": "NpcFace_yizugaoshou",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 133,
+   "Name": "武当山岳神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 134,
+   "Name": "武当洞穴神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 135,
+   "Name": "武当峡谷神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 136,
+   "Name": "武当沼泽神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 137,
+   "Name": "武当丘陵神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 138,
+   "Name": "武当桃源神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 139,
+   "Name": "武当原野神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 140,
+   "Name": "武当湖泊神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 141,
+   "Name": "武当林地神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 142,
+   "Name": "武当密林神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 143,
+   "Name": "武当河滩神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 144,
+   "Name": "武当溪谷神木",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 145,
+   "Name": "武当主线城主",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    30,
+    50
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 17,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 146,
+   "Name": "武当主线旅者",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 147,
+   "Name": "武当主线酒徒",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 0,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 148,
+   "Name": "武当主线小道长",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    500,
+    599
+   ],
+   "Clothing": 27,
+   "IsMonk": false,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 149,
+   "Name": "武当主线武当鸭",
+   "Texture": "NpcFace_wudangya",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 150,
+   "Name": "璇女主线过路神医",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    40,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 151,
+   "Name": "璇女主线青鸾家仆",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 152,
+   "Name": "峨眉主线弟子甲",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 153,
+   "Name": "峨眉主线弟子乙",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 154,
+   "Name": "峨眉主线弟子丙",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 155,
+   "Name": "峨眉主线弟子丁",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": 2
+  },
+  {
+   "TemplateId": 156,
+   "Name": "峨眉主线弟子戊",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 157,
+   "Name": "峨眉主线弟子己",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 158,
+   "Name": "峨眉主线弟子庚",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 159,
+   "Name": "峨眉主线弟子辛",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 22,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 160,
+   "Name": "璇女主线天女虚影",
+   "Texture": "NpcFace_tiannvxuying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 161,
+   "Name": "峨眉白猿黑影",
+   "Texture": "NpcFace_emeibaiyuanheiying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 162,
+   "Name": "峨眉长老假扮黑衣人",
+   "Texture": "NpcFace_emeizhanglaojiabanheiyiren",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 163,
+   "Name": "璇女主线女童",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    5,
+    6
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 164,
+   "Name": "梦回巨大黑影",
+   "Texture": "NpcFace_menghuijudaheiying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 165,
+   "Name": "梦回神秘匠人",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 2,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 166,
+   "Name": "豢龙氏哥哥",
+   "Texture": "NpcFace_huanlongshigege",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 167,
+   "Name": "豢龙氏妹妹",
+   "Texture": "NpcFace_huanlongshimeimei",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 168,
+   "Name": "雾中少女",
+   "Texture": "NpcFace_wuzhongshaonv",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 169,
+   "Name": "金刚主线昆仑山居民",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    70
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 170,
+   "Name": "金刚主线驱邪村民",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    40,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 171,
+   "Name": "金刚鬼影僧人",
+   "Texture": "NpcFace_jingangguiyingsengren",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 172,
+   "Name": "金刚高僧魂灵",
+   "Texture": "NpcFace_gaosenghunling",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 173,
+   "Name": "五仙主线婆婆",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    60,
+    70
+   ],
+   "AttractionRange": [
+    400,
+    500
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": 1
+  },
+  {
+   "TemplateId": 174,
+   "Name": "五仙主线苗妇",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    500,
+    600
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 175,
+   "Name": "五仙主线少女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    30
+   ],
+   "AttractionRange": [
+    400,
+    600
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": 1
+  },
+  {
+   "TemplateId": 176,
+   "Name": "五仙主线青年",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    30
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 177,
+   "Name": "五仙主线老者",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    90
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 52,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 178,
+   "Name": "然山主线山下弟子",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    25
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 37,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 179,
+   "Name": "然山主线山下小童1",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 180,
+   "Name": "然山主线山下小童2",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 181,
+   "Name": "然山主线山下小童3",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 182,
+   "Name": "然山主线上山弟子",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 38,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 183,
+   "Name": "然山主线奇遇弟子",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 37,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 184,
+   "Name": "然山主线雾中弟子1",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 37,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 185,
+   "Name": "然山主线雾中弟子2",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 38,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 186,
+   "Name": "然山主线雾中小童",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    6,
+    12
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 187,
+   "Name": "然山主线雾中弟子3",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 37,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 188,
+   "Name": "然山主线雾中船夫",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 189,
+   "Name": "百花主线村中守卫0",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 190,
+   "Name": "百花主线村中守卫1",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 191,
+   "Name": "百花主线冯青剪影",
+   "Texture": "NpcFace_baihuazhuxianfengqingjianying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 192,
+   "Name": "百花主线焕心剪影",
+   "Texture": "NpcFace_baihuazhuxianhuanxinjianying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 193,
+   "Name": "百花主线相枢剪影",
+   "Texture": "NpcFace_xiangshu2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 194,
+   "Name": "百花主线无名之人男剪影",
+   "Texture": "NpcFace_wumingzhirennanjianying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 195,
+   "Name": "百花主线无名之人女剪影",
+   "Texture": "NpcFace_wumingzhirennvjianying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 196,
+   "Name": "百花主线冯青",
+   "Texture": "NpcFace_baihuazhuxianfengqing",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 197,
+   "Name": "百花主线无名之人男解脱",
+   "Texture": "NpcFace_wumingzhirennanjietuo",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 198,
+   "Name": "百花主线无名之人女解脱",
+   "Texture": "NpcFace_wumingzhirennvjietuo",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 199,
+   "Name": "百花主线无名之人男",
+   "Texture": "NpcFace_wumingzhirennan",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 200,
+   "Name": "百花主线无名之人女",
+   "Texture": "NpcFace_wumingzhirennv",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 201,
+   "Name": "然山主线通用莽汉",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 202,
+   "Name": "然山主线通用妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    25
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 203,
+   "Name": "然山主线通用文人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 204,
+   "Name": "然山主线通用商人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 15,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 205,
+   "Name": "然山主线通用手艺人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    30,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 206,
+   "Name": "然山主线雾中老者",
+   "Texture": "NpcFace_guiguziwu",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 207,
+   "Name": "然山主线华居线老书生",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    60,
+    70
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 4,
+   "IsMonk": false,
+   "PresetBodyType": 0
+  },
+  {
+   "TemplateId": 208,
+   "Name": "然山主线玄质线师姐",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 11,
+   "IsMonk": false,
+   "PresetBodyType": 1
+  },
+  {
+   "TemplateId": 209,
+   "Name": "然山主线迎娇线少女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 210,
+   "Name": "然山主线迎娇线书生",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    600,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 211,
+   "Name": "然山主线迎娇线妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    20,
+    25
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 13,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 212,
+   "Name": "然山主线迎娇线男子",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    20,
+    25
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 13,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 213,
+   "Name": "然山迎娇线幻觉少女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 214,
+   "Name": "然山迎娇线幻觉少年",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    800,
+    900
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 215,
+   "Name": "然山主线丑陋妇人",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    16,
+    20
+   ],
+   "AttractionRange": [
+    0,
+    100
+   ],
+   "Clothing": 16,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 216,
+   "Name": "伏龙主线伏龙使者",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    40
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 59,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 217,
+   "Name": "伏龙主线蒙面女子",
+   "Texture": "NpcFace_mengmianshenminvzi",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 218,
+   "Name": "伏龙主线琉璃本体",
+   "Texture": "NpcFace_liulishouxing",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 219,
+   "Name": "芦花鸡",
+   "Texture": "NpcFace_chicken_clever0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 220,
+   "Name": "麻鸡",
+   "Texture": "NpcFace_chicken_clever1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 221,
+   "Name": "雉鸡",
+   "Texture": "NpcFace_chicken_clever2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 222,
+   "Name": "竹鸡",
+   "Texture": "NpcFace_chicken_clever3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 223,
+   "Name": "黑羽鸡",
+   "Texture": "NpcFace_chicken_clever4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 224,
+   "Name": "鹑尾",
+   "Texture": "NpcFace_chicken_clever5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 225,
+   "Name": "马鸡",
+   "Texture": "NpcFace_chicken_clever6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 226,
+   "Name": "赤足鸡",
+   "Texture": "NpcFace_chicken_clever7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 227,
+   "Name": "窗禽",
+   "Texture": "NpcFace_chicken_clever8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 228,
+   "Name": "元宝鸡",
+   "Texture": "NpcFace_chicken_lucky0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 229,
+   "Name": "丹鸡",
+   "Texture": "NpcFace_chicken_lucky1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 230,
+   "Name": "虢国鸡",
+   "Texture": "NpcFace_chicken_lucky2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 231,
+   "Name": "祝祝",
+   "Texture": "NpcFace_chicken_lucky3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 232,
+   "Name": "长尾鸡",
+   "Texture": "NpcFace_chicken_lucky4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 233,
+   "Name": "银锦鸡",
+   "Texture": "NpcFace_chicken_lucky5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 234,
+   "Name": "金锦鸡",
+   "Texture": "NpcFace_chicken_lucky6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 235,
+   "Name": "琅琊鸡",
+   "Texture": "NpcFace_chicken_lucky7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 236,
+   "Name": "碧鸡",
+   "Texture": "NpcFace_chicken_lucky8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 237,
+   "Name": "梅林鸡",
+   "Texture": "NpcFace_chicken_perceptive0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 238,
+   "Name": "孙枝鸡",
+   "Texture": "NpcFace_chicken_perceptive1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 239,
+   "Name": "会稽公",
+   "Texture": "NpcFace_chicken_perceptive2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 240,
+   "Name": "五黑鸡",
+   "Texture": "NpcFace_chicken_perceptive3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 241,
+   "Name": "桃源鸡",
+   "Texture": "NpcFace_chicken_perceptive4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 242,
+   "Name": "胡须鸡",
+   "Texture": "NpcFace_chicken_perceptive5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 243,
+   "Name": "鹿苑鸡",
+   "Texture": "NpcFace_chicken_perceptive6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 244,
+   "Name": "峨眉黑鸡",
+   "Texture": "NpcFace_chicken_perceptive7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 245,
+   "Name": "烛夜",
+   "Texture": "NpcFace_chicken_perceptive8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 246,
+   "Name": "怀乡鸡",
+   "Texture": "NpcFace_chicken_firm0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 247,
+   "Name": "五灰鸡",
+   "Texture": "NpcFace_chicken_firm1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 248,
+   "Name": "茶花鸡",
+   "Texture": "NpcFace_chicken_firm2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 249,
+   "Name": "固始鸡",
+   "Texture": "NpcFace_chicken_firm3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 250,
+   "Name": "乌骨鸡",
+   "Texture": "NpcFace_chicken_firm4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 251,
+   "Name": "约瓦鸡",
+   "Texture": "NpcFace_chicken_firm5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 252,
+   "Name": "静宁鸡",
+   "Texture": "NpcFace_chicken_firm6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 253,
+   "Name": "黑凤鸡",
+   "Texture": "NpcFace_chicken_firm7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 254,
+   "Name": "长鸣都尉",
+   "Texture": "NpcFace_chicken_firm8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 255,
+   "Name": "略阳鸡",
+   "Texture": "NpcFace_chicken_calm0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 256,
+   "Name": "安南鸡",
+   "Texture": "NpcFace_chicken_calm1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 257,
+   "Name": "花尾",
+   "Texture": "NpcFace_chicken_calm2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 258,
+   "Name": "文昌鸡",
+   "Texture": "NpcFace_chicken_calm3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 259,
+   "Name": "雪鸡",
+   "Texture": "NpcFace_chicken_calm4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 260,
+   "Name": "白头黑鸡",
+   "Texture": "NpcFace_chicken_calm5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 261,
+   "Name": "六指鸡",
+   "Texture": "NpcFace_chicken_calm6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 262,
+   "Name": "五色鸡",
+   "Texture": "NpcFace_chicken_calm7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 263,
+   "Name": "七彩雉",
+   "Texture": "NpcFace_chicken_calm8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 264,
+   "Name": "封川鸡",
+   "Texture": "NpcFace_chicken_enthusiastic0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 265,
+   "Name": "海陵鸡",
+   "Texture": "NpcFace_chicken_enthusiastic1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 266,
+   "Name": "上谷鸡",
+   "Texture": "NpcFace_chicken_enthusiastic2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 267,
+   "Name": "宁都鸡",
+   "Texture": "NpcFace_chicken_enthusiastic3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 268,
+   "Name": "青州鸡",
+   "Texture": "NpcFace_chicken_enthusiastic4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 269,
+   "Name": "黔香鸡",
+   "Texture": "NpcFace_chicken_enthusiastic5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 270,
+   "Name": "招财鸡",
+   "Texture": "NpcFace_chicken_enthusiastic6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 271,
+   "Name": "越王鸡",
+   "Texture": "NpcFace_chicken_enthusiastic7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 272,
+   "Name": "金羽银耳",
+   "Texture": "NpcFace_chicken_enthusiastic8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 273,
+   "Name": "建宁鸡",
+   "Texture": "NpcFace_chicken_brave0",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 274,
+   "Name": "云松鸡",
+   "Texture": "NpcFace_chicken_brave1",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 275,
+   "Name": "突厥雀",
+   "Texture": "NpcFace_chicken_brave2",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 276,
+   "Name": "九真鸡",
+   "Texture": "NpcFace_chicken_brave3",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 277,
+   "Name": "长安鸡",
+   "Texture": "NpcFace_chicken_brave4",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 278,
+   "Name": "昆仑鸡",
+   "Texture": "NpcFace_chicken_brave5",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 279,
+   "Name": "金足鸡",
+   "Texture": "NpcFace_chicken_brave6",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 280,
+   "Name": "鹖鸡",
+   "Texture": "NpcFace_chicken_brave7",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 281,
+   "Name": "鶤鸡",
+   "Texture": "NpcFace_chicken_brave8",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 282,
+   "Name": "太吾村民",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    20,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 10,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 283,
+   "Name": "铜生头颅",
+   "Texture": "NpcFace_tongshengtou",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 284,
+   "Name": "欧冶子",
+   "Texture": "NpcFace_ouyanzi",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 285,
+   "Name": "天帝黑影",
+   "Texture": "NpcFace_tiandiheiying",
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": -1,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 286,
+   "Name": "铸剑弟子男",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    25
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 287,
+   "Name": "铸剑弟子女",
+   "Texture": null,
+   "Gender": 0,
+   "GenderName": "女",
+   "AgeRange": [
+    18,
+    25
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 288,
+   "Name": "老玄鸿匠",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    70,
+    80
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 44,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 289,
+   "Name": "老百辟匠",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    70,
+    80
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 290,
+   "Name": "老青君匠",
+   "Texture": null,
+   "Gender": -1,
+   "GenderName": "隨機",
+   "AgeRange": [
+    70,
+    80
+   ],
+   "AttractionRange": [
+    0,
+    900
+   ],
+   "Clothing": 43,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  },
+  {
+   "TemplateId": 291,
+   "Name": "古代匠人",
+   "Texture": null,
+   "Gender": 1,
+   "GenderName": "男",
+   "AgeRange": [
+    18,
+    60
+   ],
+   "AttractionRange": [
+    500,
+    900
+   ],
+   "Clothing": 44,
+   "IsMonk": false,
+   "PresetBodyType": -1
+  }
+ ]
+}

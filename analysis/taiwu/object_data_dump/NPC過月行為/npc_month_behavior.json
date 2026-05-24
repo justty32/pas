@@ -1,0 +1,3783 @@
+{
+ "MonthlyActions": {
+  "table": "MonthlyActions",
+  "title": "NPC 每月可執行行動清單（核心）",
+  "pack": "MonthlyActions_language",
+  "count": 84,
+  "unresolved": 0,
+  "name_from_ref": 84,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "奇遇-京城招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 1,
+    "Name": "奇遇-成都招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 2,
+    "Name": "奇遇-桂州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 3,
+    "Name": "奇遇-襄阳招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 4,
+    "Name": "奇遇-太原招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 5,
+    "Name": "奇遇-广州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 6,
+    "Name": "奇遇-青州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 7,
+    "Name": "奇遇-江陵招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 8,
+    "Name": "奇遇-福州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 9,
+    "Name": "奇遇-辽阳招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 10,
+    "Name": "奇遇-秦州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 11,
+    "Name": "奇遇-大理招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 12,
+    "Name": "奇遇-寿春招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 13,
+    "Name": "奇遇-杭州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 14,
+    "Name": "奇遇-扬州招亲-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 36,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 15,
+    "Name": "奇遇-恶丐窝-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 16,
+    "Name": "奇遇-贼人营寨-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 17,
+    "Name": "奇遇-恶人谷-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 18,
+    "Name": "奇遇-悍匪砦-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 19,
+    "Name": "奇遇-叛徒结伙-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 20,
+    "Name": "奇遇-迷香阵-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 21,
+    "Name": "奇遇-异士居-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 22,
+    "Name": "奇遇-乱葬岗-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 23,
+    "Name": "奇遇-修罗场-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 24,
+    "Name": "奇遇-群魔乱舞-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 25,
+    "Name": "奇遇-弃世绝境-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 26,
+    "Name": "奇遇-邪人死地-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 27,
+    "Name": "奇遇-义士堂-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 28,
+    "Name": "奇遇-任侠会盟-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 29,
+    "Name": "奇遇-世外秘境-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": true,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 30,
+    "Name": "奇遇-武林大会-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 31,
+    "Name": "奇遇-京城招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 32,
+    "Name": "奇遇-成都招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 33,
+    "Name": "奇遇-桂州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 34,
+    "Name": "奇遇-襄阳招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 35,
+    "Name": "奇遇-太原招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 36,
+    "Name": "奇遇-广州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 37,
+    "Name": "奇遇-青州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 38,
+    "Name": "奇遇-江陵招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 39,
+    "Name": "奇遇-福州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 40,
+    "Name": "奇遇-辽阳招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 41,
+    "Name": "奇遇-秦州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 42,
+    "Name": "奇遇-大理招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 43,
+    "Name": "奇遇-寿春招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 44,
+    "Name": "奇遇-杭州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 45,
+    "Name": "奇遇-扬州招亲女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 1,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 6,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 46,
+    "Name": "奇遇-门派较武少林-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 47,
+    "Name": "奇遇-门派较武峨眉-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 48,
+    "Name": "奇遇-门派较武百花-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 49,
+    "Name": "奇遇-门派较武武当-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 50,
+    "Name": "奇遇-门派较武元山-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 51,
+    "Name": "奇遇-门派较武狮相-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 52,
+    "Name": "奇遇-门派较武然山-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 53,
+    "Name": "奇遇-门派较武璇女-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 54,
+    "Name": "奇遇-门派较武铸剑-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 55,
+    "Name": "奇遇-门派较武空桑-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 56,
+    "Name": "奇遇-门派较武金刚-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 57,
+    "Name": "奇遇-门派较武五仙-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 58,
+    "Name": "奇遇-门派较武界青-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 59,
+    "Name": "奇遇-门派较武伏龙-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 60,
+    "Name": "奇遇-门派较武血犼-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 24,
+    "MinFailureInterval": 1
+   },
+   {
+    "TemplateId": 61,
+    "Name": "奇遇-春日集市-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 62,
+    "Name": "奇遇-比武大会·拳掌-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 63,
+    "Name": "奇遇-比武大会·指法-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 64,
+    "Name": "奇遇-比武大会·腿法-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 65,
+    "Name": "奇遇-比武大会·暗器-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 66,
+    "Name": "奇遇-比武大会·剑法-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 67,
+    "Name": "奇遇-比武大会·刀法-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 68,
+    "Name": "奇遇-比武大会·长兵-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 69,
+    "Name": "奇遇-比武大会·奇门-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 70,
+    "Name": "奇遇-比武大会·软兵-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 71,
+    "Name": "奇遇-比武大会·御射-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 72,
+    "Name": "奇遇-比武大会·乐器-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 73,
+    "Name": "奇遇-促织大会-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 74,
+    "Name": "奇遇-较艺大会·锻造-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 75,
+    "Name": "奇遇-较艺大会·制木-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 76,
+    "Name": "奇遇-较艺大会·织锦-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 77,
+    "Name": "奇遇-较艺大会·巧匠-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 78,
+    "Name": "奇遇-较艺大会·医术-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 79,
+    "Name": "奇遇-较艺大会·毒术-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 80,
+    "Name": "奇遇-较艺大会·厨艺-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 2,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": false,
+    "PreparationDuration": 2,
+    "PreannouncingTime": 2,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 81,
+    "Name": "奇遇-何为正宗-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 82,
+    "Name": "奇遇-三宗比武-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   },
+   {
+    "TemplateId": 83,
+    "Name": "奇遇-试剑大典-前置准备",
+    "NameSrc": "ref",
+    "CharacterSearchRange": 0,
+    "IsEnemyNest": false,
+    "CanActionBeforehand": true,
+    "PreparationDuration": 0,
+    "PreannouncingTime": 0,
+    "MinInterval": 0,
+    "MinFailureInterval": 0
+   }
+  ]
+ },
+ "AiAction": {
+  "table": "AiAction",
+  "title": "AI 行動定義（含說明）",
+  "pack": "AiAction_language",
+  "count": 59,
+  "unresolved": 0,
+  "name_from_ref": 59,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "普攻",
+    "NameSrc": "ref",
+    "Type": "NormalAttack",
+    "Desc": "执行一次普攻",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 1,
+    "Name": "普攻1",
+    "NameSrc": "ref",
+    "Type": "ChangeTrick",
+    "Desc": "执行变招攻击，使用记忆功法 {0} 部位与蓄式",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 2,
+    "Name": "普攻2",
+    "NameSrc": "ref",
+    "Type": "ChangeTrickFlaw",
+    "Desc": "执行变招破绽，使用记忆功法 {0} 部位与蓄式",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 3,
+    "Name": "普攻3",
+    "NameSrc": "ref",
+    "Type": "ChangeTrickAcupoint",
+    "Desc": "执行变招封穴 {1}，使用记忆功法 {0} 蓄式",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 4,
+    "Name": "普攻4",
+    "NameSrc": "ref",
+    "Type": "ChangeTrickNeiliType",
+    "Desc": "执行变招改内力属性，使用记忆功法 {0} 蓄式",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 5,
+    "Name": "功法",
+    "NameSrc": "ref",
+    "Type": "CastSkill",
+    "Desc": "施展特定功法 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 6,
+    "Name": "功法1",
+    "NameSrc": "ref",
+    "Type": "CastSkillAttackBest",
+    "Desc": "施展最佳摧破功法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 7,
+    "Name": "功法2",
+    "NameSrc": "ref",
+    "Type": "CastSkillDefendBest",
+    "Desc": "施展最佳护体功法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 8,
+    "Name": "功法3",
+    "NameSrc": "ref",
+    "Type": "CastSkillDefendBlock",
+    "Desc": "施展恢复招架的护体",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 9,
+    "Name": "功法4",
+    "NameSrc": "ref",
+    "Type": "CastSkillAgileBuff",
+    "Desc": "施展增益类身法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 10,
+    "Name": "功法5",
+    "NameSrc": "ref",
+    "Type": "CastSkillAgileSpeed",
+    "Desc": "施展速度最快的身法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 11,
+    "Name": "功法6",
+    "NameSrc": "ref",
+    "Type": "CastSkillCastBoost",
+    "Desc": "执行施展增幅",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 12,
+    "Name": "移动0",
+    "NameSrc": "ref",
+    "Type": "MoveToAttackRangeCenter",
+    "Desc": "设置目标距离为攻击范围正中 + {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 13,
+    "Name": "移动1",
+    "NameSrc": "ref",
+    "Type": "MoveToNearbyEscape",
+    "Desc": "设置目标距离为对方攻击范围边缘",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 14,
+    "Name": "移动2",
+    "NameSrc": "ref",
+    "Type": "MoveToTargetDistance",
+    "Desc": "设置目标距离为 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 15,
+    "Name": "移动3",
+    "NameSrc": "ref",
+    "Type": "MoveToFarthest",
+    "Desc": "设置目标距离为战场最远距离",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 16,
+    "Name": "记忆0",
+    "NameSrc": "ref",
+    "Type": "MemorySetString",
+    "Desc": "设置记忆中 {0} 为 {1}",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 17,
+    "Name": "记忆1",
+    "NameSrc": "ref",
+    "Type": "MemorySetBoolean",
+    "Desc": "设置记忆中 {0} 为 {1}",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 18,
+    "Name": "记忆2",
+    "NameSrc": "ref",
+    "Type": "MemorySet",
+    "Desc": "设置记忆中 {0} 为 {1}",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 19,
+    "Name": "同道指令",
+    "NameSrc": "ref",
+    "Type": "UseTeammateCommand",
+    "Desc": "执行 {0} 指令",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 20,
+    "Name": "武器",
+    "NameSrc": "ref",
+    "Type": "ChangeWeaponAuto",
+    "Desc": "从索引 {0} - {1} 中切换到当前距离兵器",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 21,
+    "Name": "行为",
+    "NameSrc": "ref",
+    "Type": "UseOtherAction",
+    "Desc": "预约行为 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 22,
+    "Name": "道具0",
+    "NameSrc": "ref",
+    "Type": "UseItemHealInjury",
+    "Desc": "使用疗伤药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 23,
+    "Name": "道具1",
+    "NameSrc": "ref",
+    "Type": "UseItemHealPoison",
+    "Desc": "使用驱毒药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 24,
+    "Name": "道具2",
+    "NameSrc": "ref",
+    "Type": "UseItemHealQiDisorder",
+    "Desc": "使用内息药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 25,
+    "Name": "道具3",
+    "NameSrc": "ref",
+    "Type": "UseItemBuff",
+    "Desc": "使用增益药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 26,
+    "Name": "道具4",
+    "NameSrc": "ref",
+    "Type": "UseItemPoison",
+    "Desc": "使用毒药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 27,
+    "Name": "道具5",
+    "NameSrc": "ref",
+    "Type": "UseItemNeili",
+    "Desc": "使用血露",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 28,
+    "Name": "道具6",
+    "NameSrc": "ref",
+    "Type": "UseItemWine",
+    "Desc": "使用酒",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 29,
+    "Name": "道具7",
+    "NameSrc": "ref",
+    "Type": "UseItemRepairWeapon",
+    "Desc": "修理兵器",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 30,
+    "Name": "道具8",
+    "NameSrc": "ref",
+    "Type": "UseItemRepairArmor",
+    "Desc": "修理防具",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 31,
+    "Name": "武器1",
+    "NameSrc": "ref",
+    "Type": "ChangeWeaponIndex",
+    "Desc": "切换至索引为 {0} 的兵器",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 32,
+    "Name": "武器2",
+    "NameSrc": "ref",
+    "Type": "ChangeWeaponSpecial",
+    "Desc": "切换至兵器 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 33,
+    "Name": "武器3",
+    "NameSrc": "ref",
+    "Type": "ChangeWeaponType",
+    "Desc": "切换至 {0} 类兵器",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 34,
+    "Name": "记忆3",
+    "NameSrc": "ref",
+    "Type": "MemoryAdd",
+    "Desc": "记忆中 {0} 对应值加上 {1}，如记忆中不存在该值则取值为零进行叠加",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 35,
+    "Name": "中断0",
+    "NameSrc": "ref",
+    "Type": "InterruptCasting",
+    "Desc": "中断正在施展的功法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 36,
+    "Name": "中断1",
+    "NameSrc": "ref",
+    "Type": "InterruptAffectingDefense",
+    "Desc": "中断当前运起的护体",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 37,
+    "Name": "记忆4",
+    "NameSrc": "ref",
+    "Type": "MemoryInternalSetString",
+    "Desc": "设置记忆中 {0} 对应文本为 {1} 对应文本",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 38,
+    "Name": "记忆5",
+    "NameSrc": "ref",
+    "Type": "MemoryInternalSetBoolean",
+    "Desc": "设置记忆中 {0} 对应布尔为 {1} 对应布尔",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 39,
+    "Name": "记忆6",
+    "NameSrc": "ref",
+    "Type": "MemoryInternalSet",
+    "Desc": "设置记忆中 {0} 对应值为 {1} 对应值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 40,
+    "Name": "记忆7",
+    "NameSrc": "ref",
+    "Type": "MemorySetAllMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 所有标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 41,
+    "Name": "记忆8",
+    "NameSrc": "ref",
+    "Type": "MemorySetInjuryMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 所有部位伤势标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 42,
+    "Name": "记忆9",
+    "NameSrc": "ref",
+    "Type": "MemorySetFlawMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 所有部位破绽标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 43,
+    "Name": "记忆10",
+    "NameSrc": "ref",
+    "Type": "MemorySetAcupointMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 所有部位封穴标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 44,
+    "Name": "记忆11",
+    "NameSrc": "ref",
+    "Type": "MemorySetPoisonMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 所有毒素标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 45,
+    "Name": "记忆12",
+    "NameSrc": "ref",
+    "Type": "MemorySetMindMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 失神标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 46,
+    "Name": "记忆13",
+    "NameSrc": "ref",
+    "Type": "MemorySetFatalMarkCount",
+    "Desc": "设置记忆中 {0} 为 {1} 重创标记个数",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 47,
+    "Name": "记忆14",
+    "NameSrc": "ref",
+    "Type": "MemorySetChangeTrickCountByFlawCost",
+    "Desc": "设置记忆中 {0} 为 {1} 当前可变招破绽次数（斩杀用）",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 48,
+    "Name": "记忆15",
+    "NameSrc": "ref",
+    "Type": "MemorySetSpecialCombatSkill",
+    "Desc": "设置记忆中 {0} 为功法 {1}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 49,
+    "Name": "移动4",
+    "NameSrc": "ref",
+    "Type": "MoveToAttackRangeEdge",
+    "Desc": "设置目标距离为攻击范围 {0} 边缘 + {1}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 50,
+    "Name": "记忆16",
+    "NameSrc": "ref",
+    "Type": "MemorySetLastPrepareCombatSkill",
+    "Desc": "设置记忆中 {0} 为 {1} 当前或上次施展的功法，缺省设置为 -1",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 51,
+    "Name": "优先级0",
+    "NameSrc": "ref",
+    "Type": "PrioritySetHigh",
+    "Desc": "设置记忆中 {0} 对应功法为高优先级",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 52,
+    "Name": "优先级1",
+    "NameSrc": "ref",
+    "Type": "PrioritySetLow",
+    "Desc": "设置记忆中 {0} 对应功法为低优先级",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 53,
+    "Name": "优先级2",
+    "NameSrc": "ref",
+    "Type": "PriorityReset",
+    "Desc": "重置记忆中 {0} 对应功法已设置的优先级",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 54,
+    "Name": "记忆17",
+    "NameSrc": "ref",
+    "Type": "MemorySetBestAttackCombatSkill",
+    "Desc": "设置记忆中 {0} 为当前可施展的最佳摧破功法，缺省设置为 -1",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 55,
+    "Name": "功法7",
+    "NameSrc": "ref",
+    "Type": "CastSkillByMemory",
+    "Desc": "施展记忆中功法 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 56,
+    "Name": "中断2",
+    "NameSrc": "ref",
+    "Type": "InterruptAffectingMove",
+    "Desc": "中断当前运起的身法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 57,
+    "Name": "解封1",
+    "NameSrc": "ref",
+    "Type": "UnlockAttackWeapon",
+    "Desc": "使用兵器 {0} 执行一次解封",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 58,
+    "Name": "解封2",
+    "NameSrc": "ref",
+    "Type": "UnlockAttackWeaponType",
+    "Desc": "使用兵器类型 {0} 执行一次解封",
+    "GroupId": 1
+   }
+  ]
+ },
+ "BehaviorType": {
+  "table": "BehaviorType",
+  "title": "行為大類（道德傾向）",
+  "pack": "BehaviorType_language",
+  "count": 5,
+  "unresolved": 0,
+  "name_from_ref": 5,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "刚正",
+    "NameSrc": "ref",
+    "Desc": "刚正不阿之侠者，处世黑白分明。 除恶则必尽，树德则必滋。世事纵有千变万化，正道总是仅此一条！",
+    "ExchangeBook": 4,
+    "BetrayTips": [
+     "志不同，只得如此……",
+     "道不合，实难强求……",
+     "我意已决，你莫心软……"
+    ]
+   },
+   {
+    "TemplateId": 1,
+    "Name": "仁善",
+    "NameSrc": "ref",
+    "Desc": "慈悲仁义者，品行殊高洁。 扶危能够舍己，济世能够忘我。可以报怨以德，宛然浑金璞玉一般。",
+    "ExchangeBook": 4,
+    "BetrayTips": [
+     "我只怕你伤人伤己……",
+     "你且自己保重……",
+     "是我愧对于你……"
+    ]
+   },
+   {
+    "TemplateId": 2,
+    "Name": "中庸",
+    "NameSrc": "ref",
+    "Desc": "中庸无为者，处世不偏不倚。 凡事顺其自然，但求折中调和。心中既少了正邪之分，或许终能成就开明大道？",
+    "ExchangeBook": 4,
+    "BetrayTips": [
+     "事出有因，你莫怪我……",
+     "世事向来难两全……",
+     "如此亦是不得已……"
+    ]
+   },
+   {
+    "TemplateId": 3,
+    "Name": "叛逆",
+    "NameSrc": "ref",
+    "Desc": "叛逆处世者，直性狭中、黑白颠倒。 “应笑”而不笑、“应喜”而不喜、“应慈”而不慈、“闻恶”而不改、“闻善”而不乐。",
+    "ExchangeBook": 4,
+    "BetrayTips": [
+     "且叫我看看好戏……",
+     "如此这般，方才有趣……",
+     "不如我来寻些乐子……"
+    ]
+   },
+   {
+    "TemplateId": 4,
+    "Name": "唯我",
+    "NameSrc": "ref",
+    "Desc": "世间唯我者，凌弱者，伐异己，党邪佞，欺良善。 为达目的不择手段，唯利是图无情无义。",
+    "ExchangeBook": 4,
+    "BetrayTips": [
+     "我与你难以谋事……",
+     "我不过另谋大计……",
+     "此事我自有计较……"
+    ]
+   }
+  ]
+ },
+ "PrioritizedActions": {
+  "table": "PrioritizedActions",
+  "title": "優先級行動設定（過月每月先選一個高優先行為）",
+  "pack": "PrioritizedActions_language",
+  "count": 23,
+  "unresolved": 0,
+  "name_from_ref": 23,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "拜师学艺",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     90,
+     90,
+     90,
+     90,
+     90
+    ],
+    "ActionCoolDown": 6,
+    "Duration": 12,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 1,
+    "Name": "受邀赴约",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     80,
+     50,
+     80,
+     20,
+     60
+    ],
+    "ActionCoolDown": 0,
+    "Duration": 0,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 2,
+    "Name": "保护亲友",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     60,
+     60,
+     40,
+     60,
+     10
+    ],
+    "ActionCoolDown": 3,
+    "Duration": 4,
+    "IsAdultOnly": true,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要保护亲友，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 3,
+    "Name": "解救亲友",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     70,
+     70,
+     50,
+     70,
+     20
+    ],
+    "ActionCoolDown": 3,
+    "Duration": 4,
+    "IsAdultOnly": true,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要援救亲友，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 4,
+    "Name": "祭拜故人",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     30,
+     40,
+     10,
+     0,
+     30
+    ],
+    "ActionCoolDown": 12,
+    "Duration": 3,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 5,
+    "Name": "探访亲友",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     20,
+     30,
+     30,
+     10,
+     0
+    ],
+    "ActionCoolDown": 6,
+    "Duration": 3,
+    "IsAdultOnly": false,
+    "IsNonLeader": true,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 6,
+    "Name": "寻找宝藏",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     0,
+     10,
+     60,
+     30,
+     70
+    ],
+    "ActionCoolDown": 3,
+    "Duration": 6,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 7,
+    "Name": "天材地宝",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     10,
+     20,
+     70,
+     40,
+     80
+    ],
+    "ActionCoolDown": 0,
+    "Duration": 6,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 8,
+    "Name": "寻仇报复",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     40,
+     0,
+     0,
+     80,
+     50
+    ],
+    "ActionCoolDown": 6,
+    "Duration": 6,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 9,
+    "Name": "奇书争夺",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 36,
+    "Duration": 24,
+    "IsAdultOnly": true,
+    "IsNonLeader": true,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要寻求奇书，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 10,
+    "Name": "收养弃婴",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     50,
+     80,
+     20,
+     50,
+     40
+    ],
+    "ActionCoolDown": 0,
+    "Duration": 3,
+    "IsAdultOnly": true,
+    "IsNonLeader": false,
+    "IsNonMonk": true,
+    "RefuseAppointment": "“我尚要收养弃婴，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 11,
+    "Name": "抗击三魔",
+    "NameSrc": "ref",
+    "ActType": "SectStory",
+    "BasePriority": 90,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要抵御三魔，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 12,
+    "Name": "消灭敌人",
+    "NameSrc": "ref",
+    "ActType": "SectStory",
+    "BasePriority": 90,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要驱逐来敌，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 13,
+    "Name": "同门相残",
+    "NameSrc": "ref",
+    "ActType": "SectStory",
+    "BasePriority": 90,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要挑战同门，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 14,
+    "Name": "似曾相识",
+    "NameSrc": "ref",
+    "ActType": "DreamBack",
+    "BasePriority": 99,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": 0,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": ""
+   },
+   {
+    "TemplateId": 15,
+    "Name": "守卫公库",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 100,
+    "MoralityPriority": [
+     100,
+     80,
+     60,
+     30,
+     40
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要守卫库房，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 16,
+    "Name": "治疗死气",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     80,
+     90,
+     70,
+     60,
+     50
+    ],
+    "ActionCoolDown": 3,
+    "Duration": 6,
+    "IsAdultOnly": false,
+    "IsNonLeader": true,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要医治疯症，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 17,
+    "Name": "抓捕逃犯",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     80,
+     50,
+     30,
+     60,
+     20
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": true,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要抓捕逃犯，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 18,
+    "Name": "畏罪潜逃",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 100,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚有要事在身，性命攸关，不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 19,
+    "Name": "寻求庇护",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 101,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚有要事在身，性命攸关，不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 20,
+    "Name": "押送囚犯",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 100,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚要押送囚犯，此事不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 21,
+    "Name": "村民身份",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 100,
+    "MoralityPriority": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "ActionCoolDown": 0,
+    "Duration": -1,
+    "IsAdultOnly": false,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚有太吾村事务在身，不容疏漏，恕我暂时不能受你之邀……”"
+   },
+   {
+    "TemplateId": 22,
+    "Name": "追杀太吾",
+    "NameSrc": "ref",
+    "ActType": "Normal",
+    "BasePriority": 0,
+    "MoralityPriority": [
+     80,
+     50,
+     30,
+     60,
+     20
+    ],
+    "ActionCoolDown": 3,
+    "Duration": -1,
+    "IsAdultOnly": true,
+    "IsNonLeader": false,
+    "IsNonMonk": false,
+    "RefuseAppointment": "“我尚有要事在身，此事不容疏漏，恕我暂时不能受你之邀……”"
+   }
+  ]
+ },
+ "VillagerRoleArrangement": {
+  "table": "VillagerRoleArrangement",
+  "title": "村民職務安排（村民過月自動執行的職務）",
+  "pack": "VillagerRoleArrangement_language",
+  "count": 13,
+  "unresolved": 0,
+  "name_from_ref": 13,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "义诊扶危",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>举炊备膳：可以派遣多名农户前往<color=#orange>「食窖」</color>进行烹饪…</color>  - 派遣主事至<color=#orange>「食窖」</color>后，方能「举炊备膳」，亦可派遣伙计加快烹饪的进度…  -<SpName=mousetip_jiyi_14>「厨艺」造诣越高，烹饪出品级较高的食物的概率越高…  - 可以消耗<SpName=mousetip_ziyuan_0>「食材」加快烹饪的进度…",
+    "VillagerRole": 2
+   },
+   {
+    "TemplateId": 1,
+    "Name": "外出经商",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>采集资源：可派遣农户在地格上采集指定的资源…</color>",
+    "VillagerRole": 3
+   },
+   {
+    "TemplateId": 2,
+    "Name": "江湖游艺",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>迁移资源：在派遣农户时选择「迁移」，将以毁坏资源丰饶的地形为代价，获取对应的心材…</color>  -<SpName=mousetip_qiyuan_6>「合道」越高，迁移的成功率越高…",
+    "VillagerRole": 3
+   },
+   {
+    "TemplateId": 3,
+    "Name": "看守剑冢",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>精耕细作：在农户迁移资源时，有几率得到更高级的「资源心材」…</color>  -<SpName=mousetip_qiyuan_6>「合道」越高，获得高级「资源心材」的几率越高…",
+    "VillagerRole": 3
+   },
+   {
+    "TemplateId": 4,
+    "Name": "太吾使者",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>制造物品：可以派遣多名匠人前往<color=#orange>「火炼室」</color><color=#orange>「木工房」</color><color=#orange>「绣楼」</color><color=#orange>「巧匠屋」</color>进行制造…</color>  - 派遣主事至<color=#orange>「火炼室」</color><color=#orange>「木工房」</color><color=#orange>「绣楼」</color><color=#orange>「巧匠屋」</color>后，方能制造物品，亦可派遣伙计加快制造的进度…  - 对应<SpName=mousetip_lifeskillcircular>「技艺」造诣越高，制造出品级较高物品的几率越高…  - 可以消耗对应的制造资源加快制造的进度…",
+    "VillagerRole": 3
+   },
+   {
+    "TemplateId": 5,
+    "Name": "资源采集",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>制药炼毒：可以派遣多名大夫前往<color=#orange>「药房」</color><color=#orange>「幽室」</color>炼制药物及毒药…</color>  - 派遣掌柜至<color=#orange>「药房」</color><color=#orange>「幽室」</color>后，方能炼药制毒，亦可派遣门生加快炼制的进度…  - 对应<SpName=mousetip_lifeskillcircular>「技艺」造诣越高，制造出品级较高药毒的几率越高…  - 可以消耗<SpName=mousetip_ziyuan_5>「药材」加快制造的进度…",
+    "VillagerRole": 4
+   },
+   {
+    "TemplateId": 6,
+    "Name": "资源迁移",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>义诊扶危：指定一个开通驿站的地区，派遣大夫为该地区的人物<SpName=mousetip_injury>「疗伤」<SpName=mousetip_poison>「驱毒」<SpName=mousetip_neixiwenluan>「调息」<SpName=mousetip_jiankang>「复元」，并收获<SpName=mousetip_enyi>「地区恩义」…</color>  -<SpName=mousetip_qiyuan_0>「冷静」越高，可为<SpName=mousetip_character>「身份」品阶越高的病患进行治疗…  -<SpName=mousetip_jiyi_8>「医术」或<SpName=mousetip_jiyi_9>「毒术」造诣越高，或病患的<SpName=mousetip_character>「身份」品阶越高，获得的<SpName=mousetip_enyi>「地区恩义」越多…",
+    "VillagerRole": 4
+   },
+   {
+    "TemplateId": 7,
+    "Name": "精耕细作",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>养心调志：派遣大夫进行「义诊扶危」时，可减少该地区「入邪之人」受到的<SpName=mousetip_rumo>「相枢邪念」侵袭…</color>  -<SpName=mousetip_qiyuan_0>「冷静」越高，<SpName=mousetip_jiyi_8>「医术」或<SpName=mousetip_jiyi_9>「毒术」造诣越高，减少的<SpName=mousetip_rumo>「相枢邪念」越多…",
+    "VillagerRole": 4
+   },
+   {
+    "TemplateId": 8,
+    "Name": "养心调志",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>经商行贾：指定一个开通驿站的地区，派遣商人前往该地区买卖物品…</color>  -<SpName=mousetip_qiyuan_2>「热情」越高，可当地与<SpName=mousetip_character>「身份」品阶越高的人物进行买卖…  -<SpName=mousetip_jiyi_15>「杂学」造诣越高，买入物品价格越低，卖出物品价格越高…",
+    "VillagerRole": 4
+   },
+   {
+    "TemplateId": 9,
+    "Name": "商会联络",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "<color=#pinkyellow>商会联络：商人受派遣「经商行贾」时，可每月增加受派遣地区商会的<SpName=mousetip_multilove>「好感」…</color>  -<SpName=mousetip_qiyuan_2>「热情」越高，<SpName=mousetip_jiyi_15>「杂学」造诣越高，增加的商会<SpName=mousetip_multilove>「好感」越多…  - 派遣至商会总部所在地时，可增加此商会更多<SpName=mousetip_multilove>「好感」…",
+    "VillagerRole": 5
+   },
+   {
+    "TemplateId": 10,
+    "Name": "江湖联络",
+    "NameSrc": "ref",
+    "ShortName": "",
+    "Desc": "",
+    "VillagerRole": 5
+   },
+   {
+    "TemplateId": 11,
+    "Name": "挺身降魔",
+    "NameSrc": "ref",
+    "ShortName": "<color=#pinkyellow>采茶取酒：可以派遣多名文人前往<color=#orange>「茶园」</color><color=#orange>「蒸酒坊」</color>进行制造…</color>  - 派遣掌柜至<color=#orange>「茶园」</color><color=#orange>「蒸酒坊」</color>后，方能采茶取酒，亦可派遣伙计加快制造的进度…  -<SpName=mousetip_jiyi_5>「品鉴」</color>造诣越高，制造出品级较高茶酒的几率越高…  - 可以消耗<SpName=mousetip_ziyuan_6>「银钱」加快制造的进度…",
+    "Desc": "",
+    "VillagerRole": 5
+   },
+   {
+    "TemplateId": 12,
+    "Name": "举炊备膳",
+    "NameSrc": "ref",
+    "ShortName": "<color=#pinkyellow>江湖游艺：指定一个开通驿站的地区，派遣文人前往该地区，影响当地城镇村寨的<SpName=mousetip_development_0>「安定」<SpName=mousetip_development_1>「文化」…</color>  -<SpName=mousetip_qiyuan_1>「聪颖」越高，当月可进行影响的次数越多…  -<SpName=mousetip_jiyi_0>「音律」<SpName=mousetip_jiyi_1>「弈棋」<SpName=mousetip_jiyi_2>「诗书」<SpName=mousetip_jiyi_3>「绘画」任一技艺造诣越高，<SpName=mousetip_development_0>「安定」及<SpName=mousetip_development_1>「文化」改变得越多…  - <SpName=mousetip_lichang_0><color=#ffe78f>刚正</color>大概率增加当地的安定或文化；<SpName=mousetip_lichang_1><color=#9fe0dc>仁善</color>必然增加当地的安定或文化；<SpName=mousetip_lichang_2><color=#ffffff>中庸</color>随机增加或减少当地的安定或文化；<SpName=mousetip_lichang_3><color=#b975ff>叛逆</color>必然减少当地的安定或文化；<SpName=mousetip_lichang_4><color=#c6272e>唯我</color>大概率减少当地的安定或文化…",
+    "Desc": "",
+    "VillagerRole": 5
+   }
+  ]
+ },
+ "VillagerRole": {
+  "table": "VillagerRole",
+  "title": "村民角色（職業類別，職務安排的母類）",
+  "pack": "VillagerRole_language",
+  "count": 7,
+  "unresolved": 0,
+  "name_from_ref": 7,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "太吾村农户",
+    "NameSrc": "ref",
+    "OrganizationMember": 17,
+    "EffectTexts": [
+     "迁移成功率",
+     "心材升级几率",
+     "采集次数",
+     "+{0}%",
+     "+{0}次"
+    ]
+   },
+   {
+    "TemplateId": 1,
+    "Name": "太吾村匠人",
+    "NameSrc": "ref",
+    "OrganizationMember": 16,
+    "EffectTexts": [
+     "修理次数",
+     "获得精制物品几率",
+     "升级精制物品几率",
+     "最高可义诊病患",
+     "减轻相枢邪念侵袭"
+    ]
+   },
+   {
+    "TemplateId": 2,
+    "Name": "太吾村大夫",
+    "NameSrc": "ref",
+    "OrganizationMember": 15,
+    "EffectTexts": [
+     "+{0}阶",
+     "生效",
+     "最高可买卖经商",
+     "增加商会好感",
+     "改变安定或文化次数",
+     "江湖游艺影响人数",
+     "试才献艺影响人数"
+    ]
+   },
+   {
+    "TemplateId": 3,
+    "Name": "太吾村商人",
+    "NameSrc": "ref",
+    "OrganizationMember": 14,
+    "EffectTexts": [
+     "+{0}人",
+     "收集剑冢见闻几率",
+     "抵御化身时受伤几率",
+     "获得特性几率",
+     "降低相枢邪念侵袭",
+     "战斗次数"
+    ]
+   },
+   {
+    "TemplateId": 4,
+    "Name": "太吾村文人",
+    "NameSrc": "ref",
+    "OrganizationMember": 13,
+    "EffectTexts": [
+     "提高",
+     "可修改额外法规数目",
+     "人情世故影响人物对数",
+     "缘来如此生效概率",
+     "+{0}条",
+     "+{0}对",
+     "",
+     "<VillagerRole_language_30_invalid>",
+     "<VillagerRole_language_31_invalid>"
+    ]
+   },
+   {
+    "TemplateId": 5,
+    "Name": "太吾村护冢",
+    "NameSrc": "ref",
+    "OrganizationMember": 12,
+    "EffectTexts": [
+     "<VillagerRole_language_32_invalid>",
+     "<VillagerRole_language_33_invalid>",
+     "<VillagerRole_language_34_invalid>",
+     "<VillagerRole_language_35_invalid>",
+     "<VillagerRole_language_36_invalid>",
+     "<VillagerRole_language_37_invalid>",
+     "<VillagerRole_language_38_invalid>",
+     "<VillagerRole_language_39_invalid>",
+     "<VillagerRole_language_40_invalid>",
+     "<VillagerRole_language_41_invalid>"
+    ]
+   },
+   {
+    "TemplateId": 6,
+    "Name": "太吾村村长",
+    "NameSrc": "ref",
+    "OrganizationMember": 11,
+    "EffectTexts": [
+     "<VillagerRole_language_42_invalid>",
+     "<VillagerRole_language_43_invalid>",
+     "<VillagerRole_language_44_invalid>",
+     "<VillagerRole_language_45_invalid>",
+     "<VillagerRole_language_46_invalid>"
+    ]
+   }
+  ]
+ },
+ "AiNode": {
+  "table": "AiNode",
+  "title": "AI 決策樹節點種類（順序/分支/行為）",
+  "pack": "AiNode_language",
+  "count": 3,
+  "unresolved": 0,
+  "name_from_ref": 3,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "顺序",
+    "NameSrc": "ref",
+    "Type": "Linear",
+    "Desc": "顺序执行所有子节点直到行为节点",
+    "IsAction": false
+   },
+   {
+    "TemplateId": 1,
+    "Name": "分支",
+    "NameSrc": "ref",
+    "Type": "Branch",
+    "Desc": "根据条件判定接下来执行的节点",
+    "IsAction": false
+   },
+   {
+    "TemplateId": 2,
+    "Name": "行为",
+    "NameSrc": "ref",
+    "Type": "Action",
+    "Desc": "执行特定行为",
+    "IsAction": true
+   }
+  ]
+ },
+ "AiCondition": {
+  "table": "AiCondition",
+  "title": "AI 決策條件定義（含說明）",
+  "pack": "AiCondition_language",
+  "count": 114,
+  "unresolved": 0,
+  "name_from_ref": 114,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "延迟",
+    "NameSrc": "ref",
+    "Type": "Delay",
+    "Desc": "每 {0} 返回一次真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 1,
+    "Name": "概率",
+    "NameSrc": "ref",
+    "Type": "CheckPercentProb",
+    "Desc": "当判定 {0}% 概率通过时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 2,
+    "Name": "首次",
+    "NameSrc": "ref",
+    "Type": "First",
+    "Desc": "每场战斗首次执行到该条件时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 3,
+    "Name": "功法0",
+    "NameSrc": "ref",
+    "Type": "EquipCombatSkill",
+    "Desc": "当 {0} 运功栏含有 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 4,
+    "Name": "功法1",
+    "NameSrc": "ref",
+    "Type": "BreakCombatSkill",
+    "Desc": "当 {0} 已突破 {1} {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 5,
+    "Name": "功法2",
+    "NameSrc": "ref",
+    "Type": "LearnCombatSkill",
+    "Desc": "当 {0} 已习得 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 6,
+    "Name": "位置0",
+    "NameSrc": "ref",
+    "Type": "InCurrentAttackRange",
+    "Desc": "当前距离 +{1} 处于 {0} 的普攻或施展中摧破攻击范围时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 7,
+    "Name": "位置1",
+    "NameSrc": "ref",
+    "Type": "InCombatSkillRange",
+    "Desc": "当前距离 +{1} 处于 {0} 的功法 {2} 施展范围时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 8,
+    "Name": "位置2",
+    "NameSrc": "ref",
+    "Type": "AnyAttackRangeEdge",
+    "Desc": "当 {0} 存在有效的攻击范围边缘时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 9,
+    "Name": "记忆等于0",
+    "NameSrc": "ref",
+    "Type": "MemoryEqualString",
+    "Desc": "当记忆中 {0} 对应值与 {1} 相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 10,
+    "Name": "记忆等于1",
+    "NameSrc": "ref",
+    "Type": "MemoryEqualBoolean",
+    "Desc": "当记忆中 {0} 对应值与 {1} 相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 11,
+    "Name": "记忆等于2",
+    "NameSrc": "ref",
+    "Type": "MemoryEqual",
+    "Desc": "当记忆中 {0} 对应值与 {1} 相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 12,
+    "Name": "记忆不等0",
+    "NameSrc": "ref",
+    "Type": "MemoryNotEqualString",
+    "Desc": "当记忆中 {0} 无对应值或与 {1} 不相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 13,
+    "Name": "记忆不等1",
+    "NameSrc": "ref",
+    "Type": "MemoryNotEqualBoolean",
+    "Desc": "当记忆中 {0} 无对应值或与 {1} 不相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 14,
+    "Name": "记忆不等2",
+    "NameSrc": "ref",
+    "Type": "MemoryNotEqual",
+    "Desc": "当记忆中 {0} 无对应值或与 {1} 不相同时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 15,
+    "Name": "记忆大于",
+    "NameSrc": "ref",
+    "Type": "MemoryAbove",
+    "Desc": "当记忆中 {0} 对应值大于 {1} 时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 16,
+    "Name": "记忆小于",
+    "NameSrc": "ref",
+    "Type": "MemoryBelow",
+    "Desc": "当记忆中 {0} 对应值小于 {1} 时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 17,
+    "Name": "战斗难度",
+    "NameSrc": "ref",
+    "Type": "CombatDifficulty",
+    "Desc": "当角色为太吾或战斗难度不低于 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 18,
+    "Name": "目标距离0",
+    "NameSrc": "ref",
+    "Type": "TargetDistanceNearby",
+    "Desc": "目标距离偏向 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 19,
+    "Name": "目标距离1",
+    "NameSrc": "ref",
+    "Type": "TargetDistanceIsNot",
+    "Desc": "目标距离不为 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 20,
+    "Name": "目标距离2",
+    "NameSrc": "ref",
+    "Type": "TargetDistanceIsNotFarthest",
+    "Desc": "目标距离不为最远距离",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 21,
+    "Name": "正在施展0",
+    "NameSrc": "ref",
+    "Type": "CastingSkillType",
+    "Desc": "{0} 正在施展 {1}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 22,
+    "Name": "正在施展1",
+    "NameSrc": "ref",
+    "Type": "CastingSkill",
+    "Desc": "{0} 正在施展功法 {1}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 23,
+    "Name": "功法进度0",
+    "NameSrc": "ref",
+    "Type": "CastingProgressMoreOrEqual",
+    "Desc": "{1} 功法施展进度不低于 {0}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 24,
+    "Name": "功法进度1",
+    "NameSrc": "ref",
+    "Type": "CastingProgressLess",
+    "Desc": "{1} 功法施展进度低于 {0}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 25,
+    "Name": "招架",
+    "NameSrc": "ref",
+    "Type": "BlockPercentLess",
+    "Desc": "当 {1} 剩余招架值低于 {0}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 26,
+    "Name": "逃跑0",
+    "NameSrc": "ref",
+    "Type": "IsCharacterHalfFallen",
+    "Desc": "当 {0} 战败标记过半时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 27,
+    "Name": "逃跑1",
+    "NameSrc": "ref",
+    "Type": "CheckBanFlee",
+    "Desc": "当己方不可逃跑或判定禁用逃跑通过时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 28,
+    "Name": "逃跑2",
+    "NameSrc": "ref",
+    "Type": "CheckFleeNormal",
+    "Desc": "当己方满足逃跑条件时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 29,
+    "Name": "逃跑3",
+    "NameSrc": "ref",
+    "Type": "InHazard",
+    "Desc": "当己方处于危险中时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 30,
+    "Name": "选项0",
+    "NameSrc": "ref",
+    "Type": "OptionAttack",
+    "Desc": "可以进行普攻",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 31,
+    "Name": "选项1",
+    "NameSrc": "ref",
+    "Type": "OptionChangeTrick",
+    "Desc": "可以进行变招",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 32,
+    "Name": "选项2",
+    "NameSrc": "ref",
+    "Type": "OptionChangeTrickFlaw",
+    "Desc": "可以变招破绽",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 33,
+    "Name": "选项3",
+    "NameSrc": "ref",
+    "Type": "OptionChangeTrickAcupoint",
+    "Desc": "可以变招封穴 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 34,
+    "Name": "选项4",
+    "NameSrc": "ref",
+    "Type": "OptionChangeTrickNeiliType",
+    "Desc": "可以变招改内力属性",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 35,
+    "Name": "选项5",
+    "NameSrc": "ref",
+    "Type": "OptionChangeWeapon",
+    "Desc": "当索引 {0} - {1} 之间存在可切换且处于攻击范围的武器时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 36,
+    "Name": "选项6",
+    "NameSrc": "ref",
+    "Type": "OptionTryDodge",
+    "Desc": "可以进行逃脱移动",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 37,
+    "Name": "选项7",
+    "NameSrc": "ref",
+    "Type": "OptionOtherAction",
+    "Desc": "可以进行行为 {0}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 38,
+    "Name": "选项8",
+    "NameSrc": "ref",
+    "Type": "OptionTeammateCommand",
+    "Desc": "存在可用的 {0} 指令",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 39,
+    "Name": "选项9",
+    "NameSrc": "ref",
+    "Type": "OptionProactiveSkillType",
+    "Desc": "存在可用的 {0} 功法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 40,
+    "Name": "选项10",
+    "NameSrc": "ref",
+    "Type": "OptionCastBoost",
+    "Desc": "存在可用的施展增幅",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 41,
+    "Name": "选项11",
+    "NameSrc": "ref",
+    "Type": "OptionCastDefendBlock",
+    "Desc": "存在恢复招架护体",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 42,
+    "Name": "选项12",
+    "NameSrc": "ref",
+    "Type": "OptionCastAgileBuff",
+    "Desc": "存在增益身法",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 43,
+    "Name": "选项13",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemHealInjury",
+    "Desc": "存在可用的疗伤药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 44,
+    "Name": "选项14",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemHealPoison",
+    "Desc": "存在可用的驱毒药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 45,
+    "Name": "选项15",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemHealQiDisorder",
+    "Desc": "存在可用的内息药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 46,
+    "Name": "选项16",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemBuff",
+    "Desc": "存在可用的增益药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 47,
+    "Name": "选项17",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemPoison",
+    "Desc": "存在可用的毒药",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 48,
+    "Name": "选项18",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemNeili",
+    "Desc": "存在可用的血露",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 49,
+    "Name": "选项19",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemWine",
+    "Desc": "存在可用的酒",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 50,
+    "Name": "选项20",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemRepairWeapon",
+    "Desc": "存在可修理的兵器",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 51,
+    "Name": "选项21",
+    "NameSrc": "ref",
+    "Type": "OptionUseItemRepairArmor",
+    "Desc": "存在可修理的防具",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 52,
+    "Name": "战斗类型",
+    "NameSrc": "ref",
+    "Type": "CombatTypeEqual",
+    "Desc": "当战斗类型为 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 53,
+    "Name": "运起0",
+    "NameSrc": "ref",
+    "Type": "AnyAffectingAgile",
+    "Desc": "当 {0} 已运起身法时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 54,
+    "Name": "运起1",
+    "NameSrc": "ref",
+    "Type": "SpecialAffectingAgile",
+    "Desc": "当 {0} 已运起身法 {1} {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 55,
+    "Name": "运起2",
+    "NameSrc": "ref",
+    "Type": "AnyAffectingDefense",
+    "Desc": "当 {0} 已运起护体时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 56,
+    "Name": "运起3",
+    "NameSrc": "ref",
+    "Type": "SpecialAffectingDefense",
+    "Desc": "当 {0} 已运起护体 {1} {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 57,
+    "Name": "太吾",
+    "NameSrc": "ref",
+    "Type": "IsTaiwu",
+    "Desc": "仅自身为太吾时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 58,
+    "Name": "标记0",
+    "NameSrc": "ref",
+    "Type": "InjuryMarkCountMoreOrEqual",
+    "Desc": "当 {0} {2} {3} 伤标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 59,
+    "Name": "标记1",
+    "NameSrc": "ref",
+    "Type": "FlawMarkCountMoreOrEqual",
+    "Desc": "当 {0} {2} 破绽标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 60,
+    "Name": "标记2",
+    "NameSrc": "ref",
+    "Type": "AcupointMarkCountMoreOrEqual",
+    "Desc": "当 {0} {2} 封穴标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 61,
+    "Name": "标记3",
+    "NameSrc": "ref",
+    "Type": "PoisonMarkCountMoreOrEqual",
+    "Desc": "当 {0} {2} 标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 62,
+    "Name": "标记4",
+    "NameSrc": "ref",
+    "Type": "MindMarkCountMoreOrEqual",
+    "Desc": "当 {0} 失神标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 63,
+    "Name": "标记5",
+    "NameSrc": "ref",
+    "Type": "FatalMarkCountMoreOrEqual",
+    "Desc": "当 {0} 重创标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 64,
+    "Name": "标记6",
+    "NameSrc": "ref",
+    "Type": "DieMarkCountMoreOrEqual",
+    "Desc": "当 {0} 必死标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 65,
+    "Name": "标记7",
+    "NameSrc": "ref",
+    "Type": "QiDisorderMarkCountMoreOrEqual",
+    "Desc": "当 {0} 内息标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 66,
+    "Name": "标记8",
+    "NameSrc": "ref",
+    "Type": "StateMarkCountMoreOrEqual",
+    "Desc": "当 {0} 状态标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 67,
+    "Name": "标记9",
+    "NameSrc": "ref",
+    "Type": "HealthMarkCountMoreOrEqual",
+    "Desc": "当 {0} 健康标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 68,
+    "Name": "标记10",
+    "NameSrc": "ref",
+    "Type": "HasGrowingWug",
+    "Desc": "当 {0} 有 {1} 且 {2} 的 {3} 蛊时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 69,
+    "Name": "标记11",
+    "NameSrc": "ref",
+    "Type": "HasGrownWug",
+    "Desc": "当 {0} 有 {1} 成蛊时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 70,
+    "Name": "标记12",
+    "NameSrc": "ref",
+    "Type": "HasKingWug",
+    "Desc": "当 {0} 有 {1} 王蛊时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 71,
+    "Name": "标记13",
+    "NameSrc": "ref",
+    "Type": "NeiliAllocationPercentMoreOrEqual",
+    "Desc": "当 {0} {1} 真气不低于 {2}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 72,
+    "Name": "功法效果",
+    "NameSrc": "ref",
+    "Type": "CombatSkillEffectCountMoreOrEqual",
+    "Desc": "当 {0} 功法 {1} {2} 有 {3} 层效果时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 73,
+    "Name": "脚力值",
+    "NameSrc": "ref",
+    "Type": "MobilityPercentMoreOrEqual",
+    "Desc": "当 {1} 脚力值不低于 {0}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 74,
+    "Name": "疲怠中",
+    "NameSrc": "ref",
+    "Type": "MobilityLocking",
+    "Desc": "弃用条件，当前会始终返回假值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 75,
+    "Name": "精纯",
+    "NameSrc": "ref",
+    "Type": "ConsummateLevelMoreOrEqual",
+    "Desc": "当角色为太吾或 {0} 精纯值不低于 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 76,
+    "Name": "阶段",
+    "NameSrc": "ref",
+    "Type": "BossPhaseMoreOrEqual",
+    "Desc": "当战斗阶段不低于 {0} 时返回真值（首个阶段为零）",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 77,
+    "Name": "式槽",
+    "NameSrc": "ref",
+    "Type": "TrickCountMoreOrEqual",
+    "Desc": "当 {0} 式槽中 {1} 式数量不低于 {2} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 78,
+    "Name": "选项22",
+    "NameSrc": "ref",
+    "Type": "OptionChangeWeaponIndex",
+    "Desc": "当索引为 {0} 的兵器可被切换时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 79,
+    "Name": "选项23",
+    "NameSrc": "ref",
+    "Type": "OptionChangeWeaponSpecial",
+    "Desc": "当存在可切换的兵器 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 80,
+    "Name": "选项24",
+    "NameSrc": "ref",
+    "Type": "OptionChangeWeaponType",
+    "Desc": "当存在可切换的 {0} 类兵器时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 81,
+    "Name": "当前武器0",
+    "NameSrc": "ref",
+    "Type": "CurrentWeaponIsSpecial",
+    "Desc": "当 {0} 兵器为 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 82,
+    "Name": "当前武器1",
+    "NameSrc": "ref",
+    "Type": "CurrentWeaponIsType",
+    "Desc": "当 {0} 兵器类型为 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 83,
+    "Name": "内力属性",
+    "NameSrc": "ref",
+    "Type": "NeiliTypeFiveElementEqual",
+    "Desc": "当 {0} 内力属性五行为 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 84,
+    "Name": "标记14",
+    "NameSrc": "ref",
+    "Type": "AllMarkCountMoreOrEqual",
+    "Desc": "当 {0} 所有标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 85,
+    "Name": "标记15",
+    "NameSrc": "ref",
+    "Type": "OuterOrInnerInjuryMarkCountMoreOrEqual",
+    "Desc": "当 {0} 所有部位 {2} 伤标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 86,
+    "Name": "标记16",
+    "NameSrc": "ref",
+    "Type": "AllInjuryMarkCountMoreOrEqual",
+    "Desc": "当 {0} 所有部位伤势标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 87,
+    "Name": "标记17",
+    "NameSrc": "ref",
+    "Type": "AllFlawMarkCountMoreOrEqual",
+    "Desc": "当 {0} 所有部位破绽标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 88,
+    "Name": "标记18",
+    "NameSrc": "ref",
+    "Type": "AllAcupointMarkCountMoreOrEqual",
+    "Desc": "当 {0} 所有部位封穴标记不低于 {1} 个时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 89,
+    "Name": "记忆内大于",
+    "NameSrc": "ref",
+    "Type": "MemoryInternalAbove",
+    "Desc": "当记忆中 {0} 对应值大于 {1} 对应值时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 90,
+    "Name": "记忆内小于",
+    "NameSrc": "ref",
+    "Type": "MemoryInternalBelow",
+    "Desc": "当记忆中 {0} 对应值小于 {1} 对应值时返回真值",
+    "GroupId": 0
+   },
+   {
+    "TemplateId": 91,
+    "Name": "记忆等于施展",
+    "NameSrc": "ref",
+    "Type": "MemoryEqualCasting",
+    "Desc": "当记忆中 {0} 对应值与 {1} 正在施展的功法相同时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 92,
+    "Name": "位置3",
+    "NameSrc": "ref",
+    "Type": "AttackRangeEdgeMore",
+    "Desc": "当 {0} 攻击范围 {1} 边缘大于另一方攻击范围相同边缘时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 93,
+    "Name": "位置4",
+    "NameSrc": "ref",
+    "Type": "AttackRangeEdgeLess",
+    "Desc": "当 {0} 攻击范围 {1} 边缘小于另一方攻击范围相同边缘时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 94,
+    "Name": "环境0",
+    "NameSrc": "ref",
+    "Type": "EnvironmentLastNormalAttackAnyMiss",
+    "Desc": "上次普攻为当前武器，且首次攻击或追击被化解时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 95,
+    "Name": "当前武器2",
+    "NameSrc": "ref",
+    "Type": "CurrentWeaponIsIndex",
+    "Desc": "当 {0} 兵器索引为 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 96,
+    "Name": "正在施展2",
+    "NameSrc": "ref",
+    "Type": "CastingDirectOrReverseSkill",
+    "Desc": "{0} 正在施展功法 {1} {2}",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 97,
+    "Name": "选项25",
+    "NameSrc": "ref",
+    "Type": "OptionCastSpecialCombatSkill",
+    "Desc": "自身可施展功法 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 98,
+    "Name": "选项26",
+    "NameSrc": "ref",
+    "Type": "OptionCastDirectOrReverseCombatSkill",
+    "Desc": "自身可施展功法 {0} 且该功法为 {1} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 99,
+    "Name": "状态0",
+    "NameSrc": "ref",
+    "Type": "BuffStatePowerSumMoreOrEqual",
+    "Desc": "当 {1} 存在名称为 {0} 的增益状态且总强度不低于 {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 100,
+    "Name": "状态1",
+    "NameSrc": "ref",
+    "Type": "DebuffStatePowerSumMoreOrEqual",
+    "Desc": "当 {1} 存在名称为 {0} 的损害状态且总强度不低于 {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 101,
+    "Name": "状态2",
+    "NameSrc": "ref",
+    "Type": "SpecialStatePowerSumMoreOrEqual",
+    "Desc": "当 {1} 存在名称为 {0} 的特殊状态且总强度不低于 {2} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 102,
+    "Name": "位置5",
+    "NameSrc": "ref",
+    "Type": "InMemoryCombatSkillRange",
+    "Desc": "当前距离 +{2} 处于 {1} 记忆中 {0} 对应值施展范围时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 103,
+    "Name": "选项27",
+    "NameSrc": "ref",
+    "Type": "OptionCastMemoryCombatSkill",
+    "Desc": "自身可施展记忆中 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 104,
+    "Name": "位置6",
+    "NameSrc": "ref",
+    "Type": "CurrentDistanceEqual",
+    "Desc": "当前距离等于 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 105,
+    "Name": "位置7",
+    "NameSrc": "ref",
+    "Type": "CurrentDistanceAbove",
+    "Desc": "当前距离大于 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 106,
+    "Name": "位置8",
+    "NameSrc": "ref",
+    "Type": "CurrentDistanceBelow",
+    "Desc": "当前距离小于 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 107,
+    "Name": "环境1",
+    "NameSrc": "ref",
+    "Type": "EnvironmentLastNormalAttackOutOfRange",
+    "Desc": "上次落空的普攻为当前武器，且未进行攻击时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 108,
+    "Name": "选项28",
+    "NameSrc": "ref",
+    "Type": "OptionUnlockAttackWeapon",
+    "Desc": "当存在可解封的兵器 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 109,
+    "Name": "选项29",
+    "NameSrc": "ref",
+    "Type": "OptionUnlockAttackWeaponType",
+    "Desc": "当存在可解封的兵器类型 {0} 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 110,
+    "Name": "解封值",
+    "NameSrc": "ref",
+    "Type": "UnlockAttackValuePercentMoreOrEqual",
+    "Desc": "当 {1} 有兵器 {2} 解封进度不低于 {0}% 时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 111,
+    "Name": "选项30",
+    "NameSrc": "ref",
+    "Type": "OptionInterruptCasting",
+    "Desc": "当角色正在施展功法且允许中断施展时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 112,
+    "Name": "选项31",
+    "NameSrc": "ref",
+    "Type": "OptionInterruptAffectingDefense",
+    "Desc": "当角色已运起护体且允许中断护体时返回真值",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 113,
+    "Name": "选项32",
+    "NameSrc": "ref",
+    "Type": "OptionInterruptAffectingMove",
+    "Desc": "当角色已运起身法且允许中断身法时返回真值",
+    "GroupId": 1
+   }
+  ]
+ },
+ "AiParam": {
+  "table": "AiParam",
+  "title": "AI 參數型別（決策樹條件/行動的取值型別）",
+  "pack": "AiParam_language",
+  "count": 25,
+  "unresolved": 0,
+  "name_from_ref": 25,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "整数",
+    "NameSrc": "ref",
+    "Type": "Int",
+    "Desc": "输入任意整数，但不可大于等于十亿或小于等于负十亿"
+   },
+   {
+    "TemplateId": 1,
+    "Name": "布尔",
+    "NameSrc": "ref",
+    "Type": "Bool",
+    "Desc": "输入任意布尔，如 True、False"
+   },
+   {
+    "TemplateId": 2,
+    "Name": "功法",
+    "NameSrc": "ref",
+    "Type": "CombatSkill",
+    "Desc": "输入功法名，必须与配置表中功法名完全相同，若存在同名功法则会显示警告并应用首个该名称功法"
+   },
+   {
+    "TemplateId": 3,
+    "Name": "敌我",
+    "NameSrc": "ref",
+    "Type": "IsAlly",
+    "Desc": "输入任意布尔，True 代表己方，False 代表对方"
+   },
+   {
+    "TemplateId": 4,
+    "Name": "文本",
+    "NameSrc": "ref",
+    "Type": "String",
+    "Desc": "输入任意文本，如 “abc123”、“示例”"
+   },
+   {
+    "TemplateId": 5,
+    "Name": "战斗难度",
+    "NameSrc": "ref",
+    "Type": "CombatDifficulty",
+    "Desc": "输入战斗难度名称，如普通、困难、极难、必死"
+   },
+   {
+    "TemplateId": 6,
+    "Name": "同道指令",
+    "NameSrc": "ref",
+    "Type": "TeammateCommand",
+    "Desc": "输入一般同道指令名称，如攻击、防御、牵制等，不可输入负面指令"
+   },
+   {
+    "TemplateId": 7,
+    "Name": "主动功法类型",
+    "NameSrc": "ref",
+    "Type": "ProactiveSkillType",
+    "Desc": "输入主动功法类型，如摧破、轻灵、护体"
+   },
+   {
+    "TemplateId": 8,
+    "Name": "其它行为类型",
+    "NameSrc": "ref",
+    "Type": "OtherActionType",
+    "Desc": "输入其它行为类型，如疗伤、驱毒、逃跑"
+   },
+   {
+    "TemplateId": 9,
+    "Name": "前后",
+    "NameSrc": "ref",
+    "Type": "IsForward",
+    "Desc": "输入任意布尔，True 代表前方，False 代表后方"
+   },
+   {
+    "TemplateId": 10,
+    "Name": "部位",
+    "NameSrc": "ref",
+    "Type": "BodyPartType",
+    "Desc": "输入部位名，如头颈、左臂、右腿"
+   },
+   {
+    "TemplateId": 11,
+    "Name": "表达式",
+    "NameSrc": "ref",
+    "Type": "Expression",
+    "Desc": "输入含有七元赋性类型的表达式，如 20 + 聪颖 × 40 ÷ 100"
+   },
+   {
+    "TemplateId": 12,
+    "Name": "正逆",
+    "NameSrc": "ref",
+    "Type": "IsDirect",
+    "Desc": "输入任意布尔，True 代表正练，False 代表逆练"
+   },
+   {
+    "TemplateId": 13,
+    "Name": "内外",
+    "NameSrc": "ref",
+    "Type": "IsInner",
+    "Desc": "输入任意布尔，True 代表内，False 代表外"
+   },
+   {
+    "TemplateId": 14,
+    "Name": "毒素",
+    "NameSrc": "ref",
+    "Type": "PoisonType",
+    "Desc": "输入毒素类型，如烈毒、幻毒"
+   },
+   {
+    "TemplateId": 15,
+    "Name": "蛊虫成长",
+    "NameSrc": "ref",
+    "Type": "IsNotOnlyInCombat",
+    "Desc": "输入任意布尔，True 代表已成长的，False 代表未成长的"
+   },
+   {
+    "TemplateId": 16,
+    "Name": "蛊虫识主",
+    "NameSrc": "ref",
+    "Type": "IsGood",
+    "Desc": "输入任意布尔，True 代表已识主的，False 代表未识主的"
+   },
+   {
+    "TemplateId": 17,
+    "Name": "蛊虫类型",
+    "NameSrc": "ref",
+    "Type": "WugType",
+    "Desc": "输入蛊虫类型，如赤目,魑魅,黑血,心魔,尸螭,冰蚕,金蚕,青髓，也可简化输入 0~7 来指代"
+   },
+   {
+    "TemplateId": 18,
+    "Name": "真气类型",
+    "NameSrc": "ref",
+    "Type": "NeiliAllocationType",
+    "Desc": "输入真气类型，如摧破、轻灵、护体、奇窍，也可简化输入 0~3 来指代"
+   },
+   {
+    "TemplateId": 19,
+    "Name": "蓄式",
+    "NameSrc": "ref",
+    "Type": "TrickType",
+    "Desc": "输入蓄式名，如劈、刺、撩"
+   },
+   {
+    "TemplateId": 20,
+    "Name": "武器",
+    "NameSrc": "ref",
+    "Type": "Weapon",
+    "Desc": "输入兵器名，如湛卢、巨阙"
+   },
+   {
+    "TemplateId": 21,
+    "Name": "武器类型",
+    "NameSrc": "ref",
+    "Type": "WeaponSubType",
+    "Desc": "输入兵器类型，如针匣、对刺、剑、刀"
+   },
+   {
+    "TemplateId": 22,
+    "Name": "五行",
+    "NameSrc": "ref",
+    "Type": "FiveElementsType",
+    "Desc": "输入五行类型，如金刚、紫霞、玄阴、纯阳、归元、混元，也可简化输入 0~5 来指代"
+   },
+   {
+    "TemplateId": 23,
+    "Name": "战斗类型",
+    "NameSrc": "ref",
+    "Type": "CombatType",
+    "Desc": "输入战斗类型，如切磋、恶斗、死斗、接招"
+   },
+   {
+    "TemplateId": 24,
+    "Name": "战斗状态名",
+    "NameSrc": "ref",
+    "Type": "CombatStateName",
+    "Desc": "输入战斗状态名称，如轻身术、驭使负屃"
+   }
+  ]
+ },
+ "AiData": {
+  "table": "AiData",
+  "title": "AI 藍圖資料項（具名行為樹，如「太吾」「莫女」等）",
+  "pack": null,
+  "count": 25,
+  "unresolved": 0,
+  "name_from_ref": 25,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "太吾",
+    "NameSrc": "ref",
+    "Path": "taiwu",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 1,
+    "Name": "无名之人逃跑",
+    "NameSrc": "ref",
+    "Path": "sect-story/baihua-anonym-escape",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 2,
+    "Name": "莫女",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/monv",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 3,
+    "Name": "大岳瑶常",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/dayue-yaochang",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 4,
+    "Name": "九寒",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/jiuhan",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 5,
+    "Name": "金凰儿",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/jin-huanger",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 6,
+    "Name": "衣以侯",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/yi-yihou",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 7,
+    "Name": "卫起",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/wei-qi",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 8,
+    "Name": "以向",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/yixiang",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 9,
+    "Name": "血枫",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/xuefeng",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 10,
+    "Name": "术方",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/shufang",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 11,
+    "Name": "焕心",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/huanxin",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 12,
+    "Name": "相枢",
+    "NameSrc": "ref",
+    "Path": "sword-tomb/xiangshu",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 13,
+    "Name": "小和尚",
+    "NameSrc": "ref",
+    "Path": "tutorial/little-monk",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 14,
+    "Name": "复生之人",
+    "NameSrc": "ref",
+    "Path": "sect-story/baihua-anonym",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 15,
+    "Name": "少林互动魔头0",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon0",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 16,
+    "Name": "少林互动魔头3",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon3",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 17,
+    "Name": "少林互动魔头6",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon6",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 18,
+    "Name": "少林互动魔头7",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon7",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 19,
+    "Name": "少林互动魔头11",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon11",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 20,
+    "Name": "少林互动魔头2",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon2",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 21,
+    "Name": "少林互动魔头4",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon4",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 22,
+    "Name": "少林互动魔头17",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon17",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 23,
+    "Name": "少林互动魔头10",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon10",
+    "GroupId": 1
+   },
+   {
+    "TemplateId": 24,
+    "Name": "少林互动魔头12",
+    "NameSrc": "ref",
+    "Path": "sect-story/shaolin-slayer-trial-demon12",
+    "GroupId": 1
+   }
+  ]
+ },
+ "AiGroup": {
+  "table": "AiGroup",
+  "title": "AI 分組（通用/戰鬥…，將條件/行動歸類）",
+  "pack": null,
+  "count": 3,
+  "unresolved": 1,
+  "name_from_ref": 2,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "通用",
+    "NameSrc": "ref",
+    "GroupIds": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "TemplateId": 1,
+    "Name": "战斗",
+    "NameSrc": "ref",
+    "GroupIds": [
+     1
+    ]
+   },
+   {
+    "TemplateId": 2,
+    "Name": null,
+    "NameSrc": null,
+    "GroupIds": [
+     2
+    ]
+   }
+  ]
+ },
+ "AiRelations": {
+  "table": "AiRelations",
+  "title": "關係觸發 AI（互動後好感/仇怨等關係如何變化）",
+  "pack": null,
+  "count": 13,
+  "unresolved": 0,
+  "name_from_ref": 13,
+  "name_from_lang": 0,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "结下仇怨",
+    "NameSrc": "ref",
+    "PersonalityType": 3,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": 1000,
+    "FriendlySectMemberAdjust": -1000
+   },
+   {
+    "TemplateId": 1,
+    "Name": "化解仇怨",
+    "NameSrc": "ref",
+    "PersonalityType": 0,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": -1000,
+    "FriendlySectMemberAdjust": 1000
+   },
+   {
+    "TemplateId": 2,
+    "Name": "爱慕",
+    "NameSrc": "ref",
+    "PersonalityType": 2,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 3,
+    "Name": "表白",
+    "NameSrc": "ref",
+    "PersonalityType": 3,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 4,
+    "Name": "分手",
+    "NameSrc": "ref",
+    "PersonalityType": 0,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 5,
+    "Name": "求婚",
+    "NameSrc": "ref",
+    "PersonalityType": 4,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 6,
+    "Name": "结为好友",
+    "NameSrc": "ref",
+    "PersonalityType": 2,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": -1000,
+    "FriendlySectMemberAdjust": 1000
+   },
+   {
+    "TemplateId": 7,
+    "Name": "断绝友谊",
+    "NameSrc": "ref",
+    "PersonalityType": 0,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": 1000,
+    "FriendlySectMemberAdjust": -1000
+   },
+   {
+    "TemplateId": 8,
+    "Name": "义结金兰",
+    "NameSrc": "ref",
+    "PersonalityType": 2,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": -1000,
+    "FriendlySectMemberAdjust": 1000
+   },
+   {
+    "TemplateId": 9,
+    "Name": "割袍断义",
+    "NameSrc": "ref",
+    "PersonalityType": 0,
+    "NoncontradictoryBehaviorAjust": -500,
+    "NoncontradictoryFameAjust": -500,
+    "EnemySectMemberAdjust": 1000,
+    "FriendlySectMemberAdjust": -1000
+   },
+   {
+    "TemplateId": 10,
+    "Name": "拜认父母",
+    "NameSrc": "ref",
+    "PersonalityType": 4,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 11,
+    "Name": "收养子女",
+    "NameSrc": "ref",
+    "PersonalityType": 4,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   },
+   {
+    "TemplateId": 12,
+    "Name": "离婚",
+    "NameSrc": "ref",
+    "PersonalityType": 4,
+    "NoncontradictoryBehaviorAjust": 0,
+    "NoncontradictoryFameAjust": 0,
+    "EnemySectMemberAdjust": 0,
+    "FriendlySectMemberAdjust": 0
+   }
+  ]
+ }
+}

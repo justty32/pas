@@ -1,0 +1,4850 @@
+{
+ "_meta": {
+  "source_decompiled": "/home/lorkhan/dev/taiwu-src/Assembly-CSharp/Config",
+  "lang_dir": "/home/lorkhan/.local/share/Steam/steamapps/common/The Scroll Of Taiwu/The Scroll of Taiwu_Data/StreamingAssets/Language_CN",
+  "note": "名稱與介紹一律走語言檔行號(Name=lang[argN])以保 Name+Desc 內部自洽；ref 因版本漂移於 Adventure/AdventureType/ShopEvent 不可靠，未採用。"
+ },
+ "AdventureType": {
+  "title": "奇遇類型",
+  "count": 18,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "DisplayName": "",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 0
+   },
+   {
+    "TemplateId": 1,
+    "DisplayName": "主要故事",
+    "IsTrivial": "false",
+    "ColorName": "mainstoryadventure",
+    "AdventureCount": 12
+   },
+   {
+    "TemplateId": 2,
+    "DisplayName": "地区故事",
+    "IsTrivial": "false",
+    "ColorName": "sectstoryadventure",
+    "AdventureCount": 36
+   },
+   {
+    "TemplateId": 3,
+    "DisplayName": "奇缘趣事",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 9
+   },
+   {
+    "TemplateId": 4,
+    "DisplayName": "外道巢穴",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 12
+   },
+   {
+    "TemplateId": 5,
+    "DisplayName": "义士据点",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 3
+   },
+   {
+    "TemplateId": 6,
+    "DisplayName": "季节趣事",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 21
+   },
+   {
+    "TemplateId": 7,
+    "DisplayName": "比武招亲",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 15
+   },
+   {
+    "TemplateId": 8,
+    "DisplayName": "比武招亲",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 15
+   },
+   {
+    "TemplateId": 9,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 4
+   },
+   {
+    "TemplateId": 10,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 2
+   },
+   {
+    "TemplateId": 11,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 2
+   },
+   {
+    "TemplateId": 12,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 2
+   },
+   {
+    "TemplateId": 13,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 2
+   },
+   {
+    "TemplateId": 14,
+    "DisplayName": "天材地宝",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 11
+   },
+   {
+    "TemplateId": 15,
+    "DisplayName": "剑冢异动",
+    "IsTrivial": "false",
+    "ColorName": "swordtomb",
+    "AdventureCount": 36
+   },
+   {
+    "TemplateId": 16,
+    "DisplayName": "邂逅良缘",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 0
+   },
+   {
+    "TemplateId": 17,
+    "DisplayName": "奇书宝典",
+    "IsTrivial": "true",
+    "ColorName": "normaladventure",
+    "AdventureCount": 14
+   }
+  ]
+ },
+ "Adventure": {
+  "title": "歷練奇遇",
+  "pack": "Adventure_language",
+  "count": 196,
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "世外秘境",
+    "Desc": "荒野偏僻之处，隐有不知名的喑哑嘶声扰人心神。此处隐秘难寻，竟好似一处世外秘境。其中有何怪异之处，不如前去一探究竟……",
+    "DescFull": "荒野偏僻之处，隐有不知名的喑哑嘶声扰人心神。此处隐秘难寻，竟好似一处世外秘境。其中有何怪异之处，不如前去一探究竟……",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 1,
+    "Name": "比武大会·刀法",
+    "Desc": "此地正在举办一场关于刀法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于刀法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 2,
+    "Name": "门派较武",
+    "Desc": "门中盛事——门派较武——正在此地举办，无论是门派高层或普通弟子纷纷回到门派，各人观艺学艺、争求指点、一展身手，风采尽显……",
+    "DescFull": "门中盛事——门派较武——正在此地举办，无论是门派高层或普通弟子纷纷回到门派，各人观艺学艺、争求指点、一展身手，风采尽显……",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 4,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 3,
+    "Name": "比武大会·乐器",
+    "Desc": "此地正在举办一场关于乐器的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于乐器的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 4,
+    "Name": "城镇集会",
+    "Desc": "长街十里人声沸，货列千摊物色新。在此地商人的协助下，各地商会于此举办起了集会……",
+    "DescFull": "长街十里人声沸，货列千摊物色新。在此地商人的协助下，各地商会于此举办起了集会……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 5,
+    "Name": "家常茶会",
+    "Desc": "在此地文人的协助下，准备开办一场家常茶会……",
+    "DescFull": "在此地文人的协助下，准备开办一场家常茶会……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 6,
+    "Name": "英雄猴杰",
+    "Desc": "一只强壮的猿猴在此占地为王，谷中大多数的猿猴现下都已聚集在它的身边，它们除了整日喧闹不休，还时常在竹庐附近捣乱……",
+    "DescFull": "一只强壮的猿猴在此占地为王，谷中大多数的猿猴现下都已聚集在它的身边，它们除了整日喧闹不休，还时常在竹庐附近捣乱……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 7,
+    "Name": "家常酒宴",
+    "Desc": "在此地文人的协助下，准备开办一场家常酒宴……",
+    "DescFull": "在此地文人的协助下，准备开办一场家常酒宴……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 8,
+    "Name": "青庐交拜",
+    "Desc": "此地处处张灯结彩、锣鼓喧天，可谓热闹非凡，原来乃是太吾传人的婚礼正在此地进行……",
+    "DescFull": "此地处处张灯结彩、锣鼓喧天，可谓热闹非凡，原来乃是太吾传人的婚礼正在此地进行……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 9,
+    "Name": "庭院茶会",
+    "Desc": "在此地文人的协助下，准备开办一场庭院茶会……",
+    "DescFull": "在此地文人的协助下，准备开办一场庭院茶会……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 10,
+    "Name": "庄园茶会",
+    "Desc": "在此地文人的协助下，准备开办一场庄园茶会……",
+    "DescFull": "在此地文人的协助下，准备开办一场庄园茶会……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 11,
+    "Name": "春日集市",
+    "Desc": "春暖花开、万物苏生，各地商会趁机举办起了春日集市……",
+    "DescFull": "春暖花开、万物苏生，各地商会趁机举办起了春日集市……",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 12,
+    "Name": "比武大会·暗器",
+    "Desc": "此地正在举办一场关于暗器的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于暗器的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 13,
+    "Name": "比武大会·长兵",
+    "Desc": "此地正在举办一场关于长兵的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于长兵的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 14,
+    "Name": "比武大会·奇门",
+    "Desc": "此地正在举办一场关于奇门的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于奇门的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 15,
+    "Name": "比武大会·拳掌",
+    "Desc": "此地正在举办一场关于拳掌的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于拳掌的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 16,
+    "Name": "比武大会·软兵",
+    "Desc": "此地正在举办一场关于软兵的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于软兵的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 17,
+    "Name": "比武大会·腿法",
+    "Desc": "此地正在举办一场关于腿法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于腿法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 18,
+    "Name": "比武大会·御射",
+    "Desc": "此地正在举办一场关于御射的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于御射的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 19,
+    "Name": "比武大会·指法",
+    "Desc": "此地正在举办一场关于指法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于指法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 20,
+    "Name": "较艺大会·厨艺",
+    "Desc": "每年的立冬时节举办，各地的庖丁汇聚于此，切磋技艺、其乐融融，竞相争夺“烹调圣手”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的庖丁汇聚于此，切磋技艺、其乐融融，竞相争夺“烹调圣手”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 21,
+    "Name": "较艺大会·毒术",
+    "Desc": "每年的立冬时节举办，各地的医者汇聚于此，切磋毒术、其乐融融，竞相争夺“绝命毒手”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的医者汇聚于此，切磋毒术、其乐融融，竞相争夺“绝命毒手”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 22,
+    "Name": "较艺大会·锻造",
+    "Desc": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“锻造名匠”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“锻造名匠”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 23,
+    "Name": "较艺大会·巧匠",
+    "Desc": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“巧手名匠”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“巧手名匠”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 24,
+    "Name": "较艺大会·医术",
+    "Desc": "每年的立冬时节举办，各地医者汇聚于此，为病患开设良方，与同行切磋医术……",
+    "DescFull": "每年的立冬时节举办，各地医者汇聚于此，为病患开设良方，与同行切磋医术……",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 25,
+    "Name": "较艺大会·织锦",
+    "Desc": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“织锦名匠”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“织锦名匠”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 26,
+    "Name": "比武大会·剑法",
+    "Desc": "此地正在举办一场关于剑法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "DescFull": "此地正在举办一场关于剑法的比武大会，来自五湖四海的江湖武人，摩拳擦掌，跃跃欲试，迫不及待地要登上擂台，大显一番身手！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 27,
+    "Name": "较艺大会·制木",
+    "Desc": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“制木名匠”这一风光名号！",
+    "DescFull": "每年的立冬时节举办，各地的手艺匠人汇聚于此，切磋技艺、其乐融融，竞相争夺“制木名匠”这一风光名号！",
+    "Type": 6,
+    "TypeName": "季节趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 28,
+    "Name": "庄园酒宴",
+    "Desc": "在此地文人的协助下，准备开办一场庄园酒宴……",
+    "DescFull": "在此地文人的协助下，准备开办一场庄园酒宴……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 29,
+    "Name": "门派争端",
+    "Desc": "一场门派争端正在发生，似乎争端的起因与「太吾」有关……",
+    "DescFull": "一场门派争端正在发生，似乎争端的起因与「太吾」有关……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 30,
+    "Name": "恶丐窝",
+    "Desc": "一伙恶丐群聚于此地，他们不仅时常骚扰附近的百姓与旅人，还向周边散播着恶毒与疾病……",
+    "DescFull": "一伙恶丐群聚于此地，他们不仅时常骚扰附近的百姓与旅人，还向周边散播着恶毒与疾病……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 31,
+    "Name": "贼人营寨",
+    "Desc": "此地周边百姓常常失窃，听闻曾有人见有鬼鬼祟祟的贼子出现在附近……",
+    "DescFull": "此地周边百姓常常失窃，听闻曾有人见有鬼鬼祟祟的贼子出现在附近……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 32,
+    "Name": "弃世绝境",
+    "Desc": "此地曾是某处世外绝境的屏障，直到无休止的江湖纷争蔓延至此，那些原本隐居于绝境中的人满怀着仇恨被迫重返尘世……",
+    "DescFull": "此地曾是某处世外绝境的屏障，直到无休止的江湖纷争蔓延至此，那些原本隐居于绝境中的人满怀着仇恨被迫重返尘世……",
+    "Type": 5,
+    "TypeName": "义士据点",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 33,
+    "Name": "悍匪砦",
+    "Desc": "大批气焰嚣张的匪类于此地占路夺桥，拉帮结派，方圆数百里内，受其欺凌者不计其数……",
+    "DescFull": "大批气焰嚣张的匪类于此地占路夺桥，拉帮结派，方圆数百里内，受其欺凌者不计其数……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 3,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 34,
+    "Name": "叛徒结伙",
+    "Desc": "此地聚集了诸多门派弃徒，他们或为复仇，或为奸恶目的，最终结成一伙，为害江湖……",
+    "DescFull": "此地聚集了诸多门派弃徒，他们或为复仇，或为奸恶目的，最终结成一伙，为害江湖……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 4,
+    "LifeSkillDifficulty": 4,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 35,
+    "Name": "恶人谷",
+    "Desc": "许多同时身负正邪两道数笔血债的亡命之徒盘踞于此地，因为过着刀口舔血、朝不保夕的日子，故而异常的凶恶……",
+    "DescFull": "许多同时身负正邪两道数笔血债的亡命之徒盘踞于此地，因为过着刀口舔血、朝不保夕的日子，故而异常的凶恶……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 4,
+    "LifeSkillDifficulty": 4,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 36,
+    "Name": "迷香阵",
+    "Desc": "迷香阵笼罩在一片红雾之内，伴随着其中的细细笑语和靡靡乐音，阵阵异香不断地飘送出来……",
+    "DescFull": "迷香阵笼罩在一片红雾之内，伴随着其中的细细笑语和靡靡乐音，阵阵异香不断地飘送出来……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 37,
+    "Name": "义士堂",
+    "Desc": "世事纷乱，如今多出恶徒，百姓不堪其苦。正是此时，义士纷纷而起，致力于攘除江湖奸凶。此处正有不少义士群聚，意欲诛杀恶徒……",
+    "DescFull": "世事纷乱，如今多出恶徒，百姓不堪其苦。正是此时，义士纷纷而起，致力于攘除江湖奸凶。此处正有不少义士群聚，意欲诛杀恶徒……",
+    "Type": 5,
+    "TypeName": "义士据点",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 38,
+    "Name": "乱葬岗",
+    "Desc": "弃置着众多枉死者尸身的不祥之地，随着一些江湖上的诡怪术士在此地频繁出入，更为此地蒙上了一层可怖的阴影……",
+    "DescFull": "弃置着众多枉死者尸身的不祥之地，随着一些江湖上的诡怪术士在此地频繁出入，更为此地蒙上了一层可怖的阴影……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 6,
+    "LifeSkillDifficulty": 6,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 39,
+    "Name": "异士居",
+    "Desc": "一些左道异士结庐居于此地，这些异士虽身怀绝技，但性情乖戾，善恶不分，行事只凭一时之兴……",
+    "DescFull": "一些左道异士结庐居于此地，这些异士虽身怀绝技，但性情乖戾，善恶不分，行事只凭一时之兴……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 40,
+    "Name": "邪人死地",
+    "Desc": "大批异疆邪教中人群聚于此，他们设坛祭鬼，施烟布瘴，每日杀人取乐，闻者无不色变……",
+    "DescFull": "大批异疆邪教中人群聚于此，他们设坛祭鬼，施烟布瘴，每日杀人取乐，闻者无不色变……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 41,
+    "Name": "修罗场",
+    "Desc": "发生过极多可怕杀戮的凶恶之地，许多曾在杀戮中失却心智的疯子与狂人受到炼心师的操弄，仍不断游荡在此地附近……",
+    "DescFull": "发生过极多可怕杀戮的凶恶之地，许多曾在杀戮中失却心智的疯子与狂人受到炼心师的操弄，仍不断游荡在此地附近……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 8,
+    "LifeSkillDifficulty": 8,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 42,
+    "Name": "任侠会盟",
+    "Desc": "春风催桃李，江湖多夜雨。如今天下，纷乱不止，义士侠辈代代频出。听得近处似有纷扰，正有某一宗门的弟子群聚于此，不知何故……",
+    "DescFull": "春风催桃李，江湖多夜雨。如今天下，纷乱不止，义士侠辈代代频出。听得近处似有纷扰，正有某一宗门的弟子群聚于此，不知何故……",
+    "Type": 5,
+    "TypeName": "义士据点",
+    "CombatDifficulty": 8,
+    "LifeSkillDifficulty": 8,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 43,
+    "Name": "群魔乱舞",
+    "Desc": "此处魔气四溢，入魔之人向此处涌来，一支无名魔教在此不断以骇人的手段残害着武林正道的人士……",
+    "DescFull": "此处魔气四溢，入魔之人向此处涌来，一支无名魔教在此不断以骇人的手段残害着武林正道的人士……",
+    "Type": 4,
+    "TypeName": "外道巢穴",
+    "CombatDifficulty": 9,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 44,
+    "Name": "促织大会",
+    "Desc": "三年一届的促织大赛正在如火如荼地举办，各地的促织好手汇聚于此，各人以虫为戏、其乐融融，竞相争夺‘促织大将军’这一风光名号！",
+    "DescFull": "三年一届的促织大赛正在如火如荼地举办，各地的促织好手汇聚于此，各人以虫为戏、其乐融融，竞相争夺‘促织大将军’这一风光名号！",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 45,
+    "Name": "比武招亲·扬州",
+    "Desc": "歌船云集，鲜花四散……听说扬州正举办一场佳人选美盛会，其中有一位小姐欲在此时寻觅良缘……",
+    "DescFull": "歌船云集，鲜花四散……听说扬州正举办一场佳人选美盛会，其中有一位小姐欲在此时寻觅良缘……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 46,
+    "Name": "比武招亲·成都",
+    "Desc": "此日，成都城中一别庄设有游园乐宴，此家主人欲于此次宴乐之中挑选一名东床快婿……",
+    "DescFull": "此日，成都城中一别庄设有游园乐宴，此家主人欲于此次宴乐之中挑选一名东床快婿……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 47,
+    "Name": "比武招亲·成都（女）",
+    "Desc": "这日，成都城中一别庄设有游园乐宴，欲为太吾传人在此次宴乐之中挑选一名东床快婿……",
+    "DescFull": "这日，成都城中一别庄设有游园乐宴，欲为太吾传人在此次宴乐之中挑选一名东床快婿……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 48,
+    "Name": "比武招亲·大理",
+    "Desc": "听闻大理的小姐正举办一场跳月舞会，邀请男女一同欢庆，各人或许可于此时找到自己的良缘……",
+    "DescFull": "听闻大理的小姐正举办一场跳月舞会，邀请男女一同欢庆，各人或许可于此时找到自己的良缘……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 49,
+    "Name": "比武招亲·大理（女）",
+    "Desc": "大理正在为太吾传人举办一场跳月舞会，邀请男女一同欢庆，各人或许可于此时找到自己的良缘……",
+    "DescFull": "大理正在为太吾传人举办一场跳月舞会，邀请男女一同欢庆，各人或许可于此时找到自己的良缘……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 50,
+    "Name": "比武招亲·福州",
+    "Desc": "相传福州某族有先祖托梦为女选婿，该宗女正跪于祠堂之中，等候良人通过先祖考验……",
+    "DescFull": "相传福州某族有先祖托梦为女选婿，该宗女正跪于祠堂之中，等候良人通过先祖考验……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 51,
+    "Name": "比武招亲·福州（女）",
+    "Desc": "福州宗祠中，正为太吾传人举办一场招亲盛会，相传求亲者需于宗祠之中，经过先祖考验，方为良人……",
+    "DescFull": "福州宗祠中，正为太吾传人举办一场招亲盛会，相传求亲者需于宗祠之中，经过先祖考验，方为良人……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 52,
+    "Name": "比武招亲·广州",
+    "Desc": "广州花香弥漫，无论夏暑冬寒，皆有百花盛开，此地有一名权贵小姐正在举行招亲，若有人可采花为小姐冠首，则视为情意相许……",
+    "DescFull": "广州花香弥漫，无论夏暑冬寒，皆有百花盛开，此地有一名权贵小姐正在举行招亲，若有人可采花为小姐冠首，则视为情意相许……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 53,
+    "Name": "比武招亲·广州（女）",
+    "Desc": "广州花香弥漫，无论夏暑冬寒，皆有百花盛开，此地正为太吾传人举行招亲，若有人可采花为她冠首，则视为情意相许……",
+    "DescFull": "广州花香弥漫，无论夏暑冬寒，皆有百花盛开，此地正为太吾传人举行招亲，若有人可采花为她冠首，则视为情意相许……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 54,
+    "Name": "比武招亲·桂州",
+    "Desc": "听闻此地正在举行一场歌会，众人以歌传情，一诉心意，两情相悦者，可在此以山水为证，结成连理……",
+    "DescFull": "听闻此地正在举行一场歌会，众人以歌传情，一诉心意，两情相悦者，可在此以山水为证，结成连理……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 55,
+    "Name": "比武招亲·桂州（女）",
+    "Desc": "听闻桂州正在为太吾传人举行一场歌会，众人以歌传情，一诉心意，两情相悦者，可在此以山水为证，结成连理……",
+    "DescFull": "听闻桂州正在为太吾传人举行一场歌会，众人以歌传情，一诉心意，两情相悦者，可在此以山水为证，结成连理……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 56,
+    "Name": "比武招亲·杭州",
+    "Desc": "听闻杭州正举办一场以灯结缘的比武招亲，灯亮则缘起，灯落则缘灭，而那招亲的小姐正在西湖断桥上等候她的良人……",
+    "DescFull": "听闻杭州正举办一场以灯结缘的比武招亲，灯亮则缘起，灯落则缘灭，而那招亲的小姐正在西湖断桥上等候她的良人……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 57,
+    "Name": "比武招亲·杭州（女）",
+    "Desc": "听闻杭州正为太吾传人举办一场以灯结缘的比武招亲，灯亮则缘起，灯落则缘灭，于断桥之上，或可候得良人……",
+    "DescFull": "听闻杭州正为太吾传人举办一场以灯结缘的比武招亲，灯亮则缘起，灯落则缘灭，于断桥之上，或可候得良人……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 58,
+    "Name": "比武招亲·江陵",
+    "Desc": "九姊九妹陪我来，团圆桌上来结拜……江陵素有十姊妹之俗，今日，听闻那招亲的小姐欲借十姊妹来考验考验求亲之人……",
+    "DescFull": "九姊九妹陪我来，团圆桌上来结拜……江陵素有十姊妹之俗，今日，听闻那招亲的小姐欲借十姊妹来考验考验求亲之人……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 59,
+    "Name": "比武招亲·江陵（女）",
+    "Desc": "九姊九妹陪我来，团圆桌上来结拜……江陵素有十姊妹之俗，今日正为太吾传人借此习俗考验求亲之人……",
+    "DescFull": "九姊九妹陪我来，团圆桌上来结拜……江陵素有十姊妹之俗，今日正为太吾传人借此习俗考验求亲之人……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 60,
+    "Name": "比武招亲·京城",
+    "Desc": "京城的权贵小姐正逢待嫁年纪，京城各处张灯结彩，仆从往来，迎接四方求亲者，又听有人道“得道多助”，不知何意……",
+    "DescFull": "京城的权贵小姐正逢待嫁年纪，京城各处张灯结彩，仆从往来，迎接四方求亲者，又听有人道“得道多助”，不知何意……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 61,
+    "Name": "比武招亲·京城（女）",
+    "Desc": "京城正在为太吾传人举办一场声势浩大的比武，京城各处张灯结彩，仆从往来，迎接四方求亲者，又听有人道“得道多助”，不知何意……",
+    "DescFull": "京城正在为太吾传人举办一场声势浩大的比武，京城各处张灯结彩，仆从往来，迎接四方求亲者，又听有人道“得道多助”，不知何意……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 62,
+    "Name": "比武招亲·辽阳",
+    "Desc": "燕山参云，辽水折曲，草原之上，正在举办一场以白马青牛结缘的比武招亲……",
+    "DescFull": "燕山参云，辽水折曲，草原之上，正在举办一场以白马青牛结缘的比武招亲……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 63,
+    "Name": "比武招亲·辽阳（女）",
+    "Desc": "燕山参云，辽水折曲，草原之上，正在为太吾传人举办一场以白马青年结缘的比武招亲……",
+    "DescFull": "燕山参云，辽水折曲，草原之上，正在为太吾传人举办一场以白马青年结缘的比武招亲……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 64,
+    "Name": "比武招亲·秦州",
+    "Desc": "秦州商队往来，驼铃阵阵，此日更是聚集了许多武林好手，据说黄沙之中，小姐正在等候英雄为她送去此地最贵重的珍宝——清水……",
+    "DescFull": "秦州商队往来，驼铃阵阵，此日更是聚集了许多武林好手，据说黄沙之中，小姐正在等候英雄为她送去此地最贵重的珍宝——清水……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 65,
+    "Name": "比武招亲·秦州（女）",
+    "Desc": "秦州商队往来，驼铃阵阵，此日更是聚集了许多武林好手，据说太吾传人正在此地举办一场招亲，于黄沙之中等候英雄为她送去此地最贵重的珍宝——清水……",
+    "DescFull": "秦州商队往来，驼铃阵阵，此日更是聚集了许多武林好手，据说太吾传人正在此地举办一场招亲，于黄沙之中等候英雄为她送去此地最贵重的珍宝——清水……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 66,
+    "Name": "比武招亲·青州",
+    "Desc": "此日，青州地界正在举行一场招亲，传闻若与新娘有缘之人腕上则会生出一股红线，代表着与新娘的姻缘……",
+    "DescFull": "此日，青州地界正在举行一场招亲，传闻若与新娘有缘之人腕上则会生出一股红线，代表着与新娘的姻缘……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 67,
+    "Name": "比武招亲·青州（女）",
+    "Desc": "青州地界正为太吾传人举办一场招亲，由红娘说媒，相传若有人与其有缘，腕上便自会生出代表姻缘的红线……",
+    "DescFull": "青州地界正为太吾传人举办一场招亲，由红娘说媒，相传若有人与其有缘，腕上便自会生出代表姻缘的红线……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 68,
+    "Name": "比武招亲·寿春",
+    "Desc": "云梦泽故地，正在举行一场声势浩大的比武招亲，众人纵马山林，狩猎争雄！",
+    "DescFull": "云梦泽故地，正在举行一场声势浩大的比武招亲，众人纵马山林，狩猎争雄！",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 69,
+    "Name": "比武招亲·寿春（女）",
+    "Desc": "云梦泽故地，正在为太吾传人举行一场声势浩大的比武招亲，众人纵马山林，狩猎争雄！",
+    "DescFull": "云梦泽故地，正在为太吾传人举行一场声势浩大的比武招亲，众人纵马山林，狩猎争雄！",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 70,
+    "Name": "比武招亲·太原",
+    "Desc": "太原城一位没落权贵正在此地举办一场声势浩大的擂台招亲，各地的名士、豪杰无不齐聚于此，或为一睹美人芳容、或摩拳擦掌只为技压群雄，抱得美人归，只为凑热闹之人亦不在少数……",
+    "DescFull": "太原城一位没落权贵正在此地举办一场声势浩大的擂台招亲，各地的名士、豪杰无不齐聚于此，或为一睹美人芳容、或摩拳擦掌只为技压群雄，抱得美人归，只为凑热闹之人亦不在少数……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 71,
+    "Name": "比武招亲·太原（女）",
+    "Desc": "太原城正在为太吾传人举办一场声势浩大的擂台招亲，各地的名士、豪杰无不齐聚于此，或为一睹美人芳容、或摩拳擦掌以求抱得美人归，只为凑热闹之人亦不在少数……",
+    "DescFull": "太原城正在为太吾传人举办一场声势浩大的擂台招亲，各地的名士、豪杰无不齐聚于此，或为一睹美人芳容、或摩拳擦掌以求抱得美人归，只为凑热闹之人亦不在少数……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 72,
+    "Name": "比武招亲·襄阳",
+    "Desc": "汉江之湄，亮石遍地，江水悠悠……听说权贵小姐正在此地举办招亲之会，依襄阳习俗，若寻穿天石，传达心中情意，或许可以打动佳人……",
+    "DescFull": "汉江之湄，亮石遍地，江水悠悠……听说权贵小姐正在此地举办招亲之会，依襄阳习俗，若寻穿天石，传达心中情意，或许可以打动佳人……",
+    "Type": 7,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 73,
+    "Name": "比武招亲·襄阳（女）",
+    "Desc": "汉江之湄，江水悠悠……听说太吾传人正在此地举办招亲之会，依襄阳习俗，若受赠穿天石，传达心中情意，或可结为良缘……",
+    "DescFull": "汉江之湄，江水悠悠……听说太吾传人正在此地举办招亲之会，依襄阳习俗，若受赠穿天石，传达心中情意，或可结为良缘……",
+    "Type": 8,
+    "TypeName": "比武招亲",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 74,
+    "Name": "比武招亲·扬州（女）",
+    "Desc": "歌船云集，鲜花四散……听说扬州正举办一场佳人选美盛会，太吾传人也参与其中，并欲在此时寻觅良缘……",
+    "DescFull": "歌船云集，鲜花四散……听说扬州正举办一场佳人选美盛会，太吾传人也参与其中，并欲在此时寻觅良缘……",
+    "Type": 9,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 75,
+    "Name": "寻找黑熊",
+    "Desc": "天灾过后，百兽受惊，鸣而不绝……传闻曾有人在此见过一只奔逃的黑熊……",
+    "DescFull": "天灾过后，百兽受惊，鸣而不绝……传闻曾有人在此见过一只奔逃的黑熊……",
+    "Type": 9,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 76,
+    "Name": "寻找猴头菇",
+    "Desc": "听闻天灾过后，此地的五谷便纷纷开始生长，不知其中是否藏着什么灵物……",
+    "DescFull": "听闻天灾过后，此地的五谷便纷纷开始生长，不知其中是否藏着什么灵物……",
+    "Type": 9,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 77,
+    "Name": "寻找蓝孔雀",
+    "Desc": "此地青山钟灵毓秀，禽鸟啁啾，偶尔听得几声奇异叫声……或有蓝孔雀出没？",
+    "DescFull": "此地青山钟灵毓秀，禽鸟啁啾，偶尔听得几声奇异叫声……或有蓝孔雀出没？",
+    "Type": 9,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 78,
+    "Name": "寻找鲟鳇鱼",
+    "Desc": "天灾过后，此地山塌地裂，江河决堤，在此形成了一片偌大的水域……",
+    "DescFull": "天灾过后，此地山塌地裂，江河决堤，在此形成了一片偌大的水域……",
+    "Type": 10,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 79,
+    "Name": "寻找九曲紫竹",
+    "Desc": "此地风水失常，地乏灵气，屡屡有地动之灾，因此少有人敢靠近……",
+    "DescFull": "此地风水失常，地乏灵气，屡屡有地动之灾，因此少有人敢靠近……\n<color=#darkgrey>（本奇遇需要用到金银材料……）</color>",
+    "Type": 10,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 80,
+    "Name": "寻找乌金紫檀",
+    "Desc": "此地本有一片树林，如今，林中生了异变，于是大雾弥漫，人难以辨清其中究竟……",
+    "DescFull": "此地本有一片树林，如今，林中生了异变，于是大雾弥漫，人难以辨清其中究竟……\n<color=#darkgrey>（本奇遇需要用到铁质材料……）</color>",
+    "Type": 11,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 81,
+    "Name": "寻找蝉壳精金",
+    "Desc": "听闻天灾过后，此地便出现了一座洞穴，其中虽然狭窄逼仄，碎石不绝，但灵光隐隐，似乎藏着什么罕见的金银……",
+    "DescFull": "听闻天灾过后，此地便出现了一座洞穴，其中虽然狭窄逼仄，碎石不绝，但灵光隐隐，似乎藏着什么罕见的金银……\n<color=#darkgrey>（本奇遇需要用到玉质材料……）</color>",
+    "Type": 11,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 82,
+    "Name": "寻找玄铁",
+    "Desc": "有火流星自天边坠落，落于此地，形成一方巨铁之山，其周边绵延着数十里的火海……",
+    "DescFull": "有火流星自天边坠落，落于此地，形成一方巨铁之山，其周边绵延着数十里的火海……\n<color=#darkgrey>（本奇遇需要用到石质材料……）</color>",
+    "Type": 12,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 83,
+    "Name": "寻找昆仑活玉",
+    "Desc": "相传天灾之后，此地突显异象，众星相聚，光耀烁烁……",
+    "DescFull": "相传天灾之后，此地突显异象，众星相聚，光耀烁烁……\n<color=#darkgrey>（本奇遇需要用到植物织物……）</color>",
+    "Type": 12,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 84,
+    "Name": "寻找神照石",
+    "Desc": "天灾过后，此地的石块变得光泽透明，仿佛有莹辉照耀，仿佛是因有异宝出世之故……",
+    "DescFull": "天灾过后，此地的石块变得光泽透明，仿佛有莹辉照耀，仿佛是因有异宝出世之故……\n<color=#darkgrey>（本奇遇需要用到毛皮织物……）</color>",
+    "Type": 13,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 85,
+    "Name": "寻找金缕蝉衣",
+    "Desc": "传说天灾过后，此地的树林中突然有诸般奇珍异兽出没，更有人曾在此见到金色的鸣蝉……",
+    "DescFull": "传说天灾过后，此地的树林中突然有诸般奇珍异兽出没，更有人曾在此见到金色的鸣蝉……\n<color=#darkgrey>（本奇遇需要用到木质材料……）</color>",
+    "Type": 13,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 86,
+    "Name": "寻找天蚕丝",
+    "Desc": "天灾过后，此地突然出现了大片高耸入云的桑树，诸多蚁蚕出没于其间，不知传说中的天蚕是否就在此处……",
+    "DescFull": "天灾过后，此地突然出现了大片高耸入云的桑树，诸多蚁蚕出没于其间，不知传说中的天蚕是否就在此处……\n<color=#darkgrey>（本奇遇需要用到竹藤材料……）</color>",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 87,
+    "Name": "祸福相依",
+    "Desc": "祸福本来相依，未经大祸不得至福；得失原为一体，不肯舍弃难以存真。天灾过后，此地紫气旺盛，正是祸尽福生，苦尽甘来的征兆，也不知世间何处有德行兼备之人？能受此地福报……",
+    "DescFull": "祸福本来相依，未经大祸不得至福；得失原为一体，不肯舍弃难以存真。天灾过后，此地紫气旺盛，正是祸尽福生，苦尽甘来的征兆，也不知世间何处有德行兼备之人？能受此地福报……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 88,
+    "Name": "奇正相征",
+    "Desc": "天灾过后，此地埋藏的上古珍兽、异虫纷纷复苏，天地虽改，却仍是不容二主，奇物之间自是各不相让，奋力相征，然而世间万物，总是相生相克，一物降一物的……",
+    "DescFull": "天灾过后，此地埋藏的上古珍兽、异虫纷纷复苏，天地虽改，却仍是不容二主，奇物之间自是各不相让，奋力相征，然而世间万物，总是相生相克，一物降一物的……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 89,
+    "Name": "生死相循",
+    "Desc": "“活人舍命以救死，死者回天以慰生”。天灾之地，死气浓重，然而物极必反，生死本就是循环往复之过程，极死之灾地，存极生之希望，若能舍生成仁，或可得天地间最俱生机之珍宝……",
+    "DescFull": "“活人舍命以救死，死者回天以慰生”。天灾之地，死气浓重，然而物极必反，生死本就是循环往复之过程，极死之灾地，存极生之希望，若能舍生成仁，或可得天地间最俱生机之珍宝……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 90,
+    "Name": "实幻相映",
+    "Desc": "天灾骇人，地改天移，一片混乱之间，阴阳重归于蒙昧，万物重归于未形，时而似见古之异兽破石腾空，时而似见梦里兰花化影争妍，只是未入混沌，谁知实、幻、真、假……",
+    "DescFull": "天灾骇人，地改天移，一片混乱之间，阴阳重归于蒙昧，万物重归于未形，时而似见古之异兽破石腾空，时而似见梦里兰花化影争妍，只是未入混沌，谁知实、幻、真、假……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 91,
+    "Name": "万物相生",
+    "Desc": "“毒蛇出没之地必有解毒之药”。天灾过后，此地恶毒横流，各色瘴气遮天蔽日，亦有各类奇物受扰出世或受恶毒吸引而来，或见大蛇，或见毒蟾，亦有奇草破土而出……",
+    "DescFull": "“毒蛇出没之地必有解毒之药”。天灾过后，此地恶毒横流，各色瘴气遮天蔽日，亦有各类奇物受扰出世或受恶毒吸引而来，或见大蛇，或见毒蟾，亦有奇草破土而出……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 92,
+    "Name": "寻找断肠草",
+    "Desc": "疏林原野，平阔宁静，却无人敢靠近——听闻其中随处可见各类毒物……",
+    "DescFull": "疏林原野，平阔宁静，却无人敢靠近——听闻其中随处可见各类毒物……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 93,
+    "Name": "寻找千年冰蚕",
+    "Desc": "传闻天灾过后，此地小丘突然寒气环绕，朔风时起，似乎有因寒而生的灵物藏身于其间……",
+    "DescFull": "传闻天灾过后，此地小丘突然寒气环绕，朔风时起，似乎有因寒而生的灵物藏身于其间……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 94,
+    "Name": "寻找千年青蛛",
+    "Desc": "天灾过后，此地突然草木凋零，生机衰败，传闻曾有人在此见过一只通体碧玉的青蛛……",
+    "DescFull": "天灾过后，此地突然草木凋零，生机衰败，传闻曾有人在此见过一只通体碧玉的青蛛……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 95,
+    "Name": "寻找人面曼陀罗",
+    "Desc": "深谷幽静，风送异香……香气似乎从前方不远处传来，但远远望去，却并未见到花朵……",
+    "DescFull": "深谷幽静，风送异香……香气似乎从前方不远处传来，但远远望去，却并未见到花朵……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 96,
+    "Name": "寻找邪窍花",
+    "Desc": "传闻天灾过后，此地突然生长出一片花海，其中还有诸多毒物生长……",
+    "DescFull": "传闻天灾过后，此地突然生长出一片花海，其中还有诸多毒物生长……",
+    "Type": 14,
+    "TypeName": "天材地宝",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 97,
+    "Name": "返回竹庐",
+    "Desc": "竹庐内外一片寂静，没有半点声响，通往竹庐的小径铺满落叶，似乎已许久没有人从这里走过。",
+    "DescFull": "竹庐内外一片寂静，没有半点声响，通往竹庐的小径铺满落叶，似乎已许久没有人从这里走过。",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 98,
+    "Name": "顺河而下",
+    "Desc": "义父地图上所绘的大河，当由此处顺流而下……",
+    "DescFull": "义父地图上所绘的大河，当由此处顺流而下……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 0
+   },
+   {
+    "TemplateId": 99,
+    "Name": "玄石紫竹",
+    "Desc": "一棵紫竹生长在一块玄石之上，看上去极是怪异，玄石不知从何而来，紫竹亦不知由何而生……",
+    "DescFull": "一棵紫竹生长在一块玄石之上，看上去极是怪异，玄石不知从何而来，紫竹亦不知由何而生……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 100,
+    "Name": "村中异变",
+    "Desc": "此地已被大火席卷，其间隐隐听得嘶吼声、哭泣声……似乎仍有人身处小村！",
+    "DescFull": "此地已被大火席卷，其间隐隐听得嘶吼声、哭泣声……似乎仍有人身处小村！",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 0
+   },
+   {
+    "TemplateId": 101,
+    "Name": "荒废驿站",
+    "Desc": "此处有一座荒废多年的驿站，如今已经成为了恶丐藏身之所……",
+    "DescFull": "此处有一座荒废多年的驿站，如今已经成为了恶丐藏身之所……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 102,
+    "Name": "山底暗河",
+    "Desc": "山底的一条暗河，河道幽秘冗长，难以望到尽头，其中似乎还暗藏着不为人知的危险。",
+    "DescFull": "山底的一条暗河，河道幽秘冗长，难以望到尽头，其中似乎还暗藏着不为人知的危险。",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 4,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 103,
+    "Name": "深谷出口",
+    "Desc": "此地并无太多特异之处，只在东、南、西、北四角各有黑、白、青、黄四块隐于草木之中的巨石，若无人指引，极难发现，正是义父所绘地图中出谷的道路所在。",
+    "DescFull": "此地并无太多特异之处，只在东、南、西、北四角各有黑、白、青、黄四块隐于草木之中的巨石，若无人指引，极难发现，正是义父所绘地图中出谷的道路所在。",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 104,
+    "Name": "古墓仙人",
+    "Desc": "此处有一座年代久远的古墓，或许便是传说中那位“古墓仙人”的所在……",
+    "DescFull": "此处有一座年代久远的古墓，或许便是传说中那位“古墓仙人”的所在……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 105,
+    "Name": "天下武林盟会",
+    "Desc": "群雄毕至，各自身怀绝艺、武功盖世，为夺得武林盟主之位而倾尽全力，谁能成为一统武林的新英雄？",
+    "DescFull": "群雄毕至，各自身怀绝艺、武功盖世，为夺得武林盟主之位而倾尽全力，谁能成为一统武林的新英雄？",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 106,
+    "Name": "玄竹降世",
+    "Desc": "一根通体漆黑的竹子遥遥而立……",
+    "DescFull": "一根通体漆黑的竹子遥遥而立……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 107,
+    "Name": "出神之地",
+    "Desc": "凝神入定，自有召引……",
+    "DescFull": "凝神入定，自有召引……",
+    "Type": 1,
+    "TypeName": "主要故事",
+    "CombatDifficulty": 9,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 108,
+    "Name": "寻找血蟾",
+    "Desc": "天灾过后，此地潮涨不落，水患难平，海水隐泛血红，延绵一片，甚为可怖……",
+    "DescFull": "天灾过后，此地潮涨不落，水患难平，海水隐泛血红，延绵一片，甚为可怖……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 109,
+    "Name": "剑冢“大玄凝”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间冰雪遍地，奇冷无比，冢上刻有“大玄凝”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 110,
+    "Name": "剑冢“焚神炼”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间异火燎烧，似有还无，冢上刻有“焚神炼”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 111,
+    "Name": "剑冢“凤凰茧”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间金光闪烁，灼人眼目，冢上刻有“凤凰茧”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 112,
+    "Name": "剑冢“伏邪铁”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间草木不生，一片肃杀，冢上刻有“伏邪铁”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 113,
+    "Name": "剑冢“鬼神霞”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间霞光万丈，难分昼夜，冢上刻有“鬼神霞”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 114,
+    "Name": "剑冢“解龙魄”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间蛟蛇盘绕，隐有龙吟，冢上刻有“解龙魄”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 115,
+    "Name": "剑冢“莫女衣”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间莺歌燕舞，四季如春，冢上刻有“莫女衣”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 116,
+    "Name": "剑冢“囚魔木”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间遍生枫木，鲜红似血，冢上刻有“囚魔木”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 117,
+    "Name": "剑冢“溶尘隐”",
+    "Desc": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。",
+    "DescFull": "古墓仙人离去后，在太吾村附近忽然出现了七座剑冢。\n此冢乃七座剑冢之一，冢间流光溢彩，幻化不定，冢上刻有“溶尘隐”三字，似乎有什么东西将要破冢而出……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 118,
+    "Name": "灭之篇·“大玄凝”",
+    "Desc": "九寒手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "九寒手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 119,
+    "Name": "灭之篇·“焚神炼”",
+    "Desc": "衣以候手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "衣以候手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 120,
+    "Name": "灭之篇·“凤凰茧”",
+    "Desc": "金凰儿手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "金凰儿手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 121,
+    "Name": "灭之篇·“伏邪铁”",
+    "Desc": "大岳瑶常手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "大岳瑶常手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 122,
+    "Name": "灭之篇·“鬼神霞”",
+    "Desc": "术方手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "术方手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 123,
+    "Name": "灭之篇·“解龙魄”",
+    "Desc": "卫起手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "卫起手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 124,
+    "Name": "灭之篇·“莫女衣”",
+    "Desc": "莫女手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "莫女手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 125,
+    "Name": "灭之篇·“囚魔木”",
+    "Desc": "血枫手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "血枫手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 126,
+    "Name": "灭之篇·“溶尘隐”",
+    "Desc": "以向手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "DescFull": "以向手足无措，失魂落魄……似乎正陷入莫大的痛苦……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 127,
+    "Name": "缘之篇·“大玄凝”",
+    "Desc": "九寒眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "九寒眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 128,
+    "Name": "缘之篇·“焚神炼”",
+    "Desc": "衣以侯眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "衣以侯眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 129,
+    "Name": "缘之篇·“凤凰茧”",
+    "Desc": "金凰儿眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "金凰儿眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 130,
+    "Name": "缘之篇·“伏邪铁”",
+    "Desc": "大岳瑶常眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "大岳瑶常眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 131,
+    "Name": "缘之篇·“鬼神霞”",
+    "Desc": "术方眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "术方眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 132,
+    "Name": "缘之篇·“解龙魄”",
+    "Desc": "卫起眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "卫起眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 133,
+    "Name": "缘之篇·“莫女衣”",
+    "Desc": "莫女眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "莫女眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 134,
+    "Name": "缘之篇·“囚魔木”",
+    "Desc": "血枫眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "血枫眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 135,
+    "Name": "缘之篇·“溶尘隐”",
+    "Desc": "以向眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "以向眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 136,
+    "Name": "封魔神光·大玄凝",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 137,
+    "Name": "封魔神光·焚神炼",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 138,
+    "Name": "神光之处……",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 139,
+    "Name": "封魔神光·凤凰茧",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 140,
+    "Name": "封魔神光·伏邪铁",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 141,
+    "Name": "封魔神光·鬼神霞",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 142,
+    "Name": "封魔神光·解龙魄",
+    "Desc": "神光之处",
+    "DescFull": "神光之处",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 143,
+    "Name": "封魔神光·莫女衣",
+    "Desc": "以向眉头紧锁，正在出神……不知想起了什么……",
+    "DescFull": "以向眉头紧锁，正在出神……不知想起了什么……",
+    "Type": 15,
+    "TypeName": "剑冢异动",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 1
+   },
+   {
+    "TemplateId": 144,
+    "Name": "酒楼酒宴",
+    "Desc": "在此地文人的协助下，准备开办一场酒楼酒宴……",
+    "DescFull": "在此地文人的协助下，准备开办一场酒楼酒宴……",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 145,
+    "Name": "封魔神光·囚魔木",
+    "Desc": "封魔神光·溶尘隐",
+    "DescFull": "封魔神光·溶尘隐",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 146,
+    "Name": "《八埏至宝经》",
+    "Desc": "不世宝典——《八埏至宝经》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《八埏至宝经》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 147,
+    "Name": "《白衣行化笈》",
+    "Desc": "不世宝典——《白衣行化笈》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《白衣行化笈》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 148,
+    "Name": "《大全千法》",
+    "Desc": "不世宝典——《大全千法》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《大全千法》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 149,
+    "Name": "《化影奇书》",
+    "Desc": "不世宝典——《化影奇书》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《化影奇书》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 150,
+    "Name": "《浑心无字诀》",
+    "Desc": "不世宝典——《浑心无字诀》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《浑心无字诀》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 151,
+    "Name": "《九似真藏》",
+    "Desc": "不世宝典——《九似真藏》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《九似真藏》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 152,
+    "Name": "《神女绝音》",
+    "Desc": "不世宝典——《神女绝音》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《神女绝音》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 153,
+    "Name": "《十杀魔罗录》",
+    "Desc": "不世宝典——《十杀魔罗录》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《十杀魔罗录》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 154,
+    "Name": "《天通神术》",
+    "Desc": "不世宝典——《天通神术》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《天通神术》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 155,
+    "Name": "《无名剑典》",
+    "Desc": "不世宝典——《无名剑典》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《无名剑典》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 156,
+    "Name": "《无先玄元书》",
+    "Desc": "不世宝典——《无先玄元书》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《无先玄元书》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 157,
+    "Name": "《象龙演画》",
+    "Desc": "不世宝典——《象龙演画》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《象龙演画》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 158,
+    "Name": "《心观残笺》",
+    "Desc": "不世宝典——《心观残笺》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "DescFull": "不世宝典——《心观残笺》——已被发现！武林当中正邪各派的高手正逐渐聚集于此，一场大战在所难免！究竟谁能技压群豪，夺得宝典？",
+    "Type": 17,
+    "TypeName": "奇书宝典",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 159,
+    "Name": "长生之死",
+    "Desc": "时有传言，听闻空桑山深处，曾见青烟缭绕……",
+    "DescFull": "时有传言，听闻空桑山深处，曾见青烟缭绕……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 160,
+    "Name": "疑梦相悲",
+    "Desc": "心生疑窦，悲梦寥落，太吾村中，怪事频发，真相似已水落石出；却在此时，姬穸不告而别，只得一路循迹而去，问其究竟……",
+    "DescFull": "心生疑窦，悲梦寥落，太吾村中，怪事频发，真相似已水落石出；却在此时，姬穸不告而别，只得一路循迹而去，问其究竟……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 161,
+    "Name": "古经迷踪",
+    "Desc": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "DescFull": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 162,
+    "Name": "跳盘王",
+    "Desc": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "DescFull": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 3,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 163,
+    "Name": "诡事悬谜·一",
+    "Desc": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "DescFull": "近日太吾村中，诡事频发，夜半怪声，阴森骇人，真相为何，或当一探究竟……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 164,
+    "Name": "彩缕撩乱晴空，鼓乐彭彭魄魄，远处身着盛装的男女们正高歌盘王曲，齐跳盘王舞……",
+    "Desc": "诡事悬谜·三",
+    "DescFull": "诡事悬谜·三",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 3,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 165,
+    "Name": "占位",
+    "Desc": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "DescFull": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 166,
+    "Name": "三才绝魔大阵",
+    "Desc": "剑指苍穹，卓竖莹莹明月现，刀向绝巘，横挥凛凛清风生。大元山巅，千名元山弟子列阵以待，三才绝魔大阵开启在即！",
+    "DescFull": "剑指苍穹，卓竖莹莹明月现，刀向绝巘，横挥凛凛清风生。大元山巅，千名元山弟子列阵以待，三才绝魔大阵开启在即！",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 167,
+    "Name": "一明幻境·三",
+    "Desc": "一明幻境·一",
+    "DescFull": "一明幻境·一",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 168,
+    "Name": "峨眉山中，危崖笔立，常人若失足掉落，非死也残……\n\n至于崖底风物，因一直少人行径，虽有种种传闻，却难辨真假……",
+    "Desc": "剑指苍穹，卓竖莹莹明月现，刀向绝巘，横挥凛凛清风生。大元山巅，千名元山弟子列阵以待，三才绝魔大阵开启在即！",
+    "DescFull": "剑指苍穹，卓竖莹莹明月现，刀向绝巘，横挥凛凛清风生。大元山巅，千名元山弟子列阵以待，三才绝魔大阵开启在即！",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 4,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 169,
+    "Name": "手足俱全",
+    "Desc": "四关藏神机，五脏作巧枢。此番青铜组件搜集齐全，铜生自可拼凑成形……",
+    "DescFull": "四关藏神机，五脏作巧枢。此番青铜组件搜集齐全，铜生自可拼凑成形……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 170,
+    "Name": "三魔交涉",
+    "Desc": "暂无简介",
+    "DescFull": "暂无简介",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 171,
+    "Name": "乡村怪病",
+    "Desc": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "DescFull": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 172,
+    "Name": "星陨坠火",
+    "Desc": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "DescFull": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 173,
+    "Name": "一明幻境·二",
+    "Desc": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "DescFull": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 174,
+    "Name": "璇女峰顶，一明珏旁。只见镜中山水化境，烟云幻形，似有太虚之景，缥缈灵动。若是再入镜中，不知能否探得昔日师姐投水真相……",
+    "Desc": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "DescFull": "赤明岛上天火息止，疑有星陨坠落，满地散落奇异的七彩琉璃，无不异彩奇辉，光鲜瑰异。不知真龙是否已然降世，藏身其中……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 175,
+    "Name": "崖底仙踪",
+    "Desc": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "DescFull": "本为怡然乡野，如今村舍紧闭，传有诡奇疫病肆虐此地，染病之人药石无医，一时之间，村中人人自危……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 4,
+    "LifeSkillDifficulty": 4,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 176,
+    "Name": "三宗比武",
+    "Desc": "时隔多年，三宗比武于然山再次举办……",
+    "DescFull": "时隔多年，三宗比武于然山再次举办……\n一众弟子斋沐盥漱，严整衣冠，静候门中前辈到场。",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 177,
+    "Name": "镜里孤鸾",
+    "Desc": "峨峨山雪，旧事深藏，神秘人在此处写就《孤鸾镜水谣》，却不知可有昔日传闻，遗落璇女峰中……",
+    "DescFull": "峨峨山雪，旧事深藏，神秘人在此处写就《孤鸾镜水谣》，却不知可有昔日传闻，遗落璇女峰中……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 3,
+    "LifeSkillDifficulty": 3,
+    "TimeCost": 0
+   },
+   {
+    "TemplateId": 178,
+    "Name": "身心交病",
+    "Desc": "游说三魔",
+    "DescFull": "游说三魔",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 5,
+    "LifeSkillDifficulty": 5,
+    "TimeCost": 6
+   },
+   {
+    "TemplateId": 179,
+    "Name": "何为正宗",
+    "Desc": "峨眉派“正宗武学之争”愈演愈烈，门人之间厮杀争斗，已是寻常景象……",
+    "DescFull": "峨眉派“正宗武学之争”愈演愈烈，门人之间厮杀争斗，已是寻常景象……\n当前白猿生死未卜，石候酒一手遮天，太吾传人若不早日做出决断，恐怕会终身遗恨……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 180,
+    "Name": "枯木寒鸦，野草芊芊。\n\n一处幽幽古刹深藏山中，只余庙前古柏残枿，阶满尘埃，早已梵音不再，荒凉特甚。传言古刹之内，妖魔鬼怪盘踞不去，秽气满溢，邪事频生，凡来往此地者，皆是万死无归……",
+    "Desc": "诡事悬谜·二",
+    "DescFull": "诡事悬谜·二",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 181,
+    "Name": "五圣心毒",
+    "Desc": "五仙教血迹蔓延，腥气扑鼻，不知何故……",
+    "DescFull": "五仙教血迹蔓延，腥气扑鼻，不知何故……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 182,
+    "Name": "幽墓昔人",
+    "Desc": "血光奇诡之处，草木森郁，虫蚁不生，细探竟有一处隐秘古墓，所在之地死气氤氲，天昏地暗……",
+    "DescFull": "血光奇诡之处，草木森郁，虫蚁不生，细探竟有一处隐秘古墓，所在之地死气氤氲，天昏地暗……\n如今墓穴门开，阴风阵阵，红衣老人之身影，正是消失此处……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 183,
+    "Name": "祭星典",
+    "Desc": "星月皎洁，明河在天，身着盛装的男女们于星河之下载歌载舞，酣饮尽欢……",
+    "DescFull": "星月皎洁，明河在天，身着盛装的男女们于星河之下载歌载舞，酣饮尽欢……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 2,
+    "LifeSkillDifficulty": 2,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 184,
+    "Name": "青琅一梦",
+    "Desc": "氤氲然山，扑朔迷离，三宗比武，青琅仙阁，一切自有分晓……",
+    "DescFull": "氤氲然山，扑朔迷离，三宗比武，青琅仙阁，一切自有分晓……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 185,
+    "Name": "五仙异变",
+    "Desc": "不知何故，五仙教血迹蔓延，腥气扑鼻，苗人尸体横陈，触目惊心……",
+    "DescFull": "不知何故，五仙教血迹蔓延，腥气扑鼻，苗人尸体横陈，触目惊心……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 186,
+    "Name": "起死回生",
+    "Desc": "",
+    "DescFull": "",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 187,
+    "Name": "黑白踪影",
+    "Desc": "",
+    "DescFull": "",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 7,
+    "LifeSkillDifficulty": 7,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 188,
+    "Name": "奇人疑踪",
+    "Desc": "",
+    "DescFull": "",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 8,
+    "LifeSkillDifficulty": 8,
+    "TimeCost": 5
+   },
+   {
+    "TemplateId": 189,
+    "Name": "邪魔现身",
+    "Desc": "决战奇人",
+    "DescFull": "决战奇人",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 9,
+    "LifeSkillDifficulty": 9,
+    "TimeCost": 10
+   },
+   {
+    "TemplateId": 190,
+    "Name": "敌潜伏龙",
+    "Desc": "伏龙坛内外寂静非常，四周更是不见人影，只怕伏龙坛中已然生变。眼下探清真相，刻不容缓！",
+    "DescFull": "伏龙坛内外寂静非常，四周更是不见人影，只怕伏龙坛中已然生变。眼下探清真相，刻不容缓！",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 191,
+    "Name": "祭龙盛典",
+    "Desc": "为祈愿真龙降世，伏龙坛中群情鼎沸，正热火朝天地筹备祭龙盛典，一时锣鼓喧天，一派欢欣踊跃……",
+    "DescFull": "为祈愿真龙降世，伏龙坛中群情鼎沸，正热火朝天地筹备祭龙盛典，一时锣鼓喧天，一派欢欣踊跃……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 192,
+    "Name": "心命之争",
+    "Desc": "暂无",
+    "DescFull": "暂无",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 193,
+    "Name": "狮相绝艺",
+    "Desc": "狮相门正在举办一场“秘密绝艺”比试，场外戒备森严，常人难以轻易进入……",
+    "DescFull": "狮相门正在举办一场“秘密绝艺”比试，场外戒备森严，常人难以轻易进入……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 15
+   },
+   {
+    "TemplateId": 194,
+    "Name": "试剑大典",
+    "Desc": "月明星稀，炉火还明。试剑大典已然召开，是非成败，传承延续，皆在此举……",
+    "DescFull": "月明星稀，炉火还明。试剑大典已然召开，是非成败，传承延续，皆在此举……",
+    "Type": 2,
+    "TypeName": "地区故事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 3
+   },
+   {
+    "TemplateId": 195,
+    "Name": "复生之人",
+    "Desc": "那位“复生之人”果然还是回到了太吾村，却只是遥望村中，既不移，也不动，似乎只是在等待“太吾”来此。",
+    "DescFull": "那位“复生之人”果然还是回到了太吾村，却只是遥望村中，既不移，也不动，似乎只是在等待“太吾”来此。",
+    "Type": 3,
+    "TypeName": "奇缘趣事",
+    "CombatDifficulty": 1,
+    "LifeSkillDifficulty": 1,
+    "TimeCost": 10
+   }
+  ]
+ },
+ "AdventureTerrain": {
+  "title": "奇遇地形",
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "未知",
+    "Desc": "未知之地……",
+    "DescFull": "未知之地……"
+   },
+   {
+    "TemplateId": 1,
+    "Name": "山岭",
+    "Desc": "此处高山连而不绝，山脊延绵不断，横看成岭侧成峰。",
+    "DescFull": "此处高山连而不绝，山脊延绵不断，横看成岭侧成峰。"
+   },
+   {
+    "TemplateId": 2,
+    "Name": "峡谷",
+    "Desc": "峡谷两岸峭壁横立，争相崛起，十分雄奇巍峨，谷内道路陡峻，车马难以穿行。",
+    "DescFull": "峡谷两岸峭壁横立，争相崛起，十分雄奇巍峨，谷内道路陡峻，车马难以穿行。"
+   },
+   {
+    "TemplateId": 3,
+    "Name": "洞穴",
+    "Desc": "地面、悬崖、峭壁等处天然形成的洞穴，其中甬道狭小，仅容一人弯躯侧身通行。",
+    "DescFull": "地面、悬崖、峭壁等处天然形成的洞穴，其中甬道狭小，仅容一人弯躯侧身通行。"
+   },
+   {
+    "TemplateId": 4,
+    "Name": "江河",
+    "Desc": "江河水质混浊，多有泥沙沉积，其水道横贯东西，纵连南北，甚至涉达万里。",
+    "DescFull": "江河水质混浊，多有泥沙沉积，其水道横贯东西，纵连南北，甚至涉达万里。"
+   },
+   {
+    "TemplateId": 5,
+    "Name": "湖泊",
+    "Desc": "湖泊水质清澈，水流平缓，其中生长有诸多水草、鱼虾等活物。",
+    "DescFull": "湖泊水质清澈，水流平缓，其中生长有诸多水草、鱼虾等活物。"
+   },
+   {
+    "TemplateId": 6,
+    "Name": "潭泽",
+    "Desc": "潭泽水质澄澈，狭小而深，观之幽暗隐秘，其中生长着少量鱼虾。",
+    "DescFull": "潭泽水质澄澈，狭小而深，观之幽暗隐秘，其中生长着少量鱼虾。"
+   },
+   {
+    "TemplateId": 7,
+    "Name": "茅庐",
+    "Desc": "普通的茅庐，以茅草、竹篾、草泥简易搭置而成，仅作遮风避雨之用。",
+    "DescFull": "普通的茅庐，以茅草、竹篾、草泥简易搭置而成，仅作遮风避雨之用。"
+   },
+   {
+    "TemplateId": 8,
+    "Name": "乡村",
+    "Desc": "数户人家形成的聚落。居民日出而作，日落而息，以耕织、渔猎为生。",
+    "DescFull": "数户人家形成的聚落。居民日出而作，日落而息，以耕织、渔猎为生。"
+   },
+   {
+    "TemplateId": 9,
+    "Name": "镇集",
+    "Desc": "人口众多的集市。镇中定时举办集会，四周货物往来频繁，更有诸多杂耍之戏、聚会之所。",
+    "DescFull": "人口众多的集市。镇中定时举办集会，四周货物往来频繁，更有诸多杂耍之戏、聚会之所。"
+   },
+   {
+    "TemplateId": 10,
+    "Name": "花海",
+    "Desc": "遍布花卉的草地。其间百花盛开，宛如海洋，色彩缤纷，因时而变，香飘十里，常见蜂蝶翩飞。",
+    "DescFull": "遍布花卉的草地。其间百花盛开，宛如海洋，色彩缤纷，因时而变，香飘十里，常见蜂蝶翩飞。"
+   },
+   {
+    "TemplateId": 11,
+    "Name": "树林",
+    "Desc": "树木丛聚的土地。其间有乔木、灌木，枝叶繁茂，凉风习习，树果香甜，高枝可栖，常见鸟兽在此觅食。",
+    "DescFull": "树木丛聚的土地。其间有乔木、灌木，枝叶繁茂，凉风习习，树果香甜，高枝可栖，常见鸟兽在此觅食。"
+   },
+   {
+    "TemplateId": 12,
+    "Name": "林野",
+    "Desc": "零星散布着草木的原野。地势开阔，青碧连绵，常有飞禽走兽暂歇于此。",
+    "DescFull": "零星散布着草木的原野。地势开阔，青碧连绵，常有飞禽走兽暂歇于此。"
+   },
+   {
+    "TemplateId": 13,
+    "Name": "营寨",
+    "Desc": "武人驻扎之地。由栅栏、围墙等物围成，具有一定的防守之力。",
+    "DescFull": "武人驻扎之地。由栅栏、围墙等物围成，具有一定的防守之力。"
+   },
+   {
+    "TemplateId": 14,
+    "Name": "庙宇",
+    "Desc": "普通的寺庙，多为附近居民捐献而成，其中供奉有佛祖、菩萨、天王、罗汉等塑像。",
+    "DescFull": "普通的寺庙，多为附近居民捐献而成，其中供奉有佛祖、菩萨、天王、罗汉等塑像。"
+   },
+   {
+    "TemplateId": 15,
+    "Name": "道观",
+    "Desc": "道士修道之所，或用以供奉道家神仙祖师，有玄妙，常受百姓参拜祈福。",
+    "DescFull": "道士修道之所，或用以供奉道家神仙祖师，有玄妙，常受百姓参拜祈福。"
+   },
+   {
+    "TemplateId": 16,
+    "Name": "古迹",
+    "Desc": "古代遗留下来的建筑或地址。可从中窥得古人生存过的痕迹，也可能寻获少许遗留的珍奇古物。",
+    "DescFull": "古代遗留下来的建筑或地址。可从中窥得古人生存过的痕迹，也可能寻获少许遗留的珍奇古物。"
+   },
+   {
+    "TemplateId": 17,
+    "Name": "荒野",
+    "Desc": "荒凉的野外，空旷开阔。其土地贫瘠，少许草木鸟兽在此艰难生长，而人迹罕至。",
+    "DescFull": "荒凉的野外，空旷开阔。其土地贫瘠，少许草木鸟兽在此艰难生长，而人迹罕至。"
+   },
+   {
+    "TemplateId": 18,
+    "Name": "废墟",
+    "Desc": "不知此地曾经发生过什么，曾经的建筑如今化为一堆废墟，再无法使用，只有天空盘旋的乌鸦作伴。",
+    "DescFull": "不知此地曾经发生过什么，曾经的建筑如今化为一堆废墟，再无法使用，只有天空盘旋的乌鸦作伴。"
+   },
+   {
+    "TemplateId": 19,
+    "Name": "沙漠",
+    "Desc": "沙漠中寸草不生，尽是无边无际的黄沙，若无准备，难以在其中通行，不过偶尔也能遇到水草丰美的绿洲。",
+    "DescFull": "沙漠中寸草不生，尽是无边无际的黄沙，若无准备，难以在其中通行，不过偶尔也能遇到水草丰美的绿洲。"
+   },
+   {
+    "TemplateId": 20,
+    "Name": "古墓",
+    "Desc": "前人留下的隐秘古墓，除了骸骨之外，还可能藏有机关、秘密、宝藏。",
+    "DescFull": "前人留下的隐秘古墓，除了骸骨之外，还可能藏有机关、秘密、宝藏。"
+   },
+   {
+    "TemplateId": 21,
+    "Name": "绝壁",
+    "Desc": "极为陡峭高耸的山崖，几乎没有攀援的可能，崖壁之上偶尔生长有奇松异柏，风景独特。",
+    "DescFull": "极为陡峭高耸的山崖，几乎没有攀援的可能，崖壁之上偶尔生长有奇松异柏，风景独特。"
+   },
+   {
+    "TemplateId": 22,
+    "Name": "深渊",
+    "Desc": "看不见底的幽邃深渊，无人敢一探究竟，因此无人知晓其中究竟有何种危险。",
+    "DescFull": "看不见底的幽邃深渊，无人敢一探究竟，因此无人知晓其中究竟有何种危险。"
+   }
+  ],
+  "count": 23
+ },
+ "TravelingEvent": {
+  "title": "行旅遭遇",
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "京畿材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于京畿，助镖队通关过隘，获赠{1}…",
+    "DescFull": "{0}于京畿，助镖队通关过隘，获赠{1}…"
+   },
+   {
+    "TemplateId": 1,
+    "Name": "巴蜀材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于巴蜀，助樵人砍柴植树，获赠{1}…",
+    "DescFull": "{0}于巴蜀，助樵人砍柴植树，获赠{1}…"
+   },
+   {
+    "TemplateId": 2,
+    "Name": "广南材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于广南，助土医摘草寻药，获赠{1}…",
+    "DescFull": "{0}于广南，助土医摘草寻药，获赠{1}…"
+   },
+   {
+    "TemplateId": 3,
+    "Name": "荆北材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于荆北，助篾匠劈竹伐藤，获赠{1}…",
+    "DescFull": "{0}于荆北，助篾匠劈竹伐藤，获赠{1}…"
+   },
+   {
+    "TemplateId": 4,
+    "Name": "山西材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于山西，助农户烹肉炊食，获赠{1}…",
+    "DescFull": "{0}于山西，助农户烹肉炊食，获赠{1}…"
+   },
+   {
+    "TemplateId": 5,
+    "Name": "广东材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于广东，助石工搬运凿磨，获赠{1}…",
+    "DescFull": "{0}于广东，助石工搬运凿磨，获赠{1}…"
+   },
+   {
+    "TemplateId": 6,
+    "Name": "山东材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于山东，助织女挑花结本，获赠{1}…",
+    "DescFull": "{0}于山东，助织女挑花结本，获赠{1}…"
+   },
+   {
+    "TemplateId": 7,
+    "Name": "荆南材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于荆南，助采者踏水捞玉，获赠{1}…",
+    "DescFull": "{0}于荆南，助采者踏水捞玉，获赠{1}…"
+   },
+   {
+    "TemplateId": 8,
+    "Name": "福建材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于福建，助铁匠锻石冶铁，获赠{1}…",
+    "DescFull": "{0}于福建，助铁匠锻石冶铁，获赠{1}…"
+   },
+   {
+    "TemplateId": 9,
+    "Name": "辽东材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于辽东，助怪医寻珍觅药，获赠{1}…",
+    "DescFull": "{0}于辽东，助怪医寻珍觅药，获赠{1}…"
+   },
+   {
+    "TemplateId": 10,
+    "Name": "西域材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于西域，助牧人采毛鞣皮，获赠{1}…",
+    "DescFull": "{0}于西域，助牧人采毛鞣皮，获赠{1}…"
+   },
+   {
+    "TemplateId": 11,
+    "Name": "云南材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于云南，助乌蛮探寻毒蛊，获赠{1}…",
+    "DescFull": "{0}于云南，助乌蛮探寻毒蛊，获赠{1}…"
+   },
+   {
+    "TemplateId": 12,
+    "Name": "淮南材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于淮南，助隐者看田护园，获赠{1}…",
+    "DescFull": "{0}于淮南，助隐者看田护园，获赠{1}…"
+   },
+   {
+    "TemplateId": 13,
+    "Name": "江南材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于江南，助渔家摆渡摇橹，获赠{1}…",
+    "DescFull": "{0}于江南，助渔家摆渡摇橹，获赠{1}…"
+   },
+   {
+    "TemplateId": 14,
+    "Name": "江北材料",
+    "Type": "AreaMaterial",
+    "Desc": "{0}于江北，助异士掘地寻宝，获赠{1}…",
+    "DescFull": "{0}于江北，助异士掘地寻宝，获赠{1}…"
+   },
+   {
+    "TemplateId": 15,
+    "Name": "京畿资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 16,
+    "Name": "巴蜀资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 17,
+    "Name": "广南资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 18,
+    "Name": "荆北资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 19,
+    "Name": "山西资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 20,
+    "Name": "广东资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 21,
+    "Name": "山东资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 22,
+    "Name": "荆南资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 23,
+    "Name": "福建资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 24,
+    "Name": "辽东资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 25,
+    "Name": "西域资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 26,
+    "Name": "云南资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 27,
+    "Name": "淮南资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 28,
+    "Name": "江南资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 29,
+    "Name": "江北资源",
+    "Type": "AreaResource",
+    "Desc": "路过物产丰富的所在，获得了{1}{2}…",
+    "DescFull": "路过物产丰富的所在，获得了{1}{2}…"
+   },
+   {
+    "TemplateId": 30,
+    "Name": "京畿食物",
+    "Type": "AreaFood",
+    "Desc": "京畿美食融汇四方，{0}路过此地，获赠{1}…",
+    "DescFull": "京畿美食融汇四方，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 31,
+    "Name": "巴蜀食物",
+    "Type": "AreaFood",
+    "Desc": "蜀地滋味尤好辛香，{0}路过此地，获赠{1}…",
+    "DescFull": "蜀地滋味尤好辛香，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 32,
+    "Name": "广南食物",
+    "Type": "AreaFood",
+    "Desc": "广南饮食以稻为主，{0}路过此地，获赠{1}…",
+    "DescFull": "广南饮食以稻为主，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 33,
+    "Name": "荆北食物",
+    "Type": "AreaFood",
+    "Desc": "荆北常以熬煮为食，{0}路过此地，获赠{1}…",
+    "DescFull": "荆北常以熬煮为食，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 34,
+    "Name": "山西食物",
+    "Type": "AreaFood",
+    "Desc": "山西五谷食之宜人，{0}路过此地，获赠{1}…",
+    "DescFull": "山西五谷食之宜人，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 35,
+    "Name": "广东食物",
+    "Type": "AreaFood",
+    "Desc": "广东四季瓜果繁多，{0}路过此地，获赠{1}…",
+    "DescFull": "广东四季瓜果繁多，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 36,
+    "Name": "山东食物",
+    "Type": "AreaFood",
+    "Desc": "山东旧时多产贡果，{0}路过此地，获赠{1}…",
+    "DescFull": "山东旧时多产贡果，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 37,
+    "Name": "荆南食物",
+    "Type": "AreaFood",
+    "Desc": "荆南百姓喜食鱼肉，{0}路过此地，获赠{1}…",
+    "DescFull": "荆南百姓喜食鱼肉，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 38,
+    "Name": "福建食物",
+    "Type": "AreaFood",
+    "Desc": "福建滨海多恃鱼盐，{0}路过此地，获赠{1}…",
+    "DescFull": "福建滨海多恃鱼盐，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 39,
+    "Name": "辽东食物",
+    "Type": "AreaFood",
+    "Desc": "辽东善骑射喜食肉，{0}路过此地，获赠{1}…",
+    "DescFull": "辽东善骑射喜食肉，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 40,
+    "Name": "西域食物",
+    "Type": "AreaFood",
+    "Desc": "西域喜食牛羊酥酪，{0}路过此地，获赠{1}…",
+    "DescFull": "西域喜食牛羊酥酪，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 41,
+    "Name": "云南食物",
+    "Type": "AreaFood",
+    "Desc": "云南林中常植芳果，{0}路过此地，获赠{1}…",
+    "DescFull": "云南林中常植芳果，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 42,
+    "Name": "淮南食物",
+    "Type": "AreaFood",
+    "Desc": "淮南盛产豆腐等物，{0}路过此地，获赠{1}…",
+    "DescFull": "淮南盛产豆腐等物，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 43,
+    "Name": "江南食物",
+    "Type": "AreaFood",
+    "Desc": "江南素称鱼米之乡，{0}路过此地，获赠{1}…",
+    "DescFull": "江南素称鱼米之乡，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 44,
+    "Name": "江北食物",
+    "Type": "AreaFood",
+    "Desc": "淮扬受誉食精脍细，{0}路过此地，获赠{1}…",
+    "DescFull": "淮扬受誉食精脍细，{0}路过此地，获赠{1}…"
+   },
+   {
+    "TemplateId": 45,
+    "Name": "疗愈外伤",
+    "Type": "Heal",
+    "Desc": "路遇药泉，治愈了{1}点外伤…",
+    "DescFull": "路遇药泉，治愈了{1}点外伤…"
+   },
+   {
+    "TemplateId": 46,
+    "Name": "疗愈内伤",
+    "Type": "Heal",
+    "Desc": "路遇药泉，治愈了{1}点内伤…",
+    "DescFull": "路遇药泉，治愈了{1}点内伤…"
+   },
+   {
+    "TemplateId": 47,
+    "Name": "驱毒",
+    "Type": "Heal",
+    "Desc": "路遇药泉，体内的{1}减轻了…",
+    "DescFull": "路遇药泉，体内的{1}减轻了…"
+   },
+   {
+    "TemplateId": 48,
+    "Name": "内息",
+    "Type": "Heal",
+    "Desc": "遇空旷山谷，呼引清气，内息得以调整…",
+    "DescFull": "遇空旷山谷，呼引清气，内息得以调整…"
+   },
+   {
+    "TemplateId": 49,
+    "Name": "健康",
+    "Type": "Heal",
+    "Desc": "遇洞天福地，感应天人，健康得以恢复…",
+    "DescFull": "遇洞天福地，感应天人，健康得以恢复…"
+   },
+   {
+    "TemplateId": 50,
+    "Name": "亲友资源",
+    "Type": "CharacterGiftResource",
+    "Desc": "路经{1}时，受到{2}的招待，并获赠{3}{4}…",
+    "DescFull": "路经{1}时，受到{2}的招待，并获赠{3}{4}…"
+   },
+   {
+    "TemplateId": 51,
+    "Name": "亲友食物",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，受到{2}的招待，并获赠{3}…",
+    "DescFull": "路经{1}时，受到{2}的招待，并获赠{3}…"
+   },
+   {
+    "TemplateId": 52,
+    "Name": "亲友茶酒",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，受到{2}的招待，并获赠{3}…",
+    "DescFull": "路经{1}时，受到{2}的招待，并获赠{3}…"
+   },
+   {
+    "TemplateId": 53,
+    "Name": "亲友药品",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，{2}见{0}身有伤病，赠送{3}助其疗愈…",
+    "DescFull": "路经{1}时，{2}见{0}身有伤病，赠送{3}助其疗愈…"
+   },
+   {
+    "TemplateId": 54,
+    "Name": "人物资源",
+    "Type": "CharacterGiftResource",
+    "Desc": "路经{1}时，受到{2}的接待，并获赠{3}{4}…",
+    "DescFull": "路经{1}时，受到{2}的接待，并获赠{3}{4}…"
+   },
+   {
+    "TemplateId": 55,
+    "Name": "人物食物",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，受到{2}的接待，并获赠{3}…",
+    "DescFull": "路经{1}时，受到{2}的接待，并获赠{3}…"
+   },
+   {
+    "TemplateId": 56,
+    "Name": "人物茶酒",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，受到{2}的接待，并获赠{3}…",
+    "DescFull": "路经{1}时，受到{2}的接待，并获赠{3}…"
+   },
+   {
+    "TemplateId": 57,
+    "Name": "人物药品",
+    "Type": "CharacterGiftItem",
+    "Desc": "路经{1}时，{2}见{0}身有伤病，赠送{3}助其疗愈…",
+    "DescFull": "路经{1}时，{2}见{0}身有伤病，赠送{3}助其疗愈…"
+   },
+   {
+    "TemplateId": 58,
+    "Name": "恢复膂力",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}祛浊壮骨，恢复了{2}点膂力…",
+    "DescFull": "在{1}祛浊壮骨，恢复了{2}点膂力…"
+   },
+   {
+    "TemplateId": 59,
+    "Name": "恢复灵敏",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}观风听雨，恢复了{2}点灵敏…",
+    "DescFull": "在{1}观风听雨，恢复了{2}点灵敏…"
+   },
+   {
+    "TemplateId": 60,
+    "Name": "恢复定力",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}宁神静坐，恢复了{2}点定力…",
+    "DescFull": "在{1}宁神静坐，恢复了{2}点定力…"
+   },
+   {
+    "TemplateId": 61,
+    "Name": "恢复体质",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}舒展筋骨，恢复了{2}点体质…",
+    "DescFull": "在{1}舒展筋骨，恢复了{2}点体质…"
+   },
+   {
+    "TemplateId": 62,
+    "Name": "恢复根骨",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}吸风饮露，恢复了{2}点根骨…",
+    "DescFull": "在{1}吸风饮露，恢复了{2}点根骨…"
+   },
+   {
+    "TemplateId": 63,
+    "Name": "恢复悟性",
+    "Type": "AttributeRegen",
+    "Desc": "在{1}感灵悟道，恢复了{2}点悟性…",
+    "DescFull": "在{1}感灵悟道，恢复了{2}点悟性…"
+   },
+   {
+    "TemplateId": 64,
+    "Name": "互动友好",
+    "Type": "Notification",
+    "Desc": "在{1}偶遇{2}，二人相谈甚欢…",
+    "DescFull": "在{1}偶遇{2}，二人相谈甚欢…"
+   },
+   {
+    "TemplateId": 65,
+    "Name": "互动一般",
+    "Type": "Notification",
+    "Desc": "在{1}偶遇{2}，二人有所交流…",
+    "DescFull": "在{1}偶遇{2}，二人有所交流…"
+   },
+   {
+    "TemplateId": 66,
+    "Name": "互动不和",
+    "Type": "Notification",
+    "Desc": "在{1}偶遇{2}，二人不欢而散…",
+    "DescFull": "在{1}偶遇{2}，二人不欢而散…"
+   },
+   {
+    "TemplateId": 67,
+    "Name": "互动无视",
+    "Type": "Notification",
+    "Desc": "在{1}偶遇{2}，但并未与之交流…",
+    "DescFull": "在{1}偶遇{2}，但并未与之交流…"
+   },
+   {
+    "TemplateId": 68,
+    "Name": "京畿成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}举办斋会，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}举办斋会，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 69,
+    "Name": "巴蜀成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}疏浚河道，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}疏浚河道，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 70,
+    "Name": "广南成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}奏独弦琴，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}奏独弦琴，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 71,
+    "Name": "荆北成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}修缮城墙，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}修缮城墙，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 72,
+    "Name": "山西成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}祭祀祈福，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}祭祀祈福，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 73,
+    "Name": "广东成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}探查海域，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}探查海域，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 74,
+    "Name": "山东成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}破解棋局，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}破解棋局，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 75,
+    "Name": "荆南成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}记录胜景，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}记录胜景，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 76,
+    "Name": "福建成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}立棚施粥，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}立棚施粥，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 77,
+    "Name": "辽东成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}举办骑射，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}举办骑射，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 78,
+    "Name": "西域成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}建窟立佛，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}建窟立佛，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 79,
+    "Name": "云南成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}沟通部落，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}沟通部落，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 80,
+    "Name": "淮南成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}立碑题字，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}立碑题字，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 81,
+    "Name": "江南成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}建造货栈，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}建造货栈，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 82,
+    "Name": "江北成功",
+    "Type": "Notification",
+    "Desc": "消耗{2}帮助{1}装点画舫，获得了{3}地区恩义…",
+    "DescFull": "消耗{2}帮助{1}装点画舫，获得了{3}地区恩义…"
+   },
+   {
+    "TemplateId": 83,
+    "Name": "地区无视",
+    "Type": "Notification",
+    "Desc": "匆匆经过，并未参与{1}的活动…",
+    "DescFull": "匆匆经过，并未参与{1}的活动…"
+   },
+   {
+    "TemplateId": 84,
+    "Name": "战斗大胜",
+    "Type": "Notification",
+    "Desc": "与{1}一战大获全胜…",
+    "DescFull": "与{1}一战大获全胜…"
+   },
+   {
+    "TemplateId": 85,
+    "Name": "战斗取胜",
+    "Type": "Notification",
+    "Desc": "与{1}一战获胜，有所损伤…",
+    "DescFull": "与{1}一战获胜，有所损伤…"
+   },
+   {
+    "TemplateId": 86,
+    "Name": "战斗落败",
+    "Type": "Notification",
+    "Desc": "与{1}一战落败，遭受损伤…",
+    "DescFull": "与{1}一战落败，遭受损伤…"
+   },
+   {
+    "TemplateId": 87,
+    "Name": "接受同道",
+    "Type": "Notification",
+    "Desc": "接受{1}的引荐，令{2}加入了太吾村…",
+    "DescFull": "接受{1}的引荐，令{2}加入了太吾村…"
+   },
+   {
+    "TemplateId": 88,
+    "Name": "拒绝同道",
+    "Type": "Notification",
+    "Desc": "婉言拒绝{1}的引荐…",
+    "DescFull": "婉言拒绝{1}的引荐…"
+   },
+   {
+    "TemplateId": 89,
+    "Name": "忽略同道",
+    "Type": "Notification",
+    "Desc": "并未留意{1}的引荐…",
+    "DescFull": "并未留意{1}的引荐…"
+   },
+   {
+    "TemplateId": 90,
+    "Name": "膂力帮助",
+    "Type": "Notification",
+    "Desc": "搬运山石，获得了{1}历练…",
+    "DescFull": "搬运山石，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 91,
+    "Name": "灵敏帮助",
+    "Type": "Notification",
+    "Desc": "排除凶险，获得了{1}历练…",
+    "DescFull": "排除凶险，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 92,
+    "Name": "定力帮助",
+    "Type": "Notification",
+    "Desc": "解除迷阵，获得了{1}历练…",
+    "DescFull": "解除迷阵，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 93,
+    "Name": "体质帮助",
+    "Type": "Notification",
+    "Desc": "照顾难民，获得了{1}历练…",
+    "DescFull": "照顾难民，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 94,
+    "Name": "根骨帮助",
+    "Type": "Notification",
+    "Desc": "祭祀祈祷，获得了{1}历练…",
+    "DescFull": "祭祀祈祷，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 95,
+    "Name": "悟性帮助",
+    "Type": "Notification",
+    "Desc": "解读碑文，获得了{1}历练…",
+    "DescFull": "解读碑文，获得了{1}历练…"
+   },
+   {
+    "TemplateId": 96,
+    "Name": "未耗属性",
+    "Type": "Notification",
+    "Desc": "决定继续赶路…",
+    "DescFull": "决定继续赶路…"
+   },
+   {
+    "TemplateId": 97,
+    "Name": "绕道而行",
+    "Type": "Notification",
+    "Desc": "路遇坎坷，绕道而行，额外耗费了{1}时间…",
+    "DescFull": "路遇坎坷，绕道而行，额外耗费了{1}时间…"
+   },
+   {
+    "TemplateId": 98,
+    "Name": "无视坎坷",
+    "Type": "Notification",
+    "Desc": "路遇坎坷，坚持前行，{1}的耐久减少了…",
+    "DescFull": "路遇坎坷，坚持前行，{1}的耐久减少了…"
+   },
+   {
+    "TemplateId": 99,
+    "Name": "京畿互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}路过园林旧址，赏玩石山云水，偶遇{2}…",
+    "DescFull": "{0}路过园林旧址，赏玩石山云水，偶遇{2}…"
+   },
+   {
+    "TemplateId": 100,
+    "Name": "巴蜀互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}林中发现猫熊，观其憨态可掬，偶遇{2}…",
+    "DescFull": "{0}林中发现猫熊，观其憨态可掬，偶遇{2}…"
+   },
+   {
+    "TemplateId": 101,
+    "Name": "广南互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}恰逢歌圩之会，参与对唱山歌，偶遇{2}…",
+    "DescFull": "{0}恰逢歌圩之会，参与对唱山歌，偶遇{2}…"
+   },
+   {
+    "TemplateId": 102,
+    "Name": "荆北互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}山中寻访道观，险地四处求索，偶遇{2}…",
+    "DescFull": "{0}山中寻访道观，险地四处求索，偶遇{2}…"
+   },
+   {
+    "TemplateId": 103,
+    "Name": "山西互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}参观摩崖石窟，观其巍峨高峻，偶遇{2}…",
+    "DescFull": "{0}参观摩崖石窟，观其巍峨高峻，偶遇{2}…"
+   },
+   {
+    "TemplateId": 104,
+    "Name": "广东互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}恰逢渔民归家，观看舞草龙庆，偶遇{2}…",
+    "DescFull": "{0}恰逢渔民归家，观看舞草龙庆，偶遇{2}…"
+   },
+   {
+    "TemplateId": 105,
+    "Name": "山东互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}路过圣人故地，参拜先贤石像，偶遇{2}…",
+    "DescFull": "{0}路过圣人故地，参拜先贤石像，偶遇{2}…"
+   },
+   {
+    "TemplateId": 106,
+    "Name": "荆南互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}恰逢潇湘胜景，追思当地传说，偶遇{2}…",
+    "DescFull": "{0}恰逢潇湘胜景，追思当地传说，偶遇{2}…"
+   },
+   {
+    "TemplateId": 107,
+    "Name": "福建互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}参观旧日番船，思其构筑精妙，偶遇{2}…",
+    "DescFull": "{0}参观旧日番船，思其构筑精妙，偶遇{2}…"
+   },
+   {
+    "TemplateId": 108,
+    "Name": "辽东互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}路逢台堡墩营，循路参观长城，偶遇{2}…",
+    "DescFull": "{0}路逢台堡墩营，循路参观长城，偶遇{2}…"
+   },
+   {
+    "TemplateId": 109,
+    "Name": "西域互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}穿过广袤草原，亲近羊马鹿群，偶遇{2}…",
+    "DescFull": "{0}穿过广袤草原，亲近羊马鹿群，偶遇{2}…"
+   },
+   {
+    "TemplateId": 110,
+    "Name": "云南互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}夜闻芦笙歌曲，见人秉烛夜游，偶遇{2}…",
+    "DescFull": "{0}夜闻芦笙歌曲，见人秉烛夜游，偶遇{2}…"
+   },
+   {
+    "TemplateId": 111,
+    "Name": "淮南互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}观赏当地伎艺，围观花鼓琴书，偶遇{2}…",
+    "DescFull": "{0}观赏当地伎艺，围观花鼓琴书，偶遇{2}…"
+   },
+   {
+    "TemplateId": 112,
+    "Name": "江南互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}恰逢节庆游乐，品尝路边茶点，偶遇{2}…",
+    "DescFull": "{0}恰逢节庆游乐，品尝路边茶点，偶遇{2}…"
+   },
+   {
+    "TemplateId": 113,
+    "Name": "江北互动",
+    "Type": "AreaInteraction",
+    "Desc": "{0}路过南北码头，见人舍舟登陆，偶遇{2}…",
+    "DescFull": "{0}路过南北码头，见人舍舟登陆，偶遇{2}…"
+   },
+   {
+    "TemplateId": 114,
+    "Name": "京畿恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "京畿{1}欲举办斋会，布施百姓…",
+    "DescFull": "京畿{1}欲举办斋会，布施百姓…"
+   },
+   {
+    "TemplateId": 115,
+    "Name": "巴蜀恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "巴蜀{1}欲疏浚河道，以惠民生…",
+    "DescFull": "巴蜀{1}欲疏浚河道，以惠民生…"
+   },
+   {
+    "TemplateId": 116,
+    "Name": "广南恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "广南{1}欲弹奏匏琴，以传佳音…",
+    "DescFull": "广南{1}欲弹奏匏琴，以传佳音…"
+   },
+   {
+    "TemplateId": 117,
+    "Name": "荆北恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "荆北{1}欲修缮城墙，加强守备…",
+    "DescFull": "荆北{1}欲修缮城墙，加强守备…"
+   },
+   {
+    "TemplateId": 118,
+    "Name": "山西恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "山西{1}欲祭祀后土，祈求丰登…",
+    "DescFull": "山西{1}欲祭祀后土，祈求丰登…"
+   },
+   {
+    "TemplateId": 119,
+    "Name": "广东恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "广东{1}欲探查海域，以测天气…",
+    "DescFull": "广东{1}欲探查海域，以测天气…"
+   },
+   {
+    "TemplateId": 120,
+    "Name": "山东恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "山东{1}欲举办雅集，以效先贤…",
+    "DescFull": "山东{1}欲举办雅集，以效先贤…"
+   },
+   {
+    "TemplateId": 121,
+    "Name": "荆南恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "荆南{1}欲记览胜景，以传后世…",
+    "DescFull": "荆南{1}欲记览胜景，以传后世…"
+   },
+   {
+    "TemplateId": 122,
+    "Name": "福建恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "福建{1}欲立棚施粥，以养乞儿…",
+    "DescFull": "福建{1}欲立棚施粥，以养乞儿…"
+   },
+   {
+    "TemplateId": 123,
+    "Name": "辽东恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "辽东{1}将比赛骑射，欲引群兽…",
+    "DescFull": "辽东{1}将比赛骑射，欲引群兽…"
+   },
+   {
+    "TemplateId": 124,
+    "Name": "西域恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "西域{1}欲建窟立佛，供人告祷…",
+    "DescFull": "西域{1}欲建窟立佛，供人告祷…"
+   },
+   {
+    "TemplateId": 125,
+    "Name": "云南恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "云南{1}欲沟通部落，以求和睦…",
+    "DescFull": "云南{1}欲沟通部落，以求和睦…"
+   },
+   {
+    "TemplateId": 126,
+    "Name": "淮南恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "淮南{1}欲题文胜地，以显风雅…",
+    "DescFull": "淮南{1}欲题文胜地，以显风雅…"
+   },
+   {
+    "TemplateId": 127,
+    "Name": "江南恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "江南{1}欲建造邸店，赁与客旅…",
+    "DescFull": "江南{1}欲建造邸店，赁与客旅…"
+   },
+   {
+    "TemplateId": 128,
+    "Name": "江北恩义",
+    "Type": "SpiritualDebt",
+    "Desc": "江北{1}欲构造画舫，以取新意…",
+    "DescFull": "江北{1}欲构造画舫，以取新意…"
+   },
+   {
+    "TemplateId": 129,
+    "Name": "拜访少林",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见佛塔凭山而立，乃近少林派…",
+    "DescFull": "途经{1}，见佛塔凭山而立，乃近少林派…"
+   },
+   {
+    "TemplateId": 130,
+    "Name": "拜访峨眉",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见金顶祥光普照，乃近峨眉派…",
+    "DescFull": "途经{1}，见金顶祥光普照，乃近峨眉派…"
+   },
+   {
+    "TemplateId": 131,
+    "Name": "拜访百花",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见花海十色五光，乃近百花谷…",
+    "DescFull": "途经{1}，见花海十色五光，乃近百花谷…"
+   },
+   {
+    "TemplateId": 132,
+    "Name": "拜访武当",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见翠峰道观星列，乃近武当派…",
+    "DescFull": "途经{1}，见翠峰道观星列，乃近武当派…"
+   },
+   {
+    "TemplateId": 133,
+    "Name": "拜访元山",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见群山巍峨对峙，乃近元山派…",
+    "DescFull": "途经{1}，见群山巍峨对峙，乃近元山派…"
+   },
+   {
+    "TemplateId": 134,
+    "Name": "拜访狮相",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见殿堂石狮威武，乃近狮相门…",
+    "DescFull": "途经{1}，见殿堂石狮威武，乃近狮相门…"
+   },
+   {
+    "TemplateId": 135,
+    "Name": "拜访然山",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见山崖高阁矗立，乃近然山派…",
+    "DescFull": "途经{1}，见山崖高阁矗立，乃近然山派…"
+   },
+   {
+    "TemplateId": 136,
+    "Name": "拜访璇女",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见玉峰积冰飞雪，乃近璇女派…",
+    "DescFull": "途经{1}，见玉峰积冰飞雪，乃近璇女派…"
+   },
+   {
+    "TemplateId": 137,
+    "Name": "拜访铸剑",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见山中泉清水冽，乃近铸剑山庄…",
+    "DescFull": "途经{1}，见山中泉清水冽，乃近铸剑山庄…"
+   },
+   {
+    "TemplateId": 138,
+    "Name": "拜访空桑",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见晴山积雪如银，乃近空桑派…",
+    "DescFull": "途经{1}，见晴山积雪如银，乃近空桑派…"
+   },
+   {
+    "TemplateId": 139,
+    "Name": "拜访金刚",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见金柱屏峙四方，乃近无量金刚宗…",
+    "DescFull": "途经{1}，见金柱屏峙四方，乃近无量金刚宗…"
+   },
+   {
+    "TemplateId": 140,
+    "Name": "拜访五仙",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见山寨石多图腾，乃近五仙教…",
+    "DescFull": "途经{1}，见山寨石多图腾，乃近五仙教…"
+   },
+   {
+    "TemplateId": 141,
+    "Name": "拜访界青",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见悬崖深不见底，乃近界青门…",
+    "DescFull": "途经{1}，见悬崖深不见底，乃近界青门…"
+   },
+   {
+    "TemplateId": 142,
+    "Name": "拜访伏龙",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见海中火光映天，乃近伏龙坛…",
+    "DescFull": "途经{1}，见海中火光映天，乃近伏龙坛…"
+   },
+   {
+    "TemplateId": 143,
+    "Name": "拜访血犼",
+    "Type": "SectVisit",
+    "Desc": "途经{1}，见狭谷红雾弥漫，乃近血犼教…",
+    "DescFull": "途经{1}，见狭谷红雾弥漫，乃近血犼教…"
+   },
+   {
+    "TemplateId": 144,
+    "Name": "外道袭击",
+    "Type": "Combat",
+    "Desc": "途经险要之地，遭遇{1}袭击！",
+    "DescFull": "途经险要之地，遭遇{1}袭击！"
+   },
+   {
+    "TemplateId": 145,
+    "Name": "任侠袭击",
+    "Type": "Combat",
+    "Desc": "途经险要之地，遭遇{1}袭击！",
+    "DescFull": "途经险要之地，遭遇{1}袭击！"
+   },
+   {
+    "TemplateId": 146,
+    "Name": "爪牙袭击",
+    "Type": "Combat",
+    "Desc": "途经险要之地，遭遇{1}袭击！",
+    "DescFull": "途经险要之地，遭遇{1}袭击！"
+   },
+   {
+    "TemplateId": 147,
+    "Name": "少林袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 148,
+    "Name": "峨眉袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 149,
+    "Name": "百花袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 150,
+    "Name": "武当袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 151,
+    "Name": "元山袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}多行不义，恶名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 152,
+    "Name": "金刚袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 153,
+    "Name": "五仙袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 154,
+    "Name": "界青袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 155,
+    "Name": "伏龙袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 156,
+    "Name": "血犼袭击",
+    "Type": "SectCombat",
+    "Desc": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！",
+    "DescFull": "{0}除恶扬善，侠名远播，今日路遇{1}，正邪不能两立，于是大打出手！"
+   },
+   {
+    "TemplateId": 157,
+    "Name": "亲友同道",
+    "Type": "CharacterRecommendVillager",
+    "Desc": "路经{1}时，{2}推荐其好友{3}加入太吾村…",
+    "DescFull": "路经{1}时，{2}推荐其好友{3}加入太吾村…"
+   },
+   {
+    "TemplateId": 158,
+    "Name": "人物同道",
+    "Type": "CharacterRecommendVillager",
+    "Desc": "路经{1}时，{2}推荐其好友{3}加入太吾村…",
+    "DescFull": "路经{1}时，{2}推荐其好友{3}加入太吾村…"
+   },
+   {
+    "TemplateId": 159,
+    "Name": "消耗膂力",
+    "Type": "AttributeCost",
+    "Desc": "路遇山石阻塞道路，可消耗{1}点膂力，搬运山石…",
+    "DescFull": "路遇山石阻塞道路，可消耗{1}点膂力，搬运山石…"
+   },
+   {
+    "TemplateId": 160,
+    "Name": "消耗灵敏",
+    "Type": "AttributeCost",
+    "Desc": "路遇贼寇暗设机关，可消耗{1}点灵敏，排除凶险…",
+    "DescFull": "路遇贼寇暗设机关，可消耗{1}点灵敏，排除凶险…"
+   },
+   {
+    "TemplateId": 161,
+    "Name": "消耗定力",
+    "Type": "AttributeCost",
+    "Desc": "路遇妖人布下迷阵，可消耗{1}点定力，守心固神…",
+    "DescFull": "路遇妖人布下迷阵，可消耗{1}点定力，守心固神…"
+   },
+   {
+    "TemplateId": 162,
+    "Name": "消耗体质",
+    "Type": "AttributeCost",
+    "Desc": "路遇难民艰难远徙，可消耗{1}点体质，照顾难民…",
+    "DescFull": "路遇难民艰难远徙，可消耗{1}点体质，照顾难民…"
+   },
+   {
+    "TemplateId": 163,
+    "Name": "消耗根骨",
+    "Type": "AttributeCost",
+    "Desc": "路遇筹备祭祀典礼，可消耗{1}点根骨，祭祀祈祷…",
+    "DescFull": "路遇筹备祭祀典礼，可消耗{1}点根骨，祭祀祈祷…"
+   },
+   {
+    "TemplateId": 164,
+    "Name": "消耗悟性",
+    "Type": "AttributeCost",
+    "Desc": "路遇古代无名石碑，可消耗{1}点悟性，解读古文…",
+    "DescFull": "路遇古代无名石碑，可消耗{1}点悟性，解读古文…"
+   },
+   {
+    "TemplateId": 165,
+    "Name": "道路坎坷",
+    "Type": "CarrierDurability",
+    "Desc": "前方道路坎坷，由此地通行将损耗载具耐久…",
+    "DescFull": "前方道路坎坷，由此地通行将损耗载具耐久…"
+   }
+  ],
+  "count": 166
+ },
+ "TeaHorseCaravanEvent": {
+  "title": "茶馬商隊事件",
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "遇到海市蜃楼",
+    "Desc": "遇到了海市蜃楼，知名度得以提升",
+    "DescFull": "遇到了海市蜃楼，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 1,
+    "Name": "发现野人",
+    "Desc": "发现了野人，知名度得以提升",
+    "DescFull": "发现了野人，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 2,
+    "Name": "发现动物",
+    "Desc": "发现了珍稀动物，知名度得以提升",
+    "DescFull": "发现了珍稀动物，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 3,
+    "Name": "发现植物",
+    "Desc": "发现了珍稀植物，知名度得以提升",
+    "DescFull": "发现了珍稀植物，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 4,
+    "Name": "回传见闻",
+    "Desc": "回传了见闻，知名度得以提升",
+    "DescFull": "回传了见闻，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 5,
+    "Name": "发现聚落",
+    "Desc": "发现了聚落，知名度得以提升",
+    "DescFull": "发现了聚落，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 6,
+    "Name": "发现天气",
+    "Desc": "遇到罕见天气，知名度得以提升",
+    "DescFull": "遇到罕见天气，知名度得以提升",
+    "EventType": 2
+   },
+   {
+    "TemplateId": 7,
+    "Name": "迷路了",
+    "Desc": "迷失道路，导致知名度下降",
+    "DescFull": "迷失道路，导致知名度下降",
+    "EventType": 3
+   },
+   {
+    "TemplateId": 8,
+    "Name": "遇到盗贼",
+    "Desc": "遇到了盗贼，遗失了部分货物",
+    "DescFull": "遇到了盗贼，遗失了部分货物",
+    "EventType": 5
+   },
+   {
+    "TemplateId": 9,
+    "Name": "颠簸损坏",
+    "Desc": "路途颠簸，遗失了少量货物",
+    "DescFull": "路途颠簸，遗失了少量货物",
+    "EventType": 5
+   },
+   {
+    "TemplateId": 10,
+    "Name": "发现商队残骸",
+    "Desc": "发现了商队遗骸，获得了一些货物",
+    "DescFull": "发现了商队遗骸，获得了一些货物",
+    "EventType": 4
+   },
+   {
+    "TemplateId": 11,
+    "Name": "援助路人",
+    "Desc": "援助了路人，导致补给减少",
+    "DescFull": "援助了路人，导致补给减少",
+    "EventType": 7
+   },
+   {
+    "TemplateId": 12,
+    "Name": "水土不服",
+    "Desc": "茶马帮水土不服，导致补给减少",
+    "DescFull": "茶马帮水土不服，导致补给减少",
+    "EventType": 7
+   },
+   {
+    "TemplateId": 13,
+    "Name": "获得援助",
+    "Desc": "获得了援助，补给增加",
+    "DescFull": "获得了援助，补给增加",
+    "EventType": 6
+   },
+   {
+    "TemplateId": 14,
+    "Name": "偶得野味",
+    "Desc": "发现了野味，补给增加",
+    "DescFull": "发现了野味，补给增加",
+    "EventType": 6
+   },
+   {
+    "TemplateId": 15,
+    "Name": "发现果林",
+    "Desc": "发现了果林，可以搜寻补给",
+    "DescFull": "发现了果林，可以搜寻补给",
+    "EventType": 1
+   },
+   {
+    "TemplateId": 16,
+    "Name": "发现果林",
+    "Desc": "发现了果林，可以搜寻补给",
+    "DescFull": "发现了果林，可以搜寻补给",
+    "EventType": 1
+   },
+   {
+    "TemplateId": 17,
+    "Name": "发现果林",
+    "Desc": "发现了果林，可以搜寻补给",
+    "DescFull": "发现了果林，可以搜寻补给",
+    "EventType": 1
+   },
+   {
+    "TemplateId": 18,
+    "Name": "发现村落",
+    "Desc": "发现了村落，可以交换补给",
+    "DescFull": "发现了村落，可以交换补给",
+    "EventType": 0
+   },
+   {
+    "TemplateId": 19,
+    "Name": "发现村落",
+    "Desc": "发现了村落，可以交换补给",
+    "DescFull": "发现了村落，可以交换补给",
+    "EventType": 0
+   },
+   {
+    "TemplateId": 20,
+    "Name": "发现村落",
+    "Desc": "发现了村落，可以交换补给",
+    "DescFull": "发现了村落，可以交换补给",
+    "EventType": 0
+   },
+   {
+    "TemplateId": 21,
+    "Name": "路遇商队",
+    "Desc": "路遇商队，可以交换补给",
+    "DescFull": "路遇商队，可以交换补给",
+    "EventType": 0
+   },
+   {
+    "TemplateId": 22,
+    "Name": "路遇商队",
+    "Desc": "路遇商队，可以交换补给",
+    "DescFull": "路遇商队，可以交换补给",
+    "EventType": 0
+   },
+   {
+    "TemplateId": 23,
+    "Name": "路遇商队",
+    "Desc": "路遇商队，可以交换补给",
+    "DescFull": "路遇商队，可以交换补给",
+    "EventType": 0
+   }
+  ],
+  "count": 24
+ },
+ "TaiwuBeHuntedEvent": {
+  "title": "被獵殺/緝捕事件",
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Name": "少林派",
+    "Desc": "被「少林派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 1,
+    "Name": "峨眉派",
+    "Desc": "被「峨眉派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 2,
+    "Name": "百花谷",
+    "Desc": "被「百花谷」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 3,
+    "Name": "武当派",
+    "Desc": "被「武当派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 4,
+    "Name": "元山派",
+    "Desc": "被「元山派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 5,
+    "Name": "狮相门",
+    "Desc": "被「狮相门」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 6,
+    "Name": "然山派",
+    "Desc": "被「然山派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 7,
+    "Name": "璇女派",
+    "Desc": "被「璇女派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 8,
+    "Name": "铸剑山庄",
+    "Desc": "被「铸剑山庄」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 9,
+    "Name": "空桑派",
+    "Desc": "被「空桑派」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 10,
+    "Name": "金刚宗",
+    "Desc": "被「金刚宗」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 11,
+    "Name": "五仙教",
+    "Desc": "被「五仙教」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 12,
+    "Name": "界青门",
+    "Desc": "被「界青门」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 13,
+    "Name": "伏龙坛",
+    "Desc": "被「伏龙坛」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   },
+   {
+    "TemplateId": 14,
+    "Name": "血犼教",
+    "Desc": "被「血犼教」列為緝捕對象的遭遇事件（觸發/抵抗/勸服/收買/投降/懲戒分支）",
+    "NameSrc": "ref"
+   }
+  ],
+  "count": 15
+ },
+ "ShopEvent": {
+  "title": "商店/設施事件(僅介紹)",
+  "rows": [
+   {
+    "TemplateId": 0,
+    "Desc": "顺利地进行了捕捞工作，收获了{0}…",
+    "DescFull": "顺利地进行了捕捞工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 1,
+    "Desc": "顺利地进行了采炼工作，收获了{0}…",
+    "DescFull": "顺利地进行了采炼工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 2,
+    "Desc": "顺利地进行了采伐工作，收获了{0}…",
+    "DescFull": "顺利地进行了采伐工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 3,
+    "Desc": "顺利地进行了整修工作，收获了{0}…",
+    "DescFull": "顺利地进行了整修工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 4,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 5,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 6,
+    "Desc": "顺利地进行了采集工作，收获了{0}…",
+    "DescFull": "顺利地进行了采集工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 7,
+    "Desc": "顺利地进行了挖掘工作，收获了{0}…",
+    "DescFull": "顺利地进行了挖掘工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 8,
+    "Desc": "顺利地进行了采集工作，收获了{0}…",
+    "DescFull": "顺利地进行了采集工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 9,
+    "Desc": "顺利地进行了猎捕工作，收获了{0}…",
+    "DescFull": "顺利地进行了猎捕工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 10,
+    "Desc": "顺利地进行了提炼工作，收获了{0}…",
+    "DescFull": "顺利地进行了提炼工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 11,
+    "Desc": "顺利地进行了采炼工作，收获了{0}…",
+    "DescFull": "顺利地进行了采炼工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 12,
+    "Desc": "顺利地进行了采伐工作，收获了{0}…",
+    "DescFull": "顺利地进行了采伐工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 13,
+    "Desc": "顺利地进行了采伐工作，收获了{0}…",
+    "DescFull": "顺利地进行了采伐工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 14,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 15,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 16,
+    "Desc": "顺利地进行了采集工作，收获了{0}…",
+    "DescFull": "顺利地进行了采集工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 17,
+    "Desc": "顺利地进行了采集工作，收获了{0}…",
+    "DescFull": "顺利地进行了采集工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 18,
+    "Desc": "顺利地进行了挖掘工作，收获了{0}…",
+    "DescFull": "顺利地进行了挖掘工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 19,
+    "Desc": "顺利地进行了挖掘工作，收获了{0}…",
+    "DescFull": "顺利地进行了挖掘工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 20,
+    "Desc": "捕捞工作发生了失误，以致一无所获…",
+    "DescFull": "捕捞工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 21,
+    "Desc": "采炼工作发生了失误，以致一无所获…",
+    "DescFull": "采炼工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 22,
+    "Desc": "采伐工作发生了失误，以致一无所获…",
+    "DescFull": "采伐工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 23,
+    "Desc": "整修工作发生了失误，以致一无所获…",
+    "DescFull": "整修工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 24,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 25,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 26,
+    "Desc": "采集工作发生了失误，以致一无所获…",
+    "DescFull": "采集工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 27,
+    "Desc": "挖掘工作发生了失误，以致一无所获…",
+    "DescFull": "挖掘工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 28,
+    "Desc": "采集工作发生了失误，以致一无所获…",
+    "DescFull": "采集工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 29,
+    "Desc": "猎捕工作发生了失误，以致一无所获…",
+    "DescFull": "猎捕工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 30,
+    "Desc": "提炼工作发生了失误，以致一无所获…",
+    "DescFull": "提炼工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 31,
+    "Desc": "采炼工作发生了失误，以致一无所获…",
+    "DescFull": "采炼工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 32,
+    "Desc": "采伐工作发生了失误，以致一无所获…",
+    "DescFull": "采伐工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 33,
+    "Desc": "采伐工作发生了失误，以致一无所获…",
+    "DescFull": "采伐工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 34,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 35,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 36,
+    "Desc": "采集工作发生了失误，以致一无所获…",
+    "DescFull": "采集工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 37,
+    "Desc": "采集工作发生了失误，以致一无所获…",
+    "DescFull": "采集工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 38,
+    "Desc": "挖掘工作发生了失误，以致一无所获…",
+    "DescFull": "挖掘工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 39,
+    "Desc": "挖掘工作发生了失误，以致一无所获…",
+    "DescFull": "挖掘工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 40,
+    "Desc": "顺利地完成了保镖工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了保镖工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 41,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 42,
+    "Desc": "顺利地完成了接引工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了接引工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 43,
+    "Desc": "保镖工作发生了失误，以致一无所获…",
+    "DescFull": "保镖工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 44,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 45,
+    "Desc": "接引工作发生了失误，以致一无所获…",
+    "DescFull": "接引工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 46,
+    "Desc": "顺利地完成了演奏工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了演奏工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 47,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 48,
+    "Desc": "顺利地完成了作曲工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了作曲工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 49,
+    "Desc": "演奏工作发生了失误，以致一无所获…",
+    "DescFull": "演奏工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 50,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 51,
+    "Desc": "作曲工作发生了失误，以致一无所获…",
+    "DescFull": "作曲工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 52,
+    "Desc": "顺利地完成了接引工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了接引工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 53,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 54,
+    "Desc": "顺利地完成了讲学工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了讲学工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 55,
+    "Desc": "接引工作发生了失误，以致一无所获…",
+    "DescFull": "接引工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 56,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 57,
+    "Desc": "讲学工作发生了失误，以致一无所获…",
+    "DescFull": "讲学工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 58,
+    "Desc": "顺利地完成了售卖工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了售卖工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 59,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 60,
+    "Desc": "顺利地完成了讲学工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了讲学工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 61,
+    "Desc": "售卖工作发生了失误，以致一无所获…",
+    "DescFull": "售卖工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 62,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 63,
+    "Desc": "讲学工作发生了失误，以致一无所获…",
+    "DescFull": "讲学工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 64,
+    "Desc": "顺利地完成了售卖工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了售卖工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 65,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 66,
+    "Desc": "顺利地完成了接引工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了接引工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 67,
+    "Desc": "售卖工作发生了失误，以致一无所获…",
+    "DescFull": "售卖工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 68,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 69,
+    "Desc": "接引工作发生了失误，以致一无所获…",
+    "DescFull": "接引工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 70,
+    "Desc": "顺利地完成了占卜工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了占卜工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 71,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 72,
+    "Desc": "顺利地完成了祭祀工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了祭祀工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 73,
+    "Desc": "占卜工作发生了失误，以致一无所获…",
+    "DescFull": "占卜工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 74,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 75,
+    "Desc": "祭祀工作发生了失误，以致一无所获…",
+    "DescFull": "祭祀工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 76,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 77,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 78,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 79,
+    "Desc": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…",
+    "DescFull": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 80,
+    "Desc": "顺利地进行了茶叶品鉴，收获了{0}…",
+    "DescFull": "顺利地进行了茶叶品鉴，收获了{0}…"
+   },
+   {
+    "TemplateId": 81,
+    "Desc": "顺利地进行了美酒品鉴，收获了{0}…",
+    "DescFull": "顺利地进行了美酒品鉴，收获了{0}…"
+   },
+   {
+    "TemplateId": 82,
+    "Desc": "售卖茶叶时发生了失误，以致一无所获…",
+    "DescFull": "售卖茶叶时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 83,
+    "Desc": "售卖美酒时发生了失误，以致一无所获…",
+    "DescFull": "售卖美酒时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 84,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 85,
+    "Desc": "举办盛会时发生了失误，以致一无所获…",
+    "DescFull": "举办盛会时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 86,
+    "Desc": "茶叶品鉴发生了失误，以致一无所获…",
+    "DescFull": "茶叶品鉴发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 87,
+    "Desc": "美酒品鉴发生了失误，以致一无所获…",
+    "DescFull": "美酒品鉴发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 88,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 89,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 90,
+    "Desc": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…",
+    "DescFull": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 91,
+    "Desc": "顺利地进行了淘洗工作，收获了{0}…",
+    "DescFull": "顺利地进行了淘洗工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 92,
+    "Desc": "顺利地进行了精炼工作，收获了{0}…",
+    "DescFull": "顺利地进行了精炼工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 93,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 94,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 95,
+    "Desc": "举办盛会时发生了失误，以致一无所获…",
+    "DescFull": "举办盛会时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 96,
+    "Desc": "淘洗工作发生了失误，以致一无所获…",
+    "DescFull": "淘洗工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 97,
+    "Desc": "精炼工作发生了失误，以致一无所获…",
+    "DescFull": "精炼工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 98,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 99,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 100,
+    "Desc": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…",
+    "DescFull": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 101,
+    "Desc": "顺利地进行了伐木工作，收获了{0}…",
+    "DescFull": "顺利地进行了伐木工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 102,
+    "Desc": "顺利地进行了栽培工作，收获了{0}…",
+    "DescFull": "顺利地进行了栽培工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 103,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 104,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 105,
+    "Desc": "举办盛会时发生了失误，以致一无所获…",
+    "DescFull": "举办盛会时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 106,
+    "Desc": "伐木工作发生了失误，以致一无所获…",
+    "DescFull": "伐木工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 107,
+    "Desc": "栽培工作发生了失误，以致一无所获…",
+    "DescFull": "栽培工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 108,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 109,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 110,
+    "Desc": "以{0}救治流民，收获了{2}威望…",
+    "DescFull": "以{0}救治流民，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 111,
+    "Desc": "顺利地进行了种植工作，收获了{0}…",
+    "DescFull": "顺利地进行了种植工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 112,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 113,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 114,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 115,
+    "Desc": "救治流民时发生了失误，以致一无所获…",
+    "DescFull": "救治流民时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 116,
+    "Desc": "种植工作发生了失误，以致一无所获…",
+    "DescFull": "种植工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 117,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 118,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 119,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 120,
+    "Desc": "以{0}救治流民，收获了{2}威望…",
+    "DescFull": "以{0}救治流民，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 121,
+    "Desc": "顺利地进行了炼毒工作，收获了{0}…",
+    "DescFull": "顺利地进行了炼毒工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 122,
+    "Desc": "顺利地进行了养毒工作，收获了{0}…",
+    "DescFull": "顺利地进行了养毒工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 123,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 124,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 125,
+    "Desc": "救治流民时发生了失误，以致一无所获…",
+    "DescFull": "救治流民时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 126,
+    "Desc": "炼毒工作发生了失误，以致一无所获…",
+    "DescFull": "炼毒工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 127,
+    "Desc": "养毒工作发生了失误，以致一无所获…",
+    "DescFull": "养毒工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 128,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 129,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 130,
+    "Desc": "以{0}为媒，替人牵线搭桥，收获了{2}威望…",
+    "DescFull": "以{0}为媒，替人牵线搭桥，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 131,
+    "Desc": "顺利地进行了洗涤工作，收获了{0}…",
+    "DescFull": "顺利地进行了洗涤工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 132,
+    "Desc": "顺利地进行了饲育工作，收获了{0}…",
+    "DescFull": "顺利地进行了饲育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 133,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 134,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 135,
+    "Desc": "牵线做媒时发生了失误，以致一无所获…",
+    "DescFull": "牵线做媒时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 136,
+    "Desc": "洗涤工作发生了失误，以致一无所获…",
+    "DescFull": "洗涤工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 137,
+    "Desc": "精炼工作发生了失误，以致一无所获…",
+    "DescFull": "精炼工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 138,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 139,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 140,
+    "Desc": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…",
+    "DescFull": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 141,
+    "Desc": "顺利地进行了浣宝工作，收获了{0}…",
+    "DescFull": "顺利地进行了浣宝工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 142,
+    "Desc": "顺利地进行了解石工作，收获了{0}…",
+    "DescFull": "顺利地进行了解石工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 143,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 144,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 145,
+    "Desc": "举办盛会时发生了失误，以致一无所获…",
+    "DescFull": "举办盛会时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 146,
+    "Desc": "浣宝工作发生了失误，以致一无所获…",
+    "DescFull": "浣宝工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 147,
+    "Desc": "解玉工作发生了失误，以致一无所获…",
+    "DescFull": "解玉工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 148,
+    "Desc": "顺利地完成了法事工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了法事工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 149,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 150,
+    "Desc": "顺利地完成了接引工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了接引工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 151,
+    "Desc": "法事工作发生了失误，以致一无所获…",
+    "DescFull": "法事工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 152,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 153,
+    "Desc": "接引工作发生了失误，以致一无所获…",
+    "DescFull": "接引工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 154,
+    "Desc": "顺利地完成了化缘工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了化缘工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 155,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 156,
+    "Desc": "顺利地完成了讲经工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了讲经工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 157,
+    "Desc": "化缘工作发生了失误，以致一无所获…",
+    "DescFull": "化缘工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 158,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 159,
+    "Desc": "讲经工作发生了失误，以致一无所获…",
+    "DescFull": "讲经工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 160,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 161,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 162,
+    "Desc": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…",
+    "DescFull": "以{0}为奖励，顺利地举办了盛会，收获了{2}威望…"
+   },
+   {
+    "TemplateId": 163,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 164,
+    "Desc": "顺利地进行了培育工作，收获了{0}…",
+    "DescFull": "顺利地进行了培育工作，收获了{0}…"
+   },
+   {
+    "TemplateId": 165,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 166,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 167,
+    "Desc": "举办盛会时发生了失误，以致一无所获…",
+    "DescFull": "举办盛会时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 168,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 169,
+    "Desc": "培育工作发生了失误，以致一无所获…",
+    "DescFull": "培育工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 170,
+    "Desc": "顺利地售出了{0}，收获了{2}银钱…",
+    "DescFull": "顺利地售出了{0}，收获了{2}银钱…"
+   },
+   {
+    "TemplateId": 171,
+    "Desc": "顺利地完成了博彩工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了博彩工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 172,
+    "Desc": "顺利地完成了经营工作，收获了{1}银钱…",
+    "DescFull": "顺利地完成了经营工作，收获了{1}银钱…"
+   },
+   {
+    "TemplateId": 173,
+    "Desc": "一位流民魅力出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民魅力出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 174,
+    "Desc": "一位流民资质出众，通过了选拔，可被招揽至太吾村…",
+    "DescFull": "一位流民资质出众，通过了选拔，可被招揽至太吾村…"
+   },
+   {
+    "TemplateId": 175,
+    "Desc": "顺利地完成了接引工作，收获了{1}威望…",
+    "DescFull": "顺利地完成了接引工作，收获了{1}威望…"
+   },
+   {
+    "TemplateId": 176,
+    "Desc": "收到当品{0}，可花费{2}银钱将其收入囊中…",
+    "DescFull": "收到当品{0}，可花费{2}银钱将其收入囊中…"
+   },
+   {
+    "TemplateId": 177,
+    "Desc": "得到一位流民的投奔，可花费{1}威望将其招揽至太吾村…",
+    "DescFull": "得到一位流民的投奔，可花费{1}威望将其招揽至太吾村…"
+   },
+   {
+    "TemplateId": 178,
+    "Desc": "售卖时发生了失误，以致一无所获…",
+    "DescFull": "售卖时发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 179,
+    "Desc": "博彩工作发生了失误，以致一无所获…",
+    "DescFull": "博彩工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 180,
+    "Desc": "经营工作发生了失误，以致一无所获…",
+    "DescFull": "经营工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 181,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 182,
+    "Desc": "未能发现可招揽至太吾村的人才…",
+    "DescFull": "未能发现可招揽至太吾村的人才…"
+   },
+   {
+    "TemplateId": 183,
+    "Desc": "接引工作发生了失误，以致一无所获…",
+    "DescFull": "接引工作发生了失误，以致一无所获…"
+   },
+   {
+    "TemplateId": 184,
+    "Desc": "未能接收到当品…",
+    "DescFull": "未能接收到当品…"
+   },
+   {
+    "TemplateId": 185,
+    "Desc": "未能招揽到流民…",
+    "DescFull": "未能招揽到流民…"
+   },
+   {
+    "TemplateId": 186,
+    "Desc": "{0}在工作时，领悟到{1}之妙法…",
+    "DescFull": "{0}在工作时，领悟到{1}之妙法…"
+   },
+   {
+    "TemplateId": 187,
+    "Desc": "{0}在工作时，掌握了{1}的法门…",
+    "DescFull": "{0}在工作时，掌握了{1}的法门…"
+   },
+   {
+    "TemplateId": 188,
+    "Desc": "{0}在工作时若有所悟，然须臾已失，仅使{1}资质略长…",
+    "DescFull": "{0}在工作时若有所悟，然须臾已失，仅使{1}资质略长…"
+   },
+   {
+    "TemplateId": 189,
+    "Desc": "{0}在工作时恍若得道，然转瞬即逝，仅使{1}资质略长…",
+    "DescFull": "{0}在工作时恍若得道，然转瞬即逝，仅使{1}资质略长…"
+   },
+   {
+    "TemplateId": 190,
+    "Desc": "{0}在工作时心念微动，似有所触，{1}资质得到了增长…",
+    "DescFull": "{0}在工作时心念微动，似有所触，{1}资质得到了增长…"
+   },
+   {
+    "TemplateId": 191,
+    "Desc": "{0}在工作时心念微动，似有所触，{1}资质得到了增长…",
+    "DescFull": "{0}在工作时心念微动，似有所触，{1}资质得到了增长…"
+   }
+  ],
+  "count": 192
+ }
+}
