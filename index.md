@@ -7,6 +7,7 @@
 | 專案名稱 | 類型 | 分析深度 | 狀態 | 核心內容摘要 |
 | :--- | :--- | :--- | :--- | :--- |
 | **RimWorld** | 遊戲模組/引擎 | 高 (Architecture+Tutorial) | 已遷移 | 包含 AI、派系、地圖系統與豐富的 C# 開發教學。 |
+| **Airships: CtS** | 飛行戰艦策略遊戲 (Java) | 高 (Level 1-3, C++重寫導向) | 分析中 | CFR 反編譯 game.jar→`projects/airships-cts/src/`（691 .java）；6 份子系統分析＋C++ 重寫路線圖。核心：確定性鎖步多人、Loadable 資料系統(71 型別)、雙層戰術 Combat/戰略 Campaign、評分式 AI、2D 法線光照渲染。 |
 | **Skyrim Mod** | 遊戲模組 | 極高 (Classified) | 已遷移 | 深度分類分析 (NPC, Magic, 3D)，含 CommonLibSSE-NG。 |
 | **Luanti (Minetest)**| 遊戲引擎 | 極高 (Level 1-12) | 已遷移 | 完整的引擎剖析、Lua API 綁定、渲染管線與 13 篇開發教學。 |
 | **Godot** | 遊戲引擎 | 高 (GDExtension) | 已遷移 | 核心對象系統、物理、渲染分析，以及大量 GDExtension 教學。 |
@@ -34,7 +35,7 @@
 
 ---
 ## 統計摘要
-- **總計分析專案**：25 個
+- **總計分析專案**：26 個
 - **最近更新日期**: 2026-05-23
 - **維護 Agent**: Gemini CLI / Claude Code
 
