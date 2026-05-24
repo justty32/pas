@@ -1,0 +1,10 @@
+# CMake 建置產物
+build/
+build-*/
+cmake-build-*/
+
+# 編譯器 / IDE
+compile_commands.json
+*.o
+*.a
+.cache/
