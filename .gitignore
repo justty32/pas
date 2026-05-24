@@ -24,6 +24,10 @@ __pycache__/
 **/obj/
 **/bin/
 
+# mod 編譯產物（原始碼 .cs/.csproj 留檔即可，DLL 可重新編譯）
+**/mod_src/**/*.dll
+**/mod_src/**/*.pdb
+
 # SCons (GDExtension 建置產物)
 .sconsign.dblite
 **/.scons_temp/
