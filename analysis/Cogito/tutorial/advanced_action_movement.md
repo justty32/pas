@@ -1,116 +1,237 @@
-# 教學：如何實現進階動作 (快跑、蹲下、趴下、翻滾、瞄準)
+# 教學：如何實現進階動作（快跑、蹲下、趴下、翻滾、瞄準）
 
-本教學將引導您如何在 COGITO 中微調現有的移動機制，並添加動作遊戲中常見的進階動作，如「趴下 (Prone)」、「手動翻滾 (Dodge Roll)」以及「瞄準時減速」。
+本教學在理解 `cogito_player.gd` 的 `_physics_process` 流程後，針對各移動機制提供可直接套用的實作方案。
 
 ## 前置知識
 - 已閱讀 [Level 5E: 玩家完整移動系統](../architecture/level5e_player_movement.md)。
-- 熟悉 `cogito_player.gd` 中的物理流程。
 
 ---
 
-## 1. 微調內建動作 (Sprint, Crouch, Slide)
+## 一、已內建的移動機制（只需調整參數）
 
-COGITO 已經內建了基本的快跑、蹲下與滑步。
+以下功能**已完整實作**於 `cogito_player.gd`，只需在 Inspector 調整 @export 值：
 
-### 調整參數
-在 `cogito_player.gd` 的 Inspector 中，您可以直接修改：
-- **快跑**：`SPRINTING_SPEED` (速度), `stamina_attribute` (是否耗耐力)。
-- **蹲下**：`CROUCHING_SPEED` (速度), `CROUCHING_DEPTH` (相機下降深度)。
-- **滑步**：`SLIDING_SPEED` (滑行初速), `SLIDE_JUMP_MOD` (滑跳加成)。
+| 功能 | 相關 @export | 預設值 | 說明 |
+|---|---|---|---|
+| 快跑速度 | `SPRINTING_SPEED` | 8.0 | 消耗 `stamina_attribute`（若有設定）|
+| 蹲下速度 | `CROUCHING_SPEED` | 3.0 | 蹲下時的移動速度 |
+| 蹲下深度 | `CROUCHING_DEPTH` | -0.9 | 頭部相機 Y 軸偏移（負值 = 向下）|
+| 滑步初速 | `SLIDING_SPEED` | 5.0 | 快跑蹲下觸發滑行的初始速度 |
+| 滑跳加成 | `SLIDE_JUMP_MOD` | 1.5 | 滑行中跳躍的速度倍率 |
 
----
-
-## 2. 添加「趴下 (Prone)」動作
-
-趴下是比蹲下更低、更慢的狀態。
-
-### 實作步驟
-1. **新增變數**：在 `cogito_player.gd` 定義趴下參數。
-   ```gdscript
-   @export var PRONING_SPEED : float = 1.5
-   @export var PRONING_DEPTH : float = -1.4
-   var is_proning : bool = false
-   ```
-
-2. **新增碰撞形狀**：
-   - 在 `CogitoPlayer` 場景中，複製 `CrouchingCollisionShape` 並命名為 `ProningCollisionShape`。
-   - 縮小其高度（例如 Height = 0.5）。
-   - 在腳本頂部連結它：`@onready var proning_collision_shape = $ProningCollisionShape`。
-
-3. **處理輸入與切換**：
-   在 `_physics_process` 的蹲下邏輯附近增加趴下判定。通常邏輯是：站立 → 蹲下 → 趴下。
-   ```gdscript
-   # 偽代碼示例
-   if Input.is_action_just_pressed("crouch"):
-       if !is_crouching:
-           enter_crouch()
-       else:
-           enter_prone()
-   ```
-
-4. **更新物理狀態**：
-   在處理速度與相機高度時，加入 `is_proning` 的判定，並關閉其他碰撞形狀。
+耐力消耗由 `stamina_attribute`（`CogitoStaminaAttribute` 節點）管理；若 `player_attributes` 字典中不含 `"stamina"` 則快跑不消耗耐力。
 
 ---
 
-## 3. 手動觸發「翻滾 (Dodge Roll)」
+## 二、添加「趴下 (Prone)」
 
-COGITO 內建了落地的滾動動畫，我們可以將其改為手動觸發的閃避動作。
+趴下是比蹲下更低的狀態，需要額外的碰撞形狀。
 
-### 實作步驟
-1. **處理輸入**：
-   ```gdscript
-   if Input.is_action_just_pressed("dodge") and is_on_floor():
-       animationPlayer.play("roll")
-       # 給予一個瞬間衝量
-       velocity += direction * 10.0 
-   ```
+### 2.1 節點設定
 
-2. **無敵時間 (I-Frames)**：
-   若要加入無敵時間，可以在播放動畫時暫時關閉受擊判定：
-   ```gdscript
-   func _on_roll_started():
-       player_interaction_component.is_invulnerable = true
-       await get_tree().create_timer(0.5).timeout
-       player_interaction_component.is_invulnerable = false
-   ```
+打開 `cogito_player.tscn`，在根節點下複製 `CrouchingCollisionShape`，命名為 `ProningCollisionShape`：
+- 將其 `CapsuleShape3D` 高度縮小（例如 Height = 0.5, Radius = 0.3）
+- 設定位置偏移使其貼地（通常 `position.y` 降低）
+
+### 2.2 腳本修改
+
+在 `cogito_player.gd` 加入：
+```gdscript
+# 在 Movement Properties 區塊加入
+@export var PRONING_SPEED : float = 1.5
+@export var PRONING_DEPTH : float = -1.2   # 相機最低點
+
+@onready var proning_collision_shape = $ProningCollisionShape
+
+var is_proning : bool = false
+```
+
+在 `_physics_process` 的蹲下切換邏輯（約第 857 行，`TOGGLE_CROUCH` 判斷）附近加入趴下狀態機：
+
+```gdscript
+# 在現有的 try_crouch 判斷之後加入
+if Input.is_action_just_pressed("crouch"):
+    if is_proning:
+        # 趴下 → 嘗試起身
+        _try_leave_prone()
+    elif is_crouching:
+        # 蹲下 → 趴下（頭頂有空間就繼續往下）
+        is_proning = true
+        standing_collision_shape.disabled = true
+        crouching_collision_shape.disabled = true
+        proning_collision_shape.disabled = false
+    else:
+        # 站立 → 蹲下（使用原有邏輯）
+        try_crouch = !try_crouch
+
+
+func _try_leave_prone() -> void:
+    # 使用 ShapeCast3D 測試起身空間（與原有 try_crouch 邏輯相同）
+    crouch_raycast.disabled = false
+    if !crouch_raycast.is_colliding():  # 頭頂無阻礙
+        is_proning = false
+        proning_collision_shape.disabled = true
+        crouching_collision_shape.disabled = false  # 先回到蹲下
+    crouch_raycast.disabled = true
+```
+
+在速度計算段加入趴下的 `current_speed` 與相機深度：
+```gdscript
+# 在蹲下速度計算前加入
+if is_proning:
+    current_speed = lerp(current_speed, PRONING_SPEED, delta * LERP_SPEED)
+    head.position.y = lerp(head.position.y, PRONING_DEPTH, delta * LERP_SPEED)
+    # 跳躍在趴下時禁用
+```
 
 ---
 
-## 4. 瞄準 (ADS) 與移動速度整合
+## 三、手動觸發「翻滾 (Dodge Roll)」
 
-預設情況下，瞄準 (Secondary Action) 只會縮放 FOV。我們希望瞄準時玩家會減速。
+`cogito_player.gd` 的 `animationPlayer` 路徑在玩家場景的 `$Body/Neck/Head/Eyes/AnimationPlayer`（`cogito_player.gd:190`）。
 
-### 實作步驟
-1. **玩家端監聽**：在 `cogito_player.gd` 監聽當前武器的瞄準狀態。
-2. **修改速度計算**：
-   在 `_physics_process` 中計算 `current_speed` 時：
-   ```gdscript
-   var ads_multiplier = 0.5 # 瞄準時速度減半
-   if player_interaction_component.get_current_wieldable().is_aiming:
-       target_speed *= ads_multiplier
-   ```
-   *(註：需在具體武器腳本如 `wieldable_toy_pistol.gd` 中新增 `is_aiming` 變數並在 `action_secondary` 中切換)*
+### 3.1 確認動畫資源
+確認 `AnimationPlayer` 中有名為 `"roll"` 的動畫（若無則需自行建立）。動畫應包含：
+- 相機前傾（模擬翻滾視角）
+- 時長約 0.4-0.6 秒
+
+### 3.2 腳本實作
+
+```gdscript
+# cogito_player.gd 加入
+@export var DODGE_DISTANCE : float = 4.0
+@export var DODGE_COOLDOWN : float = 1.0
+
+var is_dodging : bool = false
+var dodge_cooldown : float = 0.0
+var _dodge_direction : Vector3 = Vector3.ZERO
+
+
+func _physics_process(delta):
+    if dodge_cooldown > 0:
+        dodge_cooldown -= delta
+    # ... 現有邏輯 ...
+
+
+# 在 _unhandled_input 中加入
+func _unhandled_input(event):
+    # ... 現有邏輯 ...
+    if event.is_action_pressed("dodge") and is_on_floor() and !is_dodging and dodge_cooldown <= 0:
+        start_dodge_roll()
+
+
+func start_dodge_roll() -> void:
+    is_dodging = true
+    dodge_cooldown = DODGE_COOLDOWN
+    
+    var input_dir = Input.get_vector("left", "right", "forward", "back")
+    if input_dir != Vector2.ZERO:
+        _dodge_direction = (body.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+    else:
+        _dodge_direction = -head.global_transform.basis.z
+    
+    animationPlayer.play("roll")
+    
+    # 翻滾期間短路移動
+    var roll_duration = animationPlayer.current_animation_length if animationPlayer.current_animation_length > 0 else 0.5
+    await get_tree().create_timer(roll_duration).timeout
+    is_dodging = false
+```
+
+在 `_physics_process` 的速度計算段插入短路：
+```gdscript
+if is_dodging:
+    main_velocity = _dodge_direction * DODGE_DISTANCE / 0.5  # 速度 = 距離/時間
+    velocity = main_velocity + gravity_vec
+    move_and_slide()
+    return
+```
+
+### 3.3 無敵時間 (I-Frames)
+
+`PlayerInteractionComponent` 沒有內建 `is_invulnerable` 屬性，需在 `cogito_player.gd` 自行加入保護邏輯：
+```gdscript
+var is_rolling : bool = false  # 使用不同名稱與 is_dodging 區分
+
+func start_dodge_roll() -> void:
+    is_rolling = true
+    is_dodging = true
+    # ... 上方邏輯 ...
+    await get_tree().create_timer(roll_duration).timeout
+    is_dodging = false
+    is_rolling = false
+
+
+# 在 decrease_attribute("health", ...) 的呼叫處加入保護（約第 1003 行落地傷害）
+func _on_damage_taken(amount: float) -> void:
+    if is_rolling:
+        return  # 翻滾中免疫傷害
+    decrease_attribute("health", amount)
+```
+**注意**：COGITO 的傷害多透過 `damage_received` 信號觸發，需在信號回調中加入 `if is_rolling: return` 的判斷。
 
 ---
 
-## 5. 滑步閃避 (Slide Dodge)
+## 四、瞄準 (ADS) 減速
 
-您可以將 Dash 與 Slide 結合。
+武器的 ADS 邏輯在 `wieldable_toy_pistol.gd` 中實作，需要與 `cogito_player.gd` 溝通。
 
-### 實作步驟
-1. **邏輯**：當玩家在快跑中按下閃避鍵，強制進入 Slide 狀態但給予更高的初始推力。
-2. **代碼**：
-   ```gdscript
-   if is_sprinting and Input.is_action_just_pressed("dodge"):
-       sliding_timer.start()
-       velocity += direction * SLIDING_SPEED * 1.5
-   ```
+### 4.1 在武器腳本加入旗標
+
+```gdscript
+# wieldable_toy_pistol.gd 加入
+var is_aiming : bool = false
+
+func action_secondary(is_released: bool):
+    if is_released:
+        is_aiming = false
+        # ... 原有 FOV 還原邏輯
+    else:
+        is_aiming = true
+        # ... 原有 FOV 縮放邏輯
+```
+
+### 4.2 在玩家腳本讀取武器狀態
+
+正確的武器存取方式是 `player_interaction_component.equipped_wieldable_node`（**無** `get_current_wieldable()` 方法）：
+```gdscript
+# cogito_player.gd 的速度計算段（約第 897 行）
+var ads_multiplier : float = 1.0
+var wieldable = player_interaction_component.equipped_wieldable_node
+if wieldable and wieldable.get("is_aiming"):  # get() 安全存取，武器無此屬性時返回 null
+    ads_multiplier = 0.5  # 瞄準時速度減半
+
+# 套用到目標速度
+current_speed = target_speed * ads_multiplier
+```
 
 ---
 
-## 驗證方式
+## 五、滑步閃避（Slide → Dodge 組合技）
 
-1. **趴下測試**：確認趴下時碰撞盒正確縮小，能鑽過蹲下鑽不過去的縫隙。
-2. **翻滾測試**：觀察翻滾時是否有明顯的位移加成，且動畫播放正確。
-3. **瞄準減速測試**：裝備手槍並按住右鍵，確認移動速度是否明顯變慢。
+在快跑時直接觸發滑行，並給予朝側向的推力：
+
+```gdscript
+# 在 _unhandled_input 中加入
+if event.is_action_pressed("dodge") and is_sprinting and is_on_floor():
+    # 已有 sliding_timer（cogito_player.gd:195）
+    sliding_timer.start()
+    
+    var lateral_dir = Input.get_vector("left", "right", "forward", "back")
+    if abs(lateral_dir.x) > 0.3:  # 有橫向輸入才觸發側滾
+        var slide_dir = (body.basis * Vector3(lateral_dir.x, 0, 0)).normalized()
+        main_velocity += slide_dir * SLIDING_SPEED * 0.8
+```
+
+---
+
+## 六、驗證清單
+
+| 測試項目 | 預期結果 |
+|---|---|
+| 按兩次蹲下鍵 | 第一次蹲下，第二次趴下；能鑽過更窄的縫隙 |
+| 趴下後嘗試起身但頭頂有障礙 | 玩家無法起身（頭頂偵測運作） |
+| 快跑中按翻滾鍵 | 玩家有明顯位移，動畫播放 `"roll"` |
+| 翻滾期間被擊中 | 不受傷（I-Frames 運作，前提是傷害路徑有加入 `is_rolling` 判斷）|
+| 持武器時按次要鍵後移動 | 移動速度明顯降低 50% |
+| 冷卻期間連按翻滾 | 不觸發（`dodge_cooldown > 0` 阻擋）|

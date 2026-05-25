@@ -1,5 +1,13 @@
 # Cogito 分析日誌
 
+## 2026-05-25（續）
+
+- **教學文件深化（10 份完整重寫）**：依序深化以下教學，以原始碼對照確保準確性：(1) `skyrim_combat_mechanics.md`：加入完整 `wieldable_sword.gd`，含長按計時重擊、格擋旗標、`apply_knockback()` NPC 失衡、玩家 `decrease_attribute` 攔截；(2) `npc_radiant_ai_schedule.md`：完整 `TimeSystem.gd` Autoload、`ScheduleComponent.gd`（Dictionary 鍵型轉換）、`npc_state_sleep.gd`（尋找最近 Bed Marker、`States.save_state_as_previous`）、`npc_state_work.gd`（工作台導航＋循環動畫）、虛擬模擬整合 `set_state()`；(3) `magic_and_magicka_system.md`：自訂 `CogitoMagickaAttribute`（`notify_cast()` 重置再生延遲）、瞬發/持續/增益三種法術完整代碼、HUD 自動整合原理；(4) `lod_implementation.md`：NPC LOD 腳本（距離閾值停用 `animation_tree.active` 和 `set_physics_process`）、MultiMeshInstance3D 程序化批次；(5) `ui_modification_interaction.md`：完整節點樹路徑、`CogitoAttributeUi` 整合機制、fixed_stamina_bar 用法；(6) `ui_modification_inventory.md`：`SlotPanel` 結構（64px 格子）、InfoPanel 節點路徑、拖放 GrabbedSlot、手把/鍵盤自動切換；(7) `ui_modification_dialogue.md`：明確說明整個橋接腳本被注解、完整取消注解步驟、`toggled_interface` 機制；(8) `open_world_architecture.md`：完整 `ChunkManager.gd` Autoload（非同步載入佇列/卸載/Chunk 存讀）、Origin Rebasing 抖動修正、Terrain3D 腳步聲整合；(9) `genshin_style_rendering.md`：完整 Toon Shader（light() 函數/Rim Light）、Backface Outline Shader、風格化草地 Wind Sway Shader；(10) `visual_presentation_and_rendering.md`：完整環境節點設定路徑、Shadow Mode 建議、FSR 位置、LUT 色彩校正說明。
+
+## 2026-05-25
+
+- **教學文件勘誤（8 處錯誤修正）**：對照原始碼逐一驗證 19 份教學，發現並修正以下錯誤：(1) `adding_character_actions.md`：`Host.navigation_agent` → `navigation_agent_3d`，`Host.set_navigation_target()` 不存在 → 改為直接設定 `navigation_agent_3d.target_position`；(2) `advanced_action_movement.md`：`PlayerInteractionComponent.is_invulnerable` 不存在，`get_current_wieldable()` 不存在 → 改為 `equipped_wieldable_node`；(3) `destructible_objects.md`：`HitboxComponent` 無 `damage_received` 信號（它連接父節點信號），`LootComponent.drop_loot()` 不存在（內部自動連接），`spawn_on_death` 是 `Array[PackedScene]`；(4) `dynamic_generation.md`：`CogitoSpawnZone` 本身即 `Area3D`，`object_to_spawn` 是單一 PackedScene 非陣列；(5) `ui_modification_inventory.md`：`inventory_interface.tscn` 不存在，demo 場景無 COGITO_1；(6) `ui_modification_dialogue.md`：`toggled_interface` emit 已被注解掉；(7) `npc_ai_behavior.md`：補充 NPC 預設不屬於 "Enemy" 群組的前提說明；(8) `magic_and_magicka_system.md`：`auto_regenerate`/`regen_speed` 屬性只在 `CogitoStaminaAttribute` 而非基類 `CogitoAttribute`。
+
 ## 2026-04-30
 
 - **Level 1 初始探索**：讀取 README、project.godot、目錄結構、cogito_globals.gd、cogito_player.gd（前段）、InteractionComponent.gd、cogito_wieldable.gd、cogito_npc.gd（前段）、npc_state_machine.gd；撰寫 `architecture/level1_overview.md`，涵蓋技術棧、Autoload 清單、模組一覽、六大核心架構模式。

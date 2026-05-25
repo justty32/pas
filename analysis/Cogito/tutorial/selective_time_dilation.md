@@ -1,112 +1,217 @@
 # 教學：如何實現局部時間緩速 (Selective Time Dilation)
 
-本教學將引導您如何在 COGITO 中實現「局部時間緩速」效果。不同於全域的 `Engine.time_scale`，此方法能讓特定物件（如某個敵人或掉落物）變慢，而玩家與其他環境保持正常速度。
+本教學實作「局部時間縮放」——讓特定 NPC、物理物件或特效變慢，而玩家與其他環境保持正常速度。
 
 ## 前置知識
 - 已閱讀 [Level 3B: NPC 狀態機行為](../architecture/level3_npc_states.md)。
-- 瞭解 Godot 的 `_physics_process(delta)` 運作原理。
 
 ---
 
-## 1. 核心概念：局部時間縮放 (Local Time Scale)
+## 一、核心概念：為何不用 Engine.time_scale
 
-要讓物件變慢，我們需要為其定義一個 `local_time_scale` 變數（1.0 為正常，0.1 為 10 倍緩速），並在處理物理移動與動畫時將其納入計算。
+`Engine.time_scale` 影響所有物件（包括玩家），適合整體暫停或進入子彈時間的「所有東西都慢下來」效果。局部緩速需要不同做法：
 
----
-
-## 2. 實作：時間緩速組件 (TimeSlowComponent)
-
-建立一個通用的組件，方便掛載到任何物件上。
-
-### 實作步驟
-1. 建立 `addons/cogito/Components/TimeSlowComponent.gd`：
-   ```gdscript
-   extends Node
-   class_name TimeSlowComponent
-
-   @export var local_time_scale : float = 1.0 :
-       set(value):
-           local_time_scale = value
-           update_object_speed()
-
-   var parent_node : Node
-
-   func _ready():
-       parent_node = get_parent()
-       update_object_speed()
-
-   func update_object_speed():
-       # 處理動畫
-       var anim_tree = parent_node.find_child("AnimationTree")
-       if anim_tree:
-           anim_tree.anim_player.speed_scale = local_time_scale
-       
-       var anim_player = parent_node.find_child("AnimationPlayer")
-       if anim_player:
-           anim_player.speed_scale = local_time_scale
-   ```
+- **動畫**：設定 `AnimationPlayer.speed_scale`、`AnimationTree` 的 speed_scale
+- **NPC 移動**：將 `delta` 乘以縮放係數
+- **RigidBody3D**：在 `_integrate_forces` 中縮放速度
+- **粒子**：設定 `GPUParticles3D.speed_scale`
 
 ---
 
-## 3. NPC 的時間緩速整合
+## 二、TimeSlowComponent 組件實作
 
-NPC 的移動邏輯分散在 `cogito_npc.gd` 與各個狀態腳本中。
+建立一個可掛載到任何物件的通用組件：
 
-### 原始碼導航
-- `addons/cogito/CogitoNPC/cogito_npc.gd`
-- `addons/cogito/CogitoNPC/npc_states/npc_state_chase.gd` (或其他移動狀態)
-
-### 實作步驟
-1. **修改 NPC 基類**：在 `cogito_npc.gd` 增加時間縮放變數。
-   ```gdscript
-   # cogito_npc.gd
-   @export var local_time_scale : float = 1.0
-   ```
-
-2. **修正移動邏輯**：在狀態腳本（如 `npc_state_chase.gd`）中，將 `delta` 乘以 `local_time_scale`。
-   ```gdscript
-   # npc_state_chase.gd 的 _physics_process 中
-   var effective_delta = _delta * Host.local_time_scale
-   Host.velocity += Host.get_gravity() * effective_delta
-   # 移動計算也需縮放
-   Host.velocity.x = direction.x * Host.move_speed * Host.local_time_scale
-   ```
-
----
-
-## 4. 物理物件 (RigidBody3D) 的時間緩速
-
-物理物件由引擎驅動，要讓其緩速需手動干預其速度。
-
-### 實作步驟
-在掛載到 `RigidBody3D` 的腳本中覆寫 `_integrate_forces`：
 ```gdscript
-func _integrate_forces(state):
-    if local_time_scale < 1.0:
-        # 每一幀都縮放速度，使其看起來像在濃稠液體中移動
-        state.linear_velocity *= local_time_scale
-        state.angular_velocity *= local_time_scale
-        # 同時需補償重力，否則物體會快速掉落
-        state.apply_force(-PhysicsServer3D.area_get_param(get_world_3d().space, PhysicsServer3D.AREA_PARAM_GRAVITY_VECTOR) * mass * (1.0 - local_time_scale))
+# addons/cogito/Components/TimeSlowComponent.gd
+extends Node
+class_name TimeSlowComponent
+
+## 1.0 = 正常速度，0.1 = 十分之一速度，0.0 = 完全停止
+@export var local_time_scale : float = 1.0:
+    set(value):
+        local_time_scale = clampf(value, 0.0, 10.0)
+        _apply_to_animations()
+
+var _parent : Node
+
+
+func _ready() -> void:
+    _parent = get_parent()
+    _apply_to_animations()
+
+
+func _apply_to_animations() -> void:
+    if not _parent:
+        return
+    
+    # AnimationPlayer
+    var anim_player = _parent.find_child("AnimationPlayer", true, false)
+    if anim_player is AnimationPlayer:
+        anim_player.speed_scale = local_time_scale
+    
+    # AnimationTree（NPC 使用）
+    var anim_tree = _parent.find_child("AnimationTree", true, false)
+    if anim_tree is AnimationTree:
+        anim_tree.speed_scale = local_time_scale
+    
+    # GPUParticles3D
+    for particles in _parent.find_children("*", "GPUParticles3D", true, false):
+        particles.speed_scale = local_time_scale
+    for particles in _parent.find_children("*", "CPUParticles3D", true, false):
+        particles.speed_scale = local_time_scale
 ```
 
 ---
 
-## 5. 特效與粒子的時間緩速
+## 三、NPC 移動的時間縮放
 
-對於特效（如火花或煙霧）：
-- 修改 `GPUParticles3D` 或 `CPUParticles3D` 的 `speed_scale` 屬性。
-- 將其與物件的 `local_time_scale` 連動。
+NPC 的移動邏輯分散在各狀態腳本的 `_physics_process` 中，每個狀態都用 `delta` 計算速度。只需讓 `Host` 提供一個 `effective_delta` 即可。
+
+### 3.1 在 cogito_npc.gd 加入縮放變數
+
+```gdscript
+# cogito_npc.gd 加入
+@export var local_time_scale : float = 1.0
+```
+
+### 3.2 修改狀態腳本使用 effective_delta
+
+以 `npc_state_move_to_random_pos.gd` 的 `_move_host_to_next_position()` 為例（`npc_state_move_to_random_pos.gd:65-83`）：
+
+```gdscript
+# 修改前（直接使用 delta）
+func move_host_to_next_position(_delta: float) -> void:
+    if not Host.is_on_floor():
+        Host.velocity += Host.get_gravity() * _delta
+    # ...
+
+# 修改後（使用 effective_delta）
+func move_host_to_next_position(_delta: float) -> void:
+    var effective_delta = _delta * Host.get("local_time_scale", 1.0)
+    
+    if not Host.is_on_floor():
+        Host.velocity += Host.get_gravity() * effective_delta
+    
+    var direction = Host.global_position.direction_to(next_position)
+    if direction:
+        Host.face_direction(face_direction)
+        # 速度直接乘縮放，不用 delta（速度本身就是每秒值）
+        Host.velocity.x = direction.x * Host.move_speed * Host.get("local_time_scale", 1.0)
+        Host.velocity.z = direction.z * Host.move_speed * Host.get("local_time_scale", 1.0)
+    Host.move_and_slide()
+```
+
+**使用 `get("local_time_scale", 1.0)` 的原因**：若某個狀態對應的 NPC 沒有定義 `local_time_scale`，`get()` 返回預設值 1.0，不會報錯。
+
+### 3.3 chase 狀態的縮放
+
+`npc_state_chase.gd` 中的移動邏輯同理，在 `velocity` 計算時乘上縮放：
+```gdscript
+# npc_state_chase.gd 約第 117 行
+var next_position = Host.navigation_agent_3d.get_next_path_position()
+var scale = Host.get("local_time_scale", 1.0)
+Host.velocity.x = direction.x * Host.move_speed * scale
+Host.velocity.z = direction.z * Host.move_speed * scale
+```
 
 ---
 
-## 驗證方式
+## 四、RigidBody3D 物件的時間縮放
 
-1. **NPC 測試**：
-   - 在場景中放置兩個相同的 NPC，將其中一個的 `local_time_scale` 設為 0.2。
-   - 觀察其行走與攻擊動畫是否明顯變慢。
-2. **物理物件測試**：
-   - 將一個方塊設為 `local_time_scale = 0.1` 並從高處丟下。
-   - 確認它是否像「慢動作」一樣緩緩飄落並緩慢彈起。
-3. **動態切換測試**：
-   - 建立一個觸發區域 (Area3D)，當玩家進入時，透過程式碼將區域內物件的 `local_time_scale` 設為 0.1，離開時恢復 1.0。
+物理物件由 PhysicsServer 驅動，需透過 `_integrate_forces` 手動介入：
+
+```gdscript
+# 掛在 RigidBody3D 的腳本中
+@export var local_time_scale : float = 1.0
+
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+    if is_equal_approx(local_time_scale, 1.0):
+        return  # 正常速度，不干預
+    
+    # 縮放線速度與角速度（每幀壓縮，產生「濃稠液體」感）
+    state.linear_velocity *= local_time_scale
+    state.angular_velocity *= local_time_scale
+    
+    # 補償重力：引擎每幀加的重力是 g * delta（未縮放），
+    # 我們已縮放 linear_velocity，但引擎會再加一次完整的重力，導致下落過快。
+    # 解法：手動抵銷多餘重力
+    var gravity_dir = PhysicsServer3D.area_get_param(
+        get_world_3d().space,
+        PhysicsServer3D.AREA_PARAM_GRAVITY_VECTOR
+    ) as Vector3
+    var gravity_mag = PhysicsServer3D.area_get_param(
+        get_world_3d().space,
+        PhysicsServer3D.AREA_PARAM_GRAVITY
+    ) as float
+    
+    # 抵銷 (1 - scale) 比例的重力
+    state.apply_force(-gravity_dir * gravity_mag * mass * (1.0 - local_time_scale))
+```
+
+---
+
+## 五、觸發緩速的實際場景
+
+### 場景一：「子彈時間」技能（玩家按鍵暫時凍結所有敵人）
+
+```gdscript
+# player_skill.gd（附加在 CogitoPlayer 或其子節點）
+@export var bullet_time_duration : float = 3.0
+@export var bullet_time_scale : float = 0.2
+var _slow_targets : Array[Node] = []
+
+
+func activate_bullet_time() -> void:
+    var enemies = get_tree().get_nodes_in_group("Enemy")
+    for enemy in enemies:
+        if enemy.has_method("set") and "local_time_scale" in enemy:
+            enemy.local_time_scale = bullet_time_scale
+            _slow_targets.append(enemy)
+    
+    await get_tree().create_timer(bullet_time_duration).timeout
+    deactivate_bullet_time()
+
+
+func deactivate_bullet_time() -> void:
+    for target in _slow_targets:
+        if is_instance_valid(target):
+            target.local_time_scale = 1.0
+    _slow_targets.clear()
+```
+
+### 場景二：進入特定區域觸發緩速（Area3D 觸發器）
+
+```gdscript
+# slow_zone_trigger.gd（掛在 Area3D）
+@export var time_scale_in_zone : float = 0.3
+@export var affect_objects_only : bool = false  # false 也影響 NPC
+
+func _on_body_entered(body: Node3D) -> void:
+    if body.is_in_group("Enemy") or (not affect_objects_only):
+        if "local_time_scale" in body:
+            body.local_time_scale = time_scale_in_zone
+        var slow_comp = body.find_child("TimeSlowComponent")
+        if slow_comp:
+            slow_comp.local_time_scale = time_scale_in_zone
+
+
+func _on_body_exited(body: Node3D) -> void:
+    if "local_time_scale" in body:
+        body.local_time_scale = 1.0
+    var slow_comp = body.find_child("TimeSlowComponent")
+    if slow_comp:
+        slow_comp.local_time_scale = 1.0
+```
+
+---
+
+## 六、驗證清單
+
+| 測試步驟 | 預期結果 |
+|---|---|
+| 設定 NPC 的 `local_time_scale = 0.2` | NPC 動畫緩慢，移動速度降為 20% |
+| 設定 RigidBody3D 的 `local_time_scale = 0.1` | 物件緩緩飄落，彈起也很慢 |
+| 觸發子彈時間技能 | 所有 Enemy 群組成員變慢，3 秒後恢復 |
+| 玩家進入 SlowZone | 玩家速度不受影響（只有 Enemy 縮放），NPC 在區域內慢動作 |
+| 粒子特效（如火焰）在設定後 | `speed_scale` 降低，粒子動得更緩慢 |

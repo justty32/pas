@@ -32,11 +32,12 @@
 | **Cogito** | FPS Immersive Sim 模板 (Godot 4.4) | Level 1 | 分析中 | 第一人稱沉浸模擬框架，組件式互動、Resource 驅動物品欄（Grid-based）、NPC 狀態機、Wieldable 基類介面、存讀檔場景管理。 |
 | **pokeemerald** | GBA 遊戲反組譯 (C/ARM) | Level 1-2 | 分析中 | 寶可夢 Emerald pret 反組譯，雙Callback主迴圈、Task協程系統、Script bytecode直譯器、CB2狀態機戰鬥、多Controller架構、AI評分腳本、BoxPokemon XOR加密。 |
 | **下一站江湖Ⅱ (jianghu-2)** | 武俠 RPG / Unity Mono Mod (BepInEx) | 中 (實戰 Mod 完成) | 分析中 | ilspycmd 反編譯 Assembly-CSharp（3004 cs，置於 `projects/jianghu-2/`）。BepInEx 注入環境踩坑全解：MonoBehaviour.Update 不 tick→Harmony patch `AppGame.Update`、plugin fake-null→`ReferenceEquals`、`PlayAnim` 回傳值說謊→`HaveAnim`。首個 mod「閒置 NPC 原地坐下(chusheng_sit)」已上線運作。含通用開發指南＋API 速查＋mod 原始碼（`analysis/jianghu-2/mod_src/`）。 |
+| **hailo-media-library** | Hailo-15 AI 視覺 SoC SDK (C++) | Level 1-2 | 分析中 | Hailo-15 嵌入式視覺 SDK：hailo-media-library（Frontend Pipeline: LDC/DIS/EIS/Denoise/MultiResize/OSD/Encoder/PrivacyMask）+ hailo-postprocess（YOLO/NMS/Segmentation/OCR/Landmarks/CLIP）+ hailo-analytics（Stage-based 並行管線，30+ Stage 類型）。JSON Profile 配置系統、DMA Buffer Pool、GStreamer 1.20 整合、HailoRT 5.2。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：26 個
-- **最近更新日期**: 2026-05-23
+- **總計分析專案**：27 個
+- **最近更新日期**: 2026-05-25
 - **維護 Agent**: Gemini CLI / Claude Code
 
 ---
