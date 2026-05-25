@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 開發教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GODOT GAME TEMPLATE</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學</a>
+  <a href="../architecture/level1_overview.md">Level 1 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學</h1>
+  <p>目標導向的實作教學，每篇含前置知識、原始碼導航、步驟、驗證方式與常見坑。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">教學清單（2 篇）</div>
+  <div class="g2">
+
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">整合</div>
+      <h3><a href="../tutorial/howto_integrate_menus_into_existing_project.md">把選單接到既有 Godot 專案</a></h3>
+      <p>
+        在<strong>已存在</strong>的 Godot 4.x 專案中加入主選單／選項／暫停選單／設定持久化，而不破壞原有遊戲邏輯。
+        對應官方文件 <code>ExistingProject.md</code> / <code>BasicSetup.md</code> / <code>MainMenuSetup.md</code> / <code>GameSceneSetup.md</code>。
+      </p>
+      <ul>
+        <li>步驟 1：複製 addon、重載、於 Plugins 啟用（觸發 Setup Wizard）</li>
+        <li>步驟 2：執行 Setup Wizard 複製範例場景、確認 4 個 autoload</li>
+        <li>步驟 3：在 <code>AppConfig</code> 設定主選單／遊戲／結尾三個場景路徑</li>
+        <li>步驟 4：用 <code>pause_menu_controller</code> 把暫停選單掛進遊戲場景</li>
+        <li>步驟 5–6（選用）：跨場景音樂延續、UI 音效自動接線</li>
+      </ul>
+      <p style="margin-top:8px;">
+        <span class="chip">冒煙測試</span>
+        <span class="chip">設定持久化驗證</span>
+        <span class="chip">輸入重綁定驗證</span>
+        <span class="chip">autoload 順序坑</span>
+      </p>
+    </div>
+
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">擴充</div>
+      <h3><a href="../tutorial/howto_add_custom_option_page.md">新增自訂選項（與選項分頁）</a></h3>
+      <p>
+        在選項選單中加入會<strong>自動持久化</strong>的自訂選項（如滑鼠靈敏度、難度、語言），並在遊戲程式中讀回。
+        核心是 <code>OptionControl</code>（<code>@tool</code>）的零程式碼擴充。對應官方 <code>AddingCustomOptions.md</code> / <code>OptionsMenuSetup.md</code>。
+      </p>
+      <ul>
+        <li>A：擺一個 <code>OptionControl</code> + 子控件，填 Option Name / Section / Property Type（無程式碼）</li>
+        <li>B：遊戲中用 <code>PlayerConfig.get_config(section, key, 預設)</code> 讀回</li>
+        <li>C（進階）：連 <code>setting_changed</code> 訊號做「改值立即生效」副作用</li>
+        <li>D：用 <code>PaginatedTabContainer</code> 新增完整選項分頁，自動納入 page up/down 導航</li>
+      </ul>
+      <p style="margin-top:8px;">
+        <span class="chip">持久化驗證</span>
+        <span class="chip">.cfg 檔案驗證</span>
+        <span class="chip">key 大小寫敏感坑</span>
+        <span class="chip">section 選錯坑</span>
+        <span class="chip">default 被還原坑</span>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="highlight-box hl-blue" style="font-style:normal;font-size:.8rem;">
+    兩篇教學的共同前置：先讀
+    <a href="../architecture/level1_overview.md">Level 1 概覽</a>（邏輯層 vs 呈現層）、
+    <a href="../architecture/level2_core_modules.md">Level 2 核心模組</a>（autoload 與設定三層）與
+    <a href="../architecture/level3_settings_persistence.md">L3 設定持久化</a>。
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現層，非真相來源）· 真相來源：<a href="../tutorial/">tutorial/*.md</a>
+</div>
+
+</body>
+</html>

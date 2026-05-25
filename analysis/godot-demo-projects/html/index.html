@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-demo-projects — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">DEMOS</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="catalog.html">分類目錄</a>
+  <a href="details.html">深入剖析</a>
+  <a href="tutorial.html">學習路徑</a>
+  <a href="../architecture/level2_catalog.md">分類目錄 .md ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>godot-demo-projects — Godot 官方範例集合</h1>
+  <p>Godot 官方維護的範例專案集合，<strong>非單一應用程式</strong>，而是「分類編目 + 各自獨立可執行」的教學素材庫。每個含 <code>project.godot</code> 的資料夾都是一個獨立 demo，可用 Godot 引擎個別開啟或一次 Scan 全部匯入。</p>
+  <p style="margin-top:12px;">
+    <span class="badge badge-blue">主流 Godot 4.6</span>
+    <span class="badge badge-gray">13 分類</span>
+    <span class="badge badge-green">137 個 project.godot</span>
+    <span class="badge badge-yellow">MIT 授權</span>
+    <span class="badge badge-purple">多數可瀏覽器試玩</span>
+  </p>
+</div>
+
+<!-- 導覽快捷 -->
+<div class="section">
+  <div class="section-title">本導覽層四頁</div>
+  <div class="g4">
+    <div class="card card-accent-blue">
+      <h3>分類目錄</h3>
+      <p>13 分類、137 demo 的完整查表，附「主題→demo」速查。</p>
+      <p><a href="catalog.html">→ 查看核心目錄</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>深入剖析</h3>
+      <p>4 個代表 demo 的逐檔剖析與可遷移設計重點。</p>
+      <p><a href="details.html">→ 查看深入剖析</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>學習路徑</h3>
+      <p>7 條主題導向學習路徑，由淺入深排序 demo。</p>
+      <p><a href="tutorial.html">→ 查看學習路徑</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>真相來源 .md</h3>
+      <p>所有內容以 <code>architecture/</code>、<code>details/</code>、<code>tutorial/</code> 的 .md 為準。</p>
+      <p><a href="../architecture/level1_overview.md">→ Level 1 總覽</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- 13 分類卡片 -->
+<div class="section">
+  <div class="section-title">13 個頂層分類（點數字標籤看完整 demo 清單）</div>
+  <div class="g4">
+    <div class="card card-accent-blue">
+      <h3>2d/ <span class="chip">26 demo</span></h3>
+      <p>2D 玩法、渲染、導航、TileMap、粒子、光影與著色器。</p>
+      <p><a href="catalog.html#cat-2d">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>3d/ <span class="chip">32 demo</span></h3>
+      <p>3D 渲染、物理、光影、全域光照、LOD、體積效果。</p>
+      <p><a href="catalog.html#cat-3d">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>audio/ <span class="chip">9 demo</span></h3>
+      <p>音效、頻譜、BPM 同步、MIDI、麥克風、TTS 語音。</p>
+      <p><a href="catalog.html#cat-audio">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>compute/ <span class="chip">3 demo</span></h3>
+      <p>Compute Shader 與 Compositor Effect 的 GPU 計算。</p>
+      <p><a href="catalog.html#cat-compute">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>gui/ <span class="chip">14 demo</span></h3>
+      <p>Control 控制項、主題覆寫、國際化 i18n、文字與字體。</p>
+      <p><a href="catalog.html#cat-gui">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>loading/ <span class="chip">6 demo</span></h3>
+      <p>場景切換、多執行緒背景載入、存讀檔與序列化。</p>
+      <p><a href="catalog.html#cat-loading">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-yellow">
+      <h3>misc/ <span class="chip">12 demo</span></h3>
+      <p>視窗、輸入、座標、暫停、雜訊檢視、OS 功能等雜項。</p>
+      <p><a href="catalog.html#cat-misc">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-pink">
+      <h3>mobile/ <span class="chip">4 demo</span></h3>
+      <p>觸控、多點手勢、感測器、Android 應用內購買。</p>
+      <p><a href="catalog.html#cat-mobile">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>mono/ <span class="chip">6 demo</span></h3>
+      <p>C#（.NET）版範例，多為其他分類同名 demo 的對照。</p>
+      <p><a href="catalog.html#cat-mono">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>networking/ <span class="chip">7 demo</span></h3>
+      <p>WebSocket、WebRTC、高階 Multiplayer API 多人連線。</p>
+      <p><a href="catalog.html#cat-networking">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>plugins/ <span class="chip">1 專案 / 4 addon</span></h3>
+      <p>單一專案內收納多個 EditorPlugin 編輯器插件 demo。</p>
+      <p><a href="catalog.html#cat-plugins">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>viewport/ <span class="chip">7 demo</span></h3>
+      <p>SubViewport、2D↔3D 互嵌、分割畫面、畫面擷取。</p>
+      <p><a href="catalog.html#cat-viewport">→ 查看清單</a></p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>xr/ <span class="chip">10 demo</span></h3>
+      <p>VR / AR：OpenXR、WebXR、Mobile VR、手部追蹤、透視。</p>
+      <p><a href="catalog.html#cat-xr">→ 查看清單</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- 版本統計 -->
+<div class="section">
+  <div class="section-title">Godot 版本統計（依 project.godot 的 config/features）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>版本 / 特性標記</th><th>demo 數</th><th>備註</th></tr></thead>
+      <tbody>
+        <tr><td><code>4.6</code></td><td>111</td><td>主流</td></tr>
+        <tr><td><code>4.6</code> + GL Compatibility</td><td>13</td><td>相容渲染器（行動裝置 / 老硬體）</td></tr>
+        <tr><td><code>4.6</code> + C#</td><td>4</td><td>mono 分類為主</td></tr>
+        <tr><td><code>4.7</code></td><td>2</td><td>較新範例</td></tr>
+        <tr><td><code>4.6</code> + Forward Plus</td><td>2</td><td>高階桌面渲染器</td></tr>
+        <tr><td><code>4.6</code> + Mobile / C#+Mobile / C#+Forward Plus</td><td>各 1</td><td></td></tr>
+        <tr><td><code>4.5</code>（含 GL Compatibility / Mobile）</td><td>2</td><td>尚未升版的少數 demo</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-blue" style="margin-top:12px;">以 Godot 4.6 為基準即可開啟絕大多數 demo；<code>mono/</code> 分類需安裝 .NET 版 Godot。</div>
+</div>
+
+<!-- 如何執行單一 demo -->
+<div class="section">
+  <div class="section-title">如何執行單一 demo</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">方式 A</div>
+      <h3>個別開啟</h3>
+      <p>啟動 Godot 4.6（C# demo 需 .NET 版）→ Project Manager 點 <strong>Import</strong> → 選某 demo 內的 <code>project.godot</code>（例 <code>2d/platformer/project.godot</code>）→ 按 F5 執行主場景。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">方式 B</div>
+      <h3>一次匯入全部</h3>
+      <p>Project Manager 點 <strong>Scan</strong> → 選 repo 根資料夾（含全部分類那層）→ Godot 遞迴掃描所有 <code>project.godot</code>，把全部 demo 列入清單。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">方式 C</div>
+      <h3>瀏覽器試玩</h3>
+      <p>多數 demo 已匯出至 GitHub Pages，可直接在瀏覽器體驗（效能低於原生）。連結見 <a href="tutorial.html">學習路徑頁</a> 底部外部連結。</p>
+    </div>
+  </div>
+  <div class="highlight-box hl-orange" style="margin-top:12px;">主場景判定：每個 demo 的進入場景定義在其 <code>project.godot</code> 的 <code>[application]</code> → <code>run/main_scene</code>。除錯時先讀 <code>project.godot</code> 確認主場景與 Autoload，再看主場景掛載的腳本。</div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（非真相來源，內容更新一律先改 .md）· 真相來源：<a href="../architecture/level1_overview.md">level1_overview.md</a>、<a href="../architecture/level2_catalog.md">level2_catalog.md</a>、<a href="../details/">details/*.md</a>、<a href="../tutorial/learn_by_topic.md">learn_by_topic.md</a>、<a href="../others/external_links.md">external_links.md</a>
+</div>
+
+</body>
+</html>

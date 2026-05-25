@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GODOT GAME TEMPLATE</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../architecture/level1_overview.md">Level 1 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>Maaack's Godot Game Template &mdash; 選單與無障礙框架</h1>
+  <p>
+    一個 game-agnostic（2D &amp; 3D 通用）的 Godot 選單／選項／暫停選單／場景載入器框架，
+    核心設計是「邏輯層（<code>addons/.../base</code>）與呈現層（<code>scenes/</code> 繼承場景）分離」。
+    <span class="badge badge-blue">Godot 4.6</span>
+    <span class="badge badge-green">純 GDScript</span>
+    <span class="badge badge-gray">MIT</span>
+    <span class="badge badge-purple">gl_compatibility</span>
+  </p>
+</div>
+
+<!-- Tech stack quick stats -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot 4.6（向下相容 4.3+）</p>
+      <p>純 GDScript（無 C#／GDExtension）</p>
+      <p>Compatibility（OpenGL）渲染器</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>架構文件</h3>
+      <p>Level 1–3 共 5 篇</p>
+      <p>整體概覽 + 模組職責 + 3 子系統</p>
+      <p><a href="architecture.html">→ 查看架構</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>開發教學</h3>
+      <p>2 篇目標導向教學</p>
+      <p>接入既有專案 · 新增自訂選項</p>
+      <p><a href="tutorial.html">→ 查看教學</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>核心定位</h3>
+      <p>「約 15 分鐘」建好完整選單</p>
+      <p>可作新專案起點，亦可外掛</p>
+      <p>涵蓋 game jam 到商業規模</p>
+    </div>
+  </div>
+</div>
+
+<!-- addon / scenes mental model -->
+<div class="section">
+  <div class="section-title">關鍵心智模型：邏輯層 vs 呈現層</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">本體</div>
+      <h3><code>addons/.../base</code></h3>
+      <p>模板核心邏輯：autoload、設定持久化、選單、選項、輸入重綁定、載入畫面、覆蓋窗。不依賴 extras / examples。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-3">擴充</div>
+      <h3><code>addons/.../extras</code></h3>
+      <p>關卡載入器、關卡管理、輸贏管理、捕捉滑鼠、場景列舉器。依賴 base。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">呈現</div>
+      <h3><code>scenes/</code>（繼承場景）</h3>
+      <p>安裝精靈把 <code>examples/</code> 以「繼承場景」複製到此。使用者只覆寫客製屬性，<strong>升級 addon 不會覆蓋使用者改動</strong>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">Autoload 全域單例（project.godot [autoload]）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>單例名稱</th><th>職責</th></tr></thead>
+      <tbody>
+        <tr><td><code>AppConfig</code></td><td>啟動協調者：載入全域存檔 <code>GlobalState.open()</code> 並 <code>AppSettings.set_from_config_and_window()</code> 套回所有設定；持有主選單／遊戲／結尾三個場景路徑</td></tr>
+        <tr><td><code>SceneLoader</code></td><td>以執行緒化 <code>ResourceLoader</code> 非阻塞載入場景，可選顯示載入畫面</td></tr>
+        <tr><td><code>ProjectMusicController</code></td><td>監聽場景樹 <code>node_added</code>，自動接管符合 Music bus 的 autoplay <code>AudioStreamPlayer</code>，跨場景淡入淡出不中斷</td></tr>
+        <tr><td><code>ProjectUISoundController</code></td><td>自動為樹中 Button/Slider/Tab/LineEdit/Tree 接上 hover/focus/click 音效</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px;">
+      注意：<code>AppSettings</code>、<code>PlayerConfig</code>、<code>GlobalState</code>、<code>GameState</code> 不是 autoload，而是用 <code>class_name</code> 宣告的<strong>靜態類別</strong>（static-only），以 <code>ClassName.method()</code> 全域呼叫，避免佔用 autoload slot。
+    </p>
+  </div>
+</div>
+
+<!-- Core architecture patterns -->
+<div class="section">
+  <div class="section-title">核心架構模式</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">設定持久化</div>
+      <h3>三層責任鏈</h3>
+      <p>
+        <code>OptionControl</code>（UI）→ <code>AppSettings</code>（語意層，碰引擎）→ <code>PlayerConfig</code>（純檔案 I/O）。
+        所有偏好集中落到單一 <code>user://player_config.cfg</code>，啟動時一次回套。即時寫檔，無需 save 按鈕。
+      </p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">音效自動接管</div>
+      <h3>autoload 偵測場景樹</h3>
+      <p>
+        <code>ProjectMusicController</code> / <code>ProjectUISoundController</code> 監聽 <code>node_added</code>，
+        無侵入地接管音樂混音與 UI 音效。使用者只要擺一個 autoplay player（bus=Music）即可跨場景延續。
+      </p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-2">輸入重綁定</div>
+      <h3>List / Tree 雙模式</h3>
+      <p>
+        監聽窗錄製新輸入 → 衝突偵測 → 寫 <code>InputMap</code> + <code>PlayerConfig</code>。
+        List 固定欄位、Tree 自由增刪；用物理鍵碼轉換 + 手把品牌感知做跨裝置可讀化。
+      </p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">場景載入</div>
+      <h3>SceneLoader 非阻塞轉場</h3>
+      <p>
+        執行緒化載入，三種策略：整場切換 / 背景預載（Opening 邊播 logo 邊載主選單）/ 載入到容器（LevelLoader 保留外層 HUD）。
+        <code>LoadingScreen</code> 含多階段「卡住偵測」與重載出口。
+      </p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-2">選單覆蓋窗</div>
+      <h3>OverlaidWindow 共用底盤</h3>
+      <p>
+        暫停選單與選項視窗的共用底盤，統一處理彈窗時的焦點、暫停、滑鼠模式與互斥遮罩（<code>exclusive</code> 模式蓋遮罩防點底層）。
+      </p>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-2">遊戲進度</div>
+      <h3>GlobalState 單一 .tres</h3>
+      <p>
+        與偏好設定分開的另一條持久化線：玩家進度（關卡、checkpoint、遊玩時間）以子狀態資源序列化進單一
+        <code>user://global_state.tres</code>，<code>GameState</code> 最小侵入地疊在其上。
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Key data flows -->
+<div class="section">
+  <div class="section-title">關鍵資料流</div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">啟動序列</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">引擎啟動</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">AppConfig._ready()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">opening.tscn 播 logo</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">main_menu.tscn</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">New Game → SceneLoader.load_scene()</span>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">偏好設定持久化（即時寫檔）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-green">選項選單控件</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">OptionControl._on_setting_changed</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">AppSettings（需副作用時）</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">PlayerConfig.set_config</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">user://player_config.cfg</span>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">輸入重綁定</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">點按鈕</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">KeyAssignmentWindow 錄製</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">衝突偵測</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">InputMap.action_add_event</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">AppSettings → InputSettings section</span>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">遊戲進度持久化</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-orange">LevelManager</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">GameState（子狀態）</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">GlobalState.save()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">user://global_state.tres</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現層，非真相來源）· 真相來源：<a href="../architecture/">architecture/*.md</a>、<a href="../tutorial/">tutorial/*.md</a>、<a href="../session_log.md">session_log.md</a>
+</div>
+
+</body>
+</html>

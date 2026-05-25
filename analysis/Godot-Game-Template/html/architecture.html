@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GODOT GAME TEMPLATE</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../architecture/level1_overview.md">Level 1 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析</h1>
+  <p>從整體技術棧到各特色子系統的逐層深入，Level 1（初探）→ Level 2（核心模組）→ Level 3（設定持久化／輸入重綁定／場景載入三個子系統）。</p>
+</div>
+
+<!-- Quick nav within page -->
+<div class="section">
+  <div class="highlight-box hl-purple" style="font-style:normal;font-size:.8rem;">
+    快速跳轉：
+    <a href="#level1">Level 1 整體概覽</a> ·
+    <a href="#level2">Level 2 核心模組</a> ·
+    <a href="#level3-settings">L3 設定持久化</a> ·
+    <a href="#level3-input">L3 輸入重綁定</a> ·
+    <a href="#level3-scene">L3 場景載入</a>
+  </div>
+</div>
+
+<!-- Level 1 -->
+<div class="section" id="level1">
+  <div class="section-title">Level 1 &mdash; 初始探索：技術棧與整體架構</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Level 1</div>
+      <h3><a href="../architecture/level1_overview.md">技術棧與整體架構概覽</a></h3>
+      <p>Godot 4.6 + 純 GDScript + gl_compatibility 渲染器。釐清 <code>scenes/</code>（繼承場景＝呈現層）與 <code>addons/.../base</code>（邏輯層）的分離關係。</p>
+      <ul>
+        <li>addon 三層結構：base / extras / examples（+ installer / utilities）</li>
+        <li>4 個 autoload 單例清單與職責</li>
+        <li>入口場景 <code>opening.tscn</code> 與啟動序列流程圖</li>
+        <li>預設輸入動作、在地化（en/fr）、構建與執行方式</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">心智模型重點</div>
+      <h3>呈現層 / 邏輯層分離</h3>
+      <p>安裝精靈把 <code>examples/</code> 以「繼承場景」複製到專案根 <code>scenes/</code>，使用者僅覆寫客製屬性。</p>
+      <ul>
+        <li>升級 addon 不會覆蓋使用者改過的 <code>scenes/</code></li>
+        <li>核心邏輯永遠由 <code>addons/base/</code> 提供</li>
+        <li>一句話摘要：4 個 autoload 提供載入/設定/音樂/UI 音效；所有設定統一寫入單一 <code>player_config.cfg</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Level 2 -->
+<div class="section" id="level2">
+  <div class="section-title">Level 2 &mdash; 核心模組職責與耦合</div>
+  <div class="card card-accent-blue" style="margin-bottom:16px;">
+    <div class="tier-label tier-2">Level 2</div>
+    <h3><a href="../architecture/level2_core_modules.md">核心模組職責深度分析</a></h3>
+    <p>
+      核心耦合主線：<strong>所有設定最終都落到 <code>PlayerConfig</code> 單一 .cfg；所有場景切換都走 <code>SceneLoader</code>；存檔狀態走 <code>GlobalState</code> 單一 .tres</strong>。
+      三條線各自獨立，交會點在 autoload <code>AppConfig</code>。
+    </p>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>AppConfig（啟動協調者）</h3>
+      <p><code>_ready()</code> 完成兩件事：<code>GlobalState.open()</code> 與 <code>AppSettings.set_from_config_and_window()</code>；持有三個共用場景路徑，供各元件 fallback。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>設定持久化三層</h3>
+      <p>PlayerConfig（檔案 I/O）／ AppSettings（語意層碰引擎）／ OptionControl（UI 雙向綁定）。詳見 L3。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>SceneLoader</h3>
+      <p>執行緒化 <code>ResourceLoader</code> 非阻塞載入，含 <code>scene_loaded</code> 訊號與 Debug 鎖定群組。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>ProjectMusicController</h3>
+      <p>動態建 <code>_BlendMusic</code> bus，監聽 <code>node_added</code> 自動接管 Music bus 的 autoplay player，跨場景 blend 不中斷。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>ProjectUISoundController</h3>
+      <p>依 node 型別連接互動音效；<code>persistent</code> 時連動態生成控件也自動接上。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>選單系統</h3>
+      <p>MainMenu（路徑為空自動隱藏按鈕）、OverlaidWindow（暫停/選項共用底盤）、PauseMenuController、各 OptionsMenu。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>GlobalState / GameState</h3>
+      <p>與偏好設定分開的進度持久化線：以子狀態資源序列化進單一 <code>global_state.tres</code>。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>extras：關卡與輸贏</h3>
+      <p>LevelLoader（載入到容器）、LevelManager（關卡序列 + 輸贏流程）、LevelAndStateManager（橋接進度到存檔）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 settings -->
+<div class="section" id="level3-settings">
+  <div class="section-title">Level 3 &mdash; 設定儲存／載入機制</div>
+  <div class="card card-accent-orange" style="margin-bottom:16px;">
+    <div class="tier-label tier-3">Level 3</div>
+    <h3><a href="../architecture/level3_settings_persistence.md">設定持久化深入</a></h3>
+    <p>
+      所有使用者偏好映射到單一 <code>user://player_config.cfg</code> 的不同 section，
+      啟動時由 <code>AppSettings.set_from_config_and_window()</code> 一次回套到引擎各子系統（InputMap / AudioServer / DisplayServer）。
+    </p>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>三層責任鏈</h3>
+      <p>OptionControl 走捷徑直寫 PlayerConfig（無語意處理）；唯有需要引擎副作用者才經 AppSettings 做 config↔引擎雙向同步。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>即時寫檔 + 只存差異</h3>
+      <p><code>set_config</code> 每次立刻 save，無需 save 按鈕；未被改過的設定不寫入檔案，預設值仍由 project.godot / 場景提供。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>音量「相對基準」設計</h3>
+      <p>存的是「相對於 bus 初始音量的線性比例」而非 dB，讓混音設計與玩家 0~1 滑桿互不干擾（易踩雷點）。</p>
+    </div>
+  </div>
+  <div class="section" style="margin-top:16px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">啟動回套流程（load）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-purple">AppConfig._ready</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">set_default_inputs（快取 InputMap）</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">套回 input</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">套回 audio</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">套回 video</span>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 input -->
+<div class="section" id="level3-input">
+  <div class="section-title">Level 3 &mdash; 輸入重綁定（Input Remapping）</div>
+  <div class="card card-accent-orange" style="margin-bottom:16px;">
+    <div class="tier-label tier-3">Level 3</div>
+    <h3><a href="../architecture/level3_input_remapping.md">輸入重綁定系統深入</a></h3>
+    <p>
+      點動作按鈕 → 監聽窗錄製新輸入 → 衝突偵測 → 寫入 <code>InputMap</code> 與 <code>PlayerConfig</code>。
+      支援 List（每動作固定欄位）與 Tree（不限數量增刪）兩種 UI 模式，並能把按鍵文字換成手把/鍵鼠圖示。
+    </p>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>KeyAssignmentWindow 狀態機</h3>
+      <p>繼承覆蓋窗（暫停背景互動）。「<code>TextEdit</code> 取得焦點＝開始監聽」，符合無障礙/手把焦點流。三種確認模式：SINGLE / DOUBLE / OK_BUTTON。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>List vs Tree</h3>
+      <p>List 固定 N 欄（主鍵/副鍵），適合休閒固定鍵位；Tree 每動作可動態增刪任意數量輸入，適合硬核。由 <code>remapping_mode</code> 切換。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>InputEventHelper 跨裝置可讀化</h3>
+      <p>用 <code>physical keycode</code> + 佈局轉換解決 AZERTY/QWERTY 差異；依手把品牌（Xbox/PS/Switch）顯示正確按鈕名。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>雙重保護</h3>
+      <p>衝突偵測（防重複指派，命中 emit <code>already_assigned</code>）+ 最小值保護（防把動作刪到沒有任何輸入，emit <code>minimum_reached</code>）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 scene loading -->
+<div class="section" id="level3-scene">
+  <div class="section-title">Level 3 &mdash; 場景載入與轉場（Scene Loading）</div>
+  <div class="card card-accent-orange" style="margin-bottom:16px;">
+    <div class="tier-label tier-3">Level 3</div>
+    <h3><a href="../architecture/level3_scene_loading.md">場景載入與轉場子系統深入</a></h3>
+    <p>
+      <code>SceneLoader</code> 以執行緒化 <code>ResourceLoader</code> 非阻塞載入；搭配 <code>LoadingScreen</code> 顯示進度與卡住偵測，
+      <code>Opening</code> 利用背景載入在播 logo 期間預載主選單。
+    </p>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>情境 1：整場切換</h3>
+      <p>主選單 → 遊戲。<code>load_scene(path)</code> 切到全螢幕 LoadingScreen，載完 <code>change_scene_to_packed</code>。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>情境 2：背景預載</h3>
+      <p>Opening 邊播 logo 邊 <code>load_scene(path, true)</code> 預載主選單，重疊等待以縮短感知延遲。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>情境 3：載入到容器</h3>
+      <p>LevelLoader <code>load_level()</code> 把關卡 <code>add_child</code> 到容器，保留外層 HUD/暫停選單不被破壞。</p>
+    </div>
+  </div>
+  <div class="card card-accent-red" style="margin-top:16px;">
+    <h3>LoadingScreen 卡住偵測</h3>
+    <p>多階段狀態機 <code>STARTED → WAITING → STILL_WAITING → GIVE_UP</code>：進度一變動就重置 15 秒計時；長時間無進度逐級升級，最終顯示「Stalled at X%」彈窗並提供重載出口，避免玩家誤以為當機。</p>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現層，非真相來源）· 真相來源：<a href="../architecture/">architecture/*.md</a>
+</div>
+
+</body>
+</html>

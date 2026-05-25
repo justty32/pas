@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-demo-projects — 深入剖析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">DEMOS</span>
+  <a href="index.html">總覽</a>
+  <a href="catalog.html">分類目錄</a>
+  <a href="details.html" class="active">深入剖析</a>
+  <a href="tutorial.html">學習路徑</a>
+  <a href="../details/">details/ 目錄 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>深入剖析 — 4 個代表 demo</h1>
+  <p>由於本 repo 沒有單一架構，分析策略是「分類全貌 + 少數代表 demo 深入」。下列 4 個 demo 各自標註其關注點，逐檔剖析並整理可遷移的設計重點。完整內容見各自的 <code>details/*.md</code>。</p>
+</div>
+
+<!-- 四個 demo 摘要卡 -->
+<div class="section">
+  <div class="section-title">深入剖析 demo 一覽</div>
+  <div class="g4">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">2D 玩法</div>
+      <h3><code>2d/platformer</code></h3>
+      <p>最完整的 2D 玩法 demo：玩家控制、跳躍手感、射擊、敵人、暫停、分割畫面。</p>
+      <p><a href="#platformer">↓ 本頁摘要</a> · <a href="../details/demo_2d_platformer.md">完整 .md</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">設計模式</div>
+      <h3><code>2d/finite_state_machine</code></h3>
+      <p>把狀態機抽象成可重用基類，組織複雜角色行為的標準模式。</p>
+      <p><a href="#fsm">↓ 本頁摘要</a> · <a href="../details/demo_2d_finite_state_machine.md">完整 .md</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">GPU 計算</div>
+      <h3><code>compute/texture</code></h3>
+      <p>最完整的 compute shader 範例：水波漣漪回灌材質，含 render thread 與 ping-pong。</p>
+      <p><a href="#compute">↓ 本頁摘要</a> · <a href="../details/demo_compute_texture.md">完整 .md</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-2">網路</div>
+      <h3><code>networking/websocket_chat</code></h3>
+      <p>WebSocket 低階 API 最完整示範：自架 server、手動 poll、握手狀態機。</p>
+      <p><a href="#websocket">↓ 本頁摘要</a> · <a href="../details/demo_networking_websocket_chat.md">完整 .md</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- platformer -->
+<div class="section" id="platformer">
+  <div class="section-title">1 · 2d/platformer — 完整 2D 平台遊戲</div>
+  <div class="card card-accent-blue">
+    <h3>為何選它</h3>
+    <p>repo 中最完整、最具教學價值的 2D 玩法 demo，是學「一個小遊戲怎麼組起來」的範本。主場景由 <code>game_singleplayer.tscn</code> / <code>game_splitscreen.tscn</code> 提供，掛載 <code>game.gd</code>。</p>
+  </div>
+  <div class="g2" style="margin-top:16px;">
+    <div class="card">
+      <h3>關鍵腳本剖析</h3>
+      <ul>
+        <li><code>game.gd:1-26</code> 頂層只管全域輸入（F 切全螢幕、Esc 切暫停），暫停用 <code>get_tree().paused</code>（對應 <code>misc/pause</code>）。</li>
+        <li><code>player/player.gd</code>（最值得讀）：重力從專案設定讀取（<code>:17</code>）、終端速度上限（<code>:37</code>）、<code>move_toward()</code> 做加速度緩衝（<code>:39-40</code>）。</li>
+        <li>跳躍手感：提前放開縮短跳躍 <code>velocity.y *= 0.6</code>（<code>:33-35</code>）、二段跳（<code>:82-85</code>）。</li>
+        <li>動畫狀態用 <code>get_new_animation()</code> 輕量 if/else（<code>:62-76</code>），對比正式 FSM。</li>
+        <li><code>player/gun.gd</code>：Timer 做射速冷卻、<code>set_as_top_level(true)</code> 解耦子彈座標（<code>:21</code>）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>可遷移的設計重點</h3>
+      <ul>
+        <li>重力讀專案設定而非寫死，方便全域調參。</li>
+        <li>跳躍手感三件套：終端速度上限、提前放開縮短、二段跳。</li>
+        <li><code>action_suffix</code> 模式：用一個字串後綴讓同一控制腳本支援多玩家（<code>:15,31,39,52</code>）。</li>
+        <li><code>set_as_top_level</code> 解耦投射物與發射者座標。</li>
+      </ul>
+      <p style="margin-top:8px;">對照：物理驅動版 <code>2d/physics_platformer</code>；正式狀態管理 <code>2d/finite_state_machine</code>；3D 對應 <code>3d/platformer</code>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- fsm -->
+<div class="section" id="fsm">
+  <div class="section-title">2 · 2d/finite_state_machine — 有限狀態機設計模式</div>
+  <div class="card card-accent-green">
+    <h3>為何選它</h3>
+    <p>把「狀態機」抽象成可重用的基礎類別，再用繼承實作具體玩家狀態，是組織複雜角色行為的標準模式。值得對照 <code>2d/platformer</code> 的「用 if/else 選動畫」輕量做法，理解何時該升級成正式 FSM。</p>
+  </div>
+  <div class="g2" style="margin-top:16px;">
+    <div class="card">
+      <h3>兩層設計 + 關鍵腳本</h3>
+      <ul>
+        <li><code>state_machine/state.gd</code>：定義所有狀態的介面契約 <code>enter()/exit()/handle_input()/update()</code>（<code>:10-28</code>），靠 <code>signal finished(next_state)</code>（<code>:6-7</code>）轉移，狀態之間不互相引用。</li>
+        <li><code>state_machine/state_machine.gd</code>：<code>_enter_tree()</code> 連接子狀態 finished 訊號（<code>:33-36</code>）；委派 <code>update()</code>/<code>_unhandled_input()</code>；用 <code>states_stack</code> 支援 push/pop（<code>:70-84</code>），<code>"previous"</code> 回上一層。</li>
+        <li><code>player/player_state_machine.gd</code>：覆寫 <code>_change_state</code> 把 stagger/jump/attack 用 <code>push_front</code>（<code>:21-30</code>）；覆寫 <code>_unhandled_input</code> 把攻擊當可打斷全域輸入（<code>:33-43</code>）。</li>
+        <li><code>player/player_state.gd</code>：用 Dictionary 集中定義狀態名常數（<code>:3-13</code>），避免魔術字串。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>可遷移的設計重點</h3>
+      <ul>
+        <li>訊號驅動轉移：狀態 emit <code>finished</code>，由狀態機切換——狀態彼此不耦合。</li>
+        <li>狀態堆疊：暫時狀態用 push/pop，永久狀態用替換；<code>"previous"</code> 是回上一狀態的關鍵字。</li>
+        <li>基類 + 特化繼承：通用機制寫一次，遊戲特化只覆寫 <code>_change_state</code> / <code>_unhandled_input</code>。</li>
+        <li>可打斷輸入上提：把能中斷任何狀態的輸入（攻擊）放在狀態機層攔截。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- compute -->
+<div class="section" id="compute">
+  <div class="section-title">3 · compute/texture — Compute Shader 即時填充材質</div>
+  <div class="card card-accent-purple">
+    <h3>為何選它</h3>
+    <p>repo 中最完整的 compute shader 範例：用 GPU compute 即時計算水面漣漪，並把結果材質回灌到一般渲染管線。涵蓋 <code>RenderingDevice</code> 低階 API、push constant、ping-pong 多緩衝、以及「在 render thread 上執行」這些進階主題。比入門的 <code>compute/heightmap</code> 深一階。</p>
+  </div>
+  <div class="g2" style="margin-top:16px;">
+    <div class="card">
+      <h3>核心流程</h3>
+      <ul>
+        <li>執行緒模型（最重要）：所有 RD 操作鎖在 render thread，用 <code>RenderingServer.call_on_render_thread(...)</code>（<code>water_plane.gd:39,55,129</code>）。</li>
+        <li>初始化 <code>_initialize_compute_code</code>（<code>:154-195</code>）：取主 RD、載 .glsl 建 pipeline、建 3 張 R32_SFLOAT 紋理、9 組 uniform set。</li>
+        <li>Ping-pong 三緩衝（<code>:139-143</code>）：一張寫入、一張上幀、一張上上幀；二階波方程需前兩幀狀態。每幀 <code>next_texture = (next_texture+1)%3</code>（<code>:117</code>）。</li>
+        <li>每幀分派 <code>_render_process</code>（<code>:198-243</code>）：手動組 push constant 對齊到 8 個 float、dispatch group = <code>(N-1)/8+1</code>、<code>compute_list_dispatch</code>。</li>
+        <li>輸入：滑鼠射線打水面 Area3D 換算紋理座標加波點（<code>:70-92</code>），無互動時隨機落雨（<code>:104-110</code>）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>可遷移的設計重點</h3>
+      <ul>
+        <li>compute 要接進渲染就用主 RD + <code>call_on_render_thread</code>，所有 RD 操作鎖在 render thread。</li>
+        <li><code>Texture2DRD</code> 是 compute 輸出回灌材質的橋樑：改它的 <code>texture_rd_rid</code> 就切換顯示紋理。</li>
+        <li>ping-pong 多緩衝處理需要歷史幀的迭代演算法（波、流體、生命遊戲）。</li>
+        <li>push constant 手動對齊到 16 byte 邊界（此處湊 8 個 float = 32 byte）。</li>
+        <li>dispatch group = <code>(N-1)/local_size + 1</code>，搭配 shader 內邊界 discard。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- websocket -->
+<div class="section" id="websocket">
+  <div class="section-title">4 · networking/websocket_chat — WebSocket 聊天室</div>
+  <div class="card card-accent-orange">
+    <h3>為何選它</h3>
+    <p>repo 中把 WebSocket 低階 API 講得最完整的 demo：同時示範「在 Godot 內自架 WS server」與「連到 server 的 client」，並手動處理握手、輪詢（poll）、收發訊息與廣播。相較於 <code>websocket_minimal</code> 與 <code>websocket_multiplayer</code>，本 demo 直接操作 <code>TCPServer</code> / <code>WebSocketPeer</code>，最能看懂底層運作。</p>
+  </div>
+  <div class="g2" style="margin-top:16px;">
+    <div class="card">
+      <h3>Server 核心剖析</h3>
+      <ul>
+        <li><code>WebSocketServer.gd</code> 用 <code>class_name</code> 註冊，對外只暴露三個訊號（<code>:4-6</code>）。</li>
+        <li>握手狀態推進 <code>_connect_pending</code>（<code>:133-169</code>）：TCP → (TLS) → WS 的逐幀狀態機，用 <code>PendingPeer</code> 追蹤；逾時丟棄（<code>:104-106</code>）。</li>
+        <li>主迴圈 <code>poll()</code>（<code>:91-130</code>）每幀由 <code>_process</code> 呼叫：接新 TCP、推進握手、對每 peer poll、偵測斷線、emit 收到的封包。</li>
+        <li><code>send()</code>（<code>:48-65</code>）用 peer_id 正負號做路由：<code>0</code>=廣播、<code>&lt;0</code>=廣播排除一人、<code>&gt;0</code>=點對點；依型別選 <code>send_text</code> 或 <code>var_to_bytes</code>。</li>
+        <li><code>client.gd</code> 示範「可重用網路類」與「畫面業務層」分離（<code>:13-50</code>）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>可遷移的設計重點</h3>
+      <ul>
+        <li>WebSocketPeer 是 poll 驅動：每幀 <code>poll()</code> 是收訊、偵測斷線的前提。</li>
+        <li>握手是多階段狀態機：TCP → (TLS) → WS，用 PendingPeer 逐幀推進並設逾時。</li>
+        <li>peer_id 正負號當廣播語意（0=全體、負=排除一人）是簡潔的路由技巧。</li>
+        <li>字串 vs 二進位用 <code>was_string_packet()</code> / <code>var_to_bytes</code> 對稱處理。</li>
+        <li>把 server/client 封裝成 <code>class_name</code> 節點，對外只露訊號與少數方法。</li>
+      </ul>
+    </div>
+  </div>
+  <div class="highlight-box hl-orange" style="margin-top:12px;">關鍵心智模型：<strong>WebSocketPeer 不會主動推事件，必須每幀 poll()</strong>，否則收不到資料、也偵測不到斷線。</div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（非真相來源，內容更新一律先改 .md）· 真相來源：<a href="../details/demo_2d_platformer.md">demo_2d_platformer.md</a>、<a href="../details/demo_2d_finite_state_machine.md">demo_2d_finite_state_machine.md</a>、<a href="../details/demo_compute_texture.md">demo_compute_texture.md</a>、<a href="../details/demo_networking_websocket_chat.md">demo_networking_websocket_chat.md</a>
+</div>
+
+</body>
+</html>

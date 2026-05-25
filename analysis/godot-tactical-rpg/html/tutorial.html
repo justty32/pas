@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-tactical-rpg — 開發教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TACTICS</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學</a>
+  <a href="../others/observations.md">觀察註記 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學</h1>
+  <p>兩篇目標導向教學，帶你在範本上做出最常見的兩種擴充：新增一種職業、自訂一張地圖。下方另附觀察區塊，列出分析時發現的重構遺留與已知遺留問題。</p>
+</div>
+
+<!-- 教學卡片 -->
+<div class="section">
+  <div class="section-title">目標導向教學</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">教學一</div>
+      <h3><a href="../tutorial/how_to_add_a_class.md">如何新增一種兵種／職業</a></h3>
+      <p>在 <code>test_level</code> 加入一名全新職業的玩家棋子（如「Mage」），擁有自己的數值與立繪。</p>
+      <p style="margin-top:8px;"><strong>核心機制</strong>：每個 pawn 的 <code>Expertise</code> 節點掛一個 <code>StatsResource</code>（<code>.tres</code>），<code>_ready</code> 時把數值灌進 <code>Stats</code>。<strong>新增職業 = 新增一個 <code>.tres</code> 並指給某 pawn 的 Expertise</strong>。</p>
+      <ul>
+        <li>步驟 1：立繪 png 放進 <code>assets/textures/actor/character/</code></li>
+        <li>步驟 2：建 <code>StatsResource</code>（仿乾淨格式 <code>mob/skeleton.tres</code>）</li>
+        <li>步驟 3：複製 pawn、把 Expertise 的 starting_stats 換成新 <code>.tres</code></li>
+        <li>驗證：移動藍格數 = movement、攻擊紅格 = attack_range、傷害 = attack_power</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">教學二</div>
+      <h3><a href="../tutorial/how_to_create_a_map.md">如何自訂一張戰棋地圖</a></h3>
+      <p>做出新場地並讓它能被範本「自動格子化」、可走訪、可載入遊玩。</p>
+      <p style="margin-top:8px;"><strong>核心觀念</strong>：你只需擺好一堆方塊 mesh，引擎執行時自動把它們轉成帶碰撞與腳本的格子；鄰接與高低差靠射線在執行期判定，不需手填座標。</p>
+      <ul>
+        <li>硬性結構：<code>Arena/Tiles/Tile*</code>，<code>Tiles</code> 名稱寫死、每格為 <code>MeshInstance3D</code></li>
+        <li>建議 1m 方塊、格心對齊整數座標；拉高 Y 即做台階障礙</li>
+        <li>路線 A：Blender 製圖（官方推薦）；路線 B：直接在編輯器拼</li>
+        <li>包成關卡 <code>&lt;name&gt;_level.tscn</code>，改 <code>main.gd</code> 的 <code>load_level</code></li>
+        <li>常見坑表：無 hover、走不通、浮空陷地、載入沒反應</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 擴充切入點摘要 -->
+<div class="section">
+  <div class="section-title">範本的「刻意留白」＝最佳擴充切入點</div>
+  <div class="card card-accent-orange">
+    <table>
+      <thead><tr><th>留白</th><th>位置</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>關卡載入器</td><td><code>data/main.gd</code></td><td>開頭明示是 placeholder，預期被自訂 loader 取代</td></tr>
+        <tr><td>死亡/移除 pawn</td><td>無</td><td>血量歸零只灰階、不移除、仍擋路</td></tr>
+        <tr><td>勝負判定</td><td>無</td><td>無「全滅即勝」等結束條件</td></tr>
+        <tr><td>存檔/讀檔</td><td>無</td><td><code>stats.gd</code> 註解提到可改造，但未實作</td></tr>
+        <tr><td>傷害深度</td><td><code>combat.gd</code></td><td>僅單一 attack_power，無防禦/命中/暴擊/克制</td></tr>
+        <tr><td>技能 / AI 性格</td><td><code>starting_skills</code> / <code>strategy</code></td><td>已宣告但未被消費，是預留 hook</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 觀察與已知遺留問題 -->
+<div class="section">
+  <div class="section-title">觀察與已知遺留問題</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">分析過程中發現、值得日後注意之處（皆為觀察，未修改原始碼）。完整內容見 <a href="../others/observations.md">others/observations.md</a>。</p>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>重構遺留：重複的 service 檔</h3>
+      <p>4.3 重構後多個 service 同時存在「短名」與「長名」兩份、內容相同、宣告同一 <code>class_name</code>（如 <code>service.gd</code> 與 <code>ptcpt_serv.gd</code>）。改 Create/Patch 前需先確認哪份真正生效。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>StatsResource schema 不一致</h3>
+      <p>舊 hero <code>.tres</code>（如 <code>knight.tres</code>）殘留 <code>mp/armor/crit_rate</code> 等已不存在欄位，載入時被忽略；最嚴重的是用 <code>mp</code> 而非 <code>movement</code>，導致移動力取預設值。新增 <code>.tres</code> 請以 <code>mob/skeleton.tres</code> 為範本。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>疑似 bug：友軍穿越條件式</h3>
+      <p><code>arena/service/service.gd:62</code> 的 <code>elif not (allies_on_map.size() &gt; 0)</code> 似乎寫反——傳了友軍時這個 elif 反而不成立，「友軍格可穿越」判斷進不去。建議實測並修正。</p>
+    </div>
+    <div class="card card-accent-yellow">
+      <h3>其他小瑕疵</h3>
+      <p><code>movement.gd:74</code> 冗餘自我賦值 <code>camera.velocity = camera.velocity</code>（無害）；<code>debug.gd</code> 部分 <code>debug_dict</code> 條目用 string 鍵而非 message 鍵，導致除錯訊息不一致而不印。</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：
+  <a href="../tutorial/how_to_add_a_class.md">how_to_add_a_class.md</a> ·
+  <a href="../tutorial/how_to_create_a_map.md">how_to_create_a_map.md</a> ·
+  <a href="../others/observations.md">others/observations.md</a> ·
+  <a href="../session_log.md">session_log.md</a>
+</div>
+
+</body>
+</html>

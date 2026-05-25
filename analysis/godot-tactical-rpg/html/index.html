@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-tactical-rpg — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TACTICS</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../architecture/level3_enemy_ai.md">敵人 AI ↗</a>
+  <a href="../others/observations.md">觀察註記 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>godot-tactical-rpg — Godot 戰棋 SRPG 範本
+    <span class="badge badge-green">Godot 4.3</span>
+    <span class="badge badge-blue">MIT</span>
+  </h1>
+  <p>戰術角色扮演（Tactical RPG / SRPG）<strong>範本</strong>，非完整遊戲。3D 場地 + 2D billboard 角色立繪（<code>Sprite3D</code> 朝相機翻面），純 GDScript 撰寫。原作者 @ramaureirac，4.3 架構重構由 @mbusson 完成；同時發佈於 Godot Asset Library（asset id 1295）。</p>
+</div>
+
+<!-- 技術棧 -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot Engine 4.3</p>
+      <p>純 GDScript（typed 風格）</p>
+      <p>mobile 渲染器</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>視覺風格</h3>
+      <p>3D 場地 + 2D 立繪</p>
+      <p><code>Sprite3D</code> billboard 翻面</p>
+      <p>Blender 方塊地圖自動格子化</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>入口與場景</h3>
+      <p>主場景 <code>main.tscn</code></p>
+      <p>關卡 <code>test_level.tscn</code></p>
+      <p>關卡載入器 <code>main.gd</code>（placeholder）</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>Autoload / 測試</h3>
+      <p>僅 <code>DebugMenu</code> 一個外掛</p>
+      <p>無自動化測試（手動遊玩驗證）</p>
+      <p><code>DebugLog</code> 彩色回合/AI 日誌</p>
+    </div>
+  </div>
+</div>
+
+<!-- 三層架構 -->
+<div class="section">
+  <div class="section-title">核心架構：Model / Module / Service 三層（類 MVC）</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">本專案最重要、與其他 Godot 範本最大不同之處：<strong>每個系統都被切成三個檔案</strong>。節點只做轉發，演算法在 service，狀態存在 resource。</p>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">Module · 節點層</div>
+      <h3>掛進場景樹的節點</h3>
+      <p>位置：<code>data/modules/**/&lt;name&gt;.gd</code> + <code>.tscn</code>。基底為 <code>Node3D</code> / <code>CharacterBody3D</code> / <code>Control</code>。持有 <code>res</code> 與 <code>serv</code>，把工作<strong>轉發</strong>給 service（<code>func _process(d): serv.process(d, self)</code>）。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Service · 邏輯層</div>
+      <h3>無狀態演算法 / 流程</h3>
+      <p>位置：<code>data/models/**/service/*.gd</code>，基底 <code>RefCounted</code>。接收 module 與 resource 當參數操作。大型系統採 <strong>service of services</strong>（如相機 move/zoom/rotate/pan、pawn movement/combat/animation/ui）。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Resource · 資料層</div>
+      <h3>持有狀態，可被共享</h3>
+      <p>位置：<code>data/models/**/&lt;name&gt;_res.gd</code> + <code>.tres</code>，基底 <code>Resource</code>。持有變數、訊號、常數，可在 Inspector 編輯。<strong>同一份 <code>.tres</code> 被多個節點 <code>load()</code> 共享</strong>，成為主要耦合媒介（取代事件匯流排）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 戰棋核心亮點 -->
+<div class="section">
+  <div class="section-title">戰棋核心亮點（五大機制）</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <h3>射線格子化（無格座標）</h3>
+      <p>Blender 方塊 mesh 執行期由 <code>tiles_into_staticbodies</code> 轉成帶碰撞與腳本的 <code>TacticsTile</code>。鄰接與佔據全靠 <code>RayCast3D</code> 物理偵測判定，天然支援不規則地形與高低差。<a href="../architecture/level3_grid_pathfinding.md">→ Level 3</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>BFS flood-fill 移動範圍</h3>
+      <p><code>process_surrounding_tiles</code> 由起點向外 BFS，記 <code>pf_root</code>（回溯指標）與 <code>pf_distance</code>（步數）。不限擴散距離，移動/攻擊上限只在標色階段用 <code>distance</code> 過濾，一份 BFS 同時服務兩種範圍。<a href="../architecture/level3_grid_pathfinding.md">→ Level 3</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>陣營制回合（整隊行動）</h3>
+      <p>三層嵌套：陣營層 <code>turn_stage</code>（0/1）→ 細部層 <code>stage</code>（0~7）→ 單位層 <code>can_move/can_attack</code>。玩家優先把己方全員動完才換 AI，無速度/敏捷決定的個別順序。<a href="../architecture/level3_turn_and_combat.md">→ Level 3</a></p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>敵人 AI 決策鏈</h3>
+      <p>「super basic」但完整：選棋（第一個能動的）→ BFS 找最近敵人鄰格 → 移動 → 選射程內血量最低者 → 攻擊。共用玩家的 BFS/標色/移動/戰鬥 service。<a href="../architecture/level3_enemy_ai.md">→ Level 3</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>四層樞紐攝影機</h3>
+      <p><code>CharacterBody3D</code>（平移）→ <code>TwistPivot</code>（yaw）→ <code>PitchPivot</code>（pitch）→ <code>Camera3D</code>（fov 縮放）。支援平移/邊緣捲動/自由視角/旋轉/縮放/聚焦，鍵鼠手把雙模、象限吸附、球形邊界。<a href="../architecture/level3_camera_input.md">→ Level 3</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>共享 Resource 耦合</h3>
+      <p>無自訂全域事件匯流排。<code>camera.tres</code> / <code>control.tres</code> / <code>participant.tres</code> / <code>arena.tres</code> 被多節點共享，<strong><code>stage</code> 變數 + 共享 res 即事件機制</strong>；相機聚焦靠資料層 <code>cam.target</code>。<a href="../architecture/level2_core_modules.md">→ Level 2</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- AI 決策鏈 pipeline -->
+<div class="section">
+  <div class="section-title">敵人 AI 決策鏈（stage 0~4 全自動）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">stage0 choose_pawn<br>挑第一個能動的</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">stage1 chase_nearest_enemy<br>BFS 找最近敵人鄰格</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">stage2 is_pawn_done_moving<br>等 tilestack 清空</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">stage3 choose_pawn_to_attack<br>挑射程內最弱目標</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-red">stage4 attack_pawn<br>結算傷害 → 換下一隻</span>
+  </div>
+  <p style="font-size:.78rem;color:var(--dim);margin-top:8px;"><code>turn.gd:58</code> 的 <code>if res.stage &gt; 4: res.stage = 0</code> 確保 AI 不誤入玩家專屬 stage 5~7。詳見 <a href="../architecture/level3_enemy_ai.md">level3_enemy_ai.md</a>。</p>
+</div>
+
+<!-- 玩家回合 pipeline -->
+<div class="section">
+  <div class="section-title">玩家回合流程（stage 0~7，輸入驅動）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">0 SELECT_PAWN<br>滑鼠選棋</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">1 SHOW_ACTIONS<br>動作選單</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">2 SHOW_MOVEMENTS<br>標藍格</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">3 SELECT_LOCATION<br>選落點</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">4 MOVE_PAWN<br>沿路徑移動</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">5 DISPLAY_TARGETS<br>標紅格</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">6 SELECT_TARGET<br>選攻擊目標</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-red">7 ATTACK<br>結算傷害</span>
+  </div>
+  <p style="font-size:.78rem;color:var(--dim);margin-top:8px;"><strong>玩家/AI 共用同一套 stage、不同 handler</strong>：玩家走完 0~7（移動與攻擊分兩條動作分支）；對手只走 0~4 自動完成。詳見 <a href="../architecture/level3_turn_and_combat.md">level3_turn_and_combat.md</a>。</p>
+</div>
+
+<!-- 五大模組速查 -->
+<div class="section">
+  <div class="section-title">五大模組速查（節點 / 邏輯 / 資料）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>模組</th><th>節點層</th><th>邏輯層 service</th><th>資料層 resource</th><th>一句話職責</th></tr></thead>
+      <tbody>
+        <tr><td>場地 Arena</td><td><code>TacticsArena</code></td><td>ArenaService + TileService</td><td><code>TacticsArenaResource</code></td><td>mesh→tile、BFS、pathfinding、目標搜尋</td></tr>
+        <tr><td>格子 Tile</td><td><code>TacticsTile</code></td><td>（沿用 ArenaService）+ Raycast</td><td>狀態存節點</td><td>可達/可攻擊/hover 狀態、射線找鄰居與佔用者</td></tr>
+        <tr><td>棋子 Pawn</td><td><code>TacticsPawn</code></td><td>movement/combat/animation/ui</td><td><code>TacticsPawnResource</code></td><td>移動物理、攻擊、動畫、血條、回合旗標</td></tr>
+        <tr><td>參與者 Participant</td><td><code>Player</code>/<code>Opponent</code></td><td>turn/combat + 陣營 service</td><td><code>TacticsParticipantResource</code></td><td>持有一方 pawn、推進 stage、輸入 vs AI 分流</td></tr>
+        <tr><td>攝影機 Camera</td><td><code>TacticsCamera</code></td><td>move/zoom/rotate/pan</td><td><code>TacticsCameraResource</code></td><td>平移/捲動/自由視角/旋轉/縮放/聚焦</td></tr>
+        <tr><td>控制 Controls</td><td><code>TacticsControls</code></td><td>input/selection/ui/camera + Cursor</td><td><code>TacticsControlsResource</code></td><td>動作選單、拾取 tile/pawn、玩家意圖轉 stage</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/level1_overview.md">architecture/*.md</a> · <a href="../tutorial/how_to_add_a_class.md">tutorial/*.md</a> · <a href="../others/observations.md">others/observations.md</a> · <a href="../session_log.md">session_log.md</a>
+</div>
+
+</body>
+</html>

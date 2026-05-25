@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-demo-projects — 分類目錄</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">DEMOS</span>
+  <a href="index.html">總覽</a>
+  <a href="catalog.html" class="active">分類目錄</a>
+  <a href="details.html">深入剖析</a>
+  <a href="tutorial.html">學習路徑</a>
+  <a href="../architecture/level2_catalog.md">分類目錄 .md ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>分類目錄 — 13 分類 137 demo 完整查表</h1>
+  <p>逐一列出全部 demo 與一句話用途，供快速查表「想學 X 該看哪個 demo」。路徑均相對於 <code>projects/godot-demo-projects/</code>；每個列出的目錄都是一個獨立可執行專案。本頁完整對應 <a href="../architecture/level2_catalog.md">architecture/level2_catalog.md</a>。</p>
+</div>
+
+<!-- 快速跳轉 -->
+<div class="section">
+  <div class="section-title">快速跳轉</div>
+  <div class="card">
+    <p style="font-size:.82rem;line-height:2.2;">
+      <a href="#cat-2d">2d (26)</a> ·
+      <a href="#cat-3d">3d (32)</a> ·
+      <a href="#cat-audio">audio (9)</a> ·
+      <a href="#cat-compute">compute (3)</a> ·
+      <a href="#cat-gui">gui (14)</a> ·
+      <a href="#cat-loading">loading (6)</a> ·
+      <a href="#cat-misc">misc (12)</a> ·
+      <a href="#cat-mobile">mobile (4)</a> ·
+      <a href="#cat-mono">mono (6)</a> ·
+      <a href="#cat-networking">networking (7)</a> ·
+      <a href="#cat-plugins">plugins (1/4)</a> ·
+      <a href="#cat-viewport">viewport (7)</a> ·
+      <a href="#cat-xr">xr (10)</a> ·
+      <a href="#topic">主題速查</a>
+    </p>
+  </div>
+</div>
+
+<!-- 2d -->
+<div class="section" id="cat-2d">
+  <div class="section-title">2d/ — 2D 玩法、渲染、導航（26）</div>
+  <div class="card card-accent-blue">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>2d/bullet_shower</code></td><td>高效管理大量物件（彈幕）：用伺服器 API 取代節點以承載成千上萬子彈</td></tr>
+        <tr><td><code>2d/custom_drawing</code></td><td>不使用節點、直接以 <code>_draw()</code> 繪製 2D 圖元</td></tr>
+        <tr><td><code>2d/dodge_the_creeps</code></td><td>官方新手教學的成品：閃避敵人的簡單小遊戲</td></tr>
+        <tr><td><code>2d/dynamic_tilemap_layers</code></td><td>用 TileMap 圖層做出可穿越的「假牆」效果</td></tr>
+        <tr><td><code>2d/finite_state_machine</code></td><td>有限狀態機（FSM）設計模式套用於玩家控制</td></tr>
+        <tr><td><code>2d/glow</code></td><td>透過 WorldEnvironment 在 2D 遊戲中使用輝光（glow）</td></tr>
+        <tr><td><code>2d/hexagonal_map</code></td><td>六角形 TileMap 與 TileSet 的最小範例</td></tr>
+        <tr><td><code>2d/instancing</code></td><td>場景實例化（scene instancing）的用法示範</td></tr>
+        <tr><td><code>2d/isometric</code></td><td>傳統等距視角（isometric）含深度排序</td></tr>
+        <tr><td><code>2d/kinematic_character</code></td><td>用 CharacterBody2D 做運動學角色控制器</td></tr>
+        <tr><td><code>2d/light2d_as_mask</code></td><td>用 2D 光源當作遮罩遮蔽螢幕上的物件</td></tr>
+        <tr><td><code>2d/lights_and_shadows</code></td><td>2D 光源與陰影的簡單示範</td></tr>
+        <tr><td><code>2d/navigation</code></td><td>2D 導航（NavigationRegion + Agent）路徑尋找</td></tr>
+        <tr><td><code>2d/navigation_astar</code></td><td>用 AStarGrid2D 做格子型 2D 導航</td></tr>
+        <tr><td><code>2d/navigation_mesh_chunks</code></td><td>為大型世界分塊烘焙導航網格</td></tr>
+        <tr><td><code>2d/particles</code></td><td>2D 粒子系統運作方式展示</td></tr>
+        <tr><td><code>2d/physics_platformer</code></td><td>用 RigidBody2D 製作物理驅動的平台跳台</td></tr>
+        <tr><td><code>2d/physics_tests</code></td><td>一系列 2D 物理行為測試</td></tr>
+        <tr><td><code>2d/platformer</code></td><td>完整像素風 2D 平台遊戲（含音效、敵人、分割畫面）</td></tr>
+        <tr><td><code>2d/polygons_lines</code></td><td>實心 / 帶貼圖的 2D 多邊形與線段繪製</td></tr>
+        <tr><td><code>2d/pong</code></td><td>簡易 Pong，示範 2D 遊戲最佳實務</td></tr>
+        <tr><td><code>2d/role_playing_game</code></td><td>格子型移動（grid-based movement）的 RPG 範例</td></tr>
+        <tr><td><code>2d/screen_space_shaders</code></td><td>多個全螢幕 2D 著色器後處理範例</td></tr>
+        <tr><td><code>2d/skeleton</code></td><td>用骨架（Skeleton2D）做綁定與動畫角色</td></tr>
+        <tr><td><code>2d/sprite_shaders</code></td><td>套用於 Sprite 的各式著色器範例集</td></tr>
+        <tr><td><code>2d/tween</code></td><td>進階 Tween（補間動畫）用法</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 3d -->
+<div class="section" id="cat-3d">
+  <div class="section-title">3d/ — 3D 渲染、物理、光影（32）</div>
+  <div class="card card-accent-green">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>3d/antialiasing</code></td><td>展示 Godot 各種 3D 抗鋸齒（MSAA/TAA/FXAA…）</td></tr>
+        <tr><td><code>3d/csg</code></td><td>建構式實體幾何（CSG）布林造型功能</td></tr>
+        <tr><td><code>3d/decals</code></td><td>Decal 貼花節點的多種使用範例</td></tr>
+        <tr><td><code>3d/global_illumination</code></td><td>全域光照系統（VoxelGI / SDFGI / LightmapGI）</td></tr>
+        <tr><td><code>3d/graphics_settings</code></td><td>圖形設定選單的實作範例</td></tr>
+        <tr><td><code>3d/ik</code></td><td>不同反向運動學（IK）演算法示範</td></tr>
+        <tr><td><code>3d/kinematic_character</code></td><td>用方塊角色示範 3D 運動學角色控制</td></tr>
+        <tr><td><code>3d/labels_and_texts</code></td><td>兩種 3D 文字技巧：Label3D 與 TextMesh</td></tr>
+        <tr><td><code>3d/lights_and_shadows</code></td><td>3D 各式光源與陰影功能展示</td></tr>
+        <tr><td><code>3d/material_testers</code></td><td>多顆複雜材質球，當作材質測試場</td></tr>
+        <tr><td><code>3d/navigation</code></td><td>3D 場景導航，角色沿路徑移動</td></tr>
+        <tr><td><code>3d/navigation_mesh_chunks</code></td><td>為大型世界分塊烘焙 3D 導航網格</td></tr>
+        <tr><td><code>3d/occlusion_culling_mesh_lod</code></td><td>遮擋剔除（occlusion culling）+ Mesh LOD</td></tr>
+        <tr><td><code>3d/particles</code></td><td>3D 粒子（GPU 與 CPU 版）功能展示</td></tr>
+        <tr><td><code>3d/physical_light_camera_units</code></td><td>物理光照與相機單位（流明 / 光圈快門 ISO）</td></tr>
+        <tr><td><code>3d/physics_interpolation</code></td><td>物理插值（physics interpolation）平滑畫面</td></tr>
+        <tr><td><code>3d/physics_tests</code></td><td>一系列 3D 物理行為測試</td></tr>
+        <tr><td><code>3d/platformer</code></td><td>3D 平台遊戲範例</td></tr>
+        <tr><td><code>3d/procedural_materials</code></td><td>3 種程序化生成材質的技巧</td></tr>
+        <tr><td><code>3d/ragdoll_physics</code></td><td>角色布娃娃（ragdoll）模擬範例</td></tr>
+        <tr><td><code>3d/rigidbody_character</code></td><td>用膠囊 RigidBody 做 3D 角色</td></tr>
+        <tr><td><code>3d/sky_shaders</code></td><td>天空著色器，含即時體積雲</td></tr>
+        <tr><td><code>3d/soft_body_physics</code></td><td>軟體物理（SoftBody）範例</td></tr>
+        <tr><td><code>3d/sprites</code></td><td>3D 中使用 Sprite3D 與 AnimatedSprite3D</td></tr>
+        <tr><td><code>3d/squash_the_creeps</code></td><td>官方 3D 新手教學成品：踩扁敵人的小遊戲</td></tr>
+        <tr><td><code>3d/tonemap_color_correction</code></td><td>各色調映射運算子與調色互動</td></tr>
+        <tr><td><code>3d/truck_town</code></td><td>不同類型卡車的駕駛物理示範</td></tr>
+        <tr><td><code>3d/variable_rate_shading</code></td><td>可變速率著色（VRS）使用方式</td></tr>
+        <tr><td><code>3d/visibility_ranges</code></td><td>用可見距離（visibility ranges）建階層式 LOD</td></tr>
+        <tr><td><code>3d/volumetric_fog</code></td><td>Vulkan 渲染器下的體積霧範例</td></tr>
+        <tr><td><code>3d/voxel</code></td><td>最小第一人稱體素（voxel）遊戲</td></tr>
+        <tr><td><code>3d/waypoints</code></td><td>在 3D 世界顯示 Label 等 GUI（導航點）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- audio -->
+<div class="section" id="cat-audio">
+  <div class="section-title">audio/ — 音效系統（9）</div>
+  <div class="card card-accent-orange">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>audio/audio_effects</code></td><td>各式 Audio Effect（總線效果）示範</td></tr>
+        <tr><td><code>audio/bpm_sync</code></td><td>將音訊播放與時間同步以維持一致 BPM</td></tr>
+        <tr><td><code>audio/device_changer</code></td><td>從 Godot 切換音訊輸出裝置</td></tr>
+        <tr><td><code>audio/generator</code></td><td>用 AudioStreamGenerator 程序化生成音訊</td></tr>
+        <tr><td><code>audio/mic_record</code></td><td>從麥克風錄音</td></tr>
+        <tr><td><code>audio/midi_piano</code></td><td>使用 MIDI 輸入做鋼琴</td></tr>
+        <tr><td><code>audio/rhythm_game</code></td><td>簡易節奏遊戲（處理音訊延遲對齊）</td></tr>
+        <tr><td><code>audio/spectrum</code></td><td>用頻譜分析器（SpectrumAnalyzer）做視覺化</td></tr>
+        <tr><td><code>audio/text_to_speech</code></td><td>文字轉語音（TTS）支援示範</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- compute -->
+<div class="section" id="cat-compute">
+  <div class="section-title">compute/ — Compute Shader / Compositor（3）</div>
+  <div class="card card-accent-purple">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>compute/heightmap</code></td><td>用 compute shader 生成高度圖（入門級 RenderingDevice 用法）</td></tr>
+        <tr><td><code>compute/post_shader</code></td><td>用 Compositor Effect 做後處理</td></tr>
+        <tr><td><code>compute/texture</code></td><td>用 compute shader 即時填充材質（水波漣漪，整合進渲染管線）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- gui -->
+<div class="section" id="cat-gui">
+  <div class="section-title">gui/ — Control 介面、主題、國際化（14）</div>
+  <div class="card card-accent-cyan">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>gui/accessibility</code></td><td>UI 無障礙（accessibility）功能示範</td></tr>
+        <tr><td><code>gui/bidi_and_font_features</code></td><td>雙向文字（BiDi）、斷行對齊、OpenType 字體特性</td></tr>
+        <tr><td><code>gui/control_gallery</code></td><td>各種 Control 節點集中陳列，附名稱便於辨識</td></tr>
+        <tr><td><code>gui/drag_and_drop</code></td><td>拖放（drag and drop）功能示範</td></tr>
+        <tr><td><code>gui/gd_paint</code></td><td>用 GDScript 做的簡易繪圖編輯器</td></tr>
+        <tr><td><code>gui/input_mapping</code></td><td>按鍵重新綁定（remap）設定畫面</td></tr>
+        <tr><td><code>gui/msdf_font</code></td><td>多通道有號距離場（MSDF）字體</td></tr>
+        <tr><td><code>gui/multiple_resolutions</code></td><td>多解析度自適應（content scaling）示範</td></tr>
+        <tr><td><code>gui/pseudolocalization</code></td><td>偽本地化（pseudolocalization）測試功能</td></tr>
+        <tr><td><code>gui/regex</code></td><td>RegEx（正規表達式）功能與用法</td></tr>
+        <tr><td><code>gui/rich_text_bbcode</code></td><td>RichTextLabel 的 BBCode 富文字支援</td></tr>
+        <tr><td><code>gui/theming_override</code></td><td>執行時覆寫 GUI 顏色與 StyleBox</td></tr>
+        <tr><td><code>gui/translation</code></td><td>專案國際化（i18n）翻譯流程</td></tr>
+        <tr><td><code>gui/ui_mirroring</code></td><td>UI 鏡像（RTL 版面）示範</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- loading -->
+<div class="section" id="cat-loading">
+  <div class="section-title">loading/ — 載入、場景切換、執行緒、序列化（6）</div>
+  <div class="card card-accent-red">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>loading/autoload</code></td><td>用 Autoload 單例切換場景</td></tr>
+        <tr><td><code>loading/load_threaded</code></td><td>用 ResourceLoader 做背景（多執行緒）載入</td></tr>
+        <tr><td><code>loading/runtime_save_load</code></td><td>執行時載入 / 存檔各種檔案格式（不經 import）</td></tr>
+        <tr><td><code>loading/scene_changer</code></td><td>用 SceneTree 兩個函式在兩場景間切換</td></tr>
+        <tr><td><code>loading/serialization</code></td><td>各種序列化方式存檔的比較</td></tr>
+        <tr><td><code>loading/threads</code></td><td>用 Thread 載入圖片的範例</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- misc -->
+<div class="section" id="cat-misc">
+  <div class="section-title">misc/ — 視窗、輸入、座標、雜項（12）</div>
+  <div class="card card-accent-yellow">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>misc/2.5d</code></td><td>2.5D 遊戲（3D 場景 2D 視覺）做法</td></tr>
+        <tr><td><code>misc/custom_logging</code></td><td>自訂 Logger，與引擎並行運作</td></tr>
+        <tr><td><code>misc/graphics_tablet_input</code></td><td>繪圖板（壓感）輸入支援</td></tr>
+        <tr><td><code>misc/hdr_output</code></td><td>HDR 輸出與最佳實務</td></tr>
+        <tr><td><code>misc/joypads</code></td><td>手把(joypad)測試工具</td></tr>
+        <tr><td><code>misc/large_world_coordinates</code></td><td>雙精度（double）渲染支援，超大世界座標</td></tr>
+        <tr><td><code>misc/matrix_transform</code></td><td>互動視覺化 Transform（矩陣變換）原理</td></tr>
+        <tr><td><code>misc/multiple_windows</code></td><td>在主視窗內使用各種 Window 類別</td></tr>
+        <tr><td><code>misc/noise_viewer</code></td><td>即時調整各種雜訊（noise）參數的檢視器</td></tr>
+        <tr><td><code>misc/os_test</code></td><td>各種 OS 相關功能（OS 類別）測試</td></tr>
+        <tr><td><code>misc/pause</code></td><td>遊戲暫停（SceneTree.paused）機制</td></tr>
+        <tr><td><code>misc/window_management</code></td><td>視窗管理（DisplayServer）各功能展示</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- mobile -->
+<div class="section" id="cat-mobile">
+  <div class="section-title">mobile/ — 行動裝置（4）</div>
+  <div class="card card-accent-pink">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>mobile/android_iap</code></td><td>Android 應用內購買（IAP）</td></tr>
+        <tr><td><code>mobile/multitouch_cubes</code></td><td>多點觸控與手勢操作（需觸控裝置）</td></tr>
+        <tr><td><code>mobile/multitouch_view</code></td><td>多點觸控除錯器（顯示按壓點彩色圓點）</td></tr>
+        <tr><td><code>mobile/sensors</code></td><td>加速度計、陀螺儀、磁力計等感測器</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- mono -->
+<div class="section" id="cat-mono">
+  <div class="section-title">mono/ — C#（.NET）版範例（6）</div>
+  <div class="card card-accent-blue">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>mono/2.5d</code></td><td>2.5D 遊戲的 C# 版本</td></tr>
+        <tr><td><code>mono/android_iap</code></td><td>Android IAP 的 C# 版本</td></tr>
+        <tr><td><code>mono/dodge_the_creeps</code></td><td>dodge_the_creeps 的 C# 版本</td></tr>
+        <tr><td><code>mono/multiplayer_pong</code></td><td>多人 Pong 的 C# 版本</td></tr>
+        <tr><td><code>mono/pong</code></td><td>Pong 的 C# 版本</td></tr>
+        <tr><td><code>mono/squash_the_creeps</code></td><td>squash_the_creeps 的 C# 版本</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-blue" style="margin-top:12px;">mono/ 的多數 demo 是其他分類同名 demo 的 C# 對照，便於學習 GDScript ↔ C# 的等價寫法；需 .NET 版 Godot。</div>
+</div>
+
+<!-- networking -->
+<div class="section" id="cat-networking">
+  <div class="section-title">networking/ — 網路與多人連線（7）</div>
+  <div class="card card-accent-green">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>networking/multiplayer_bomber</code></td><td>用高階 Multiplayer API（RPC + MultiplayerSpawner）做炸彈超人</td></tr>
+        <tr><td><code>networking/multiplayer_pong</code></td><td>多人 Pong 實作</td></tr>
+        <tr><td><code>networking/webrtc_minimal</code></td><td>用 WebRTC 連接兩個 peer 的最小範例</td></tr>
+        <tr><td><code>networking/webrtc_signaling</code></td><td>WebRTC 完整信令（signaling）流程（含 server）</td></tr>
+        <tr><td><code>networking/websocket_chat</code></td><td>WebSocket 聊天室：自架 WS server + client（手動 poll）</td></tr>
+        <tr><td><code>networking/websocket_minimal</code></td><td>用 WebSocket 連兩 peer 的最小範例</td></tr>
+        <tr><td><code>networking/websocket_multiplayer</code></td><td>WebSocket 搭配 Multiplayer API</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- plugins -->
+<div class="section" id="cat-plugins">
+  <div class="section-title">plugins/ — 編輯器插件（1 專案，內含多個 addon）</div>
+  <div class="card card-accent-orange">
+    <table>
+      <thead><tr><th>Addon（位於 plugins/addons/）</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>plugins/addons/custom_node</code></td><td>用插件註冊自訂節點型別</td></tr>
+        <tr><td><code>plugins/addons/main_screen</code></td><td>在編輯器主畫面新增自訂分頁</td></tr>
+        <tr><td><code>plugins/addons/material_creator</code></td><td>提供材質建立工具的插件</td></tr>
+        <tr><td><code>plugins/addons/simple_import_plugin</code></td><td>自訂資源匯入（import plugin）流程</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-orange" style="margin-top:12px;"><code>plugins/</code> 本身是單一專案（<code>plugins/project.godot</code>），把多個 EditorPlugin demo 集中於 <code>addons/</code>，並用 <code>plugins/test_scene.tscn</code> 展示。</div>
+</div>
+
+<!-- viewport -->
+<div class="section" id="cat-viewport">
+  <div class="section-title">viewport/ — SubViewport 與分割畫面（7）</div>
+  <div class="card card-accent-purple">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>viewport/2d_in_3d</code></td><td>用 viewport 把 2D 場景顯示在 3D 場景中</td></tr>
+        <tr><td><code>viewport/3d_in_2d</code></td><td>用 viewport 把 3D 場景顯示在 2D 場景中</td></tr>
+        <tr><td><code>viewport/3d_scaling</code></td><td>縮放 3D 解析度而不影響 2D（render scale）</td></tr>
+        <tr><td><code>viewport/dynamic_split_screen</code></td><td>動態分割畫面（兩玩家靠近時合併）</td></tr>
+        <tr><td><code>viewport/gui_in_3d</code></td><td>在 3D 場景中放置可互動的 GUI</td></tr>
+        <tr><td><code>viewport/screen_capture</code></td><td>擷取畫面截圖</td></tr>
+        <tr><td><code>viewport/split_screen_input</code></td><td>本地多人分割畫面與輸入處理</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- xr -->
+<div class="section" id="cat-xr">
+  <div class="section-title">xr/ — VR / AR（OpenXR / WebXR）（10）</div>
+  <div class="card card-accent-cyan">
+    <table>
+      <thead><tr><th>Demo</th><th>一句話用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>xr/mobile_vr_interface_demo</code></td><td>啟用 Mobile VR 介面的最簡範例</td></tr>
+        <tr><td><code>xr/openxr_binding_modifier_demo</code></td><td>OpenXR action map 的 binding modifier 功能</td></tr>
+        <tr><td><code>xr/openxr_character_centric_movement</code></td><td>以 CharacterBody3D 為基底的 VR 移動</td></tr>
+        <tr><td><code>xr/openxr_composition_layers</code></td><td>OpenXR compositor layer（合成層）功能</td></tr>
+        <tr><td><code>xr/openxr_hand_tracking_demo</code></td><td>OpenXR 手部追蹤與控制器追蹤</td></tr>
+        <tr><td><code>xr/openxr_origin_centric_movement</code></td><td>以 XROrigin3D 為基底的 VR 移動</td></tr>
+        <tr><td><code>xr/openxr_passthrough</code></td><td>OpenXR 透視（passthrough，AR）功能</td></tr>
+        <tr><td><code>xr/openxr_render_models</code></td><td>OpenXR 渲染模型（render models）實作</td></tr>
+        <tr><td><code>xr/openxr_spectator_view</code></td><td>頭盔內外不同視角（旁觀者視角）</td></tr>
+        <tr><td><code>xr/webxr</code></td><td>WebXR 渲染與控制器支援的最小範例</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 主題速查 -->
+<div class="section" id="topic">
+  <div class="section-title">速查：常見學習主題 → 推薦 demo</div>
+  <div class="card card-accent-yellow">
+    <table>
+      <thead><tr><th>想學…</th><th>看這個 demo</th></tr></thead>
+      <tbody>
+        <tr><td>2D 平台跳台完整做法</td><td><code>2d/platformer</code>、<code>2d/physics_platformer</code></td></tr>
+        <tr><td>狀態機設計模式</td><td><code>2d/finite_state_machine</code></td></tr>
+        <tr><td>角色控制器</td><td><code>2d/kinematic_character</code>、<code>3d/kinematic_character</code>、<code>3d/rigidbody_character</code></td></tr>
+        <tr><td>第一個完整小遊戲</td><td><code>2d/dodge_the_creeps</code>、<code>3d/squash_the_creeps</code></td></tr>
+        <tr><td>導航 / 尋路</td><td><code>2d/navigation_astar</code>、<code>2d/navigation</code>、<code>3d/navigation</code></td></tr>
+        <tr><td>Compute Shader</td><td><code>compute/heightmap</code>（入門）→ <code>compute/texture</code>（整合渲染）</td></tr>
+        <tr><td>多人連線（高階 API）</td><td><code>networking/multiplayer_bomber</code></td></tr>
+        <tr><td>WebSocket 通訊</td><td><code>networking/websocket_minimal</code> → <code>websocket_chat</code> → <code>websocket_multiplayer</code></td></tr>
+        <tr><td>UI / 控制項</td><td><code>gui/control_gallery</code>、<code>gui/theming_override</code></td></tr>
+        <tr><td>國際化與字體</td><td><code>gui/translation</code>、<code>gui/bidi_and_font_features</code>、<code>gui/msdf_font</code></td></tr>
+        <tr><td>場景切換與背景載入</td><td><code>loading/scene_changer</code>、<code>loading/load_threaded</code></td></tr>
+        <tr><td>暫停遊戲</td><td><code>misc/pause</code></td></tr>
+        <tr><td>分割畫面</td><td><code>viewport/dynamic_split_screen</code>、<code>viewport/split_screen_input</code></td></tr>
+        <tr><td>VR 開發起步</td><td><code>xr/openxr_character_centric_movement</code>、<code>xr/openxr_hand_tracking_demo</code></td></tr>
+        <tr><td>C# 寫 Godot</td><td><code>mono/</code> 任一（與 GDScript 版對照）</td></tr>
+        <tr><td>編輯器插件</td><td><code>plugins/</code>（內含 4 種 addon）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-purple" style="margin-top:12px;">想看由淺入深的完整學習順序，見 <a href="tutorial.html">學習路徑頁</a>（對應 <a href="../tutorial/learn_by_topic.md">tutorial/learn_by_topic.md</a>）。</div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（非真相來源，內容更新一律先改 .md）· 真相來源：<a href="../architecture/level2_catalog.md">architecture/level2_catalog.md</a>
+</div>
+
+</body>
+</html>

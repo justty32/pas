@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TakinGodotTemplate — 開發教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TAKIN</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學</h1>
+  <p>2 篇目標導向教學，示範本模板「換模組不改框架」的兩個最常見擴充情境：新增一個遊戲選項、抽換 GameContent 玩法。每篇均含前置知識、原始碼導航、實作步驟與驗證方式。</p>
+</div>
+
+<div class="section">
+  <div class="g2">
+    <div class="card card-accent-green">
+      <span class="badge badge-green" style="margin-bottom:8px;">設定擴充</span>
+      <h3><a href="../tutorial/howto_add_new_option.md">新增一個遊戲選項（Configuration）</a></h3>
+      <p>在 OptionsMenu 加上一個新的可調設定（以下拉選單 / ListCfg 為例），並讓它自動持久化到 <code>user://config.cfg</code>。核心是利用命名約定自動註冊——Loader 會自動發現命名正確的 <code>_cfg</code> 節點，無需改 Loader 程式碼。</p>
+      <ul>
+        <li>步驟 1：在 <code>ConfigurationEnum.ListCfg</code> 加 enum 值</li>
+        <li>步驟 2：建命名正確的 controller 腳本與 <code>.tscn</code></li>
+        <li>步驟 3：把 controller 掛進 Configuration autoload</li>
+        <li>步驟 4：在選項頁放 <code>menu_dropdown_node</code> UI 節點</li>
+        <li>含 List / Slider / Toggle / Tree 四種變體對照</li>
+      </ul>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3A §A 設定子系統、Level 2 §5</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <span class="badge badge-blue" style="margin-bottom:8px;">玩法抽換</span>
+      <h3><a href="../tutorial/howto_swap_game_content.md">抽換 GameContent，套上自己的玩法</a></h3>
+      <p>把預設的 2D 點擊玩法換成你自己的遊戲（2D 或 3D），同時保留框架既有的暫停 / 選項 / 離開 / 存檔流程。關鍵心智模型：<code>GameScene</code> 是固定框架、<code>GameContent</code> 是可抽換玩法本體，兩者以鴨子型別溝通。</p>
+      <ul>
+        <li>約定屬性表：<code>pause_menu_button</code> / <code>player</code> / <code>control_grab_focus</code></li>
+        <li>路徑 A：直接改預設 GameContent（最快）</li>
+        <li>路徑 B：新增玩法並用 GameMode 下拉切換（推薦）</li>
+        <li>處理 3D 玩法的滑鼠擷取（capture / release）</li>
+        <li>把玩法資料接上反射式存檔系統</li>
+      </ul>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3B §3 場景流、Level 3A §A.5 / §B</p>
+    </div>
+  </div>
+</div>
+
+<!-- 兩篇共通驗證提醒 -->
+<div class="section">
+  <div class="section-title">兩篇教學的共通驗證原則</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>面向</th><th>做法</th></tr></thead>
+      <tbody>
+        <tr><td>編輯器</td><td>Import 後預期「no errors and no warnings」；UID 警告則重存 .tscn</td></tr>
+        <tr><td>持久化</td><td>設定改值後查 <code>user://config.cfg</code>；存檔查 <code>user://data/save_N/...</code>（JSON + <code>§§§</code> 簽章）</td></tr>
+        <tr><td>重設 / 流程</td><td>Options 的 Reset 應還原當前分頁；遊戲暫停 / 離開應觸發存檔流程</td></tr>
+        <tr><td>Lint</td><td>存檔時 <code>format_on_save</code> / <code>gdLinter</code> 自動跑；push 前確認 <code>quality_check.yml</code> 的 gdlint 不報錯（threshold=0）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現索引，不取代 .md）· 真相來源：<a href="../tutorial/">tutorial/*.md</a>
+</div>
+
+</body>
+</html>

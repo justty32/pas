@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TakinGodotTemplate — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TAKIN</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析</h1>
+  <p>從整體技術棧到各子系統的逐層深入。Level 1（初探）→ Level 2（核心模組職責）→ Level 3（三個最具特色的子系統：雙持久化、場景流與 Builder、HACKS 與 Web）。</p>
+</div>
+
+<!-- Quick nav within page -->
+<div class="section">
+  <div class="highlight-box hl-blue" style="font-style:normal;font-size:.8rem;">
+    快速跳轉：
+    <a href="#level1">Level 1 初探</a> ·
+    <a href="#level2">Level 2 核心模組</a> ·
+    <a href="#level3">Level 3 子系統</a>
+  </div>
+</div>
+
+<!-- Level 1 -->
+<div class="section" id="level1">
+  <div class="section-title">Level 1 &mdash; 初始探索：技術棧與整體架構</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Level 1</div>
+      <h3><a href="../architecture/level1_overview.md">初始探索：技術棧與整體架構概覽</a></h3>
+      <p>定位本專案為 Godot 4.4 起手模板（非遊戲），純 GDScript、GL Compatibility 渲染器，靈感源自 Maaack。盤點頂層目錄、8 個 plugins、16 個 autoload、場景流、29 語系 i18n、CI/CD 與命名慣例。</p>
+      <ul>
+        <li>頂層目錄結構（<code>godot/root/</code> 收納所有實體內容）</li>
+        <li>16 個 autoload 分三類與其載入順序約束</li>
+        <li>主場景 BootSplash → MenuScene 場景流</li>
+        <li>CI（gdlint threshold=0）/ CD（itch.io）概覽</li>
+        <li>專案類型判定：模板 D（UI/框架）為主、模板 A（遊戲）為輔</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-1">速覽</div>
+      <h3>一句話總結</h3>
+      <p>以 16 個 autoload 為骨幹，把第三方 plugin 全部 <strong>Wrapper 化</strong> 成 enum / Resource 驅動的型別安全介面；再用 <strong>SignalBus 觀察者模式</strong> 解耦全域通訊；UI 採 <strong>Component-Driven Design</strong>（Builder 自動注入），設定與存檔分別走 INI / JSON 雙持久化。</p>
+      <p style="margin-top:10px;">相對 Maaack 的差異化擴充：系統化 Wrapper 層、設定/存檔分離、反射式存檔、Builder 模擬 Traits、29 語系 i18n、HACKS 文件化、多玩法範例。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 2 -->
+<div class="section" id="level2">
+  <div class="section-title">Level 2 &mdash; 核心模組職責與耦合</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Level 2</div>
+      <h3><a href="../architecture/level2_core_modules.md">核心模組職責深度分析</a></h3>
+      <p>逐一拆解模組分層、各 plugin 職責、四個 Wrapper、SignalBus、Configuration / Data 權責、Reference 系統、Scene 三層分類、Builder、Scripts 工具層，以及資料流與耦合點。</p>
+      <ul>
+        <li>Wrapper 層（最具辨識度）：SceneManager / Audio / Log / TranslationServer</li>
+        <li>Scene 三層：Component → Node → Scene</li>
+        <li>4 大耦合點與 12 項相對 Maaack 的差異對照</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Scene 三層分類（組織 UI 的核心心法）</h3>
+      <table>
+        <thead><tr><th>層級</th><th>定義</th><th>例子</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-green">Component</span></td><td>擴充父節點功能的附掛元件</td><td>ButtonAudio、TwistMotion、UiBuilder、ParticleEmitter</td></tr>
+          <tr><td><span class="badge badge-blue">Node</span></td><td>可獨立重用的功能單元</td><td>MenuButton、MenuConfiguration（dropdown/slider/toggle/tree）</td></tr>
+          <tr><td><span class="badge badge-purple">Scene</span></td><td>大型專門化集合</td><td>BootSplashScene、MenuScene、GameScene、PauseMenu</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 四大耦合點 pipeline -->
+  <div class="section" style="margin-top:16px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">主要資料流（UI → Wrapper → Plugin）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">UI 場景節點</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">Wrapper autoload</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">enum → 字串 / Resource</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">第三方 plugin</span>
+    </div>
+  </div>
+  <div class="section">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">設定資料流（UI → Controller → INI，回流以訊號同步）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">MenuDropdownNode</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">update_config_value_index</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">ConfigurationController.apply + save</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">ConfigStorage → config.cfg</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">configuration_applied 回流</span>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 -->
+<div class="section" id="level3">
+  <div class="section-title">Level 3 &mdash; 三個最具特色的子系統</div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">Level 3A</div>
+      <h3><a href="../architecture/level3_configuration_save_system.md">設定（INI）與存檔（JSON）雙持久化</a></h3>
+      <p>兩套獨立持久化機制的完整剖析：設定走 INI、存檔走 JSON + 簽章，皆以「約定 + 反射自動化」壓低擴充成本。</p>
+      <ul>
+        <li>ConfigurationController 模板方法生命週期</li>
+        <li>命名約定自動註冊（Loader 免改）</li>
+        <li>SaveData 反射式序列化、§§§ 簽章健壯性</li>
+        <li>自動存檔、加密、base64 匯入匯出</li>
+      </ul>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-3">Level 3B</div>
+      <h3><a href="../architecture/level3_scene_flow_and_builder.md">場景流、玩法抽換與 Builder 元件注入</a></h3>
+      <p>三個「換模組不改框架」的關鍵接縫：Wrapper + Resource 驅動轉場、GameScene 鴨子型別抽換玩法、Builder 條件式元件注入。</p>
+      <ul>
+        <li>轉場呼叫鏈：enum 尋址 + 預載 Options .tres</li>
+        <li>GameScene 以鴨子型別弱耦合（<code>"player" in game_content</code>）</li>
+        <li>UiBuilder 自動注入 TwistMotion / ControlFocusOnHover</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-3">Level 3C</div>
+      <h3><a href="../architecture/level3_hacks_and_web.md">HACKS（Godot issue workaround）與 Web 整合</a></h3>
+      <p>把引擎已知 issue 的 workaround 文件化，重點剖析 Web 剪貼簿的 JavaScriptBridge JS 注入。</p>
+      <ul>
+        <li>HACKS 清單：已解 [x] / 待辦 [ ]</li>
+        <li>Web 剪貼簿（#81252）原生 dialog 注入流程</li>
+        <li>Theme → CSS 主題橋接、同步阻塞輪詢</li>
+        <li>font tween→scale tween、play_stream bus 等細節</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 三接縫總結 -->
+  <div class="section" style="margin-top:16px;">
+    <div class="section-title">「換模組不改框架」三接縫</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>接縫</th><th>解耦手段</th><th>換掉它要動什麼</th></tr></thead>
+        <tbody>
+          <tr><td>場景 ↔ 轉場 plugin</td><td>Wrapper + enum + Options Resource</td><td>只改 SceneManagerWrapper / 編輯 .tres</td></tr>
+          <tr><td>GameScene ↔ 玩法</td><td>鴨子型別鉤子 + GameModeListCfg PackedScene 陣列</td><td>做一個 GameContent 子場景並加進下拉</td></tr>
+          <tr><td>UI 控制項 ↔ 行為（動畫/焦點/音效）</td><td>Builder 條件式元件注入</td><td>改 UiBuilder 的條件或注入清單</td></tr>
+          <tr><td>新增一項設定</td><td>命名約定自動註冊</td><td>加 enum + 命名正確的 <code>_cfg</code> 場景（Loader 自動發現）</td></tr>
+          <tr><td>新增存檔欄位</td><td>反射式序列化</td><td>在 SaveData 子類加一個 typed 變數</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現索引，不取代 .md）· 真相來源：<a href="../architecture/">architecture/*.md</a>
+</div>
+
+</body>
+</html>

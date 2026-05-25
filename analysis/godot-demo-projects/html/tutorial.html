@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-demo-projects — 學習路徑</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">DEMOS</span>
+  <a href="index.html">總覽</a>
+  <a href="catalog.html">分類目錄</a>
+  <a href="details.html">深入剖析</a>
+  <a href="tutorial.html" class="active">學習路徑</a>
+  <a href="../tutorial/learn_by_topic.md">學習導引 .md ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>學習路徑 — 按主題由淺入深</h1>
+  <p>本 repo 是「按主題拆好的範例庫」，學習方式不是逐一讀，而是<strong>鎖定一個主題 → 找對應 demo → 由淺入深排序</strong>。本頁提供 7 條常見學習路徑與閱讀順序，對應 <a href="../tutorial/learn_by_topic.md">tutorial/learn_by_topic.md</a>。</p>
+</div>
+
+<!-- 前置與通用步驟 -->
+<div class="section">
+  <div class="section-title">前置知識與通用使用步驟</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>前置知識</h3>
+      <ul>
+        <li>先讀 <a href="../architecture/level1_overview.md">level1_overview.md</a>：理解「每個資料夾＝獨立專案」、Godot 版本（4.6）、如何用 Scan 一次匯入。</li>
+        <li>全部 demo 索引見 <a href="catalog.html">分類目錄頁</a>（<a href="../architecture/level2_catalog.md">level2_catalog.md</a>）。</li>
+      </ul>
+    </div>
+    <div class="card card-accent-green">
+      <h3>通用使用步驟</h3>
+      <ul>
+        <li>開 Godot 4.6（C# demo 需 .NET 版），用 <strong>Scan</strong> 匯入 repo 根目錄，把全部 demo 載入。</li>
+        <li>清單雙擊要學的 demo 開啟。</li>
+        <li>先讀該 demo 的 <code>README.md</code> 了解操作，按 F5 試玩。</li>
+        <li>從主場景（<code>project.godot</code> 的 <code>run/main_scene</code>）往下看掛載腳本。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 路徑 A -->
+<div class="section">
+  <div class="section-title">路徑 A · 做一個 2D 平台遊戲</div>
+  <div class="card card-accent-blue">
+    <table>
+      <thead><tr><th>步驟</th><th>Demo</th><th>學到什麼</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>2d/dodge_the_creeps</code></td><td>最小完整遊戲：節點、輸入、計分、重來</td></tr>
+        <tr><td>2</td><td><code>2d/platformer</code></td><td>角色控制、跳躍手感、射擊、敵人、暫停、分割畫面（深入見 <a href="details.html#platformer">深入剖析</a>）</td></tr>
+        <tr><td>3</td><td><code>2d/finite_state_machine</code></td><td>當行為變複雜，用狀態機重構（深入見 <a href="details.html#fsm">深入剖析</a>）</td></tr>
+        <tr><td>4</td><td><code>2d/physics_platformer</code></td><td>改用 RigidBody2D 的物理驅動變體，比較兩種角色實作</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-blue" style="margin-top:12px;">重點對照：<code>2d/platformer</code> 用 <code>get_new_animation()</code> 的輕量 if/else（<code>player.gd:62-76</code>）；<code>2d/finite_state_machine</code> 升級成訊號驅動、可堆疊的正式 FSM。先理解前者再看後者，最能體會「何時該引入 FSM」。</div>
+</div>
+
+<!-- 路徑 B -->
+<div class="section">
+  <div class="section-title">路徑 B · 3D 渲染與畫面品質</div>
+  <div class="card card-accent-green">
+    <table>
+      <thead><tr><th>主題</th><th>Demo</th></tr></thead>
+      <tbody>
+        <tr><td>抗鋸齒</td><td><code>3d/antialiasing</code></td></tr>
+        <tr><td>全域光照</td><td><code>3d/global_illumination</code></td></tr>
+        <tr><td>光與陰影</td><td><code>3d/lights_and_shadows</code>、<code>3d/decals</code></td></tr>
+        <tr><td>體積效果</td><td><code>3d/volumetric_fog</code>、<code>3d/sky_shaders</code></td></tr>
+        <tr><td>色調 / HDR</td><td><code>3d/tonemap_color_correction</code>、<code>misc/hdr_output</code></td></tr>
+        <tr><td>效能（剔除 / LOD）</td><td><code>3d/occlusion_culling_mesh_lod</code>、<code>3d/visibility_ranges</code></td></tr>
+        <tr><td>完整設定選單</td><td><code>3d/graphics_settings</code>（把上述開關做成 UI）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:12px;">建議：先 <code>3d/material_testers</code> 熟悉材質，再依需求挑光影/效能 demo；<code>3d/graphics_settings</code> 適合最後看，了解如何把這些選項暴露給玩家。</div>
+</div>
+
+<!-- 路徑 C -->
+<div class="section">
+  <div class="section-title">路徑 C · Compute Shader / GPU 計算</div>
+  <div class="card card-accent-purple">
+    <table>
+      <thead><tr><th>步驟</th><th>Demo</th><th>難度</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>compute/heightmap</code></td><td>入門：純算資料，不接渲染</td></tr>
+        <tr><td>2</td><td><code>compute/texture</code></td><td>進階：結果回灌材質、render thread、ping-pong（深入見 <a href="details.html#compute">深入剖析</a>）</td></tr>
+        <tr><td>3</td><td><code>compute/post_shader</code></td><td>Compositor Effect 做後處理</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-purple" style="margin-top:12px;">核心觀念（來自 <code>compute/texture</code>）：所有 <code>RenderingDevice</code> 操作要鎖在 render thread，用 <code>RenderingServer.call_on_render_thread</code>（<code>water_plane.gd:39,55,129</code>）；compute 輸出靠 <code>Texture2DRD</code> 回灌一般材質。</div>
+</div>
+
+<!-- 路徑 D -->
+<div class="section">
+  <div class="section-title">路徑 D · 多人連線 / 網路</div>
+  <div class="card card-accent-orange">
+    <table>
+      <thead><tr><th>步驟</th><th>Demo</th><th>學到什麼</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>networking/websocket_minimal</code></td><td>兩 peer 最小連線</td></tr>
+        <tr><td>2</td><td><code>networking/websocket_chat</code></td><td>自架 server、手動 poll、廣播（深入見 <a href="details.html#websocket">深入剖析</a>）</td></tr>
+        <tr><td>3</td><td><code>networking/websocket_multiplayer</code></td><td>WebSocket 接 Godot 高階 Multiplayer API</td></tr>
+        <tr><td>4</td><td><code>networking/multiplayer_bomber</code></td><td>RPC + MultiplayerSpawner 的完整對戰遊戲</td></tr>
+        <tr><td>替代</td><td><code>networking/webrtc_minimal</code> → <code>webrtc_signaling</code></td><td>改用 WebRTC（P2P）的路徑</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-orange" style="margin-top:12px;">關鍵心智模型（來自 <code>websocket_chat</code>）：<strong>WebSocketPeer 是 poll 驅動</strong>，每幀必須 <code>poll()</code> 才收得到訊息與斷線事件（<code>WebSocketServer.gd:91-130</code>）。</div>
+</div>
+
+<!-- 路徑 E / F -->
+<div class="section">
+  <div class="section-title">路徑 E · GUI / UI 系統　·　路徑 F · 載入、存檔、場景管理</div>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <h3>路徑 E · GUI / UI</h3>
+      <table>
+        <thead><tr><th>主題</th><th>Demo</th></tr></thead>
+        <tbody>
+          <tr><td>認識所有 Control</td><td><code>gui/control_gallery</code></td></tr>
+          <tr><td>執行時換膚</td><td><code>gui/theming_override</code></td></tr>
+          <tr><td>按鍵重綁</td><td><code>gui/input_mapping</code></td></tr>
+          <tr><td>富文字</td><td><code>gui/rich_text_bbcode</code></td></tr>
+          <tr><td>多語言 / 字體</td><td><code>gui/translation</code>、<code>gui/bidi_and_font_features</code>、<code>gui/msdf_font</code></td></tr>
+          <tr><td>多解析度自適應</td><td><code>gui/multiple_resolutions</code></td></tr>
+          <tr><td>在 3D 中放 GUI</td><td><code>viewport/gui_in_3d</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-accent-red">
+      <h3>路徑 F · 載入 / 存檔 / 場景</h3>
+      <table>
+        <thead><tr><th>主題</th><th>Demo</th></tr></thead>
+        <tbody>
+          <tr><td>切場景（最簡）</td><td><code>loading/scene_changer</code>、<code>loading/autoload</code></td></tr>
+          <tr><td>背景非阻塞載入</td><td><code>loading/load_threaded</code>、<code>loading/threads</code></td></tr>
+          <tr><td>存讀檔</td><td><code>loading/serialization</code>、<code>loading/runtime_save_load</code></td></tr>
+          <tr><td>暫停遊戲</td><td><code>misc/pause</code>（<code>2d/platformer</code> 的 <code>game.gd:18-25</code> 即套用）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 路徑 G -->
+<div class="section">
+  <div class="section-title">路徑 G · GDScript ↔ C# 對照</div>
+  <div class="card card-accent-blue">
+    <p>想學 C# 寫 Godot，直接把 <code>mono/</code> 的 demo 與其 GDScript 同名版並排閱讀（需 .NET 版 Godot）。</p>
+    <table style="margin-top:8px;">
+      <thead><tr><th>GDScript 版</th><th>C# 版</th></tr></thead>
+      <tbody>
+        <tr><td><code>2d/dodge_the_creeps</code></td><td><code>mono/dodge_the_creeps</code></td></tr>
+        <tr><td><code>2d/pong</code></td><td><code>mono/pong</code></td></tr>
+        <tr><td><code>3d/squash_the_creeps</code></td><td><code>mono/squash_the_creeps</code></td></tr>
+        <tr><td><code>misc/2.5d</code></td><td><code>mono/2.5d</code></td></tr>
+        <tr><td><code>networking/multiplayer_pong</code></td><td><code>mono/multiplayer_pong</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 驗證方式 -->
+<div class="section">
+  <div class="section-title">驗證方式</div>
+  <div class="card card-accent-green">
+    <ul>
+      <li>每條路徑的每個 demo 都可直接 F5 執行驗證行為。</li>
+      <li>想改著色器 / 參數，多數渲染類 demo 有即時 UI 滑桿（如 <code>compute/texture</code> 的 <code>main.gd:21-26</code>、<code>misc/noise_viewer</code>）。</li>
+      <li>網路類用 <code>combo.tscn</code>（<code>websocket_chat</code>）可在單一畫面同時跑 server 與 client 自測。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 外部連結 -->
+<div class="section">
+  <div class="section-title">外部連結（純文字記錄，對應 others/external_links.md）</div>
+  <div class="card card-accent-yellow">
+    <table>
+      <thead><tr><th>資源</th><th>連結</th></tr></thead>
+      <tbody>
+        <tr><td>原始倉庫</td><td><a href="https://github.com/godotengine/godot-demo-projects">github.com/godotengine/godot-demo-projects</a></td></tr>
+        <tr><td>線上預覽（瀏覽器可玩多數 demo）</td><td><a href="https://godotengine.github.io/godot-demo-projects/">godotengine.github.io/godot-demo-projects</a></td></tr>
+        <tr><td>Godot 引擎官網</td><td><a href="https://godotengine.org">godotengine.org</a></td></tr>
+        <tr><td>Godot 文件</td><td><a href="https://docs.godotengine.org/en/stable/">docs.godotengine.org/en/stable</a></td></tr>
+        <tr><td>另一個官方進階範例（不在本 repo）</td><td><a href="https://github.com/godotengine/tps-demo">github.com/godotengine/tps-demo</a></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px;">版本對應：上游 <code>master</code> 分支對應 Godot master（下一個 4.x）、<code>3.x</code> 分支對應 Godot 3.x、其他分支對應各 stable 版本。本地這份 clone 多數標記 4.6（少數 4.5 / 4.7）。完整見 <a href="../others/external_links.md">others/external_links.md</a>。</p>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（非真相來源，內容更新一律先改 .md）· 真相來源：<a href="../tutorial/learn_by_topic.md">tutorial/learn_by_topic.md</a>、<a href="../others/external_links.md">others/external_links.md</a>
+</div>
+
+</body>
+</html>

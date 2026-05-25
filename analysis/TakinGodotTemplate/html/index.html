@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TakinGodotTemplate — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TAKIN</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>TakinGodotTemplate — Godot 遊戲起手模板
+    <span class="badge badge-green" style="vertical-align:middle;font-size:.7rem;">v0.7.2</span>
+    <span class="badge badge-blue" style="vertical-align:middle;font-size:.7rem;">Godot 4.4</span>
+  </h1>
+  <p>由 TinyTakinTeller 開發、靈感源自 Maaack's Godot Game Template 的 Godot 4.4 起手模板（Starter Kit）。
+     純 GDScript、GL Compatibility 渲染器，提供精選 plugins + 完整選單 / 選項 / 存檔 / 本地化 / CI-CD 骨架，
+     按 GitHub「Use this template」即可起步。本身不是一款遊戲，而是「換模組不改框架」的可複用 UI/框架骨架。</p>
+</div>
+
+<!-- Quick stats / 技術棧 -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot 4.4（GL Compatibility）</p>
+      <p>純 GDScript（無 C#）· typed</p>
+      <p>MIT License · v0.7.2</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>架構文件</h3>
+      <p>Level 1–3 共 5 篇</p>
+      <p>16 autoload · 雙持久化 · Builder</p>
+      <p><a href="architecture.html">→ 查看架構</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>開發教學</h3>
+      <p>2 篇目標導向教學</p>
+      <p>新增選項 · 抽換玩法</p>
+      <p><a href="tutorial.html">→ 查看教學</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>交付與部署</h3>
+      <p>CI：gdlint 品質門檻（threshold=0）</p>
+      <p>CD：自動匯出 Web / Windows</p>
+      <p>butler 部署至 itch.io</p>
+    </div>
+  </div>
+</div>
+
+<!-- 核心亮點 -->
+<div class="section">
+  <div class="section-title">核心亮點（5 大特色）</div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Plugin 抽象</div>
+      <h3>Plugin Wrapper 層 + 約定式自動註冊</h3>
+      <p>每個第三方 plugin 都再包一層 Wrapper，用 <code>enum</code> + 預載 <code>Resource</code> 取代易錯的裸字串 API。
+         設定系統的 <code>ConfigurationControllerLoader</code> 更靠「節點命名約定」自動把 enum 映射到節點，新增設定免改 Loader。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">全域通訊</div>
+      <h3>SignalBus 觀察者解耦</h3>
+      <p><code>SignalBus</code> 只宣告 signal、不含邏輯。守則：父子用一般 signal，跨層級 / 全域才走 SignalBus，
+         避免到處 <code>get_node()</code> 直連造成耦合。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">UI 架構</div>
+      <h3>Component-Driven UI（Builder 注入）</h3>
+      <p><code>UiBuilder</code> 遞迴掃描可聚焦的 <code>Control</code>，自動注入 <code>TwistMotion</code>（hover 果汁感動畫）與
+         <code>ControlFocusOnHover</code>（控制器焦點），模擬 Godot 未來的 Traits。放任何按鈕進選單即享一致 UX。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-2">存檔</div>
+      <h3>反射式存檔 + §§§ 簽章</h3>
+      <p><code>SaveData</code> 以 <code>get_script_property_list()</code> 掃描非底線變數自動序列化，新增欄位免寫存取碼。
+         落地為 JSON 並附 <code>§§§</code> 簽章，偵測 OS 寫入殘留的損毀尾段；支援自動存檔、加密、base64 匯入匯出。</p>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-2">Web 整合</div>
+      <h3>HACKS / Web 剪貼簿 JS 注入</h3>
+      <p>把 Godot 已知 issue 的 workaround 文件化。重點是用 <code>JavaScriptBridge</code> 注入原生 HTML/CSS/JS 對話框，
+         繞過 web 無法存取剪貼簿（#81252），讓存檔字串可複製分享，並把遊戲 <code>Theme</code> 顏色橋接進 CSS。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-2">雙持久化</div>
+      <h3>設定 / 存檔分流</h3>
+      <p>應用設定走 <code>INI</code>（<code>ConfigStorage</code> → <code>user://config.cfg</code>），遊戲存檔走
+         <code>JSON</code>（多槽 + 簽章 + 可選加密）。兩套獨立機制，皆以「約定優於設定 + 反射/命名自動化」壓低擴充成本。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">16 個 Autoload 全域單例（載入順序很重要）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>單例名稱</th><th>分類</th><th>職責</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>DebugMenu</code></td><td><span class="badge badge-orange">plugin</span></td><td>F3 切換的效能 / 硬體 overlay</td></tr>
+        <tr><td>2</td><td><code>Log</code></td><td><span class="badge badge-orange">plugin</span></td><td>Log4J 風格底層日誌</td></tr>
+        <tr><td>3</td><td><code>LogWrapper</code></td><td><span class="badge badge-blue">Wrapper</span></td><td>加上 log group 階層設定</td></tr>
+        <tr><td>4</td><td><code>TranslationServerWrapper</code></td><td><span class="badge badge-blue">Wrapper</span></td><td>i18n，支援 <code>@tool</code> / 編輯器翻譯（修 #46271）</td></tr>
+        <tr><td>5</td><td><code>SceneManager</code></td><td><span class="badge badge-orange">plugin</span></td><td>場景轉場核心（shader 遮罩）</td></tr>
+        <tr><td>6</td><td><code>Scenes</code></td><td><span class="badge badge-orange">plugin</span></td><td>場景清單（plugin 自動產生）</td></tr>
+        <tr><td>7</td><td><code>SceneManagerWrapper</code></td><td><span class="badge badge-blue">Wrapper</span></td><td>用 enum + Options Resource 包裝轉場</td></tr>
+        <tr><td>8</td><td><code>AudioManagerWrapper</code></td><td><span class="badge badge-blue">Wrapper</span></td><td>用 enum + AudioBanks 包裝音訊</td></tr>
+        <tr><td>9</td><td><code>SoundManager</code></td><td><span class="badge badge-orange">plugin</span></td><td>resonate 音效池</td></tr>
+        <tr><td>10</td><td><code>MusicManager</code></td><td><span class="badge badge-orange">plugin</span></td><td>resonate 音樂軌</td></tr>
+        <tr><td>11</td><td><code>SignalBus</code></td><td><span class="badge badge-purple">Global</span></td><td>全域訊號匯流排（Observer）</td></tr>
+        <tr><td>12</td><td><code>Data</code></td><td><span class="badge badge-purple">Global</span></td><td>存檔系統（JSON + 簽章）</td></tr>
+        <tr><td>13</td><td><code>Overlay</code></td><td><span class="badge badge-purple">Global</span></td><td>全域 overlay 容器（FPS 計數）</td></tr>
+        <tr><td>14</td><td><code>Configuration</code></td><td><span class="badge badge-purple">Global</span></td><td>設定系統（INI）</td></tr>
+        <tr><td>15</td><td><code>AssetReference</code></td><td><span class="badge badge-purple">Global</span></td><td>顯式預載資產（<code>const preload</code>）</td></tr>
+        <tr><td>16</td><td><code>ResourceReference</code></td><td><span class="badge badge-purple">Global</span></td><td>自動掃描預載 <code>resources/preload/</code> 下所有 .tres</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box hl-orange" style="margin-top:12px;">
+    順序約束：<code>Log</code> 必須在 <code>LogWrapper</code> 之前；各 plugin autoload 必須在對應 Wrapper 之前；<code>AssetReference</code> 須早於用到它的 <code>AudioManagerWrapper</code>。
+  </div>
+</div>
+
+<!-- 整合的 plugins -->
+<div class="section">
+  <div class="section-title">整合的 Plugins（執行期 4 + 編輯器 4）</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>執行期相依</h3>
+      <p style="margin-bottom:10px;">不直接呼叫，一律經對應 Wrapper：</p>
+      <span class="chip">scene_manager 3.10.0</span>
+      <span class="chip">resonate 2.4.0</span>
+      <span class="chip">logger / Log 1.2.1</span>
+      <span class="chip">debug_menu 1.2.0</span>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>純編輯器工具</h3>
+      <p style="margin-bottom:10px;">僅編輯器內生效，不進遊戲執行：</p>
+      <span class="chip">script-ide 1.4.6</span>
+      <span class="chip">resources_spreadsheet_view 2.7</span>
+      <span class="chip">format_on_save 1.2.0</span>
+      <span class="chip">gdLinter 2.1.0</span>
+    </div>
+  </div>
+</div>
+
+<!-- 場景流 -->
+<div class="section">
+  <div class="section-title">場景流（啟動 → 選單 → 遊戲）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">BootSplashScene（主場景）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">MenuScene（visible 切子選單）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">SaveFilesMenu 選檔</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">GameScene（動態載入 GameContent）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">PauseMenu / Leave</span>
+  </div>
+  <p style="margin-top:10px;font-size:.78rem;color:var(--dim);">
+    BootSplash <code>_ready()</code> 即以 <code>fade_boot</code> 轉場到主選單；GameScene 依 GameOptions 的 Game Mode 動態實例化玩法（2D clicker / 3D FP / 空），離開時先存檔再轉回選單。詳見架構頁 Level 3。
+  </p>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層（呈現索引，不取代 .md）· 真相來源：<a href="../architecture/">architecture/*.md</a>、<a href="../tutorial/">tutorial/*.md</a>、<a href="../session_log.md">session_log.md</a>
+</div>
+
+</body>
+</html>

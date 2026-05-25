@@ -33,10 +33,14 @@
 | **pokeemerald** | GBA 遊戲反組譯 (C/ARM) | Level 1-2 | 分析中 | 寶可夢 Emerald pret 反組譯，雙Callback主迴圈、Task協程系統、Script bytecode直譯器、CB2狀態機戰鬥、多Controller架構、AI評分腳本、BoxPokemon XOR加密。 |
 | **下一站江湖Ⅱ (jianghu-2)** | 武俠 RPG / Unity Mono Mod (BepInEx) | 中 (實戰 Mod 完成) | 分析中 | ilspycmd 反編譯 Assembly-CSharp（3004 cs，置於 `projects/jianghu-2/`）。BepInEx 注入環境踩坑全解：MonoBehaviour.Update 不 tick→Harmony patch `AppGame.Update`、plugin fake-null→`ReferenceEquals`、`PlayAnim` 回傳值說謊→`HaveAnim`。首個 mod「閒置 NPC 原地坐下(chusheng_sit)」已上線運作。含通用開發指南＋API 速查＋mod 原始碼（`analysis/jianghu-2/mod_src/`）。 |
 | **hailo-media-library** | Hailo-15 AI 視覺 SoC SDK (C++) | Level 1-2 | 分析中 | Hailo-15 嵌入式視覺 SDK：hailo-media-library（Frontend Pipeline: LDC/DIS/EIS/Denoise/MultiResize/OSD/Encoder/PrivacyMask）+ hailo-postprocess（YOLO/NMS/Segmentation/OCR/Landmarks/CLIP）+ hailo-analytics（Stage-based 並行管線，30+ Stage 類型）。JSON Profile 配置系統、DMA Buffer Pool、GStreamer 1.20 整合、HailoRT 5.2。 |
+| **Godot-Game-Template** | Godot UI/選單框架模板 (Godot 4.6, GDScript) | Level 1-3 | 分析中 | Maaack's 模板：2D/3D 通用的選單/無障礙框架（主選單、選項、暫停、製作名單、場景載入器）。邏輯層(`base/`)與繼承場景呈現層分離；4 個 autoload 提供場景載入/設定持久化/音樂/UI 音效。設定持久化三層（OptionControl→AppSettings→PlayerConfig，新增選項零程式碼）、autoload 自動接管場景樹音效、輸入重綁定雙模式（List/Tree + 衝突偵測 + 手把品牌感知）、SceneLoader 執行緒化非阻塞轉場。注意與 Godot-GameTemplate 為不同 repo。 |
+| **TakinGodotTemplate** | Godot 起手模板 (Godot 4.4, GDScript) | Level 1-3 | 分析中 | Takin 模板（靈感自 Maaack）：精選 plugins + 最佳實踐骨架。16 個 autoload 為骨幹，將第三方 plugin 全部 Wrapper 化成 enum/Resource 驅動的型別安全介面，SignalBus 觀察者解耦，UI 採 Component-Driven(Builder 注入)，設定走 INI、存檔走 JSON。亮點：約定式自動註冊設定（節點名=列舉名+型別後綴）、反射式存檔（get_script_property_list 自動序列化 + §§§ 簽章 + 可選加密）、HACKS 文件化（Web 剪貼簿 JS 注入）。整合 scene_manager/resonate/Log/debug_menu 等。 |
+| **godot-demo-projects** | Godot 官方範例集合 (Godot 4.6, GDScript/C#) | 編目 (Level 1-2) + 代表深入 | 分析中 | 官方 demo 集合（非單一架構）：13 分類、137 個 project.godot（含 mono/ C# 版）。level2 為核心分類目錄（2d=26/3d=32/gui=14/audio/compute/loading/misc/mobile/networking/viewport/xr…）+「主題→demo」速查表。深入剖析 4 個：2d/platformer、2d/finite_state_machine、compute/texture（render thread + Texture2DRD + ping-pong 水波）、networking/websocket_chat（poll 驅動 WS）。 |
+| **godot-tactical-rpg** | 戰棋 RPG 範本 (Godot 4.3, GDScript) | Level 1-3 | 分析中 | ramaureirac SRPG 範本（3D 場地 + 2D billboard 角色）。Model/Module/Service 三層(類 MVC)，整局由 TacticsParticipantResource.stage(0~7) 一個整數隱式狀態機驅動。亮點：「射線格子化」（執行期把 Blender 方塊 mesh 轉 StaticBody3D，鄰接靠 RayCast3D 偵測、移動範圍 BFS flood-fill、高度差即跳躍門檻）、陣營制回合、完整敵人 AI 決策鏈、成品級四層樞紐攝影機（鍵鼠/手把雙模）。已知遺留：重複 service 檔、舊 .tres 用廢欄位 mp。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：27 個
+- **總計分析專案**：31 個
 - **最近更新日期**: 2026-05-25
 - **維護 Agent**: Gemini CLI / Claude Code
 

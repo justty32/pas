@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>godot-tactical-rpg — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">TACTICS</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../others/observations.md">觀察註記 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析</h1>
+  <p>從整體技術棧與三層架構（Level 1）、五大模組職責與資料流（Level 2），到四個核心子系統的逐層深入剖析（Level 3）。每篇皆可點回 <code>../architecture/*.md</code> 原始文件。</p>
+</div>
+
+<!-- Quick nav -->
+<div class="section">
+  <div class="highlight-box hl-blue" style="font-style:normal;font-size:.8rem;">
+    快速跳轉：
+    <a href="#level1">Level 1 概覽</a> ·
+    <a href="#level2">Level 2 模組與資料流</a> ·
+    <a href="#level3">Level 3 核心子系統</a>
+  </div>
+</div>
+
+<!-- Level 1 -->
+<div class="section" id="level1">
+  <div class="section-title">Level 1 &mdash; 初始探索：技術棧與整體架構</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Level 1</div>
+      <h3><a href="../architecture/level1_overview.md">技術棧與整體架構概覽</a></h3>
+      <p>Godot 4.3 / mobile 渲染 / 純 GDScript 戰棋範本。頂層目錄 <code>assets/</code>（素材）vs <code>data/</code>（程式），後者再分 <code>models/</code>（資料+邏輯）與 <code>modules/</code>（場景節點）。</p>
+      <ul>
+        <li>專案基本資訊與授權（MIT）</li>
+        <li>Model / Module / Service 三層慣例與 service of services</li>
+        <li>入口初始化流程：main.tscn → main.gd → tactics_level._ready</li>
+        <li>場景節點概觀（Camera/Controls 屬 main.tscn 全域常駐）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">三層架構摘要</div>
+      <h3>Model / Module / Service</h3>
+      <p><strong>Module</strong>（節點，轉發）· <strong>Service</strong>（<code>RefCounted</code>，無狀態演算法）· <strong>Resource</strong>（<code>.tres</code>，持有狀態、可共享）。</p>
+      <p style="margin-top:8px;"><code>project.godot</code> 用資料夾顏色標示：addons 紅、assets 藍、models 綠、modules 黃。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 2 -->
+<div class="section" id="level2">
+  <div class="section-title">Level 2 &mdash; 核心模組職責與資料流</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Level 2</div>
+      <h3><a href="../architecture/level2_core_modules.md">核心模組職責與資料流</a></h3>
+      <p>五大模組（Arena / Tile / Pawn / Participant / Camera / Controls）的權責劃分與耦合點。頂層回合驅動器 <code>TacticsLevel</code> 是整局的「心臟」。</p>
+      <ul>
+        <li>八階段 stage 機（0~7）：玩家走全部、對手只走 0~4</li>
+        <li>呼叫鏈：Level → Participant.act → turn_service → controls/player/combat</li>
+        <li>共享 <code>.tres</code> 與 <code>stage</code> 變數即事件機制（無事件匯流排）</li>
+        <li>跨層 <code>cam.target</code> 聚焦機制</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">關鍵不對稱</div>
+      <h3>玩家 vs 對手 stage</h3>
+      <p>玩家 0→7（移動與攻擊分兩條動作分支，輸入驅動）；對手 0→4（選棋→追擊→移動→選目標→攻擊，自動完成）。</p>
+      <p style="margin-top:8px;">陣營制「整隊行動」：先把己方所有 pawn 動完才換邊，無個別速度順序。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 -->
+<div class="section" id="level3">
+  <div class="section-title">Level 3 &mdash; 四個核心子系統深度剖析</div>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-3">Level 3 · 場地</div>
+      <h3><a href="../architecture/level3_grid_pathfinding.md">格子地圖、移動範圍與 Pathfinding</a></h3>
+      <p>Blender 方塊 mesh 執行期格子化、射線探鄰居（高度差即跳躍門檻）、BFS flood-fill 移動範圍、reachable/attackable/hover 標色、<code>pf_root</code> 回溯重建路徑。</p>
+      <ul>
+        <li><code>tiles_into_staticbodies</code> 動態生成 StaticBody3D + 腳本</li>
+        <li>無 (x,y) 座標系統，全靠 <code>RayCast3D</code></li>
+        <li>BFS 全圖標記 + 事後距離過濾（一份結果服務移動與攻擊）</li>
+        <li>路徑是 <code>Array[Vector3]</code> 世界座標串列</li>
+      </ul>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-3">Level 3 · 回合與戰鬥</div>
+      <h3><a href="../architecture/level3_turn_and_combat.md">回合制流程、移動物理與戰鬥判定</a></h3>
+      <p>三層嵌套回合（turn_stage / stage / can_move·can_attack）、stage 推進細節、pawn 沿路徑移動含跳躍重力、極簡傷害公式。</p>
+      <ul>
+        <li>動作選單可用性由 <code>can_move/can_attack</code> 動態 enable</li>
+        <li>移動是逐格趨近 + <code>move_and_slide</code>，跳躍/落下用真實重力</li>
+        <li>傷害 = <code>curr_health += (-attack_power)</code>，無防禦/命中/暴擊</li>
+        <li>無顯式死亡移除（歸零只灰階、仍擋路）、無勝負判定</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-3">Level 3 · 敵人 AI</div>
+      <h3><a href="../architecture/level3_enemy_ai.md">敵人 AI 決策鏈</a></h3>
+      <p>stage 0~4 全自動：選棋（第一個能動）→ <code>chase_nearest_enemy</code>（BFS 找最近敵人鄰格，走不到就沿 <code>pf_root</code> 退到最近可達格）→ 等移動 → 選射程內最弱 → 攻擊。</p>
+      <ul>
+        <li>啟發式：純距離（<code>pf_distance</code>）+ 血量，無威脅/陣型評估</li>
+        <li><code>strategy</code> 列舉欄位目前完全未被使用（預留 hook）</li>
+        <li>擴充切入點：替換三個啟發式函式即可，不動共用層</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-3">Level 3 · 攝影機與輸入</div>
+      <h3><a href="../architecture/level3_camera_input.md">攝影機系統與輸入處理</a></h3>
+      <p>四層樞紐節點分離平移/yaw/pitch/zoom；五種行為 + 聚焦目標；滑鼠射線投影拾取（mask 1=tile / 2=pawn）；鍵鼠手把雙模分流（<code>is_joystick</code>）。</p>
+      <ul>
+        <li><code>static var</code> 當輕量全域狀態匯流排（代價：不利多相機）</li>
+        <li>象限吸附 + fov 縮放 + 球形邊界三個「成品級」收尾</li>
+        <li>聚焦目標 <code>res.target</code> 是相機與遊戲流程唯一耦合點</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：
+  <a href="../architecture/level1_overview.md">level1_overview.md</a> ·
+  <a href="../architecture/level2_core_modules.md">level2_core_modules.md</a> ·
+  <a href="../architecture/level3_grid_pathfinding.md">level3_grid_pathfinding.md</a> ·
+  <a href="../architecture/level3_turn_and_combat.md">level3_turn_and_combat.md</a> ·
+  <a href="../architecture/level3_enemy_ai.md">level3_enemy_ai.md</a> ·
+  <a href="../architecture/level3_camera_input.md">level3_camera_input.md</a>
+</div>
+
+</body>
+</html>
