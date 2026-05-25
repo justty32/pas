@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C-Mera — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.level-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px 24px;display:flex;flex-direction:column;gap:10px;}
+.level-card:hover{border-color:var(--orange);}
+.level-num{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+  color:var(--orange);}
+.level-card h3{font-size:1rem;font-weight:700;color:var(--text);margin:0;}
+.level-card p{font-size:.82rem;color:var(--muted);line-height:1.7;}
+.level-card .topics{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.level-card .md-link{font-size:.78rem;color:var(--blue);margin-top:6px;
+  padding:5px 10px;border:1px solid rgba(88,166,255,.25);border-radius:5px;
+  background:rgba(88,166,255,.05);display:inline-block;}
+.level-card .md-link:hover{background:rgba(88,166,255,.12);text-decoration:none;}
+
+.arch-overview{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">C-Mera</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">教學導覽</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>架構分析 — Level 1–6</h1>
+  <p>從專案定位到最底層的 Reader 機制，六個層次全面剖析 C-Mera 的內部設計。</p>
+</div>
+
+<!-- 層次一覽表 -->
+<div class="section">
+  <div class="section-title">六層總覽</div>
+  <div class="arch-overview">
+    <table>
+      <thead>
+        <tr>
+          <th>層次</th>
+          <th>主題</th>
+          <th>核心問題</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="chip">Level 1</span></td>
+          <td>初始探索與基礎架構</td>
+          <td>C-Mera 是什麼？如何建構與使用？</td>
+        </tr>
+        <tr>
+          <td><span class="chip">Level 2</span></td>
+          <td>核心模組職責</td>
+          <td>哪些套件做什麼？如何分層？</td>
+        </tr>
+        <tr>
+          <td><span class="chip">Level 3</span></td>
+          <td>AST 與 Traverser 機制</td>
+          <td>節點如何定義？Traverser 如何重寫 AST？</td>
+        </tr>
+        <tr>
+          <td><span class="chip">Level 4</span></td>
+          <td>使用者語法層（Syntax Macros）</td>
+          <td>sexp 如何對應到 C 語法？defsyntax 怎麼用？</td>
+        </tr>
+        <tr>
+          <td><span class="chip">Level 5</span></td>
+          <td>Pretty Printer 與技術流水線</td>
+          <td>AST 節點如何輸出為 C 文字？縮排如何控制？</td>
+        </tr>
+        <tr>
+          <td><span class="chip">Level 6</span></td>
+          <td>Reader、Package 切換、執行檔封裝</td>
+          <td>前置讀取如何擴充語法？如何 dump 執行檔？</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 各層詳細卡片 -->
+<div class="section">
+  <div class="section-title">各層詳細說明</div>
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <div class="level-card card-accent-orange" style="border-left:3px solid var(--orange)">
+      <div class="level-num">Level 1</div>
+      <h3>初始探索與基礎架構</h3>
+      <p>C-Mera 是以 Common Lisp 撰寫的 source-to-source 編譯器，把 S-運算式形式的程式碼轉成 C 家族語言文字。
+      刻意不引入抽象層，sexp 與目標語言語意一對一對應；Lisp 的角色是提供超強巨集系統讓 C 程式碼能被元編程。</p>
+      <div class="topics">
+        <span class="chip">技術棧 (SBCL/CCL/ECL)</span>
+        <span class="chip">GNU Autotools 建構</span>
+        <span class="chip">目錄結構</span>
+        <span class="chip">cm c / cm c++ 指令</span>
+        <span class="chip">前端分派器 cm.c</span>
+        <span class="chip">快速心智模型</span>
+      </div>
+      <a class="md-link" href="../architecture/level1_overview.md">→ level1_overview.md</a>
+    </div>
+
+    <div class="level-card" style="border-left:3px solid var(--blue)">
+      <div class="level-num" style="color:var(--blue)">Level 2</div>
+      <h3>核心模組職責</h3>
+      <p>以「核心 + 可插拔後端」分層，透過 <code>c-mera.asd</code> 的 ASDF 系統與 <code>defpackage*</code> 宏組織。
+      核心層（<code>src/c-mera/</code>）提供 AST、Traverser、Pretty Printer 的通用框架；各後端繼承並擴充。
+      套件命名三件組：<code>c-mera</code>（核心）、<code>cm-&lt;lang&gt;</code>（後端實作）、<code>cmu-&lt;lang&gt;</code>（使用者套件）。</p>
+      <div class="topics">
+        <span class="chip">c-mera 核心層 7 個檔案</span>
+        <span class="chip">C 後端 8 個檔案</span>
+        <span class="chip">C++ / CUDA / GLSL / OpenCL 後端</span>
+        <span class="chip">套件命名三件組</span>
+        <span class="chip">前端分派器原理</span>
+      </div>
+      <a class="md-link" href="../architecture/level2_modules.md">→ level2_modules.md</a>
+    </div>
+
+    <div class="level-card" style="border-left:3px solid var(--purple)">
+      <div class="level-num" style="color:var(--purple)">Level 3</div>
+      <h3>AST 與 Traverser 機制</h3>
+      <p>AST 節點體系以 <code>node / expression / statement / leaf</code> 四類別為根，加上 <code>nodelist</code>（唯一持有子節點列表）
+      與 <code>proxy</code>（traverser 臨時節點）兩個特殊型別。
+      Traverser 泛型 <code>traverse</code> 以 <code>:subnodes</code> 槽自動下鑽，允許 <code>with-proxynodes</code> 在 traversal 期間插入臨時節點。</p>
+      <div class="topics">
+        <span class="chip">defnode / defstatement / defexpression</span>
+        <span class="chip">defleaf / defproxy</span>
+        <span class="chip">values vs subnodes 槽</span>
+        <span class="chip">traverse 泛型</span>
+        <span class="chip">proxy 機制</span>
+        <span class="chip">C 後端具體 Traverser 清單</span>
+      </div>
+      <a class="md-link" href="../architecture/level3_ast_and_traverser.md">→ level3_ast_and_traverser.md</a>
+    </div>
+
+    <div class="level-card" style="border-left:3px solid var(--green)">
+      <div class="level-num" style="color:var(--green)">Level 4</div>
+      <h3>使用者語法層（Syntax Macros）</h3>
+      <p>使用者層巨集（<code>function</code>、<code>decl</code>、<code>for</code>、<code>if</code>、<code>struct</code>…）全以 <code>defsyntax</code>（即帶預設套件的 <code>c-syntax</code> 宏）定義於 <code>src/c/syntax.lisp</code>。
+      展開後直接產生對應的 AST 節點建構呼叫，不需要額外的解析步驟。</p>
+      <div class="topics">
+        <span class="chip">defsyntax / c-syntax</span>
+        <span class="chip">C 語法巨集全覽</span>
+        <span class="chip">C++ 擴充語法</span>
+        <span class="chip">cintern 識別字操作</span>
+        <span class="chip">defmacro 元編程</span>
+      </div>
+      <a class="md-link" href="../architecture/level4_syntax_macros.md">→ level4_syntax_macros.md</a>
+    </div>
+
+    <div class="level-card" style="border-left:3px solid var(--cyan)">
+      <div class="level-num" style="color:var(--cyan)">Level 5</div>
+      <h3>Pretty Printer 與技術流水線</h3>
+      <p>每個 AST 節點型別都有對應的 <code>defprettymethod</code>，以 <code>with-indent</code>/<code>curly-newline</code>/<code>newline-indent</code> 等原語控制縮排與換行。
+      C 後端的 <code>pretty.lisp</code> 是最厚的檔案（746 行），覆蓋所有 statement 與 expression 的輸出格式。</p>
+      <div class="topics">
+        <span class="chip">defprettymethod</span>
+        <span class="chip">with-indent / curly-newline</span>
+        <span class="chip">expression-statement 輸出</span>
+        <span class="chip">compound-statement 輸出</span>
+        <span class="chip">流水線全圖</span>
+      </div>
+      <a class="md-link" href="../architecture/level5_pretty_printer.md">→ level5_pretty_printer.md</a>
+    </div>
+
+    <div class="level-card" style="border-left:3px solid var(--yellow)">
+      <div class="level-num" style="color:var(--yellow)">Level 6</div>
+      <h3>Reader、Package 切換、執行檔封裝</h3>
+      <p>Reader 前置處理（<code>src/c/reader.lisp</code>）在 Lisp reader 讀入之前展開 C 慣用寫法（<code>p-&gt;x</code>、<code>a.b</code>、<code>a[i]</code>、<code>0.5f</code>）。
+      <code>define-reader</code> / <code>define-switch</code> 允許在 REPL 裡動態切換語法模式。<code>save-generator</code> 透過 image dump 把整個 Lisp 環境打包為獨立執行檔。</p>
+      <div class="topics">
+        <span class="chip">pre-process / pre-process-heads</span>
+        <span class="chip">p->x / a.b / a[i] 展開規則</span>
+        <span class="chip">define-reader / define-switch</span>
+        <span class="chip">save-generator image dump</span>
+        <span class="chip">Roswell 腳本入口</span>
+      </div>
+      <a class="md-link" href="../architecture/level6_reader_and_packages.md">→ level6_reader_and_packages.md</a>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

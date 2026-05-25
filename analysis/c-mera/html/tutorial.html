@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C-Mera — 教學導覽</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.tut-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.tut-card:hover{border-color:var(--blue);text-decoration:none;}
+.tut-num{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.tut-card h3{font-size:.9rem;font-weight:700;color:var(--text);margin:0;}
+.tut-card p{font-size:.78rem;color:var(--muted);line-height:1.65;flex:1;}
+.tut-card .topics{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.tut-card .md-link{font-size:.75rem;color:var(--blue);margin-top:4px;
+  padding:4px 9px;border:1px solid rgba(88,166,255,.22);border-radius:5px;
+  background:rgba(88,166,255,.04);display:inline-block;align-self:flex-start;}
+.tut-card .md-link:hover{background:rgba(88,166,255,.1);text-decoration:none;}
+
+.group-label{font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin:28px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+.alt-badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:.65rem;font-weight:700;
+  background:rgba(210,153,34,.12);color:var(--orange);border:1px solid rgba(210,153,34,.25);
+  margin-left:6px;vertical-align:middle;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">C-Mera</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">教學導覽</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>教學導覽 — Tutorial 00–11</h1>
+  <p>目標導向的 C-Mera 開發教學，從安裝到 Lisp 巨集元編程，再到三大編輯器整合，共 13 篇。</p>
+</div>
+
+<!-- 基礎入門 -->
+<div class="group-label">基礎入門</div>
+<div class="g3">
+
+  <a class="tut-card card-accent-orange" href="../tutorial/00_setup.md">
+    <div class="tut-num">Tutorial 00</div>
+    <h3>安裝與 Hello World</h3>
+    <p>在 Linux/macOS/Windows WSL 上安裝 SBCL/CCL、Roswell、C-Mera，並執行第一支 Hello World 程式。</p>
+    <div class="topics">
+      <span class="chip">Roswell</span>
+      <span class="chip">SBCL / CCL</span>
+      <span class="chip">make install</span>
+    </div>
+    <span class="md-link">→ 00_setup.md</span>
+  </a>
+
+  <a class="tut-card card-accent-orange" href="../tutorial/01_c_syntax_cheatsheet.md">
+    <div class="tut-num">Tutorial 01</div>
+    <h3>C 語法速查（sexp ↔ C）</h3>
+    <p>完整的 sexp ↔ C 對照表：變數宣告、函式定義、控制流、指標、陣列、結構體、前處理器指令一次看齊。</p>
+    <div class="topics">
+      <span class="chip">decl / function</span>
+      <span class="chip">for / while / if</span>
+      <span class="chip">aref / pref / oref</span>
+      <span class="chip">include / define</span>
+    </div>
+    <span class="md-link">→ 01_c_syntax_cheatsheet.md</span>
+  </a>
+
+  <a class="tut-card card-accent-orange" href="../tutorial/02_small_c_programs.md">
+    <div class="tut-num">Tutorial 02</div>
+    <h3>完整的 C 程式實戰</h3>
+    <p>用 C-Mera 撰寫幾支完整程式：鏈結串列、排序、檔案 I/O、命令列引數解析，觀察產出的 C 原始碼。</p>
+    <div class="topics">
+      <span class="chip">鏈結串列</span>
+      <span class="chip">排序演算法</span>
+      <span class="chip">FILE* I/O</span>
+      <span class="chip">argc / argv</span>
+    </div>
+    <span class="md-link">→ 02_small_c_programs.md</span>
+  </a>
+
+</div>
+
+<!-- C++ -->
+<div class="group-label">C++ 系列</div>
+<div class="g3">
+
+  <a class="tut-card card-accent-blue" href="../tutorial/03_cxx_basics.md">
+    <div class="tut-num">Tutorial 03</div>
+    <h3>C++ 基礎</h3>
+    <p>namespace、基本 class、template 函式、lambda、異常處理（try/catch），C++ 在 C-Mera sexp 中的對應寫法。</p>
+    <div class="topics">
+      <span class="chip">namespace</span>
+      <span class="chip">class</span>
+      <span class="chip">template</span>
+      <span class="chip">lambda</span>
+      <span class="chip">try/catch</span>
+    </div>
+    <span class="md-link">→ 03_cxx_basics.md</span>
+  </a>
+
+  <a class="tut-card card-accent-blue" href="../tutorial/05_cxx_classes_deep.md">
+    <div class="tut-num">Tutorial 05</div>
+    <h3>C++ 類別深入</h3>
+    <p>virtual 函式、operator 重載、nested class、static member、friend 宣告的 sexp 寫法與常見坑。</p>
+    <div class="topics">
+      <span class="chip">virtual</span>
+      <span class="chip">operator</span>
+      <span class="chip">nested class</span>
+      <span class="chip">static</span>
+      <span class="chip">friend</span>
+    </div>
+    <span class="md-link">→ 05_cxx_classes_deep.md</span>
+  </a>
+
+  <a class="tut-card card-accent-blue" href="../tutorial/06_cxx_templates_advanced.md">
+    <div class="tut-num">Tutorial 06</div>
+    <h3>Template 進階語法</h3>
+    <p>Template 特化、variadic template、SFINAE、concepts（C++20）、型別萃取（type traits）在 sexp 中的表達方式。</p>
+    <div class="topics">
+      <span class="chip">特化</span>
+      <span class="chip">variadic</span>
+      <span class="chip">SFINAE</span>
+      <span class="chip">concepts</span>
+      <span class="chip">type traits</span>
+    </div>
+    <span class="md-link">→ 06_cxx_templates_advanced.md</span>
+  </a>
+
+  <a class="tut-card card-accent-blue" href="../tutorial/07_cxx_lambda_stl.md">
+    <div class="tut-num">Tutorial 07</div>
+    <h3>Lambda、STL、現代 C++ 常用組合</h3>
+    <p>捕獲列表、泛型 lambda、STL 容器與演算法（sort/transform/for_each）搭配 C-Mera sexp 的常用慣用語。</p>
+    <div class="topics">
+      <span class="chip">capture list</span>
+      <span class="chip">generic lambda</span>
+      <span class="chip">std::vector / map</span>
+      <span class="chip">std::sort</span>
+    </div>
+    <span class="md-link">→ 07_cxx_lambda_stl.md</span>
+  </a>
+
+  <a class="tut-card card-accent-blue" href="../tutorial/08_cxx_modern_features.md">
+    <div class="tut-num">Tutorial 08</div>
+    <h3>現代 C++ 特性（C++11/14/17/20）</h3>
+    <p>移動語義、<code>auto</code>/<code>decltype</code>、結構化繫結、<code>if constexpr</code>、<code>std::optional</code>/<code>variant</code>/<code>span</code> 的 sexp 寫法。</p>
+    <div class="topics">
+      <span class="chip">move semantics</span>
+      <span class="chip">auto / decltype</span>
+      <span class="chip">if constexpr</span>
+      <span class="chip">std::optional</span>
+    </div>
+    <span class="md-link">→ 08_cxx_modern_features.md</span>
+  </a>
+
+</div>
+
+<!-- 核心價值 -->
+<div class="group-label">核心價值 — Lisp 巨集元編程</div>
+<div class="g2">
+
+  <a class="tut-card" style="border-left:3px solid var(--purple);" href="../tutorial/04_macros_the_fun_part.md">
+    <div class="tut-num" style="color:var(--purple)">Tutorial 04</div>
+    <h3>用 Lisp 巨集做元編程（C-Mera 真正的價值）</h3>
+    <p>這是 C-Mera 值得使用的核心理由。<code>defmacro</code> 在展開期執行任意 Lisp 程式以產生 C 程式碼——比 <code>#define</code> 強到不是同一個維度。涵蓋 hygienic macro、<code>lisp</code> 逃生艙、<code>cintern</code>/<code>symbol-append</code> 識別字操作、自動 dispatch table、程式碼生成迴圈。</p>
+    <div class="topics">
+      <span class="chip">defmacro</span>
+      <span class="chip">hygienic macro</span>
+      <span class="chip">(lisp ...) 逃生艙</span>
+      <span class="chip">cintern / symbol-append</span>
+      <span class="chip">dispatch table 自動生成</span>
+      <span class="chip">展開期迴圈</span>
+    </div>
+    <span class="md-link">→ 04_macros_the_fun_part.md</span>
+  </a>
+
+  <div class="card card-accent-purple" style="display:flex;flex-direction:column;gap:8px;justify-content:center;">
+    <h3 style="font-size:.88rem;">為什麼巨集這麼重要？</h3>
+    <p style="font-size:.8rem;">C 的 <code>#define</code> 是字串替換，有重複計算、無衛生性等缺陷。C-Mera 的 <code>defmacro</code> 在展開期執行完整的 Common Lisp 程式：你可以迴圈、查表、操作符號、產生任意 sexp。這讓「能用 C 的效能，卻有 Python metaclass 的彈性」成為可能。</p>
+    <div style="margin-top:8px;font-size:.75rem;color:var(--dim);">← 這就是 Tutorial 04 要解決的事</div>
+  </div>
+
+</div>
+
+<!-- 編輯器整合 -->
+<div class="group-label">編輯器整合</div>
+<div class="g3">
+
+  <a class="tut-card card-accent-green" href="../tutorial/09_neovim_integration.md">
+    <div class="tut-num">Tutorial 09</div>
+    <h3>Neovim / LazyVim 整合<span class="alt-badge">原版</span></h3>
+    <p>在 Neovim + LazyVim 環境下配置 C-Mera：Parinfer、vim-sexp、conjure 或 vlime，以及 <code>cm</code> 指令整合到建置流程。</p>
+    <div class="topics">
+      <span class="chip">Parinfer</span>
+      <span class="chip">vim-sexp</span>
+      <span class="chip">conjure</span>
+      <span class="chip">vlime</span>
+    </div>
+    <span class="md-link">→ 09_neovim_integration.md</span>
+  </a>
+
+  <a class="tut-card card-accent-green" href="../tutorial/09_neovim_lazyvim_2026.md">
+    <div class="tut-num">Tutorial 09</div>
+    <h3>Neovim / LazyVim 整合<span class="alt-badge">2026 WSL 版</span></h3>
+    <p>2026 更新版，針對 WSL2 / Linux 環境的完整步驟，解決 vim-sexp 相容性問題與最新 LazyVim 配置方式。</p>
+    <div class="topics">
+      <span class="chip">WSL2</span>
+      <span class="chip">LazyVim 2026</span>
+      <span class="chip">vim-sexp 相容</span>
+    </div>
+    <span class="md-link">→ 09_neovim_lazyvim_2026.md</span>
+  </a>
+
+  <a class="tut-card card-accent-green" href="../tutorial/10_emacs_integration.md">
+    <div class="tut-num">Tutorial 10</div>
+    <h3>Emacs / SLIME / SLY 整合</h3>
+    <p>在 Emacs 中使用 SLIME 或 SLY 建立 Common Lisp REPL，搭配 C-Mera 即時轉譯，並設定 Parinfer/Paredit 括號管理。</p>
+    <div class="topics">
+      <span class="chip">SLIME</span>
+      <span class="chip">SLY</span>
+      <span class="chip">Parinfer</span>
+      <span class="chip">Paredit</span>
+      <span class="chip">REPL 即時轉譯</span>
+    </div>
+    <span class="md-link">→ 10_emacs_integration.md</span>
+  </a>
+
+  <a class="tut-card card-accent-green" href="../tutorial/11_vscode_integration.md">
+    <div class="tut-num">Tutorial 11</div>
+    <h3>VS Code 整合</h3>
+    <p>在 VS Code 中使用 Alive 擴充套件連接 SBCL，設定 tasks.json 自動執行 <code>cm</code> 指令，以及高亮與括號配對設定。</p>
+    <div class="topics">
+      <span class="chip">Alive 擴充套件</span>
+      <span class="chip">tasks.json</span>
+      <span class="chip">SBCL</span>
+      <span class="chip">括號高亮</span>
+    </div>
+    <span class="md-link">→ 11_vscode_integration.md</span>
+  </a>
+
+</div>
+
+<!-- 學習路徑建議 -->
+<div class="section" style="margin-top:32px;">
+  <div class="section-title">建議學習路徑</div>
+  <div class="highlight-box hl-orange">
+    新手：<strong>00 → 01 → 02 → 04</strong>（安裝完即可體驗 Lisp 巨集的威力）<br>
+    C++ 使用者：<strong>03 → 05 → 06 → 07 → 08</strong>（依需要深入）<br>
+    只想配好編輯器：直接跳 <strong>09 / 10 / 11</strong>（各自獨立，不依賴其他篇）
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

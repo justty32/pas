@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C-Mera 分析 — 首頁</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--orange) 0%,var(--yellow) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.hero .sub{font-size:1rem;color:var(--muted);margin-top:10px;max-width:640px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--orange);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--orange);align-self:flex-end;}
+
+.oneliner{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;margin-bottom:32px;font-size:.95rem;font-style:italic;
+  color:var(--text);border-left:4px solid var(--orange);line-height:1.8;}
+.oneliner strong{color:var(--orange);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">C-Mera</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">教學導覽</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>C-Mera</h1>
+  <p class="sub">以 Common Lisp 驅動的 S-運算式 → C 家族語言 源到源編譯器<br>
+  讓 Lisp 巨集成為 C/C++/CUDA/GLSL/OpenCL 的元編程引擎</p>
+  <p class="sub2">— analysis/c-mera · 架構分析 + 教學文件 —</p>
+  <div class="badge-row">
+    <span class="badge badge-orange">Common Lisp</span>
+    <span class="badge badge-blue">source-to-source</span>
+    <span class="badge badge-green">C / C++</span>
+    <span class="badge badge-purple">CUDA / OpenCL</span>
+    <span class="badge badge-yellow">GLSL</span>
+    <span class="badge badge-gray">SBCL · CCL · ECL</span>
+  </div>
+</div>
+
+<!-- One-liner -->
+<div class="oneliner">
+  <strong>C-Mera</strong> = 一個讓你用 Lisp S-運算式撰寫 C/C++ 程式的工具；它不引入抽象層，sexp 與目標語言語意一對一對應，但你能用完整的 Common Lisp 巨集做 C 語言做不到的元編程。
+</div>
+
+<!-- 編譯流水線 -->
+<div class="section">
+  <div class="section-title">編譯流水線</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-orange">.lisp 輸入</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">Reader（預處理）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">巨集展開 → AST 節點</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">Traverser 重寫</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">Pretty Printer</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">.c / .cpp / .cu 輸出</span>
+  </div>
+</div>
+
+<!-- 支援語言 -->
+<div class="section">
+  <div class="section-title">支援語言後端</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>C</h3>
+      <p><code>cm c input.lisp -o out.c</code><br>基礎後端，其他後端均繼承自此。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>C++</h3>
+      <p><code>cm c++ input.lisp -o out.cpp</code><br>繼承 C 後端，加入 class、template、lambda、exception、cast 家族。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>CUDA</h3>
+      <p><code>cm cuda input.lisp -o out.cu</code><br>繼承 C++，加入 <code>launch</code>、<code>threads</code>/<code>blocks</code>、共享記憶體。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>GLSL / OpenCL</h3>
+      <p><code>cm glsl</code> / <code>cm opencl</code><br>繼承 C，加入 shader <code>layout</code> / OpenCL 特定語法。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 頁面導覽 -->
+<div class="section">
+  <div class="section-title">文件導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="architecture.html">
+      <div class="nc-icon">🏗</div>
+      <h3>架構分析（Level 1–6）</h3>
+      <p>從頂層定位（技術棧、目錄結構、建構指令）到 AST 節點體系、Traverser 機制、Pretty Printer、Reader 預處理、套件命名三件組、執行檔封裝的完整六層分析。</p>
+      <span class="nc-arrow">→ architecture.html</span>
+    </a>
+
+    <a class="nav-card" href="tutorial.html">
+      <div class="nc-icon">📖</div>
+      <h3>教學導覽（Tutorial 00–11）</h3>
+      <p>從安裝 Hello World 到 C 語法速查、C++ 類別深入、Template 進階、Lisp 巨集元編程，以及 Neovim / Emacs / VS Code 編輯器整合，共 13 篇目標導向教學。</p>
+      <span class="nc-arrow">→ tutorial.html</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- 快速數字 -->
+<div class="section">
+  <div class="section-title">分析產物快照（2026-05-25）</div>
+  <div class="g4">
+    <div class="card card-accent-orange">
+      <h3>架構分析</h3>
+      <p>Level 1–6 全部完成，涵蓋核心框架到各語言後端的完整剖析。</p>
+      <div style="margin-top:8px"><span class="badge badge-orange">6 篇</span></div>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>教學文件</h3>
+      <p>Tutorial 00–11，含兩個版本的 Neovim 整合，共 13 篇實戰教學。</p>
+      <div style="margin-top:8px"><span class="badge badge-blue">13 篇</span></div>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>原始碼剖析</h3>
+      <p><code>details/src/</code> 含 c-mera 核心、C/C++/CUDA/GLSL/OpenCL 後端完整源碼。</p>
+      <div style="margin-top:8px"><span class="badge badge-purple">5 後端</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>回歸測試</h3>
+      <p><code>details/tests/</code> 含 101 個測試案例，覆蓋 C、C++ 類別、C++ 其他特性。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">101 個</span></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>
