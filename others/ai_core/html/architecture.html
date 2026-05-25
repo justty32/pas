@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai_core — 架構元件</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.comp-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;
+  position:relative;overflow:hidden;}
+.comp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.cc-em::before    {background:linear-gradient(90deg,var(--blue),var(--cyan));}
+.cc-cp::before    {background:linear-gradient(90deg,var(--purple),var(--blue));}
+.cc-hub::before   {background:linear-gradient(90deg,var(--orange),var(--yellow));}
+.cc-sfc::before   {background:linear-gradient(90deg,var(--green),var(--cyan));}
+.cc-auth::before  {background:linear-gradient(90deg,var(--red),var(--purple));}
+.comp-card .comp-num{font-size:.65rem;font-weight:700;color:var(--dim);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:5px;}
+.comp-card h3{font-size:.95rem;font-weight:700;margin-bottom:4px;}
+.comp-card .cli-badge{font-family:monospace;font-size:.72rem;color:var(--green);
+  background:rgba(63,185,80,.08);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:10px;}
+.comp-card p{font-size:.82rem;color:var(--muted);margin-bottom:8px;}
+.comp-card .trait{background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;
+  font-size:.77rem;color:var(--dim);margin-top:6px;}
+.comp-card ul{font-size:.8rem;color:var(--muted);padding-left:16px;margin-top:4px;}
+.comp-card ul li{margin-bottom:2px;}
+
+.singleton-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+.singleton-box .sg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;}
+@media(max-width:560px){.singleton-box .sg-grid{grid-template-columns:1fr;}}
+.sg-item{padding:12px;background:rgba(255,255,255,.03);border-radius:7px;}
+.sg-label{font-size:.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.sg-em .sg-label{color:var(--blue);}
+.sg-simple .sg-label{color:var(--green);}
+.sg-item p{font-size:.8rem;color:var(--muted);}
+
+.meta-protocol{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+.meta-protocol .mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px;}
+@media(max-width:640px){.meta-protocol .mp-grid{grid-template-columns:1fr;}}
+.meta-axes{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+
+.axis-row{display:flex;gap:10px;align-items:baseline;padding:6px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:.82rem;}
+.axis-row:last-child{border-bottom:none;}
+.axis-name{font-family:monospace;font-size:.78rem;color:var(--cyan);min-width:120px;flex-shrink:0;}
+.axis-desc{color:var(--muted);}
+.axis-example{font-family:monospace;font-size:.72rem;color:var(--dim);flex-shrink:0;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">ai_core</span>
+  <a href="index.html">首頁</a>
+  <a href="vision.html">願景演化</a>
+  <a href="architecture.html" class="active">架構元件</a>
+  <a href="status.html">實作現況</a>
+  <a href="milestones.html">里程碑</a>
+  <a href="decisions.html">待決議</a>
+  <a href="target.html">目標問題</a>
+</nav>
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>🏗 架構元件</h1>
+  <p>五個核心元件的設計職責、Singleton Resource Manager Pattern，以及 <code>--metadata</code> 協議的完整規則。</p>
+</div>
+
+<!-- ═══ Overall arch diagram ═══ -->
+<div class="section">
+  <div class="section-title">整體架構圖</div>
+  <pre>caller（人類 shell / AI agent / 其他 function）
+   │
+   ├── 直接 shell call ─────────────────────────────────┐
+   │                                                    ▼
+   │                               任意語言寫的 function
+   │                               （唯一硬規則：--metadata 印合法 JSON）
+   │                                       │
+   │                                       ├── 單純函式：直接執行（stateless one-shot）
+   │                                       └── 重資源 ──▶ wrapper CLI ──▶ singleton server
+   │
+   ├── 想知道有哪些 function ──▶ Function Hub (one-shot / server)
+   │                              ├── scan → metadata → skill list
+   │                              └── export: MCP / openai-tools / anthropic-tools
+   │
+   └── 想新增 function ─────────▶ ai-core-author
+                                   generate → dry-run → register
+
+LLM 呼叫路徑：
+   ai-core-call ──HTTP──▶ ai-core-server (FastAPI + asyncio)
+       ├─ per-model FIFO queue + worker
+       ├─ rate limit (rpm / tokens / cost)
+       └─ litellm router ──▶ ollama / lm-studio / gemini</pre>
+</div>
+
+<!-- ═══ 5 components ═══ -->
+<div class="section">
+  <div class="section-title">五個核心元件</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <div class="comp-card cc-em">
+      <div class="comp-num">元件 1 · Entry Manager</div>
+      <h3>LLM Entry Manager</h3>
+      <span class="cli-badge">ai-core-server + ai-core-call</span>
+      <p>統一管理多個 LLM 模型/API 的呼叫入口。LLM 是 <strong>singleton 資源</strong>（本地或遠端一次只能處理一個請求），採佇列模式集中管理 consume rate。</p>
+      <ul>
+        <li>常駐 server（FastAPI + uvicorn），HTTP 對外</li>
+        <li>per-model FIFO asyncio queue + worker</li>
+        <li>三軸限額：rpm / tokens_per_day / cost_per_day</li>
+        <li>litellm 接通 ollama、lm-studio（OpenAI 相容）、gemini</li>
+        <li>ai-core-call wrapper：shell 不須手動 curl</li>
+      </ul>
+      <div class="trait">pattern: Entry-managing Singleton<br>
+        <code>--metadata</code>（工具自身）+ <code>--entry-metadata &lt;model&gt;</code>（個別模型）</div>
+    </div>
+
+    <div class="comp-card cc-cp">
+      <div class="comp-num">元件 2 · Calling Packing</div>
+      <h3>LLM Calling Packing</h3>
+      <span class="cli-badge">ai-core-call (context binding)</span>
+      <p>把 LLM 呼叫包裝成具語意的函式。基底介面是 <code>llm_call(string) → string</code>，再疊加 context 與 post-processing 形成新函式。</p>
+      <pre style="font-size:.72rem;padding:10px;">def llm_call_coding_question(string):
+    input = "you are a professor of coding..." + string
+    output = llm_call(input)
+    return output + " -- at 20240505"</pre>
+      <ul>
+        <li>user-profile 橫切層（「我是繁中使用者 → 產出都用繁中」）</li>
+        <li>calling pack 可被組合：pipe / fanout / retry_until_valid</li>
+        <li>M6 里程碑：llm_call_coding_question 等典型範例集</li>
+      </ul>
+      <div class="trait">context binding 是跨輪次的 memory 積累點<br>
+        見 thinking.md memory_hints 欄位（待補）</div>
+    </div>
+
+    <div class="comp-card cc-hub">
+      <div class="comp-num">元件 3 · Function Hub</div>
+      <h3>Function Hub</h3>
+      <span class="cli-badge">ai-core-hub + ai-core-hub-server</span>
+      <p>掃描函式集，呼叫每個函式的 <code>--metadata</code> 並彙總成「給 LLM 的 skill 清單」。Hub 是<strong>透鏡（lens）</strong>——聚合＋轉換 metadata，不只是被動目錄列表。</p>
+      <ul>
+        <li>掃描策略：遍歷目錄，對每個可執行檔 call <code>--metadata</code></li>
+        <li>容錯：缺 metadata / 不合法 JSON → graceful 降級</li>
+        <li>context budget 收斂：過大清單自動省略低優先函式</li>
+        <li>export 格式：MCP / openai-tools / anthropic-tools</li>
+        <li>one-shot（<code>ai-core-hub</code>）+ server（<code>ai-core-hub-server</code>）雙形態</li>
+        <li>Hub 可被組合：meta-hub 把多個 hub 再聚合</li>
+      </ul>
+      <div class="trait">Hub 的三種轉換：擴增（加分類/tag）、過濾（省略 description）、彙總（語意相近群組合並）</div>
+    </div>
+
+    <div class="comp-card cc-sfc">
+      <div class="comp-num">元件 4 · Small Function Center</div>
+      <h3>Small Function Center</h3>
+      <span class="cli-badge">ai-core-sfc</span>
+      <p>許多函式只是一行 shell 或薄 LLM 包裝，為避免檔案爆炸，集中到一個 dispatcher。git-style subcommand CLI。</p>
+      <ul>
+        <li><strong>Layer 0</strong>：store（<code>functions.json</code> + <code>index.json</code>）</li>
+        <li><strong>Layer 1a</strong>：intake（從外部收入新函式）</li>
+        <li><strong>Layer 1b</strong>：router（name → dispatch）</li>
+        <li><strong>Layer 2</strong>：forge persistent server（NDJSON 行協議）</li>
+        <li><strong>Layer 3</strong>：動態 add/remove/persist（執行期管理）</li>
+        <li><strong>Layer 4</strong>：shell-kind timeout + 標準錯誤封套</li>
+      </ul>
+      <div class="trait">kind: python（真 in-process exec）或 shell（subprocess）<br>
+        signature: fn(stdin: str, args: dict) → str</div>
+    </div>
+
+  </div>
+
+  <!-- Author alone (full width) -->
+  <div style="margin-top:16px;" class="comp-card cc-auth">
+    <div class="comp-num">元件 5 · Author</div>
+    <h3>ai-core-author（自舉）</h3>
+    <span class="cli-badge">ai-core-author</span>
+    <p>一站式產生函式骨架 + dry-run 驗證 + 進入 registry。AI 生的函式需通過驗證才能進 hub，避免「AI 生 AI 用」的內部黑箱。</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+      <div style="padding:10px;background:rgba(255,81,73,.07);border-radius:6px;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px">① Generate</div>
+        <p style="font-size:.78rem;color:var(--muted)"><code>--spec</code> 介面，透過 ai-core-call 用 LLM 產函式骨架（bash / python）</p>
+      </div>
+      <div style="padding:10px;background:rgba(255,81,73,.07);border-radius:6px;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px">② Dry-run</div>
+        <p style="font-size:.78rem;color:var(--muted)">跑範例驗證、失敗時把回饋送回 LLM 重試，不通過不放行</p>
+      </div>
+      <div style="padding:10px;background:rgba(255,81,73,.07);border-radius:6px;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--red);margin-bottom:4px">③ Register</div>
+        <p style="font-size:.78rem;color:var(--muted)">進入 registry，自動觸發 hub 更新（<code>auto/</code> 目錄同步）</p>
+      </div>
+    </div>
+    <div class="trait" style="margin-top:10px;">author 自身遵守 <code>--metadata</code>，可被 hub 發現（自舉性）。<br>
+    成功 register 後自動更新 <code>auto/FUNCTIONS.md</code> + <code>AGENTS.md</code>。</div>
+  </div>
+</div>
+
+<!-- ═══ Singleton pattern ═══ -->
+<div class="section">
+  <div class="section-title">Singleton Resource Manager Pattern</div>
+  <div class="singleton-box">
+    <p style="font-size:.82rem;color:var(--muted)">對「一次只能服務一個請求、建立成本高」的單例資源，統一採用此 pattern。適用場景：LLM 模型、heavy GPU 計算、配額受限 API、長連線本地服務。</p>
+    <div style="margin-top:12px;" class="highlight-box hl-blue">
+      Pattern 四步：① 常駐 server 包住資源，HTTP / IPC 對外 → ② per-resource FIFO queue + worker → ③ 配套一支 shell wrapper CLI（ai-core-call）→ ④ wrapper 實作 <code>--metadata</code>（工具自身）
+    </div>
+    <div class="sg-grid">
+      <div class="sg-item sg-em">
+        <div class="sg-label">Entry-managing 亞型</div>
+        <p>管理多個具名資源（entries）。例：LLM Entry Manager（多個 model）。需在 metadata 中宣告 <code>has_entries: true</code>，支援 <code>--entry-metadata &lt;name&gt;</code>。</p>
+      </div>
+      <div class="sg-item sg-simple">
+        <div class="sg-label">Simple singleton 亞型</div>
+        <p>包住單一資源，不需 entry 概念。功能上類似常駐 MCP 工具伺服器，只是變成 singleton 以保護底層資源。只有 <code>--metadata</code>，無 <code>--entry-metadata</code>。</p>
+      </div>
+    </div>
+    <p style="margin-top:10px;font-size:.78rem;color:var(--dim)">
+      共用樣板抽取時機（YAGNI）：等第二個 singleton manager 出現時才從 entry_manager/ 抽出 protocol/queue.py + protocol/ratelimit.py，目前目錄先預留。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ --metadata protocol ═══ -->
+<div class="section">
+  <div class="section-title"><code>--metadata</code> 協議</div>
+  <div class="meta-protocol">
+    <p style="font-size:.82rem;color:var(--muted)">跨元件契約。唯一強制要求：輸出合法 JSON。schema 不強制，所有 caller/hub/author 都必須預期函式可能沒寫 metadata 或寫得不完整。</p>
+    <div class="mp-grid">
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:8px">最小合法輸出範例</div>
+        <pre>{"lifecycle": "one_shot",
+ "state": "stateless",
+ "interruptible": true,
+ "guarantee": "idempotent",
+ "resources": {},
+ "entries": {
+   "stdin": {"mode": "text"}
+ }
+}
+
+# subcommand-scoped
+sfc --metadata          → lifecycle: one_shot
+sfc forge --metadata    → lifecycle: persistent
+
+# entry-managing
+ai-core-call --metadata          → 工具自身
+ai-core-call --entry-metadata M  → 個別 model M</pre>
+      </div>
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:8px">設計規則</div>
+        <ul style="list-style:none;padding:0;">
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span>合法 JSON 是唯一強制；schema 不強制
+          </li>
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span>容錯優先：缺欄位 / 不合法 → graceful 降級，不 crash
+          </li>
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span>輸入（stdin/flags/files）不影響 metadata 輸出
+          </li>
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span>可變維度只有 subcommand 層次（靜態命令層次，非執行期資料）
+          </li>
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span><code>--metadata</code> 必須是唯一旗標，不與資料旗標混用
+          </li>
+          <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--blue);margin-right:8px">▸</span>hub 可做擴增 / 過濾 / 彙總（透鏡式轉換）
+          </li>
+          <li style="padding:5px 0;font-size:.8rem;color:var(--muted)">
+            <span style="color:var(--orange);margin-right:8px">▸</span>待補欄位：memory_hints、nondeterministic、memoized（詳見 <a href="decisions.html">待決議</a>）
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 8 axes ═══ -->
+<div class="section">
+  <div class="section-title">Metadata 八軸（core_nature/lib_spec.md）</div>
+  <div class="meta-axes">
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">目前已定義的八個執行特性軸。注意：這些軸描述的是<strong>執行特性</strong>，而非語意用途（後者是 B1 懸案）。</p>
+    <div class="axis-row">
+      <span class="axis-name">lifecycle</span>
+      <span class="axis-desc">執行生命週期</span>
+      <span class="axis-example">one_shot | persistent | stateful_session</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">state</span>
+      <span class="axis-desc">函式是否有外部狀態</span>
+      <span class="axis-example">stateless | state_dirs | external</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">interruptible</span>
+      <span class="axis-desc">是否可安全中斷並恢復</span>
+      <span class="axis-example">true | false</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">guarantee</span>
+      <span class="axis-desc">重複執行的保證強度</span>
+      <span class="axis-example">none | idempotent | transactional</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">resources</span>
+      <span class="axis-desc">預期資源用量（時間、記憶體）</span>
+      <span class="axis-example">{"time_seconds": 2, "memory_mb": 64}</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">entries</span>
+      <span class="axis-desc">I/O 通道的方向/mode/type</span>
+      <span class="axis-example">{"stdin": {"mode": "text"}, "stdout": ...}</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">state_dirs</span>
+      <span class="axis-desc">狀態目錄宣告（.config/.cache/.state/.data）</span>
+      <span class="axis-example">{"cache": "~/.cache/myapp"}</span>
+    </div>
+    <div class="axis-row">
+      <span class="axis-name">has_entries</span>
+      <span class="axis-desc">是否有可用的 --entry-metadata（entry-managing singleton 用）</span>
+      <span class="axis-example">true | false</span>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.2);border-radius:6px;font-size:.78rem;color:var(--orange)">
+      ⚠️ 待補軸（候選）：<code>nondeterministic</code>（LLM 馴化框架觸發根）、<code>memoized</code>（快取策略）。詳見 <a href="decisions.html" style="color:var(--orange)">待決議 C 組</a>。
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Tech stack ═══ -->
+<div class="section">
+  <div class="section-title">技術選型</div>
+  <table>
+    <thead><tr><th>項目</th><th>選擇</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>主語言</td><td><code>Python 3.11+</code></td><td>LLM 生態最完整；asyncio 跨平台行為穩定</td></tr>
+      <tr><td>套件管理</td><td><code>uv</code></td><td>快、跨平台、有 lockfile</td></tr>
+      <tr><td>LLM 抽象</td><td><code>litellm</code></td><td>已支援 ollama、lm studio（OpenAI 相容）、gemini</td></tr>
+      <tr><td>HTTP server</td><td><code>fastapi + uvicorn</code></td><td>Entry Manager / Hub server 都用</td></tr>
+      <tr><td>跨平台路徑</td><td><code>platformdirs</code></td><td>自動找對 config/data dir</td></tr>
+      <tr><td>CLI 註冊</td><td><code>pyproject.toml [project.scripts]</code></td><td>不靠 shebang，Win/Linux 都能跑</td></tr>
+      <tr><td>配置/metadata</td><td>JSON</td><td>已拍板，語言中立</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:10px;font-size:.78rem;color:var(--dim)">注意：Python 是 ai_core <strong>自身實作</strong>所用的語言。Function 本身語言不限——bash、Python、Go、任何可執行檔都可以，只要符合 <code>--metadata</code> 協議即可被 hub 收錄與呼叫。</p>
+</div>
+
+</div>
+</body>
+</html>
