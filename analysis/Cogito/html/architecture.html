@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cogito — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">COGITO</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="details.html">深度細節</a>
+  <a href="../architecture/quick_reference.md">速查表 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析</h1>
+  <p>從整體技術棧到各子系統的逐層深入分析，Level 1（初探）→ Level 5（深度剖析）。</p>
+</div>
+
+<!-- Quick nav within page -->
+<div class="section">
+  <div class="highlight-box hl-purple" style="font-style:normal;font-size:.8rem;">
+    快速跳轉：
+    <a href="#level1-2">Level 1–2 基礎</a> ·
+    <a href="#level3">Level 3 核心系統</a> ·
+    <a href="#level4">Level 4 進階系統</a> ·
+    <a href="#level5">Level 5 深度剖析</a> ·
+    <a href="#quickref">速查表</a>
+  </div>
+</div>
+
+<!-- Level 1-2 -->
+<div class="section" id="level1-2">
+  <div class="section-title">Level 1–2 &mdash; 基礎層：整體概覽與模組職責</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Level 1</div>
+      <h3><a href="../architecture/level1_overview.md">初始探索：技術棧與整體架構</a></h3>
+      <p>Godot 4.4 + Jolt Physics 技術棧、6 個 Autoload 單例清單、<code>addons/cogito/</code> 完整子模組列表、Physics Layers 定義。</p>
+      <ul>
+        <li>7 大核心架構模式概覽</li>
+        <li>頂層目錄結構</li>
+        <li>主入口場景</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Level 2</div>
+      <h3><a href="../architecture/level2_core_modules.md">核心模組職責與耦合</a></h3>
+      <p>各模組的功能邊界、相互依賴關係、資料流向，以及插件可選擴展（Dialogic、Dialogue Nodes）的整合點。</p>
+      <ul>
+        <li>模組依賴圖</li>
+        <li>信號介面說明</li>
+        <li>可選插件整合策略</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Level 3 -->
+<div class="section" id="level3">
+  <div class="section-title">Level 3 &mdash; 核心系統：互動物件、NPC、武器</div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">Level 3A</div>
+      <h3><a href="../architecture/level3_interactive_objects.md">互動物件系統</a></h3>
+      <p>所有 <code>CogitoObject</code> 子類的詳細分析：門、開關、容器、壓力板、快扣槽、自動販賣機、保險箱等。</p>
+      <ul>
+        <li>CogitoDoor 三型態（旋轉/滑動/動畫）</li>
+        <li>CogitoSwitch 觸發鏈</li>
+        <li>CogitoSnapSlot 吸附邏輯</li>
+      </ul>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-3">Level 3B</div>
+      <h3><a href="../architecture/level3_npc_states.md">NPC 狀態機</a></h3>
+      <p><code>NpcStateMachine</code> 場景樹架構，六個內建狀態的切換條件與 hook 實作。</p>
+      <ul>
+        <li>idle / patrol_on_path / move_to_random_pos</li>
+        <li>chase / attack / switch_stance</li>
+        <li><code>_state_enter</code> / <code>_state_exit</code> hook</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-3">Level 3C</div>
+      <h3><a href="../architecture/level3_wieldables.md">Wieldable 持械系統</a></h3>
+      <p><code>CogitoWieldable</code> 基類介面，以及各具體武器的實作差異：彈丸式、Hitscan、近戰、手電筒、投擲。</p>
+      <ul>
+        <li>wieldable_toy_pistol：彈丸池 + ADS</li>
+        <li>wieldable_laser_rifle：Hitscan + BulletDecalPool</li>
+        <li>wieldable_pickaxe：雙模式命中</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Level 4 -->
+<div class="section" id="level4">
+  <div class="section-title">Level 4 &mdash; 進階系統：物質反應、存讀檔、任務</div>
+  <div class="g3">
+    <div class="card card-accent-red">
+      <div class="tier-label tier-4">Level 4A</div>
+      <h3><a href="../architecture/level4_properties_system.md">CogitoProperties 物質反應</a></h3>
+      <p>雙層位元旗標系統（濕/乾/易燃等），反應矩陣、閾值計時器、VFX 池的完整實作。</p>
+      <ul>
+        <li>HitboxComponent 傷害橋接</li>
+        <li>ImpactAttributeDamage 衝擊速度閾值</li>
+        <li>Explosion Area3D 範圍傷害</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-4">Level 4B</div>
+      <h3><a href="../architecture/level4_save_load_system.md">存讀檔系統</a></h3>
+      <p>雙群組持久化架構、JSON 格式、三種存檔槽（permanent/temp/數字），場景切換時的 temp 緩衝機制。</p>
+      <ul>
+        <li>cogito_player_state：Vector2 壓縮</li>
+        <li>cogito_scene_state：屬性反射</li>
+        <li>loading_screen：SceneLoadMode 非同步</li>
+      </ul>
+    </div>
+    <div class="card card-accent-yellow">
+      <div class="tier-label tier-4">Level 4C</div>
+      <h3><a href="../architecture/level4_quest_system.md">任務系統</a></h3>
+      <p><code>CogitoQuest</code> Resource 三狀態機、<code>CogitoQuestGroup</code> 四子類、<code>CogitoQuestUpdater</code> 四操作類型。</p>
+      <ul>
+        <li>quest_counter 響應式 setter</li>
+        <li>has_been_triggered 防重複觸發</li>
+        <li>QuestManager 反射方法呼叫</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Level 5 -->
+<div class="section" id="level5">
+  <div class="section-title">Level 5 &mdash; 深度剖析：六大子系統實作細節</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-5">Level 5A</div>
+      <h3><a href="../architecture/level5a_inventory_ui.md">物品欄 UI</a></h3>
+      <p>Grid-based 多格物品（<code>item_size</code>）、拖放狀態機（<code>grabbed_slot_data</code>）、ShapeCast3D 安全丟棄、手把輸入支援。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-5">Level 5B</div>
+      <h3><a href="../architecture/level5b_attributes.md">屬性系統</a></h3>
+      <p>CogitoAttribute 基類、六種屬性（HP/Stamina/Sanity/LightMeter/Visibility/…）、AutoConsume 子系統、<code>prevent_death()</code> 攔截機制。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-5">Level 5C</div>
+      <h3><a href="../architecture/level5c_loot_system.md">Loot 戰利品系統</a></h3>
+      <p>LootDropEntry 四種 DropType、加權隨機抽取、unique/quest 跨容器掃描、32 次 failsafe、SPAWN_ITEM vs SPAWN_CONTAINER 兩種產出模式。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-5">Level 5D</div>
+      <h3><a href="../architecture/level5d_carryable.md">物理搬運（CarryableComponent）</a></h3>
+      <p>RigidBody 浮動搬運（設速度而非位置）、手動旋轉、Raycast 例外管理、與 PlayerInteractionComponent 的協作。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-5">Level 5E</div>
+      <h3><a href="../architecture/level5e_player_movement.md">玩家移動</a></h3>
+      <p>跑/跳/蹲/滑梯/階梯系統，三次 body_test_motion 階梯判定、坡度感知耐力耗盡、gravity_zone 重力覆寫。</p>
+    </div>
+    <div class="card card-accent-pink">
+      <div class="tier-label tier-5">Level 5F</div>
+      <h3><a href="../architecture/level5f_dialogue.md">對話系統</a></h3>
+      <p>Dialogic（時間軸式）與 Dialogue Nodes（泡泡式）兩套插件的整合方式，與 CogitoNPC、QuestUpdater 的連線策略。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Quick reference -->
+<div class="section" id="quickref">
+  <div class="section-title">速查表</div>
+  <div class="card card-accent-purple">
+    <h3><a href="../architecture/quick_reference.md">Cogito 整體架構速查表</a></h3>
+    <p>涵蓋 Level 1–5 全部系統的完整類別速查：玩家、屬性、物品欄資料層、物品欄 UI、互動組件樹、場景物件、NPC、Wieldable、存讀檔、任務、Loot、物質反應、AutoConsume。另含小工具組件速查（InteractionComponent 子類、Area3D 觸發區域、場景工具 Node、腳步音效系統、安全攝影機、載具）與常用設計模式索引。</p>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/">architecture/*.md</a>
+</div>
+
+</body>
+</html>

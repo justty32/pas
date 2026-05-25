@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cogito — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">COGITO</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="details.html">深度細節</a>
+  <a href="../architecture/quick_reference.md">速查表 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>Cogito — Godot 沉浸模擬模板</h1>
+  <p>Godot 4.4 第一人稱 Immersive Sim 框架，由 Philip Drobar 開發。提供完整的互動物件、NPC 狀態機、物品欄、存讀檔與任務系統。</p>
+</div>
+
+<!-- Quick stats -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot 4.4 stable</p>
+      <p>GDScript · Jolt Physics</p>
+      <p>Forward Plus 渲染器</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>架構文件</h3>
+      <p>Level 1–5 共 14 篇</p>
+      <p>速查表 1 篇</p>
+      <p><a href="architecture.html">→ 查看架構</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>開發教學</h3>
+      <p>25 篇目標導向教學</p>
+      <p>涵蓋基礎到 Skyrim 風格擴展</p>
+      <p><a href="tutorial.html">→ 查看教學</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>深度細節</h3>
+      <p>動態生成實作細節</p>
+      <p>Skyrim 克隆開發路線圖</p>
+      <p><a href="details.html">→ 查看細節</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">Autoload 全域單例</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>單例名稱</th><th>職責</th><th>插件</th></tr></thead>
+      <tbody>
+        <tr><td><code>CogitoGlobals</code></td><td>全域設定快取、除錯日誌、Debug 形狀繪製</td><td>cogito</td></tr>
+        <tr><td><code>CogitoSceneManager</code></td><td>場景切換、存檔/讀檔</td><td>cogito</td></tr>
+        <tr><td><code>CogitoQuestManager</code></td><td>任務狀態管理（active/available/completed/failed）</td><td>cogito</td></tr>
+        <tr><td><code>MenuTemplateManager</code></td><td>主選單/暫停選單/選項選單控制</td><td>cogito</td></tr>
+        <tr><td><code>Audio</code></td><td>全域音效播放</td><td>quick_audio</td></tr>
+        <tr><td><code>InputHelper</code></td><td>輸入重新綁定、手把偵測</td><td>input_helper</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Core architecture patterns -->
+<div class="section">
+  <div class="section-title">核心架構模式（7 大支柱）</div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">互動系統</div>
+      <h3>組件式互動</h3>
+      <p><code>InteractionComponent</code> 為基類，子類透過 <code>input_map_action</code>、<code>interaction_text</code>、<code>attribute_check</code> 三個 @export 即可設定互動行為。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">玩家</div>
+      <h3>CogitoPlayer</h3>
+      <p>繼承 <code>CharacterBody3D</code>，分層節點結構：Body → Neck → Head → Eyes → Camera。持有 <code>PlayerInteractionComponent</code>、屬性字典與物品欄 Resource。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">物品欄</div>
+      <h3>Resource 驅動物品欄</h3>
+      <p>物品定義為 <code>InventoryItemPD</code> 子類的 <code>.tres</code> 資源。<code>CogitoInventory</code> 管理 Grid 空間，UI 與邏輯完全分離。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-2">NPC</div>
+      <h3>場景樹狀態機</h3>
+      <p><code>NpcStateMachine</code> 以子節點管理各狀態（idle / patrol / chase / attack / switch_stance），<code>goto("state")</code> 切換，支援 <code>_state_enter</code> / <code>_state_exit</code> hook。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-2">武器</div>
+      <h3>Wieldable 基類介面</h3>
+      <p><code>CogitoWieldable</code> 定義 <code>equip()</code>、<code>unequip()</code>、<code>action_primary()</code>、<code>action_secondary()</code>、<code>reload()</code>，具體武器繼承並覆寫。</p>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-2">存檔</div>
+      <h3>雙槽持久化</h3>
+      <p><code>Persist</code> 群組（跨場景再實例化）+ <code>save_object_state</code> 群組（原地呼叫 save/set_state）。存檔格式 JSON，支援 "permanent" / "temp" / 數字索引槽。</p>
+    </div>
+    <div class="card card-accent-yellow">
+      <div class="tier-label tier-2">任務</div>
+      <h3>任務系統</h3>
+      <p><code>CogitoQuestManager</code> 管理四個 QuestGroup。任務定義為 <code>CogitoQuest</code> Resource，透過 <code>CogitoQuestUpdater</code> 組件觸發進度更新，防重複觸發機制。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Signal flows -->
+<div class="section">
+  <div class="section-title">關鍵信號流</div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">玩家互動</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">按下互動鍵</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">PlayerInteractionComponent</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">InteractionRaycast</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">find InteractionComponent</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">interact(PIC)</span>
+    </div>
+  </div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">物品撿取</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-purple">PickupComponent.interact()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">CogitoInventory.pick_up_slot_data()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">inventory_updated.emit()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">InventoryUI 全量重建</span>
+    </div>
+  </div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">場景切換</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-orange">SceneTransitionZone</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">save_scene_state("temp")</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">load_next_scene(path, connector)</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">非同步載入畫面</span>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">屬性歸零</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-red">attribute_reached_zero.emit()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-pink">AutoConsume._auto_consume()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">（無藥可用）</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">CogitoHealthAttribute.on_death()</span>
+    </div>
+  </div>
+</div>
+
+<!-- Key design patterns -->
+<div class="section">
+  <div class="section-title">常用設計模式索引</div>
+  <div class="g2">
+    <div class="card">
+      <table>
+        <thead><tr><th>模式</th><th>典型位置</th></tr></thead>
+        <tbody>
+          <tr><td>響應式 setter（值改變才發信號）</td><td><code>CogitoAttribute.value_current</code></td></tr>
+          <tr><td>全量重建 UI</td><td><code>InventoryUI.populate_item_grid()</code></td></tr>
+          <tr><td>場景樹掛載狀態機</td><td><code>NpcStateMachine._ready()</code></td></tr>
+          <tr><td>雙群組持久化</td><td><code>CogitoSceneManager.save_scene_state()</code></td></tr>
+          <tr><td>浮動物理搬運</td><td><code>CarryableComponent._physics_process()</code></td></tr>
+          <tr><td>Raycast 例外管理</td><td><code>CarryableComponent.hold()</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>模式</th><th>典型位置</th></tr></thead>
+        <tbody>
+          <tr><td>UI 暫停協議</td><td><code>toggled_interface.emit(true/false)</code></td></tr>
+          <tr><td>加權隨機抽取</td><td><code>LootGenerator._roll_for_randomized_items()</code></td></tr>
+          <tr><td>ShapeCast3D 安全放置</td><td><code>inventory_interface._drop_item()</code></td></tr>
+          <tr><td>SubViewport 單像素採樣</td><td><code>cogito_light_meter_attribute</code></td></tr>
+          <tr><td><code>find_children</code> 反射掃描</td><td><code>CogitoPlayer._ready()</code></td></tr>
+          <tr><td>三次 body_test_motion 階梯判定</td><td><code>cogito_player.gd _handle_stairs()</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/">architecture/*.md</a>、<a href="../tutorial/">tutorial/*.md</a>、<a href="../details/">details/*.md</a>
+</div>
+
+</body>
+</html>

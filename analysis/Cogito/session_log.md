@@ -1,5 +1,9 @@
 # Cogito 分析日誌
 
+## 2026-05-25（生成 HTML 導覽層）
+
+- 生成 `html/` 導覽層（`_shared.css`、`index.html`、`architecture.html`、`tutorial.html`、`details.html`），涵蓋 15 篇架構、25 篇教學、2 篇細節的全量索引，含信號流視覺化、難度分級、分析涵蓋範圍交叉表。
+
 ## 2026-05-25（新增 6 份 tutorial）
 
 - **新增 `paper_doll_equipment.md`**：`EquipmentItemPD`（繼承 `InventoryItemPD`，新增 `equip_slot`/`defense_bonus`/`equip_mesh`）、`EquipmentManager`（BoneAttachment3D 掛載、`equip`/`unequip`/`get_total_defense`）、`decrease_attribute` 防禦攔截、`use()` 觸發裝備/卸下、存讀檔整合。

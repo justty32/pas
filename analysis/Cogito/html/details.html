@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cogito — 深度細節</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">COGITO</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="details.html" class="active">深度細節</a>
+  <a href="../architecture/quick_reference.md">速查表 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>深度細節</h1>
+  <p>超出架構層與教學層的實作細節文件，以及專案開發路線圖。</p>
+</div>
+
+<!-- Documents -->
+<div class="section">
+  <div class="section-title">細節文件</div>
+  <div class="g2">
+    <div class="card card-accent-pink">
+      <div class="tier-label tier-4">實作細節</div>
+      <h3><a href="../details/dynamic_generation_implementation.md">動態生成實作細節</a></h3>
+      <p>深入剖析 <code>cogito_spawnzone</code> 的實際運作，包含：</p>
+      <ul>
+        <li>BoxShape3D 隨機座標採樣演算法</li>
+        <li>外部信號驅動模式（<code>generic_button_pressed</code>）</li>
+        <li>批次生成與效能考量</li>
+        <li>與 Loot System 的整合邊界</li>
+        <li>程序化關卡生成延伸方案</li>
+      </ul>
+      <p style="margin-top:10px;font-size:.75rem;color:var(--dim);">對應教學：<a href="../tutorial/dynamic_generation.md">dynamic_generation.md</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-5">開發路線圖</div>
+      <h3><a href="../details/skyrim_clone_roadmap.md">Skyrim 克隆開發路線圖</a></h3>
+      <p>基於 Cogito 框架打造完整 Skyrim 風格 RPG 的分階段計畫，涵蓋：</p>
+      <ul>
+        <li>Phase 1：核心戰鬥（武器、魔法、呼喊）</li>
+        <li>Phase 2：角色系統（升等、技能樹、紙娃娃）</li>
+        <li>Phase 3：世界構建（Radiant AI、開放世界、日夜循環）</li>
+        <li>Phase 4：UI 打磨（物品欄、對話、技能樹 UI）</li>
+        <li>已知限制與 Cogito 框架擴展策略</li>
+      </ul>
+      <p style="margin-top:10px;font-size:.75rem;color:var(--dim);">對應教學群：<a href="tutorial.html#cat-combat">戰鬥</a> · <a href="tutorial.html#cat-advanced">進階系統</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Session log -->
+<div class="section">
+  <div class="section-title">操作記錄</div>
+  <div class="card card-accent-blue">
+    <h3><a href="../session_log.md">session_log.md</a></h3>
+    <p>每次分析操作的單句記錄，按時間順序排列。適合快速了解本次分析工作階段的完整脈絡。</p>
+  </div>
+</div>
+
+<!-- Analysis coverage map -->
+<div class="section">
+  <div class="section-title">分析涵蓋範圍</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>模組 / 系統</th>
+          <th>架構分析</th>
+          <th>教學</th>
+          <th>細節</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>玩家移動</td><td><a href="../architecture/level5e_player_movement.md">Level 5E ✓</a></td><td><a href="../tutorial/advanced_action_movement.md">進階動作 ✓</a></td><td>—</td></tr>
+        <tr><td>屬性系統</td><td><a href="../architecture/level5b_attributes.md">Level 5B ✓</a></td><td><a href="../tutorial/skyrim_leveling_system.md">升等 ✓</a></td><td>—</td></tr>
+        <tr><td>物品欄 UI</td><td><a href="../architecture/level5a_inventory_ui.md">Level 5A ✓</a></td><td><a href="../tutorial/ui_modification_inventory.md">UI 改造 ✓</a></td><td>—</td></tr>
+        <tr><td>NPC 狀態機</td><td><a href="../architecture/level3_npc_states.md">Level 3B ✓</a></td><td><a href="../tutorial/npc_ai_behavior.md">AI 行為 ✓</a> · <a href="../tutorial/npc_radiant_ai_schedule.md">Radiant AI ✓</a></td><td>—</td></tr>
+        <tr><td>存讀檔</td><td><a href="../architecture/level4_save_load_system.md">Level 4B ✓</a></td><td>—</td><td>—</td></tr>
+        <tr><td>任務系統</td><td><a href="../architecture/level4_quest_system.md">Level 4C ✓</a></td><td><a href="../tutorial/quest_creation_workflow.md">製作流程 ✓</a></td><td>—</td></tr>
+        <tr><td>物質反應</td><td><a href="../architecture/level4_properties_system.md">Level 4A ✓</a></td><td><a href="../tutorial/elemental_mechanics.md">元素機制 ✓</a></td><td>—</td></tr>
+        <tr><td>Loot 系統</td><td><a href="../architecture/level5c_loot_system.md">Level 5C ✓</a></td><td><a href="../tutorial/destructible_objects.md">可破壞物件 ✓</a></td><td>—</td></tr>
+        <tr><td>動態生成</td><td>—</td><td><a href="../tutorial/dynamic_generation.md">教學 ✓</a></td><td><a href="../details/dynamic_generation_implementation.md">細節 ✓</a></td></tr>
+        <tr><td>Wieldable</td><td><a href="../architecture/level3_wieldables.md">Level 3C ✓</a></td><td><a href="../tutorial/skyrim_combat_mechanics.md">Skyrim 戰鬥 ✓</a> · <a href="../tutorial/magic_and_magicka_system.md">魔法 ✓</a></td><td>—</td></tr>
+        <tr><td>對話系統</td><td><a href="../architecture/level5f_dialogue.md">Level 5F ✓</a></td><td><a href="../tutorial/ui_modification_dialogue.md">UI 改造 ✓</a></td><td>—</td></tr>
+        <tr><td>渲染</td><td>—</td><td><a href="../tutorial/visual_presentation_and_rendering.md">渲染總論 ✓</a> · <a href="../tutorial/genshin_style_rendering.md">Cel shading ✓</a></td><td>—</td></tr>
+        <tr><td>開放世界</td><td>—</td><td><a href="../tutorial/open_world_architecture.md">架構 ✓</a></td><td><a href="../details/skyrim_clone_roadmap.md">路線圖 ✓</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../details/">details/*.md</a>
+</div>
+
+</body>
+</html>

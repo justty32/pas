@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cogito — 開發教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">COGITO</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學</a>
+  <a href="details.html">深度細節</a>
+  <a href="../architecture/quick_reference.md">速查表 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學</h1>
+  <p>25 篇目標導向教學，從基礎物件製作到 Skyrim 風格系統擴展。每篇均有前置知識標注與具體實作步驟。</p>
+</div>
+
+<!-- Category nav -->
+<div class="section">
+  <div class="highlight-box hl-blue" style="font-style:normal;font-size:.8rem;">
+    快速跳轉：
+    <a href="#cat-objects">物件與互動</a> ·
+    <a href="#cat-npc">NPC 與 AI</a> ·
+    <a href="#cat-combat">戰鬥與能力</a> ·
+    <a href="#cat-items">物品與商店</a> ·
+    <a href="#cat-ui">UI 改造</a> ·
+    <a href="#cat-advanced">進階系統</a> ·
+    <a href="#cat-visual">視覺渲染</a>
+  </div>
+</div>
+
+<!-- Category 1: Objects & Interaction -->
+<div class="section" id="cat-objects">
+  <div class="section-title">物件與互動</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <span class="badge badge-green" style="margin-bottom:8px;">基礎</span>
+      <h3><a href="../tutorial/adding_objects_and_vfx.md">添加 3D 物件與特效 (VFX)</a></h3>
+      <p>物件類型決策樹、InteractionComponent 掛載流程、元素特效整合、持久化群組設定。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3A、Level 4A</p>
+    </div>
+    <div class="card card-accent-green">
+      <span class="badge badge-green" style="margin-bottom:8px;">基礎</span>
+      <h3><a href="../tutorial/adding_character_actions.md">添加角色動作</a></h3>
+      <p>如何為 CogitoPlayer 新增自定義動作，透過信號系統整合 HUD 回饋，以及 Input Map 設定。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 1 Autoload</p>
+    </div>
+    <div class="card card-accent-orange">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/destructible_objects.md">可破壞物件</a></h3>
+      <p>結合 CogitoProperties 的易碎屬性、HitboxComponent 傷害觸發、破碎 VFX 池與 Loot 掉落整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3A、Level 4A、Level 5C</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 2: NPC & AI -->
+<div class="section" id="cat-npc">
+  <div class="section-title">NPC 與 AI</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <span class="badge badge-blue" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/npc_ai_behavior.md">NPC AI 行為設計</a></h3>
+      <p>擴充 NPC 狀態機、自定義新狀態節點、視線 / 聽力偵測調校，以及 CogitoSecurityCamera 整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3B</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/npc_radiant_ai_schedule.md">NPC 輻射 AI 日程系統</a></h3>
+      <p>Skyrim 風格的 Radiant AI：NPC 日程表設計、時間驅動狀態切換、多 NPC 協調與避免碰撞。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3B、npc_ai_behavior</p>
+    </div>
+    <div class="card card-accent-yellow">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/selective_time_dilation.md">選擇性時間膨脹</a></h3>
+      <p>針對特定 NPC 或物件降速/凍結（VATS 風格），不影響玩家操作，資源消耗與 UI 整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 1、Level 2</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 3: Combat & Abilities -->
+<div class="section" id="cat-combat">
+  <div class="section-title">戰鬥與能力</div>
+  <div class="g3">
+    <div class="card card-accent-red">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/elemental_mechanics.md">元素機制</a></h3>
+      <p>火/冰/電等元素反應、CogitoProperties 旗標觸發、元素 VFX 粒子系統整合、跨物件反應鏈。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 4A</p>
+    </div>
+    <div class="card card-accent-red">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/skyrim_combat_mechanics.md">Skyrim 風格戰鬥</a></h3>
+      <p>格擋、弓箭蓄力、雙持武器、戰技系統，以及 Wieldable 基類的擴展模式。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3C、Level 5B</p>
+    </div>
+    <div class="card card-accent-purple">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/magic_and_magicka_system.md">魔法與魔力系統</a></h3>
+      <p>Magicka 屬性定義、法術 Wieldable 設計、魔力耗盡觸發 AutoConsume、法術特效整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5B、Level 3C</p>
+    </div>
+    <div class="card card-accent-orange">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/shout_system.md">呼喊系統（Shout）</a></h3>
+      <p>Skyrim 呼喊（Thu'um）機制：蓄力時間、詞語解鎖、冷卻時間、範圍效果觸發。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：magic_and_magicka_system</p>
+    </div>
+    <div class="card card-accent-blue">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/advanced_action_movement.md">進階動作移動</a></h3>
+      <p>衝刺翻滾、攀爬、牆跑等進階移動能力，擴展 Level 5E 玩家移動系統的具體實作步驟。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5E</p>
+    </div>
+    <div class="card card-accent-green">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/skyrim_leveling_system.md">Skyrim 升等系統</a></h3>
+      <p>技能使用驅動升等、經驗值屬性設計、能力解鎖資料 Resource 架構。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5B、Level 4C</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 4: Items & Shop -->
+<div class="section" id="cat-items">
+  <div class="section-title">物品、裝備與商店</div>
+  <div class="g3">
+    <div class="card card-accent-yellow">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/paper_doll_equipment.md">紙娃娃裝備系統</a></h3>
+      <p>身體部位裝備槽設計、CogitoInventory 擴充、裝備屬性加成與視覺換裝（Mesh 替換）。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5A、Level 5B</p>
+    </div>
+    <div class="card card-accent-yellow">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/shop_merchant_system.md">商店與商人系統</a></h3>
+      <p><code>CogitoVendor</code> 動態庫存生成、貨幣交易邏輯、商人對話整合、日程補貨機制。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 3A、Level 4C</p>
+    </div>
+    <div class="card card-accent-green">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/quest_creation_workflow.md">任務製作工作流</a></h3>
+      <p>從 CogitoQuest .tres 設計、CogitoQuestUpdater 配置到 UI 顯示，完整端對端任務製作流程。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 4C</p>
+    </div>
+    <div class="card card-accent-purple">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/skill_tree_ui.md">技能樹 UI</a></h3>
+      <p>技能節點 Resource 設計、解鎖條件依賴圖、GraphEdit 或自定義節點 UI 實作、存讀檔整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：skyrim_leveling_system</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 5: UI Modifications -->
+<div class="section" id="cat-ui">
+  <div class="section-title">UI 改造</div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/ui_modification_interaction.md">UI 改造：互動提示</a></h3>
+      <p>重設計互動提示 HUD（互動文字、持握計時 bar、屬性門檻警示），EasyMenus 框架內的客製化要點。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 2、Level 5A</p>
+    </div>
+    <div class="card card-accent-blue">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/ui_modification_inventory.md">UI 改造：物品欄介面</a></h3>
+      <p>替換或擴充 InventoryUI Grid、修改拖放視覺效果、新增物品比較 tooltip、手把輸入適配。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5A</p>
+    </div>
+    <div class="card card-accent-blue">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/ui_modification_dialogue.md">UI 改造：對話介面</a></h3>
+      <p>Dialogic 時間軸樣式客製化、Dialogue Nodes 泡泡對話皮膚替換、與 CogitoNPC 信號的整合方式。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5F</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 6: Advanced Systems -->
+<div class="section" id="cat-advanced">
+  <div class="section-title">進階系統</div>
+  <div class="g3">
+    <div class="card card-accent-pink">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/dynamic_generation.md">動態生成系統</a></h3>
+      <p><code>cogito_spawnzone</code> 擴展、程序化關卡生成、動態 Loot 填充、與 QuestSystem 驅動的動態事件觸發。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5C、details/dynamic_generation_implementation.md</p>
+    </div>
+    <div class="card card-accent-pink">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/open_world_architecture.md">開放世界架構</a></h3>
+      <p>多場景無縫串接策略、streaming chunk 設計、CogitoSceneManager 的多 temp 槽擴展、持久化邊界處理。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 4B、details/skyrim_clone_roadmap.md</p>
+    </div>
+    <div class="card card-accent-yellow">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/lod_implementation.md">LOD 實作</a></h3>
+      <p>Godot 4 VisibilityNotifier3D / GeometryInstance LOD 模式、NPC AI 距離降頻、音效距離衰減整合。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 1 技術棧</p>
+    </div>
+  </div>
+</div>
+
+<!-- Category 7: Visual & Rendering -->
+<div class="section" id="cat-visual">
+  <div class="section-title">視覺渲染</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/genshin_style_rendering.md">原神風格渲染</a></h3>
+      <p>Cel shading + 輪廓線著色器實作、臉部陰影特殊處理、Godot Forward Plus 下的 PBR-to-toon 轉換策略。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 1（Forward Plus 渲染器）</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <span class="badge badge-purple" style="margin-bottom:8px;">進階</span>
+      <h3><a href="../tutorial/visual_presentation_and_rendering.md">視覺呈現與渲染總論</a></h3>
+      <p>後處理堆疊、環境光遮蔽、景深、動態光源最佳化、SubViewport 採樣技術（LightMeter）。</p>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--dim);">前置：Level 5B（LightMeter）</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <span class="badge badge-orange" style="margin-bottom:8px;">中階</span>
+      <h3><a href="../tutorial/day_night_cycle_visual.md">晝夜循環視覺</a></h3>
+      <p>DirectionalLight3D 旋轉、天空盒動態切換、環境光漸變、與 LightzoneComponent / Sanity 屬性的日夜聯動。</p>
+      <p style="margin-top:8px;font-size:.75rim;color:var(--dim);">前置：Level 5B（Visibility/Sanity）</p>
+    </div>
+  </div>
+</div>
+
+<!-- Difficulty legend -->
+<div class="section">
+  <div class="section-title">難度圖例</div>
+  <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;padding:14px 20px;">
+    <span><span class="badge badge-green">基礎</span> — 無特定前置架構知識</span>
+    <span><span class="badge badge-orange">中階</span> — 需了解 Level 3–4 對應系統</span>
+    <span><span class="badge badge-purple">進階</span> — 需跨多個 Level 5 子系統，建議先讀速查表</span>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../tutorial/">tutorial/*.md</a>
+</div>
+
+</body>
+</html>
