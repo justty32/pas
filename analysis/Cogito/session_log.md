@@ -1,5 +1,19 @@
 # Cogito 分析日誌
 
+## 2026-05-25（新增 6 份 tutorial）
+
+- **新增 `paper_doll_equipment.md`**：`EquipmentItemPD`（繼承 `InventoryItemPD`，新增 `equip_slot`/`defense_bonus`/`equip_mesh`）、`EquipmentManager`（BoneAttachment3D 掛載、`equip`/`unequip`/`get_total_defense`）、`decrease_attribute` 防禦攔截、`use()` 觸發裝備/卸下、存讀檔整合。
+- **新增 `quest_creation_workflow.md`**：`CogitoQuest` 資源欄位說明（`cogito_quest.gd`）、計數型 vs 直接完成型任務設計、`CogitoQuestUpdater` 兩種觸發方式（Area3D/NPC 死亡）、`CogitoQuestManager` 完整 API 速查、Dialogic 整合（QuestBridge Autoload、Timeline `[call]` 語法）、`ui_quest_hud.gd` 自動更新機制解析。
+- **新增 `shop_merchant_system.md`**：`CogitoCurrency`（`cogito_currency.gd`）設定、`player.increase_currency`/`decrease_currency`（`cogito_player.gd:306-321`）、`ItemValue` 資源、`ShopData` + `ShopEntry` 商品資源設計、`ShopComponent`（`try_buy`/`try_sell`）、`ShopBridge` Autoload 接 Dialogic、簡化版直接互動商店。
+- **新增 `skill_tree_ui.md`**：`PerkData` 資源（`required_level`/`prerequisite_perk_id`/`effect_type`）、`PerkManager` Autoload（`can_unlock`/`unlock`/`get_total_effect`）、`PerkNode` 場景（灰/白/金三種狀態）、`SkillTreeUI` 主控腳本、天賦效果套用到傷害/耐力計算、K 鍵開啟入口。
+- **新增 `day_night_cycle_visual.md`**：`DayNightController`（`DirectionalLight3D` 旋轉、`ProceduralSkyMaterial` 顏色插值、月光強度）、`TimeSystem` 補充 `minute_changed` 信號、霧氣密度隨時段變化、時鐘 HUD `Label`。
+- **新增 `shout_system.md`**：`ShoutData` 資源（三段充能/各段冷卻）、`ShoutManager` Autoload（連按窗口 0.6s/`press_shout`/`_execute_shout`）、Input Map 獨立 Z 鍵（`_unhandled_input` 接入點）、`ShoutExecutor`（推飛/慢動作/火焰/瞬移四種效果）、冷卻條 HUD。
+
+## 2026-05-25（details 深化）
+
+- **`dynamic_generation_implementation.md` 深化**：補充兩套群組機制（`Persist` vs `save_object_state`）對比表、`save_scene_state`/`load_scene_state` 原始碼逐行解析（含行號）、`CogitoObject.save()` 完整字典格式（`cogito_object.gd:91-119`）、`set_state()` 行為（`cogito_object.gd:70-77`）、存檔暫存機制（temp→slot 流程）、`CogitoSpawnZone` 完整原始碼解析（BoxShape3D 限制/父節點固定為場景根/Persist 由物件自身決定）、常見陷阱更新（`set()` 反射型別問題）。
+- **`skyrim_clone_roadmap.md` 深化**：為六大系統各補充具體 COGITO 接入點與完整代碼——(1) ChunkManager 非同步載入核心迴圈；(2) TimeSystem + ScheduleComponent 完整代碼（含 Dictionary String→int 轉換）；(3) SkillManager Autoload 完整實作 + 近戰命中/受傷 XP 注入點（對應 `HitboxComponent.gd:48`）；(4) EquipmentManager + BoneAttachment3D 全流程（ItemPD 擴充、equip/unequip、`decrease_attribute` 防禦攔截）；(5) MagickaAttribute + 投射物法術 + 龍吼獨立鍵位；(6) CogitoQuestManager 實際 API（`start_quest` 接資源不接字串、`change_quest_counter` 計數器機制）+ Dialogic QuestBridge 橋接。
+
 ## 2026-05-25（續）
 
 - **教學文件深化（10 份完整重寫）**：依序深化以下教學，以原始碼對照確保準確性：(1) `skyrim_combat_mechanics.md`：加入完整 `wieldable_sword.gd`，含長按計時重擊、格擋旗標、`apply_knockback()` NPC 失衡、玩家 `decrease_attribute` 攔截；(2) `npc_radiant_ai_schedule.md`：完整 `TimeSystem.gd` Autoload、`ScheduleComponent.gd`（Dictionary 鍵型轉換）、`npc_state_sleep.gd`（尋找最近 Bed Marker、`States.save_state_as_previous`）、`npc_state_work.gd`（工作台導航＋循環動畫）、虛擬模擬整合 `set_state()`；(3) `magic_and_magicka_system.md`：自訂 `CogitoMagickaAttribute`（`notify_cast()` 重置再生延遲）、瞬發/持續/增益三種法術完整代碼、HUD 自動整合原理；(4) `lod_implementation.md`：NPC LOD 腳本（距離閾值停用 `animation_tree.active` 和 `set_physics_process`）、MultiMeshInstance3D 程序化批次；(5) `ui_modification_interaction.md`：完整節點樹路徑、`CogitoAttributeUi` 整合機制、fixed_stamina_bar 用法；(6) `ui_modification_inventory.md`：`SlotPanel` 結構（64px 格子）、InfoPanel 節點路徑、拖放 GrabbedSlot、手把/鍵盤自動切換；(7) `ui_modification_dialogue.md`：明確說明整個橋接腳本被注解、完整取消注解步驟、`toggled_interface` 機制；(8) `open_world_architecture.md`：完整 `ChunkManager.gd` Autoload（非同步載入佇列/卸載/Chunk 存讀）、Origin Rebasing 抖動修正、Terrain3D 腳步聲整合；(9) `genshin_style_rendering.md`：完整 Toon Shader（light() 函數/Rim Light）、Backface Outline Shader、風格化草地 Wind Sway Shader；(10) `visual_presentation_and_rendering.md`：完整環境節點設定路徑、Shadow Mode 建議、FSR 位置、LUT 色彩校正說明。
