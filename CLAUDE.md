@@ -33,6 +33,7 @@ pas/
 - `answers/`: 具體問答的解答
 - `details/`: 深入的原始碼剖析
 - `others/`: 不屬於上述分類的雜項（含 `patches/` 子目錄，記錄對應的 Patch 連結）
+- `html/`: HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔；詳見準則 6）
 - `gemini_temp/`: 會話進度保存文件
 - `session_log.md`: 操作日誌（每項操作一句話）
 
@@ -41,6 +42,7 @@ pas/
 - `session_log.md`: 操作日誌
 - `session_temp/`: 會話進度快照
 - `src/`, `tests/`, `docs/`: 依技術棧慣例
+- `html/`: HTML 導覽層（選用，詳見準則 6）
 
 ### patches/<patch_name>/ 結構
 - `PATCH.md`: Patch 目標、修改類型、影響範圍、分析依據
@@ -49,6 +51,7 @@ pas/
 - `session_temp/`: 會話進度快照
 - `src/`: Patch 代碼（模擬原專案相對路徑）
 - `tests/`: 驗證腳本或說明
+- `html/`: HTML 導覽層（選用，詳見準則 6）
 
 ## AI 核心行為準則 (Core Mandates)
 
@@ -84,6 +87,34 @@ pas/
 - 已完成項目
 - 剩餘待辦事項
 - 核心上下文摘要
+
+### 6. HTML 導覽層（降低瀏覽認知負擔）
+當某個工作單位的 .md 文件數量增多、難以快速綜覽時，可生成一組 HTML 作為**導覽／呈現層**。
+
+- **定位**：HTML 不取代 .md。.md 仍是內容的唯一真實來源 (source of truth)，HTML 只是索引與呈現，內容更新一律先改 .md。
+- **位置**：放在該工作單位下的 `html/` 子目錄，與來源 .md 同層：
+  - Analysis → `analysis/<project>/html/`
+  - Create → `derived/<project>/html/`
+  - Patch → `patches/<patch>/html/`
+- **結構**：
+  - `index.html`：入口頁，提供總覽與導覽（頂部導覽列 + 卡片連結）
+  - 各主題 `*.html`
+  - `_shared.css`：同一單位內共用一份樣式
+- **連結**：以相對路徑連回同層或上層的 .md，讓使用者能在導覽頁與原始文件間往返
+- **觸發時機**：使用者要求，或 AI 判斷 .md 已多到造成認知負擔時主動生成／更新
+- **參考範例**：`others/ai_core/html/`（`index.html` + 主題頁 + `_shared.css` 的完整實作）
+
+### 7. 圖表呈現（架構圖／流程圖）
+**禁止用 ASCII art 畫框線圖**。本工作區內容以繁體中文為主，全形字與框線字元（`─│┌┐`）寬度不一致，等寬字體也無法對齊，且 AI 生成時極易算錯字元數導致圖形錯亂。改用下列語意化（不靠字元對齊）方式：
+
+- **`.md` 內（真相層）**：
+  - 首選 **Mermaid** 程式碼塊（` ```mermaid `）——以語法描述節點與連線，多數 Markdown 檢視器（GitHub 等）可直接渲染。
+  - 簡單關係改用**巢狀列點**或 **Markdown 表格**。
+- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現視覺化分層架構，沿用 `others/ai_core/html/_shared.css` 既有類別：
+  - 卡片：`.card` + `.card-accent-{blue,green,orange,purple,red,cyan}`（以色彩區分層級／類型）
+  - 格線分層：`.g2` / `.g3` / `.g4`（響應式自動換行）
+  - 區段：`.section` + `.section-title`
+  - 需要流程連線時，於 html 內嵌 Mermaid，或用簡單箭頭元素串接卡片。
 
 ## 關鍵檔案
 - `analysis_workflow.md`: Analysis 模式 SOP

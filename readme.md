@@ -24,6 +24,7 @@ pas/
 │       ├── answers/        # 具體問答的解答
 │       ├── details/        # 原始碼深度剖析
 │       ├── others/         # 雜項（含 patches/ 子目錄）
+│       ├── html/           # HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔）
 │       ├── gemini_temp/    # 會話進度保存文件
 │       └── session_log.md  # Agent 操作日誌
 ├── derived/            # 衍生小專案（Create 模式產出）

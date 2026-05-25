@@ -45,6 +45,7 @@ patches/<patch_name>/
 ├── session_temp/       # 進度快照
 ├── src/                # Patch 的實際代碼（新增或修改的檔案）
 ├── tests/              # 驗證 Patch 效果的測試腳本或說明
+├── html/               # HTML 導覽層（選用，.md 過多時生成；見階段三第 6 點）
 └── CLAUDE.md           # 當前 agent 的指導文件
 ```
 
@@ -65,6 +66,7 @@ patches/<patch_name>/
 3. **自動留檔**：技術細節自動寫入 `patches/<patch_name>/` 下對應位置
 4. **會話日誌**：每次操作後 append 一句話至 `session_log.md`
 5. **會話保存**：收到「我準備要退出了」時，在 `session_temp/session_resume.md` 建立進度保存檔
+6. **HTML 導覽層（選用）**：當 Patch 說明文件（`PATCH.md`、`APPLY.md` 等）增多、難以綜覽時，於 `patches/<patch_name>/html/` 生成導覽層（`index.html` + 主題頁 + 共用 `_shared.css`），以相對路徑連回 .md。HTML 不取代 .md，內容更新一律先改 .md。參考範例：`others/ai_core/html/`
 
 ---
 

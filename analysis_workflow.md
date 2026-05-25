@@ -47,6 +47,7 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 | `answer/` | 一次性問答的具體解答 |
 | `detail/` | 單點技術細節（某個 API、某個演算法…） |
 | `other/` | 不屬於上述類別的雜項 |
+| `html/` | HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔；見階段三第 4 節） |
 | `session_temp/` | 進度快照、暫存筆記、會話恢復檔 |
 
 ### 3. 程式碼標註規範
@@ -78,6 +79,13 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 - **Project Overview** — 專案目的與高階架構
 - **Building and Running** — 構建、執行、測試指令
 - **Development Conventions** — 編碼規範、架構守則、特殊禁令
+
+### 7. 圖表呈現規範
+
+**禁止用 ASCII art 畫框線圖**。內容以繁體中文為主，全形字與框線字元寬度不一致，等寬字體也無法對齊，且 Agent 生成時極易算錯字元數導致圖形錯亂。改用語意化（不靠字元對齊）方式：
+
+- **`.md` 內（真相層）**：首選 **Mermaid** 程式碼塊（` ```mermaid `）；簡單關係改用巢狀列點或 Markdown 表格。
+- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現分層架構，沿用 `others/ai_core/html/_shared.css` 的 `.card` / `.card-accent-*` / `.g2`–`.g4` / `.section` 等類別；流程連線於 html 內嵌 Mermaid 或用箭頭元素串接。
 
 ---
 
@@ -188,6 +196,16 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
   2. **原始碼導航**：必須修改或參考的具體檔案與行號
   3. **實作步驟**：具體的程式碼實作或配置修改
   4. **驗證方式**：單元測試、整合測試、手動驗證步驟
+
+### 4. HTML 導覽層（選用）
+
+當 `.md` 數量增多、難以快速綜覽時，於 `work/html/`（實際專案為 `analysis/<project>/html/`）生成一組 HTML 作為**導覽／呈現層**：
+
+- **定位**：HTML 不取代 .md。.md 仍是唯一真實來源，內容更新一律先改 .md，HTML 只負責索引與呈現。
+- **結構**：`index.html`（入口頁，含頂部導覽列 + 卡片連結）＋ 各主題 `*.html` ＋ 共用 `_shared.css`。
+- **連結**：以相對路徑連回同層或上層的 .md，讓使用者能在導覽頁與原始文件間往返。
+- **觸發時機**：使用者要求，或 Agent 判斷 .md 已多到造成認知負擔時主動生成／更新。
+- **參考範例**：`others/ai_core/html/`。
 
 ---
 
