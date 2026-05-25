@@ -41,4 +41,4 @@
 - **維護 Agent**: Gemini CLI / Claude Code
 
 ---
-*註：此清單僅包含已遷移至 `analysis/` 目錄並符合 GitHub 專案分析規範的項目。*
+*註：此清單追蹤 Analysis 模式的分析專案。衍生小專案與 Patch 小專案分別存放於 `derived/` 與 `patches/`，尚無獨立索引。*

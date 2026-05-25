@@ -2,28 +2,34 @@
 
 ## 專案概述 (Project Overview)
 
-此目錄 `pas` (Project Analysis System) 是一個結構化的工作空間，旨在利用 LLM 分析各種 GitHub 專案。它作為克隆倉庫與儲存後續分析結果的中心樞紐。
+此目錄 `pas` (Project Analysis System) 是一個結構化的工作空間，旨在利用 LLM 對外部專案進行**分析、衍生開發與 Patch 製作**。支援三種工作模式，各有獨立 SOP 文件。
+
+外部專案不一定是 git repository；`pas` 本身不使用 git submodule，GitHub 連結以純文字記錄於對應的 Markdown 中。
+
+## 工作模式與 SOP
+
+| 模式 | 適用情境 | SOP 文件 |
+|---|---|---|
+| **Analysis** | 初次接觸陌生專案，建立結構化分析 | `analysis_workflow.md` |
+| **Create** | 基於分析產物建立獨立衍生小專案 | `create_workflow.md` |
+| **Patch** | 製作可被 agent 套用至原專案的獨立 Patch 小專案 | `patch_workflow.md` |
 
 ## 目錄結構與用途 (Intended Structure & Usage)
 
-- `projects/`: 用於克隆外部 GitHub 專案的原始碼。請直接克隆，不要使用 git submodules。
-- `analysis/`: 存放所有分析報告、筆記與 LLM 產出的見解。每個專案應有其獨立的子目錄。
+- `projects/`: 克隆外部專案的原始碼。直接克隆，不使用 git submodule。
+- `analysis/`: 所有分析報告、筆記與 LLM 產出的見解。每個專案有獨立子目錄。
+- `derived/`: 衍生小專案（Create 模式產出）。
+- `patches/`: Patch 小專案（Patch 模式產出）。
 
-### 工作範圍限制 (Scope)
-- **僅限 GitHub 專案分析**：此工作空間專為分析開源 GitHub 專案而設計。
-- **排除非分析類專案**：若遇到個人工具、內部實驗性專案、爬蟲程式、自創語言或非針對特定 GitHub 倉庫的分析紀錄，**應予以跳過，不進行遷移、初始化或 SOP 化處理**。
-- **辨識方式**：優先檢查目錄內是否有指向 GitHub 倉庫的說明、README 或原始碼連結。若性質不明，應先詢問使用者。
+### analysis/<project_name>/ 子目錄結構
 
-### 專案分析子目錄結構
-
-對於每個分析中的專案 `<project_name>`，應在 `analysis/<project_name>/` 下建立以下結構：
-- `architecture/`: 存放架構分析、模組職責與技術架構文件。
-- `tutorial/`: 存放「如何開發」的目標導向教學文件。
-- `answers/`: 存放針對具體問題的解答。
-- `details/`: 存放深入的原始碼剖析與細節紀錄。
-- `others/`: 存放不屬於上述分類的其他內容。
-- `gemini_temp/`: 存放會話進度保存文件（如 `session_resume.md`）。
-- `session_log.md`: 紀錄操作日誌（每項操作簡短的一句話）。
+- `architecture/`: 架構分析、模組職責與技術架構文件。
+- `tutorial/`: 目標導向的開發教學文件。
+- `answers/`: 具體問題的解答。
+- `details/`: 深入的原始碼剖析與細節紀錄。
+- `others/`: 雜項（含 `patches/` 子目錄，記錄對應的 Patch 連結）。
+- `gemini_temp/`: 會話進度保存文件（如 `session_resume.md`）。
+- `session_log.md`: 操作日誌（每項操作一句話）。
 
 ## AI 核心行為準則 (Core Mandates)
 
@@ -37,8 +43,15 @@
 - 所有程式碼片段 **必須標註原始碼位置**（路徑與大約行號或函數名）。
 
 ### 2. 自動留檔機制
-- 在回覆技術細節、教學或分析時，**必須同步將內容寫入** `analysis/<project_name>/` 下對應的子資料夾。
-- 每次操作後，必須以 append 方式在 `analysis/<project_name>/session_log.md` 紀錄具體執行的事項。
+依當前工作模式，將技術細節寫入對應目錄：
+
+| 工作模式 | 留檔位置 |
+|---|---|
+| Analysis | `analysis/<project>/` 對應子資料夾 |
+| Create | `derived/<project>/docs/` |
+| Patch | `patches/<patch>/`（代碼在 `src/`，說明在 `PATCH.md`） |
+
+每次操作後，以 append 方式在對應的 `session_log.md` 留一句話紀錄。
 
 ### 3. 分析路徑 (Standardized Analysis Path)
 在進行新專案分析時，應依序執行以下級別：
