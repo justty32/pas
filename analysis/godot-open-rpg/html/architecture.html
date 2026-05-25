@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot-Open-RPG — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">OPEN-RPG</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學 / 衍生計畫</a>
+  <a href="../README.md">分析 README ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析 — Level 1 → 4</h1>
+  <p>由淺入深的分層剖析。每一 Level 連回 <code>architecture/</code> 下的對應 .md（唯一真實來源）。每個子系統皆附「GDExtension 遷移點」小節，標示哪些純邏輯適合移往 C++ 後端、哪些表現留在 Godot。</p>
+</div>
+
+<!-- Level overview -->
+<div class="section">
+  <div class="section-title">分層總覽</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-1">Level 1</div>
+      <h3>初始探索</h3>
+      <p>專案定位、技術棧、進入點、九個 Autoload、頂層目錄。</p>
+      <p><a href="../architecture/level_1_initial_exploration.md">→ level_1_initial_exploration.md</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-2">Level 2</div>
+      <h3>核心模組職責</h3>
+      <p>field / combat / common 三大支柱，完整觸發戰鬥事件流。</p>
+      <p><a href="../architecture/level_2_core_modules.md">→ level_2_core_modules.md</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">Level 3</div>
+      <h3>戰鬥系統 + Signal Bus</h3>
+      <p>兩階段回合排程、Battler 生命週期、傷害公式；事件匯流排解耦。</p>
+      <p><a href="../architecture/level_3_combat_system.md">→ 戰鬥</a> · <a href="../architecture/level_3_signal_bus_and_events.md">→ Signal Bus</a></p>
+    </div>
+    <div class="card card-accent-pink">
+      <div class="tier-label tier-4">Level 4</div>
+      <h3>Resource 資料 + 場域</h3>
+      <p>.tres 原型模式、Inventory 存檔、Gameboard、field↔combat 切換。</p>
+      <p><a href="../architecture/level_4_resource_data_and_scene_states.md">→ level_4_resource_data_and_scene_states.md</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 1 -->
+<div class="section">
+  <div class="tier-label tier-1">Level 1</div>
+  <div class="section-title">初始探索</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>專案定位</h3>
+      <p>GDQuest 的 2D 回合制 JRPG <b>教學示範</b>（非框架）。嚴守 GDQuest GDScript Style Guide，充分使用 GDScript 4 新特性。涵蓋回合制戰鬥、物品欄、角色成長、過場/對話、網格移動、多層選單。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>進入點與分工</h3>
+      <p>主場景 <code>src/main.tscn</code> → <code>Field</code>（Node2D）。九個 Autoload 為鬆耦合骨幹。資料層（<code>combat/</code>·<code>overworld/</code>）與邏輯層（<code>src/</code>）分離，設計師與程式設計師互不踩線。</p>
+    </div>
+  </div>
+  <div style="margin-top:8px;"><a href="../architecture/level_1_initial_exploration.md">→ 完整 Level 1 文件</a></div>
+</div>
+
+<!-- Level 2 -->
+<div class="section">
+  <div class="tier-label tier-2">Level 2</div>
+  <div class="section-title">核心模組職責（三大支柱）</div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <h3>src/field/ 探索狀態</h3>
+      <ul>
+        <li><code>field.gd</code>：主場景根，動態掛 PlayerController</li>
+        <li><code>gameboard/</code>：格子系統 + Pathfinder</li>
+        <li><code>gamepieces/</code>：Gamepiece + Controller + Animation</li>
+        <li><code>cutscenes/</code>：Cutscene / Trigger / Interaction</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <h3>src/combat/ 戰鬥狀態</h3>
+      <ul>
+        <li><code>combat.gd</code>：兩階段回合排程器</li>
+        <li><code>battlers/</code>：Battler / Stats / Roster / Anim</li>
+        <li><code>actions/</code>：BattlerAction 家族 + BattlerHit</li>
+        <li><code>combat_ai_random.gd</code>：策略物件基底</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>src/common/ 跨狀態服務</h3>
+      <ul>
+        <li><code>player.gd</code>：玩家當前 Gamepiece</li>
+        <li><code>inventory.gd</code>：物品欄 Resource</li>
+        <li><code>directions.gd</code>：四向枚舉</li>
+        <li><code>screen_transitions/</code>·<code>music/</code></li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:8px;"><a href="../architecture/level_2_core_modules.md">→ 完整 Level 2 文件（含觸發戰鬥事件流追蹤）</a></div>
+</div>
+
+<!-- Level 3 combat -->
+<div class="section">
+  <div class="tier-label tier-3">Level 3 · A</div>
+  <div class="section-title">回合制戰鬥系統深度剖析</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>兩階段回合制</h3>
+      <p><b>階段一</b>：敵方 AI 先選，玩家後選（<code>_select_next_player_action</code> 支援按「back」回溯前一位）。<b>階段二</b>：<code>_play_next_action</code> 把可行動者依 <code>speed</code> 降序排序逐一執行，<code>turn_finished</code> 遞迴推進。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>Battler 生命週期</h3>
+      <p><code>_ready()</code> 把 <code>stats</code> / <code>actions</code> 全部 <code>duplicate()</code>（原型→實例）。組合驅動：<code>battler_anim_scene</code> / <code>ai_scene</code> 以 PackedScene 動態掛載並做型別檢查。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>傷害 / 命中公式</h3>
+      <p><code>modified = base_damage + source.attack</code>；<code>damage = modified ±10%</code>；<code>to_hit = hit_chance × (source.hit_chance/100)</code>；命中判定 <code>randf()×100 &lt; to_hit</code>。負傷害即治療。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>BattlerStats 修飾器系統</h3>
+      <p><code>final = round(max(0, base×(1+Σmult)+Σmod))</code>。<code>add_modifier/multiplier</code> 回傳 uid 供裝備卸下時移除。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <div class="highlight-box hl-orange">★ 重要發現：readiness/ATB 為未實裝遺跡，現行為純回合制；傷害公式尚未納入 defense/evasion/元素相剋（教學留白）。</div>
+  </div>
+  <div style="margin-top:8px;"><a href="../architecture/level_3_combat_system.md">→ 完整 Level 3 戰鬥文件（含回合流程圖、GDExtension 遷移點）</a></div>
+</div>
+
+<!-- Level 3 signal bus -->
+<div class="section">
+  <div class="tier-label tier-3">Level 3 · B</div>
+  <div class="section-title">Signal Bus 與事件系統</div>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <h3>FieldEvents</h3>
+      <p>探索態事件匯流排。<code>combat_triggered(arena)</code> 是探索→戰鬥的<b>唯一</b>切換管道；<code>input_paused(bool)</code> 由 Cutscene 靜態旗標自動發出，凍結/解鎖全 field 輸入。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>CombatEvents</h3>
+      <p>戰鬥態事件匯流排。<code>combat_finished(victory)</code> 一對多廣播：同時被 <code>field.gd</code>（show()）與 <code>combat_trigger.gd</code>（await 取勝負）消費，兩者互不知情。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <div class="highlight-box hl-blue">設計原則：任何子系統都不持有彼此引用、不 get_node() 找對方——全部經 autoload 事件匯流排通訊（控制反轉）。這正是 GDExtension 後端化的天然事件接口雛形。</div>
+  </div>
+  <div style="margin-top:8px;"><a href="../architecture/level_3_signal_bus_and_events.md">→ 完整 Signal Bus 文件（含 signal 發收對照表、時序圖）</a></div>
+</div>
+
+<!-- Level 4 -->
+<div class="section">
+  <div class="tier-label tier-4">Level 4</div>
+  <div class="section-title">Resource 驅動資料 與 場域系統</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>.tres 原型模式</h3>
+      <p>所有戰鬥數值/戰技做成 Resource，編輯器 inspector 視覺化編輯。執行期 <code>duplicate()</code> 成獨立實例，<b>避開 Godot Resource 跨節點共享的污染陷阱</b>。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>Inventory 唯一存檔</h3>
+      <p>專案中<b>只有 Inventory</b> 持久化（<code>user://inventory.tres</code>，ResourceSaver/Loader）。Battler 數值、進度、地圖位置目前不存檔（教學留白）。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>Gameboard 格子系統</h3>
+      <p>格↔像素互轉、A* Pathfinder、GamepieceRegistry 一格一棋子。棋子移動自動觸發 Pathfinder enable/disable 佔用格，全套無需手動同步。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>field ↔ combat 切換</h3>
+      <p>兩狀態同時存在於場景樹，靠 <code>show()</code>/<code>hide()</code> 切換（非 change_scene），唯一觸發點為 <code>combat_triggered</code> 事件接力。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>隊伍（party）</h3>
+      <p>無獨立 party 資料結構——隊員即 BattlerRoster 下 <code>is_player==true</code> 的 Battler 節點；探索態操控者由 <code>Player.gamepiece</code> 單一持有。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>Gamepiece 笨物件</h3>
+      <p>繼承 Path2D，只負責佔格與沿 Curve2D 平滑移動；主動行為由 Controller 子節點提供（組合優於繼承）。</p>
+    </div>
+  </div>
+  <div style="margin-top:8px;"><a href="../architecture/level_4_resource_data_and_scene_states.md">→ 完整 Level 4 文件（含載入流程圖、GDExtension 遷移點）</a></div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/level_1_initial_exploration.md">L1</a> ·
+  <a href="../architecture/level_2_core_modules.md">L2</a> ·
+  <a href="../architecture/level_3_combat_system.md">L3 戰鬥</a> ·
+  <a href="../architecture/level_3_signal_bus_and_events.md">L3 Signal Bus</a> ·
+  <a href="../architecture/level_4_resource_data_and_scene_states.md">L4</a>
+</div>
+
+</body>
+</html>

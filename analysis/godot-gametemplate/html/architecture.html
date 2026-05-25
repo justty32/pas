@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GAMETEMPLATE</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../architecture/level1_overview.md">Level 1 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>架構分析 — Level 1 ~ 6</h1>
+  <p>採用 Analysis SOP 的「遊戲原始碼分析（模板 A）」路徑，由初始探索逐層深入至視覺特效。每節為 <code>../architecture/*.md</code> 的摘要，點標題或連結可回到 Markdown 真相層（全篇核對於 2026-05-25）。</p>
+</div>
+
+<!-- Level 1 -->
+<div class="section">
+  <div class="tier-label tier-1">Level 1 · 初始探索</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level1_overview.md">初始探索與技術棧</a></h2>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>技術棧</h3>
+      <ul>
+        <li>Godot 4.6 / Forward Plus（<code>project.godot:19</code>）</li>
+        <li>480×270 視口、1280×720 視窗（<code>:32-35</code>）</li>
+        <li>入口場景 <code>boot_load.tscn</code>（<code>:18</code>）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>結構</h3>
+      <ul>
+        <li><code>addons/top_down/</code>：遊戲邏輯（scripts / scenes / resources / shaders）</li>
+        <li><code>addons/great_games_library/</code>：通用 nodes / resources / static</li>
+        <li><code>kanban_tasks</code> / <code>resource_manager</code>：編輯器外掛</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>子系統入口</h3>
+      <ul>
+        <li>資源傳輸：<code>AreaTransmitter2D</code> / <code>TransmissionResource</code></li>
+        <li>實例化＋對象池：<code>InstanceResource</code> + <code>PoolNode</code></li>
+        <li>導航：<code>AstarGridResource</code> + <code>TileAstargridObstacle</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Level 2 -->
+<div class="section">
+  <div class="tier-label tier-2">Level 2 · 核心模組職責</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level2_modules.md">解耦與組合 · ResourceNode 模式</a></h2>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>ResourceNode 依賴注入</h3>
+      <p>組件透過 <code>get_resource(key)</code>（<code>ResourceNode.gd:51</code>）取得資料源，鍵名實際為 <code>"input"</code> / <code>"movement"</code> / <code>"push"</code> / <code>"damage"</code> / <code>"health"</code>。<code>make_unique</code> 於 <code>_ready()</code> 以 <code>duplicate_deep</code> 產生獨立副本。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>MoverTopDown2D</h3>
+      <p>繼承 <code>ShapeCast2D</code>，自行覆寫 <code>move_and_slide(delta)</code>（<code>:127-139</code>）與 <code>_remove_overlap()</code>（<code>:93-117</code>）。<code>get_impulse()</code>（<code>:84-91</code>）以加速度收斂至目標速度；<code>character:CharacterBody2D</code> 為實際被移動節點。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>戰鬥與傷害鏈</h3>
+      <p><code>Weapon._ready()</code> 把 <code>damage_data_resource.report_callback</code> 接到 damage 資源的 <code>report</code>（<code>Weapon.gd:23-25</code>）。<code>Projectile2D</code> 以 <code>pool_node</code> 池化，生命週期用 <code>prepare_exit_event</code> 信號 + <code>prepare_exit()</code>。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>啟動流程</h3>
+      <p><code>BootPreloader.start()</code> 雙旗標並行：<code>PreloadResource</code> 觸發材質/Shader 編譯避免卡頓；走訪 <code>PersistentData.saveable_list</code> 載入存檔，兩者完成才 <code>preload_finished</code>。</p>
+    </div>
+  </div>
+  <div class="highlight-box hl-purple" style="margin-top:14px;">GDExtension 觀察：Mover 的純向量運算每幀對全體 Actor 執行、無節點樹依賴，是最適合下沉 C++ 的熱點（呼應使用者「核心邏輯 C++、Godot 作表現層」偏好）。</div>
+</div>
+
+<!-- Level 3 -->
+<div class="section">
+  <div class="tier-label tier-3">Level 3 · 進階機制與模擬</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level3_mechanisms.md">AI 決策鏈 · 波次 · 樹狀血脈</a></h2>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <h3>AI：感官-決策-執行</h3>
+      <p><code>TargetFinder</code> 以 <code>ShapeCast2D</code> 在 <code>BotInput.input_update</code> 時掃描（跳過 StaticBody2D），<code>GameMath.get_closest_node_2d</code> 選最近目標（<code>TargetFinder.gd:32</code>）。<code>BotInput</code> 以 <code>process_physics_priority -= 1</code> 確保先於 Mover。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>波次管理</h3>
+      <p><code>EnemyWaveManager</code> 以 1 個 Bool + 3 個 Int 資源串信號鏈。波次資料實際來源是 <code>enemy_manager.wave_queue.waves</code>（<code>SpawnWaveList</code> 佇列），每清空一波 <code>pop_front()</code>（<code>:53</code>）。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>樹狀實體追蹤</h3>
+      <p><code>ActiveEnemy</code> 用 <strong>靜態</strong> <code>root</code> / <code>instance_dictionary</code> + 雙向 <code>ActiveEnemyResource</code> 樹。<code>remove_branch()</code> 僅在 nodes 與 children 皆空時遞迴向上清除——整株消滅才計一次擊殺。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 4 -->
+<div class="section">
+  <div class="tier-label tier-4">Level 4 · 遊戲性與 RPG 系統</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level4_rpg_systems.md">傷害體系 · 狀態效果 · 物品</a></h2>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>傷害數據（DamageDataResource）</h3>
+      <p>繼承 <code>TransmissionResource</code>。公式（<code>:104-107</code>）：<code>total += max(value * damage_multiply - resistance[type], 0)</code>；命中時依 <code>critical_chance</code>（預設 0.3）套 <code>critical_multiply</code>（1.5）。<code>new_generation()</code> + <code>hit_list</code> 防穿透重複命中。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>兩套 DamageType 枚舉</h3>
+      <p>傷害結算實用 <code>DamageTypeResource.DamageType</code>（PHYSICAL/FIRE/ICE/LIGHTNING/POISON/ACID/MAGNETIC/BLOOD/DARK/ARCANE）。另有未被傷害管線引用的 <code>GameEnums.DamageType</code>（14 種，含 BLUNT/PIERCE/SLASH/TOXIC）——兩者不一致，勿混淆。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>物品系統</h3>
+      <p><code>ItemResource</code> 欄位僅 <code>icon</code> / <code>scene_path</code> / <code>type</code> / <code>unlocked</code>（無 id/name）。<code>WeaponItemResource</code> 為空子類，武器場景由基類 <code>scene_path</code> 指定。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>背包與數值</h3>
+      <p><code>ItemCollectionResource</code> 繼承 <code>SaveableResource</code>（核心欄位 <code>list</code>），序列化為 <code>.tres</code>（非 JSON）。數值平衡靠 <code>ActorStatsResource</code> / <code>HealthResource</code> 等 <code>.tres</code>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 5 -->
+<div class="section">
+  <div class="tier-label tier-5">Level 5 · 技術架構與數據流</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level5_data_flow.md">持久化 · PersistentData · Steam</a></h2>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>SaveableResource</h3>
+      <p>以 static <code>save_type{FILE, STEAM}</code> 切換；<strong>STEAM 分支目前仍是 TODO</strong>，與 FILE 同走 <code>ResourceSaver</code> 存 <code>user://*.tres</code>。具 <code>version</code> 欄位、<code>is_loaded</code> 防重載、載入失敗回 <code>reset_resource()</code>。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>PersistentData</h3>
+      <p>精簡 autoload，僅 <code>saveable_list</code> + <code>data</code> 字典。啟動時由 BootPreloader 觸發載入；<code>data</code> 作跨關卡記憶體快取（如釘住 <code>preload_resource</code>）。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>SteamInit</h3>
+      <p><code>_ready()</code> 先測 <code>Engine.has_singleton("Steam")</code>，成功且擁有遊戲才 <code>set_save_type(STEAM)</code>（<code>:49</code>）。<code>_process()</code> 跑 <code>run_callbacks()</code>，支援 Steam Deck 判定；預設 app_id 480。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Level 6 -->
+<div class="section">
+  <div class="tier-label tier-1">Level 6 · 視覺、動畫與特效</div>
+  <h2 style="font-size:1.15rem;margin-bottom:10px;"><a href="../architecture/level6_visuals.md">Shader 轉場 · 殘影 · VFX</a></h2>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <h3>截圖溶解轉場</h3>
+      <p><code>TransitionManager</code> 等本幀畫完→<code>get_viewport().get_texture().get_image()</code> 截圖→賦予 TextureRect→Tween 推 <code>transition.gdshader</code> 的 <code>progress</code> 0→1，期間 <code>ThreadUtility</code> 異步載入新場景。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>殘影（After-Image）</h3>
+      <p><code>AfterImageVFX.setup()</code> 複製 Sprite 的 texture/frame/offset，由 <strong>AnimationPlayer</strong> 播放淡出，播完 <code>pool_node.pool_return()</code> 回收。常與 <code>DashAbility</code> 掛鉤。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>VFX Shaders</h3>
+      <p>受傷閃白 <code>color_flash.gdshader</code>；粒子 <code>dust_partickle.gdshader</code>（原拼字）；另有 <code>spawn_ring</code> / <code>progress_bar</code> / <code>progress_fill</code> 等。啟動時預編譯避免執行期卡頓。</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：
+  <a href="../architecture/level1_overview.md">level1</a> ·
+  <a href="../architecture/level2_modules.md">level2</a> ·
+  <a href="../architecture/level3_mechanisms.md">level3</a> ·
+  <a href="../architecture/level4_rpg_systems.md">level4</a> ·
+  <a href="../architecture/level5_data_flow.md">level5</a> ·
+  <a href="../architecture/level6_visuals.md">level6</a>
+</div>
+
+</body>
+</html>

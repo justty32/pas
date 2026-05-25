@@ -10,3 +10,13 @@
 - [2026-04-18] 撰寫主教學 `tutorial/00_master_guide.md`，並補充 REQUEST_TURN 插隊機制：新增 PlayerAction.REQUEST_TURN、PLAYER_TURN 事件加 force 欄位、輸入鎖流程更新。：精煉版施工指南，含素材提取表、元件清單、接口規格、事件定義表、7 個 Milestone，供其他模型直接按步驟實作。：MUD 風格事件架構、GameEngine 三方法接口（tick/submit_action/query）、12 種 GameEvent 定義、VisualRegistry、DisplayAPI、InputHandler 設計。，涵蓋：從 godot-open-rpg 提取/丟棄/改造清單、next_turn/player_act 設計、雙層地圖架構（WorldMap/LocalMap）、TurnManager/InputHandler/Gamepiece 改造範例程式碼、GDExtension API 規格、5 個 Milestone 實作順序。
 - [2026-04-18] 建立 `target/` 規劃委派中心，放入 5 份規格文件複本與 README 總覽。
 - [2026-04-18] 撰寫規劃層三件套 `target/ARCHITECTURE.md`（架構哲學、邊界、非目標）、`target/TASKS.md`（M0-M7 可指派任務卡，含前置/參考/交付/驗收）、`target/PROMPT_TEMPLATES.md`（給執行模型下 prompt 的五種範本 + 陷阱清單）。
+- [2026-05-25] 撰寫 Level 3 戰鬥系統深度剖析 (architecture/level_3_combat_system.md)，拆解兩階段回合排程、Battler 生命週期、BattlerStats 修飾器、傷害/命中公式，並指出 readiness/ATB 為未實裝遺跡、標註戰鬥邏輯的 GDExtension 遷移點。
+- [2026-05-25] 撰寫 Level 3 Signal Bus 與事件系統 (architecture/level_3_signal_bus_and_events.md)，列出 FieldEvents/CombatEvents 全部 signal 的發收方、combat_triggered 為唯一狀態切換管道、時序圖，並標註 signal bus 轉換為後端事件接口的 GDExtension 遷移點。
+- [2026-05-25] 撰寫 Level 4 Resource 驅動資料與場域系統 (architecture/level_4_resource_data_and_scene_states.md)，剖析 .tres 原型模式與執行期 duplicate() 陷阱、Inventory 唯一存檔、Gameboard/Pathfinder/GamepieceRegistry 自動同步、field<->combat 切換，並標註資料模型與格子系統的 GDExtension 遷移點。
+- [2026-05-25] 生成 HTML 導覽層 (html/index.html + architecture.html + tutorial.html)，並原封不動複製 Cogito 的 _shared.css；更新分析 README 的 Level 進度表（L3-L4 標為已完成）與 HTML 導覽層區段。
+- [2026-05-25] 對照當前源碼核對全部 5 篇架構文件並標註「核對於 2026-05-25」。
+- [2026-05-25] Level 1 修正：Godot 版本 4.5→4.6（`project.godot:19`）、Dialogic autoload 改為 `*uid://ds2q0uclmolvu`、`.gd` 檔數 324→70、移除過時的「main_scene 指向 field.tscn」說法（實際 main.tscn root 直接掛 field.gd 並內嵌 Combat）、修正 autoload 與 display/input 區段行號。
+- [2026-05-25] Level 2 修正：Gameboard 行號標註（`39-99` 拆為座標/索引/鄰格/pathfinder add-remove 的精確位置）、將 §5 ASCII 框線事件流圖改為 Mermaid + 行號對照表（符合準則 7）、更正 `roaming_combat_trigger.gd` 為繼承 CombatTrigger（非覆寫 _execute）、`collision_finder.gd` 改為 `PhysicsShapeQueryParameters2D`、補 `player_path_set` signal 與各 common 類別 class_name/行號。
+- [2026-05-25] Level 3（signal bus）修正：`interaction_selected` 發送方由 `FieldCursor` 更正為 `Interaction`（`interaction.gd:63-66`），並補上 cell_highlighted/cell_selected 的精確發送位置。
+- [2026-05-25] Level 3（戰鬥）與 Level 4 逐行對照源碼與 `bear_stats.tres`，所有檔名/行號/傷害命中公式/duplicate 原型流程確認正確，僅加註核對標記。
+- [2026-05-25] 同步 HTML 導覽層：`html/index.html` 兩處 Godot 4.5→4.6（其餘 HTML 無涉及被修正的結論）。

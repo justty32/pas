@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot-Open-RPG — 開發教學 / 衍生計畫</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">OPEN-RPG</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學 / 衍生計畫</a>
+  <a href="../README.md">分析 README ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學 / 衍生計畫</h1>
+  <p>本專案分析的延伸產物分兩類：（一）<b>改造教學</b>——把 godot-open-rpg 改造為「Godot 表現層 + GDExtension C++ 後端」的回合制 RPG；（二）<b><code>target/</code> 規劃委派中心</b>——可直接指派給執行模型的施工規格、任務卡與 prompt 範本。所有卡片連回對應 .md（唯一真實來源）。</p>
+</div>
+
+<!-- Tutorials -->
+<div class="section">
+  <div class="section-title">改造教學（tutorial/）</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-5">主指南</div>
+      <h3>00 · 主教學</h3>
+      <p>完整施工指南：從 godot-open-rpg 提取/丟棄/改造清單、三方法接口（tick / submit_action / query）、GameEvent / PlayerAction 定義表、7 個 Milestone、REQUEST_TURN 插隊機制。</p>
+      <p><a href="../tutorial/00_master_guide.md">→ 00_master_guide.md</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-3">提取改造</div>
+      <h3>01 · 提取與改造指南</h3>
+      <p>哪些檔案直接複製（Gameboard / Pathfinder / GamepieceRegistry / directions / transitions / music）、哪些改造、哪些丟棄；雙層地圖（WorldMap/LocalMap）架構。</p>
+      <p><a href="../tutorial/01_extraction_and_modification_guide.md">→ 01_extraction_and_modification_guide.md</a></p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-3">前端設計</div>
+      <h3>02 · 前端設計與接口</h3>
+      <p>MUD 風格事件架構、GameEngine 三方法接口、12+ 種 GameEvent、VisualRegistry / DisplayAPI / InputHandler 設計與範例程式碼。</p>
+      <p><a href="../tutorial/02_frontend_design.md">→ 02_frontend_design.md</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- target planning center -->
+<div class="section">
+  <div class="section-title">target/ 衍生計畫規劃委派中心</div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="highlight-box hl-purple">仿照 Tales of Maj'Eyal (ToME) / T-Engine 4 的前後端分離哲學：前端（GDScript）純顯示+輸入層，後端（GDExtension / C++）擁有所有遊戲狀態與邏輯。兩端只靠「三方法 + 事件表 + visual_key 清單」契約溝通。這正是各 Level 「GDExtension 遷移點」的落地實作。</div>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">規劃者視角</div>
+      <h3>ARCHITECTURE.md</h3>
+      <p>架構哲學、前後端邊界、單向事件流、三方法契約、Milestone 總覽、非目標（不做多人/即時戰鬥/不復刻原戰鬥系統）。</p>
+      <p><a href="../target/ARCHITECTURE.md">→ ARCHITECTURE.md</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-3">任務卡</div>
+      <h3>TASKS.md</h3>
+      <p>M0–M7 可直接指派的任務清單，每張卡含前置/參考/交付/驗收。M0–M6 用 GDScript mock 後端，M7 後接真實 GDExtension。</p>
+      <p><a href="../target/TASKS.md">→ TASKS.md</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-3">prompt 範本</div>
+      <h3>PROMPT_TEMPLATES.md</h3>
+      <p>給執行模型下 prompt 的五種範本 + 陷阱清單，搭配 TASKS.md 使用。</p>
+      <p><a href="../target/PROMPT_TEMPLATES.md">→ PROMPT_TEMPLATES.md</a></p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-2">規格</div>
+      <h3>施工規格三件套</h3>
+      <ul>
+        <li><a href="../target/00_master_guide.md">00_master_guide.md</a>（接口/Milestone 總表）</li>
+        <li><a href="../target/01_extraction_and_modification_guide.md">01_extraction_and_modification_guide.md</a></li>
+        <li><a href="../target/02_frontend_design.md">02_frontend_design.md</a></li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-4">後端</div>
+      <h3>GDExtension 後端架構</h3>
+      <p>API 邊界設計、Delta Update、執行緒、對話系統整合、建構管線與陷阱清單。</p>
+      <p><a href="../target/gdextension_backend_architecture.md">→ gdextension_backend_architecture.md</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">背景</div>
+      <h3>專案構想 / 委派中心</h3>
+      <ul>
+        <li><a href="../target/README.md">target/README.md</a>（文件地圖與工作流程）</li>
+        <li><a href="../target/project_idea_gdextension_rpg.md">project_idea_gdextension_rpg.md</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Related answers -->
+<div class="section">
+  <div class="section-title">相關問答 / 雜項</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>GDExtension 後端架構解答</h3>
+      <p>API 邊界、Delta Update、執行緒、對話整合、建構管線、陷阱清單。</p>
+      <p><a href="../answers/gdextension_backend_architecture.md">→ answers/gdextension_backend_architecture.md</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>後端 RPG 專案構想記錄</h3>
+      <p>最初的構想與動機（效能、可測試性、AI 擅長 C++、跨引擎可攜）。</p>
+      <p><a href="../others/project_idea_gdextension_rpg.md">→ others/project_idea_gdextension_rpg.md</a></p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../tutorial/">tutorial/*.md</a>、<a href="../target/">target/*.md</a>、<a href="../answers/">answers/*.md</a>、<a href="../others/">others/*.md</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GAMETEMPLATE</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學</a>
+  <a href="../architecture/level1_overview.md">Level 1 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>Godot Game Template — 俯視角射擊框架</h1>
+  <p>
+    <span class="badge badge-blue">Godot 4.6</span>
+    <span class="badge badge-green">Forward Plus</span>
+    <span class="badge badge-gray">作者 nezvers</span>
+    <span class="badge badge-purple">GDScript</span>
+  </p>
+  <p>由 nezvers 開發的結構化俯視角（2.5D 透視）射擊遊戲框架。核心特色為高度解耦的「資源驅動依賴注入」架構：玩家與 AI 共用同一條移動鏈、傷害經由 Resource 回呼上報、場景以著色器截圖溶解轉場。本頁為導覽層，內容真相來源為 <code>../architecture/*.md</code> 與 <code>../tutorial/*.md</code>（核對於 2026-05-25）。</p>
+</div>
+
+<!-- Quick stats -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot 4.6 stable</p>
+      <p>GDScript · Forward Plus</p>
+      <p>480×270 視口 / 1280×720 視窗</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>架構文件</h3>
+      <p>Level 1–6 共 6 篇</p>
+      <p>已對照源碼核對</p>
+      <p><a href="architecture.html">→ 查看架構</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>開發教學</h3>
+      <p>3 篇目標導向教學</p>
+      <p>新武器 · GDExtension · Boss AI</p>
+      <p><a href="tutorial.html">→ 查看教學</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>專案結構</h3>
+      <p><code>addons/top_down/</code> 遊戲邏輯</p>
+      <p><code>addons/great_games_library/</code> 通用庫</p>
+      <p>入口：<code>boot_load.tscn</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">Autoload 全域單例（project.godot:24-28）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>單例名稱</th><th>職責</th><th>實作</th></tr></thead>
+      <tbody>
+        <tr><td><code>SteamInit</code></td><td>Steam API 初始化（選用），成功則切換存檔後端</td><td><code>great_games_library/autoload/SteamInit.gd</code></td></tr>
+        <tr><td><code>SoundManager</code></td><td>2D/3D 音效播放</td><td><code>top_down/scenes/autoloads/sound_manager.tscn</code></td></tr>
+        <tr><td><code>Music</code></td><td>背景音樂管理</td><td><code>top_down/scenes/autoloads/music.tscn</code></td></tr>
+        <tr><td><code>Transition</code></td><td>著色器截圖溶解轉場</td><td><code>scripts/game/TransitionManager.gd</code></td></tr>
+        <tr><td><code>PersistentData</code></td><td>存檔清單與跨場景記憶體快取</td><td><code>scripts/game/PersistentData.gd</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Core architecture patterns -->
+<div class="section">
+  <div class="section-title">核心架構支柱</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-2">解耦核心</div>
+      <h3>ResourceNode 依賴注入</h3>
+      <p>每個 Actor 持有 <code>ResourceNode</code> 作服務定位器，組件以 <code>get_resource("input"/"movement"/"push"/"damage"/"health")</code> 取依賴而非直接互連。<code>make_unique</code> 決定每實例獨立副本或共享。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">移動</div>
+      <h3>MoverTopDown2D（2.5D）</h3>
+      <p>繼承 <code>ShapeCast2D</code>，自行覆寫 <code>move_and_slide()</code> 與 <code>_remove_overlap()</code>。以 <code>axis_multiplier_resource</code> 縮放再補償模擬俯視透視。純向量運算為 GDExtension 熱點。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">AI</div>
+      <h3>Resource 驅動 AI</h3>
+      <p>AI 不直接操作，而是用 <code>BotInput</code> 填充與玩家共用的 <code>InputResource.axis</code>。<code>TargetFinder</code> 以 <code>ShapeCast2D</code> 掃描、<code>GameMath.get_closest_node_2d</code> 選敵；可隨時人工接管。</p>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-3">戰鬥</div>
+      <h3>傷害回呼鏈</h3>
+      <p>傷害不直接呼叫函式，而是 <code>DamageDataResource.report_callback</code> 回報。<code>new_generation()</code> + <code>hit_list</code> 防穿透彈重複命中；屬性以 <code>DamageTypeResource.DamageType</code> 結算。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-3">敵群</div>
+      <h3>樹狀血脈追蹤</h3>
+      <p><code>ActiveEnemy</code> 用靜態 <code>ActiveEnemyResource</code> 樹（parent/children/nodes）追蹤分裂敵人，整株消滅才計一次擊殺，解決 Slime 分裂計數難題。波次由 <code>EnemyWaveManager</code> 信號鏈驅動。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-1">視覺</div>
+      <h3>Shader 轉場與對象池</h3>
+      <p><code>TransitionManager</code> 截圖→TextureRect→<code>transition.gdshader</code> 的 <code>progress</code> 溶解，異步載入新場景。<code>PoolNode</code> 對象池支撐高密度彈幕與殘影。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Key data flows -->
+<div class="section">
+  <div class="section-title">關鍵資料流</div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">統一輸入鏈（玩家 / AI 共用）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">PlayerInput / BotInput</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">InputResource.axis</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">MoverTopDown2D</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">CharacterBody2D.move_and_collide</span>
+    </div>
+  </div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">傷害結算</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-orange">Projectile2D 命中</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-red">DamageDataResource.process()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">HealthResource.add_hp(-total)</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-pink">report_callback.call()</span>
+    </div>
+  </div>
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">波次推進（信號鏈）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-green">fight_mode_resource.changed_true</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">remaining_wave_count.updated</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">EnemySpawner 生成</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">enemy_count.updated → 下一波</span>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">啟動流程（BootPreloader）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-orange">boot_load.tscn</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">PreloadResource 材質預編譯</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">PersistentData.saveable_list.load</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">preload_finished</span>
+    </div>
+  </div>
+</div>
+
+<!-- Key file index -->
+<div class="section">
+  <div class="section-title">關鍵檔案索引（相對於 projects/Godot-GameTemplate/）</div>
+  <div class="g2">
+    <div class="card">
+      <table>
+        <thead><tr><th>主題</th><th>檔案</th></tr></thead>
+        <tbody>
+          <tr><td>資源依賴中介</td><td><code>great_games_library/nodes/ResourceNode/ResourceNode.gd</code></td></tr>
+          <tr><td>移動核心</td><td><code>top_down/scripts/actor/MoverTopDown2D.gd</code></td></tr>
+          <tr><td>AI 抽象輸入</td><td><code>top_down/scripts/actor/bots/BotInput.gd</code></td></tr>
+          <tr><td>目標搜尋</td><td><code>top_down/scripts/actor/bots/TargetFinder.gd</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>主題</th><th>檔案</th></tr></thead>
+        <tbody>
+          <tr><td>傷害資料</td><td><code>top_down/scripts/damage/properties/DamageDataResource.gd</code></td></tr>
+          <tr><td>存檔基類</td><td><code>great_games_library/resources/SaveableResource/SaveableResource.gd</code></td></tr>
+          <tr><td>轉場管理</td><td><code>top_down/scripts/game/TransitionManager.gd</code></td></tr>
+          <tr><td>Boss 範例</td><td><code>top_down/scripts/actor/boss/BigJellyAi.gd</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/">architecture/*.md</a>、<a href="../tutorial/">tutorial/*.md</a>、<a href="../session_log.md">session_log.md</a>
+</div>
+
+</body>
+</html>

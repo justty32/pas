@@ -1,6 +1,10 @@
 # 教學 02: 將 MoverTopDown2D 遷移至 GDExtension (C++)
 
+> 核對於 2026-05-25（Claude Code, Opus 4.7）：`get_impulse` 的 C++ 範例與源碼 `MoverTopDown2D.gd:84-91` 邏輯一致；`projects/godot-cpp` 已存在（含 `SConstruct`）。補充：原版 `MoverTopDown2D` 繼承 `ShapeCast2D` 並**自行覆寫** `move_and_slide(delta)`（`:127-139`），遷移時這段自訂滑動邏輯也應一併移植，而非沿用引擎內建版本。此教學呼應使用者偏好——核心邏輯下沉 C++、Godot 僅作表現層。
+
 本教學將引導您如何利用 GDExtension 將 `Godot-GameTemplate` 中效能最密集的移動模組 (`MoverTopDown2D`) 重寫為 C++。這對於處理大量敵人（超過 100 個）時的效能優化至關重要。
+
+> 適合下沉 C++ 的純運算熱點（每幀對全體 Actor 執行、無節點樹依賴）：`get_impulse()`、`_remove_overlap()` 的向量計算、`move_and_slide()` 的滑動迭代（最終才呼叫 `character.move_and_collide`）。
 
 ## 1. 環境準備
 1. **克隆 godot-cpp**: 確保 `projects/godot-cpp` 已存在且初始化。

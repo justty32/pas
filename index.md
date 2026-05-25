@@ -24,8 +24,8 @@
 | **LispC** | 編譯器 | 教學導向 | 已遷移 | Lisp-to-C 轉換邏輯、宏系統與 C 語言嵌入教學。 |
 | **C-mera** | 代碼生成器 | 高 (Architecture) | 已遷移 | 基於 Lisp 的 C/C++/CUDA 生成器、AST 轉換與宏系統分析。 |
 | **godot-cpp** | 遊戲引擎組件 | Level 1 (Initial) | 分析中 | Godot 引擎的 C++ 綁定庫，用於開發 GDExtension。 |
-| **Godot-GameTemplate** | 遊戲範本 | 極高 (Level 1-6) | 已完成 | 高度解耦的俯視角射擊框架，含資源驅動 AI 與 Shader 轉場。 |
-| **godot-open-rpg** | 遊戲示範 (JRPG) | Level 1-2 | 分析中 | GDQuest 出品 Godot 4.5 回合制 RPG 教學示範，Signal Bus + Resource 驅動設計。 |
+| **Godot-GameTemplate** | 遊戲範本 (Godot 4.6) | 極高 (Level 1-6) + HTML | 已完成 (源碼核對 2026-05-25) | 高度解耦的俯視角射擊框架，含資源驅動 AI 與 Shader 轉場。已對照源碼核對 L1-6 並修正過時引用（movement_stats→movement、prepare_exit_event、波次來自 EnemyManager.wave_queue、兩套不一致 DamageType 枚舉、STEAM 存檔仍 TODO 等）。 |
+| **godot-open-rpg** | 遊戲示範 (JRPG, Godot 4.6) | Level 1-4 + HTML | 分析中 (源碼核對 2026-05-25) | GDQuest 回合制 RPG 教學示範，Signal Bus + Resource 驅動設計。深化：兩階段回合制戰鬥（階段一選 action、階段二依 speed 遞迴執行）、FieldEvents/CombatEvents 事件匯流排（combat_triggered 為探索→戰鬥唯一切換）、.tres 原型模式與跨節點共享污染陷阱。發現 ATB/readiness 為未實裝設計遺跡、傷害公式未納 defense/元素。各子系統附 GDExtension 遷移點。 |
 | **Freedom-Hunter** | 動作 RPG (Godot 4.3) | Level 1-2 | 分析中 | 仿 Monster Hunter 風格，ENet 多人、Entity 狀態機、怪物 AI 導航、銳利度武器系統。 |
 | **BreadbinEngine** | 動作 RPG 框架 (Godot 4.0) | Level 1-2 | 分析中 | 仿 Dark Souls/BB 風格，CSV AttackTable 資料驅動武器招式，Inspector 可調 AI 機率，Hitbox 雙層碰撞設計。 |
 | **mh1j** | PS2 遊戲反組譯 (MIPS/C) | Level 1 | 分析中 | Monster Hunter 1 日版 (SLPM_654.95) 逐位元組匹配反組譯，MetroWerks 編譯器 + splat 拆分，主 ELF + 6 個 Overlay (含 DNAS 加密)。 |

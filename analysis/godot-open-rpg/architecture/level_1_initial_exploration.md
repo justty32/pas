@@ -3,6 +3,7 @@
 > 目標：掌握專案整體定位、技術棧、進入點與頂層目錄劃分。
 > 分析對象：`projects/godot-open-rpg/`
 > 分析日期：2026-04-18
+> 核對於 2026-05-25（已對照當前源碼修正 Godot 版本、Dialogic autoload 寫法、`.gd` 檔數、main 場景描述）
 
 ---
 
@@ -30,13 +31,13 @@
 
 | 類別 | 技術 / 版本 | 來源 |
 | :--- | :--- | :--- |
-| 遊戲引擎 | **Godot 4.5** | `project.godot:15` `config/features=PackedStringArray("4.5", "GL Compatibility")` |
-| 渲染後端 | **GL Compatibility**（OpenGL ES 3.0／支援舊硬體） | `project.godot:209-210` |
+| 遊戲引擎 | **Godot 4.6** | `project.godot:19` `config/features=PackedStringArray("4.6", "GL Compatibility")` |
+| 渲染後端 | **GL Compatibility**（OpenGL ES 3.0／支援舊硬體） | `project.godot:214-215` `renderer/rendering_method="gl_compatibility"` |
 | 程式語言 | **GDScript 4** | 所有 `.gd` 檔案 |
-| 對話系統 | **Dialogic**（Godot addon） | `addons/dialogic/`；`project.godot:28` `Dialogic="*res://addons/dialogic/Core/DialogicGameHandler.gd"` |
-| 美術資源 | **Kenney Tiny Town**（像素風） | `README.md:38` |
-| 解析度 | 邏輯 1920×1080 / 視窗 960×540（`canvas_items` 拉伸、`expand` 長寬比） | `project.godot:117-122` |
-| 輸入 | 鍵盤 + 手把 + 滑鼠（已設 `ui_*`, `select`, `interact`, `back`, `dialogic_default_action`） | `project.godot:139-195` |
+| 對話系統 | **Dialogic**（Godot addon） | `addons/dialogic/`；`project.godot:32` `Dialogic="*uid://ds2q0uclmolvu"`（以 uid 指向 `DialogicGameHandler.gd`） |
+| 美術資源 | **Kenney Tiny Town**（像素風） | `README.md` |
+| 解析度 | 邏輯 1920×1080 / 視窗 960×540（`canvas_items` 拉伸、`expand` 長寬比） | `project.godot:123-128` |
+| 輸入 | 鍵盤 + 手把 + 滑鼠（已設 `ui_*`, `select`, `interact`, `back`, `dialogic_default_action`） | `project.godot:145-200` |
 
 ---
 
@@ -44,13 +45,13 @@
 
 ### 3.1 主場景
 
-`project.godot:14` 指定：
+`project.godot:18` 指定：
 
 ```ini
 run/main_scene="res://src/main.tscn"
 ```
 
-主場景掛載 `src/field/field.gd` 作為根 `Node2D` 腳本（見 `src/field/field.gd:1-51`）。其 `_ready()` 職責：
+`src/main.tscn` 的根節點直接掛 `src/field/field.gd`（`main.tscn:3` `ext_resource ... path="res://src/field/field.gd"`），同一場景內也內嵌了 `Combat`（`main.tscn:81` 引用 `src/combat/combat.gd`）。因此「探索」與「戰鬥」兩大節點開機即同時存在於 main 場景樹中，靠 `show()`/`hide()` 切換。`field.gd` 共 51 行（`src/field/field.gd:1-51`），其 `_ready()` 職責：
 
 1. `randomize()` — 初始化隨機種子。
 2. 連結 `Player.gamepiece_changed` signal：每當玩家操控的 Gamepiece 改變，動態附加一個 `PlayerController`，並將相機鎖定到新 Gamepiece。
@@ -60,19 +61,19 @@ run/main_scene="res://src/main.tscn"
 
 ### 3.2 Autoload（全域單例）清單
 
-`project.godot:18-28` 宣告九個全域單例，是整個專案「鬆耦合通訊」的骨幹：
+`project.godot:22-32` 宣告九個全域單例，是整個專案「鬆耦合通訊」的骨幹：
 
-| Autoload 名稱 | 路徑 | 職責 |
+| Autoload 名稱 | 路徑（`project.godot`） | 職責 |
 | :--- | :--- | :--- |
-| `Camera` | `src/field/field_camera.gd` | 玩家相機，跟隨當前 Gamepiece |
-| `CombatEvents` | `src/combat/combat_events.gd` | 戰鬥事件匯流排（`combat_initiated` / `combat_finished` / `player_battler_selected`） |
-| `FieldEvents` | `src/field/field_events.gd` | 場景事件匯流排（`cell_highlighted` / `combat_triggered` / `cutscene_began` / `input_paused` 等） |
-| `Gameboard` | `src/field/gameboard/gameboard.gd` | 全域遊戲棋盤（格子座標、Pathfinder） |
-| `GamepieceRegistry` | `src/field/gamepieces/gamepiece_registry.gd` | 註冊表：格子座標 ↔ Gamepiece 的映射 |
-| `Music` | `src/common/music/music_player.tscn` | 背景音樂播放器 |
-| `Player` | `src/common/player.gd` | 玩家狀態（當前 Gamepiece 持有者） |
-| `Transition` | `src/common/screen_transitions/ScreenTransition.tscn` | 畫面轉場效果（遮罩） |
-| `Dialogic` | `addons/dialogic/Core/DialogicGameHandler.gd` | 對話 runtime（第三方） |
+| `Camera` | `src/field/field_camera.gd`（`:24`） | 玩家相機，跟隨當前 Gamepiece（`class_name FieldCamera extends Camera2D`） |
+| `CombatEvents` | `src/combat/combat_events.gd`（`:25`） | 戰鬥事件匯流排（`combat_initiated` / `combat_finished` / `player_battler_selected`） |
+| `FieldEvents` | `src/field/field_events.gd`（`:26`） | 場景事件匯流排（`cell_highlighted` / `cell_selected` / `interaction_selected` / `combat_triggered` / `cutscene_began` / `cutscene_ended` / `input_paused`） |
+| `Gameboard` | `src/field/gameboard/gameboard.gd`（`:27`） | 全域遊戲棋盤（格子座標、Pathfinder） |
+| `GamepieceRegistry` | `src/field/gamepieces/gamepiece_registry.gd`（`:28`） | 註冊表：格子座標 ↔ Gamepiece 的映射 |
+| `Music` | `src/common/music/music_player.tscn`（`:29`，腳本 `music_player.gd`） | 背景音樂播放器 |
+| `Player` | `src/common/player.gd`（`:30`） | 玩家狀態（當前 Gamepiece 持有者） |
+| `Transition` | `src/common/screen_transitions/ScreenTransition.tscn`（`:31`，腳本 `screen_transition.gd`） | 畫面轉場效果（遮罩） |
+| `Dialogic` | `*uid://ds2q0uclmolvu`（`:32`，第三方 `DialogicGameHandler.gd`） | 對話 runtime（第三方；現以 uid 而非路徑指定） |
 
 > **設計洞察**：每個子系統都有獨立的 `*_events.gd` 作為事件匯流排，而非直接互相 reference，遵循 GDQuest 一貫提倡的「Signal Bus 模式」。
 
@@ -94,7 +95,7 @@ godot-open-rpg/
 │   ├── combat/                # 戰鬥系統
 │   ├── common/                # 跨系統共用（Inventory、Player、方向、轉場、音樂）
 │   ├── field/                 # 場景系統（Gameboard、Gamepiece、Cutscene、Camera、UI）
-│   └── main.tscn              # 主場景（但目前 main_scene 實際指向 field.tscn，見下方備註）
+│   └── main.tscn              # 主場景（root 直接掛 field.gd，內嵌 Combat；project.godot main_scene 指向此檔）
 ├── media/                     # Banner 圖片
 ├── project.godot              # 引擎設定 / Autoload / 輸入 / 變數
 ├── default_bus_layout.tres    # 音訊 Bus 配置
@@ -105,7 +106,7 @@ godot-open-rpg/
 ### 資料（tscn / tres）vs 邏輯（gd）分離
 
 - **資料層** 放在 `combat/` 與 `overworld/`（編輯器拖拉即可設計新戰鬥或地圖）。
-- **邏輯層** 放在 `src/`，共 324 個 `.gd` 檔（主要為腳本、少部分 `.tscn`）。
+- **邏輯層** 放在 `src/`，共 **70 個 `.gd`** 與 29 個 `.tscn`（全專案排除 addons 約 78 個 `.gd`）。
 
 > 此分離為 GDQuest 的慣例：美術/設計師只動頂層 `combat`、`overworld`；程式設計師只動 `src`。
 

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot-Open-RPG — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">OPEN-RPG</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">開發教學 / 衍生計畫</a>
+  <a href="../README.md">分析 README ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>Godot-Open-RPG — 回合制 JRPG 教學示範 <span class="badge badge-purple">Godot 4.6</span></h1>
+  <p>GDQuest 出品、以 GDScript 4 實作的經典日式回合制 RPG 教材。強調三大支柱：<b>Signal Bus（事件匯流排解耦）</b>、<b>Composition over Inheritance（場景組合）</b>、<b>Resource-as-Template（資料驅動戰鬥）</b>。本分析另就使用者偏好標註各子系統的 <b>GDExtension（C++ 後端）遷移點</b>。</p>
+</div>
+
+<!-- Quick stats -->
+<div class="section">
+  <div class="section-title">基本技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>引擎與語言</h3>
+      <p>Godot 4.6 · GL Compatibility</p>
+      <p>GDScript 4（<code>class_name</code> / <code>@tool</code> / <code>@export</code>）</p>
+      <p>邏輯 1920×1080 / 視窗 960×540</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>架構文件</h3>
+      <p>Level 1–4 共 4 篇</p>
+      <p>戰鬥 / Signal Bus / Resource / 場域</p>
+      <p><a href="architecture.html">→ 查看架構</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>開發教學 / 衍生計畫</h3>
+      <p>3 篇改造教學 + target/ 規劃中心</p>
+      <p>GDExtension 後端 RPG 施工指南</p>
+      <p><a href="tutorial.html">→ 查看教學</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>第三方 / 美術</h3>
+      <p>Dialogic（對話 addon）</p>
+      <p>Kenney Tiny Town 像素美術</p>
+      <p>資料 <code>combat/</code>·<code>overworld/</code> ／ 邏輯 <code>src/</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">Autoload 全域單例（九個，鬆耦合骨幹）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>單例</th><th>路徑</th><th>職責</th></tr></thead>
+      <tbody>
+        <tr><td><code>FieldEvents</code></td><td>src/field/field_events.gd</td><td>探索狀態事件匯流排（<code>combat_triggered</code> / <code>input_paused</code> …）</td></tr>
+        <tr><td><code>CombatEvents</code></td><td>src/combat/combat_events.gd</td><td>戰鬥狀態事件匯流排（<code>combat_initiated</code> / <code>combat_finished</code> / <code>player_battler_selected</code>）</td></tr>
+        <tr><td><code>Gameboard</code></td><td>src/field/gameboard/gameboard.gd</td><td>格子座標系統 + Pathfinder</td></tr>
+        <tr><td><code>GamepieceRegistry</code></td><td>src/field/gamepieces/gamepiece_registry.gd</td><td>格子座標 ↔ Gamepiece 映射</td></tr>
+        <tr><td><code>Player</code></td><td>src/common/player.gd</td><td>玩家當前操控的 Gamepiece</td></tr>
+        <tr><td><code>Camera</code> / <code>Music</code> / <code>Transition</code></td><td>src/field / src/common</td><td>相機跟隨 / 背景音樂 / 畫面轉場</td></tr>
+        <tr><td><code>Dialogic</code></td><td>addons/dialogic/…</td><td>對話 runtime（第三方）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Core architecture -->
+<div class="section">
+  <div class="section-title">核心架構（三大支柱 + 兩大狀態）</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <div class="tier-label tier-3">支柱一</div>
+      <h3>Signal Bus 事件匯流排</h3>
+      <p>子系統不互持引用，全部透過 <code>FieldEvents</code> / <code>CombatEvents</code> 的 signal emit/connect 通訊。<code>combat_triggered</code> 是探索→戰鬥的<b>唯一</b>切換管道。</p>
+    </div>
+    <div class="card card-accent-green">
+      <div class="tier-label tier-3">支柱二</div>
+      <h3>Composition over Inheritance</h3>
+      <p><code>Battler</code> 用 <code>@export PackedScene</code> 動態掛載 <code>BattlerAnim</code> 與 <code>CombatAI</code>；<code>Gamepiece</code> 為「笨物件」，行為由 Controller 子節點提供。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-3">支柱三</div>
+      <h3>Resource-as-Template</h3>
+      <p><code>BattlerStats</code> / <code>BattlerAction</code> 是 <code>.tres</code> 原型，<code>_ready()</code> 時 <code>duplicate()</code> 成獨立實例，避免共享污染。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-2">狀態 A</div>
+      <h3>探索（field）</h3>
+      <p><code>Field</code>（Node2D，主場景根）。Gameboard 格子移動、Gamepiece、Cutscene、Pathfinder。常駐，戰鬥時 <code>hide()</code>。</p>
+    </div>
+    <div class="card card-accent-red">
+      <div class="tier-label tier-2">狀態 B</div>
+      <h3>戰鬥（combat）</h3>
+      <p><code>Combat</code>（CanvasLayer）。<b>兩階段回合制</b>：階段一全員選 action，階段二依 speed 降序執行。常駐但 <code>hide()</code>。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="tier-label tier-4">GDExtension</div>
+      <h3>C++ 後端化方向</h3>
+      <p>戰鬥計算 / 回合排程 / 狀態機 / 傷害公式移往 C++；Godot 只留資料接收與顯示。詳見 <a href="tutorial.html">target/ 衍生計畫</a>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Key data flow pipelines -->
+<div class="section">
+  <div class="section-title">關鍵資料流</div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">探索 → 戰鬥（狀態切換，全程經 Signal Bus）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-orange">CombatTrigger._execute</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">FieldEvents.combat_triggered</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-red">Combat.setup</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">CombatEvents.combat_initiated</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">Field.hide()</span>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">回合制戰鬥（兩階段）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-red">next_round</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">階段一：AI + 玩家逐一選 action</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">_play_next_action 依 speed 排序</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">Battler.act → cached_action.execute</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-red">turn_finished（遞迴）</span>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:12px;">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">傷害結算（近戰攻擊）</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-blue">base_damage + source.attack</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-orange">±10% 隨機浮動</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-purple">BattlerHit(damage, to_hit)</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">take_hit → stats.health -= damage</span>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">Resource 原型 → 執行期實例</div>
+    <div class="pipeline">
+      <span class="pipe-step pipe-purple">.tres 原型（設計時）</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-blue">@export 掛到 Battler</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-green">_ready() duplicate()</span>
+      <span class="pipe-arrow">→</span>
+      <span class="pipe-step pipe-cyan">獨立實例（互不污染）</span>
+    </div>
+  </div>
+</div>
+
+<!-- Analysis findings -->
+<div class="section">
+  <div class="section-title">分析重點發現</div>
+  <div class="g2">
+    <div class="card">
+      <div class="highlight-box hl-orange">readiness / ATB 是未實裝的設計遺跡：docstring 與 <code>readiness_saved</code> 欄位殘留，但現行 <code>combat.gd</code> 為純回合制，順序僅由 <code>speed</code> 降序決定。</div>
+    </div>
+    <div class="card">
+      <div class="highlight-box hl-blue">傷害公式目前未納入 <code>defense</code> / <code>evasion</code> / 元素相剋（<code>elements.gd</code> 的 ADVANTAGES 表未接線）——這是教學專案刻意留給學習者擴充的空白。</div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：<a href="../architecture/">architecture/*.md</a>、<a href="../tutorial/">tutorial/*.md</a>、<a href="../target/">target/*.md</a>、<a href="../answers/">answers/*.md</a>
+</div>
+
+</body>
+</html>

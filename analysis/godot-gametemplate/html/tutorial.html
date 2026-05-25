@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Godot Game Template — 開發教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">GAMETEMPLATE</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">開發教學</a>
+  <a href="../tutorial/01_add_new_weapon.md">教學 01 ↗</a>
+  <a href="../session_log.md">操作日誌 ↗</a>
+</nav>
+
+<div class="page-header">
+  <h1>開發教學 — 目標導向</h1>
+  <p>三篇針對常見開發任務的教學，皆已對照源碼核對欄位與行號（2026-05-25）。每篇含前置知識、原始碼導航、實作步驟與驗證方式；點卡片標題回到 <code>../tutorial/*.md</code> 真相層。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">教學清單</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <div class="tier-label tier-2">武器擴展</div>
+      <h3><a href="../tutorial/01_add_new_weapon.md">01 · 新增自定義遠程武器</a></h3>
+      <p>以「等離子槍（電屬性）」示範解耦資源組裝流程。</p>
+      <ul>
+        <li>建立 <code>DamageDataResource</code>（<code>LIGHTNING</code> 屬性 + 爆擊率）</li>
+        <li>彈幕場景掛 <code>Projectile2D</code> + <code>PoolNode</code>，再做 <code>InstanceResource</code></li>
+        <li>武器場景繼承 <code>weapon.tscn</code>，<code>ProjectileSpawner</code> 設 <code>projectile_instance_resource</code> / <code>projectile_angles</code></li>
+        <li>登錄至 <code>weapon_database.tres</code> 的 <code>list</code>（用 <code>scene_path</code>，無 item_name/weapon_scene）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <div class="tier-label tier-3">C++ 效能</div>
+      <h3><a href="../tutorial/02_gdextension_migration.md">02 · Mover 遷移 GDExtension</a></h3>
+      <p>把效能熱點 <code>MoverTopDown2D</code> 重寫為 C++（呼應「核心邏輯 C++、Godot 表現層」哲學）。</p>
+      <ul>
+        <li>環境：<code>projects/godot-cpp</code>（已存在）+ SCons + 編譯器</li>
+        <li>移植 <code>get_impulse()</code>（與 <code>:84-91</code> 邏輯一致）與自訂 <code>move_and_slide()</code></li>
+        <li><code>GDREGISTER_CLASS</code> 註冊、編譯 <code>.gdextension</code></li>
+        <li>效能對比：200 隻分裂 Slime，物理幀時 12ms → 1-2ms</li>
+      </ul>
+    </div>
+    <div class="card card-accent-orange">
+      <div class="tier-label tier-3">Boss AI</div>
+      <h3><a href="../tutorial/03_boss_ai_implementation.md">03 · 複雜 Boss AI 與優化</a></h3>
+      <p>剖析 Big Jelly 的事件驅動狀態機與分裂機制。</p>
+      <ul>
+        <li>決策中心 <code>BigJellyAi._state_update()</code>，靠 <code>chase.finished</code> 回呼推進</li>
+        <li>2.5D 補償：<code>axis_compensation = ONE / axis_multiplication</code>（修正後）</li>
+        <li>跳躍壓殺 + <code>BigJellySlimeSpawner</code> 依 <code>angles</code> 分裂、掛入血脈樹</li>
+        <li>GDExtension 目標：<code>BigJellyChase.target_calculation()</code> 純向量運算</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">核對重點（本次修正）</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>教學</th><th>原描述</th><th>修正為（源碼）</th></tr></thead>
+      <tbody>
+        <tr><td>01</td><td><code>ProjectileSpawner.instance_resource</code> / <code>fire_rate</code></td><td><code>projectile_instance_resource</code> / <code>projectile_angles</code>（射速由 WeaponTrigger 等控制）</td></tr>
+        <tr><td>01</td><td>物品設 <code>item_name</code> / <code>weapon_scene</code>，加入 <code>items</code></td><td>用 <code>resource_name</code> + <code>scene_path</code>，加入 <code>list</code></td></tr>
+        <tr><td>02</td><td>沿用引擎 move_and_slide</td><td>原版自行覆寫 <code>move_and_slide(delta)</code>，遷移時需一併移植</td></tr>
+        <tr><td>03</td><td><code>diff.y *= axis_multiplication.y</code></td><td>整體向量乘 <code>axis_compensation = ONE / axis_multiplication</code>；方向才乘回 axis_multiplication</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">延伸閱讀</div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>架構前置知識</h3>
+      <p>教學依賴的核心模組詳見 <a href="architecture.html">架構分析</a>：Level 2（ResourceNode、Mover、傷害鏈）、Level 4（傷害數據）、Level 3（Boss/AI 機制）。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>GDExtension 哲學</h3>
+      <p>教學 02/03 對應使用者偏好：Godot 僅作表現層，移動/距離計算等純運算下沉 C++。適合熱點：<code>get_impulse</code>、<code>_remove_overlap</code>、<code>target_calculation</code>。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>真相來源</h3>
+      <p>本頁僅為摘要導覽，完整步驟與程式碼以 <code>../tutorial/*.md</code> 為準，內容更新一律先改 Markdown。</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--dim);">
+  HTML 導覽層 · 真相來源：
+  <a href="../tutorial/01_add_new_weapon.md">01 新增武器</a> ·
+  <a href="../tutorial/02_gdextension_migration.md">02 GDExtension</a> ·
+  <a href="../tutorial/03_boss_ai_implementation.md">03 Boss AI</a>
+</div>
+
+</body>
+</html>

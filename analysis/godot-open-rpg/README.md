@@ -13,10 +13,19 @@
 | :--- | :--- | :--- | :--- |
 | Level 1 | 初始探索（README / 技術棧 / 目錄） | ✅ 已完成 | [architecture/level_1_initial_exploration.md](architecture/level_1_initial_exploration.md) |
 | Level 2 | 核心模組職責（Autoload / Field / Combat） | ✅ 已完成 | [architecture/level_2_core_modules.md](architecture/level_2_core_modules.md) |
-| Level 3 | 戰鬥系統深度剖析 (Battler / Action / Stats) | ⏳ 待進行 | - |
-| Level 4 | 場景系統 (Gameboard / Gamepiece / Cutscene) | ⏳ 待進行 | - |
-| Level 5 | UI 與資產驅動流程 (Dialogic / Inventory) | ⏳ 待進行 | - |
-| Level 6 | 開發教學（如何擴充一個新戰技 / 新地圖） | ⏳ 待進行 | - |
+| Level 3 | 回合制戰鬥系統深度剖析 (Battler / Action / Stats / 傷害公式) | ✅ 已完成 | [architecture/level_3_combat_system.md](architecture/level_3_combat_system.md) |
+| Level 3 | Signal Bus 與事件系統 (FieldEvents / CombatEvents) | ✅ 已完成 | [architecture/level_3_signal_bus_and_events.md](architecture/level_3_signal_bus_and_events.md) |
+| Level 4 | Resource 驅動資料 與 場域系統 (.tres / Gameboard / field↔combat) | ✅ 已完成 | [architecture/level_4_resource_data_and_scene_states.md](architecture/level_4_resource_data_and_scene_states.md) |
+
+> 每個 Level 3+ 子系統皆附「GDExtension 遷移點」小節（標註可移往 C++ 後端的純邏輯與留在 Godot 的表現層）。
+
+## HTML 導覽層
+
+`.md` 文件增多後，於 [`html/`](html/) 生成導覽層（不取代 .md，僅索引與呈現）：
+
+- [`html/index.html`](html/index.html)：總覽（技術棧、Autoload、三大支柱、關鍵資料流）
+- [`html/architecture.html`](html/architecture.html)：Level 1–4 彙整
+- [`html/tutorial.html`](html/tutorial.html)：改造教學與 target/ 衍生計畫入口
 
 ## 教學文件
 
