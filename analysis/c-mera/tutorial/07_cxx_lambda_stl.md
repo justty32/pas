@@ -1,54 +1,86 @@
 # 教學 07：Lambda、STL、現代 C++ 常用組合
 
+---
+
 ## 一、lambda 完整語法
 
-C-Mera 的 lambda 叫 `lambda-function`（注意不是 `lambda`，`lambda` 是 Common Lisp 自己的）。一般格式：
+C-Mera 的 lambda 叫 **`lambda-function`**（不是 `lambda`，那是 Common Lisp 自己的形式）。完整格式：
 
 ```
-(lambda-function <capture> <parameters> [qualifiers...] -> <return-type> <body>)
+(lambda-function <捕獲列表> <參數列表> [qualifiers...] -> <回傳型別> <body...>)
 ```
 
-各段都可省略（但順序固定）。看完整範例（改寫自 `tests/cxx.misc.lambda.00.lisp`）：
+各段都可省略，但**順序固定**，不能調換。
 
-### 1. 最簡：無捕獲、無回傳型別
+### 最簡：無捕獲、自動推導回傳型別
+
 ```lisp
-(decl ((auto f = (lambda-function () ((int x)) (return (* x x))))))
-(f 5)        ; 25
-```
-對應 `[](int x) { return x * x; }`。
+(decl ((auto f = (lambda-function () ((int x))
+                    (return (* x x))))))
+; C++: auto f = [](int x) { return x * x; };
 
-### 2. 加回傳型別
+(f 5)   ; => f(5);
+```
+
+### 加明確回傳型別
+
 ```lisp
 (lambda-function () ((int x)) -> int (return (* x x)))
+; [](int x) -> int { return x * x; }
 ```
 
-### 3. 值捕獲 `=`、參考捕獲 `&`、混合
+### 捕獲語法對照
+
+| C-Mera | C++ | 意思 |
+|---|---|---|
+| `(lambda-function () ...)` | `[]` | 無捕獲 |
+| `(lambda-function (=) ...)` | `[=]` | 全部值捕獲 |
+| `(lambda-function (&) ...)` | `[&]` | 全部參考捕獲 |
+| `(lambda-function (x) ...)` | `[x]` | 值捕獲 x |
+| `(lambda-function (&y) ...)` | `[&y]` | 參考捕獲 y |
+| `(lambda-function (= &y) ...)` | `[=, &y]` | 全值捕獲，但 y 用參考 |
+| `(lambda-function (x &y) ...)` | `[x, &y]` | 混合 |
+| `(lambda-function (this) ...)` | `[this]` | 捕獲 this 指標 |
+
+### mutable（可修改值捕獲的副本）
+
 ```lisp
-(lambda-function (=)      ((int n)) (return (+ x n)))    ; [=](int n) { ... }
-(lambda-function (&)      ((int n)) (return (+ x n)))    ; [&]
-(lambda-function (= &y)   ((int n)) (return (+ x y n)))  ; [=, &y]
-(lambda-function (x &y)   ((int n)) ...)                  ; [x, &y]
-(lambda-function (this)   ()       (return this->value)) ; [this]
+(decl ((int counter = 0))
+  (decl ((auto inc = (lambda-function (=) ()
+                        mutable -> int
+                        (return ++counter)))))
+  (inc) (inc) (inc)
+  ; counter 仍為 0（值捕獲只改副本）
+  (<< cout counter endl))   ; 0
 ```
 
-### 4. 有修飾符 mutable
+`mutable` 放在參數列表後、`->` 前（和 `const`、`override`、`noexcept` 同位置）。
+
+### 立即呼叫（IIFE）
+
 ```lisp
-(lambda-function (=) ((const int& a) (const int& b))
-   mutable                                   ; qualifier 位置
-   -> int
-   (progn ++x (return (+ a b))))
+(decl ((int result =
+         (funcall (lambda-function () () -> int
+                    (decl ((int x = 6) (int y = 7))
+                      (return (* x y))))))))
+; result = 42
 ```
-對應 `[=](const int& a, const int& b) mutable -> int { ... }`。
 
-### 5. 立即呼叫 IIFE
+用 `funcall` 包住 lambda 再加引數。不能直接把 lambda 放第一位，因為 C-Mera 的 reader 會把它當函式名。
+
+### C++14 init-capture（搬移語意）
+
 ```lisp
-(decl ((int result = (funcall (lambda-function () () -> int (return 42))))))
+(decl (((instantiate #:std::unique_ptr (Widget)) uptr ((new Widget))))
+  (decl ((auto f = (lambda-function ((= owned (funcall #:std::move uptr))) ()
+                      -> void
+                      (owned->work))))))
+; [owned = std::move(uptr)]() { owned->work(); }
 ```
-`funcall` 是 C-Mera 的「函式物件呼叫」工具；可讀性好過把 lambda 直接放第一個位置（reader 會想當函式名）。
 
-## 二、STL 容器速覽
+---
 
-以下全部需要 `(using-namespace std)` 或用 `#:std::...`。
+## 二、STL 容器完整範例
 
 ```lisp
 (include <vector>)
@@ -59,163 +91,235 @@ C-Mera 的 lambda 叫 `lambda-function`（注意不是 `lambda`，`lambda` 是 C
 (include <string>)
 (include <algorithm>)
 (include <numeric>)
+(include <iostream>)
+(using-namespace std)
 
-;; vector
-(decl (((instantiate vector (int)) v { 3 1 4 1 5 9 2 6 })))
+(function main () -> int
+  ;; --- vector ---
+  (decl (((instantiate vector (int)) v { 3 1 4 1 5 9 2 6 5 }))
+    ;; 排序
+    (funcall sort (v.begin) (v.end))
 
-;; iterator
-(for ((auto it = (v.begin)) (!= it (v.end)) ++it)
-  (<< cout *it " "))
+    ;; 去重
+    (decl ((auto last = (funcall unique (v.begin) (v.end)))))
+    (funcall (oref v erase) last (v.end))
 
-;; range-based for
-(for ((auto& x) v)
-  (<< cout x " "))
+    ;; 印出
+    (for ((int x) v)
+      (<< cout x " "))
+    (<< cout endl)   ; 1 2 3 4 5 6 9
 
-;; sort
-(funcall sort (v.begin) (v.end))
+    ;; 總和
+    (decl ((int s = (funcall accumulate (v.begin) (v.end) 0))))
+    (<< cout "sum=" s endl)   ; sum=30
 
-;; sort 帶 lambda
-(funcall sort (v.begin) (v.end)
-         (lambda-function () ((int a) (int b)) (return (> a b))))
+    ;; 找特定值
+    (decl ((auto it = (funcall find (v.begin) (v.end) 5))))
+    (if (!= it (v.end))
+        (<< cout "found 5" endl)))
 
-;; accumulate
-(decl ((int s = (funcall accumulate (v.begin) (v.end) 0))))
+  ;; --- map ---
+  (decl (((instantiate map (string) (int)) scores))
+    (set scores["Alice"] 95
+         scores["Bob"]   87
+         scores["Carol"] 92)
 
-;; find
-(decl ((auto it = (funcall find (v.begin) (v.end) 5))))
-(if (!= it (v.end))
-    (<< cout "found" endl))
+    ;; 遍歷（自動排序）
+    (for ((const auto& kv) scores)
+      (<< cout kv.first ": " kv.second endl)))
 
-;; map
-(decl (((instantiate map (string) (int)) m)))
-(set m["apple"] 1
-     m["pear"]  2)
-(for ((const auto& kv) m)
-  (<< cout kv.first ":" kv.second endl))
+  ;; --- set ---
+  (decl (((instantiate set (int)) s { 5 3 1 4 1 5 9 2 6 }))
+    (<< cout "set size=" (s.size) endl)   ; 7（自動去重）
+    (<< cout (if (s.count 5) "has 5" "no 5") endl))
+
+  (return 0))
 ```
 
-小坑：成員函式呼叫想寫得像 C++ 一點，就用 reader 的 dot：`v.begin()` 要寫 `(v.begin)`（括號外覆）；一般不能省括號，因為 `v.begin` 單獨是「取成員」而非「呼叫」。
+**重點：成員函式呼叫的語法**
 
-## 三、range-based for（再強調）
-
-`(for ((型別 名稱) 容器) body)` 兩段式（沒有 test / step）就是 C++11 的 `for (auto x : v)`：
 ```lisp
-(for ((const auto& item) v)
-  (<< cout item endl))
+(v.begin)           ; v.begin()   ← 括號外覆是呼叫
+v.begin             ; v.begin     ← 沒括號是取成員（不呼叫）
+(funcall sort (v.begin) (v.end))   ; sort(v.begin(), v.end())
 ```
+
+---
+
+## 三、algorithm 常用組合
+
+```lisp
+(include <vector>)
+(include <algorithm>)
+(include <numeric>)
+(include <iostream>)
+(using-namespace std)
+
+(function demo ((instantiate vector (int)) v) -> void
+  ;; 排序（降冪）
+  (funcall sort (v.begin) (v.end)
+           (lambda-function () ((int a) (int b)) (return (> a b))))
+
+  ;; remove_if + erase
+  (funcall (oref v erase)
+           (funcall remove_if (v.begin) (v.end)
+                    (lambda-function () ((int x)) (return (== 0 (% x 2)))))
+           (v.end))
+
+  ;; transform：每個元素乘以 2
+  (funcall transform (v.begin) (v.end) (v.begin)
+           (lambda-function () ((int x)) (return (* x 2))))
+
+  ;; count_if：計算大於 5 的個數
+  (decl ((int cnt = (funcall count_if (v.begin) (v.end)
+                             (lambda-function () ((int x)) (return (> x 5))))))
+    (<< cout "count > 5: " cnt endl))
+
+  ;; for_each
+  (funcall for_each (v.begin) (v.end)
+           (lambda-function () ((int x))
+             (<< cout x " ")))
+  (<< cout endl))
+
+(function main () -> int
+  (decl (((instantiate vector (int)) v { 1 2 3 4 5 6 7 8 9 10 }))
+    (demo v))
+  (return 0))
+```
+
+---
 
 ## 四、smart pointer
 
 ```lisp
 (include <memory>)
+(include <iostream>)
 (using-namespace std)
 
-(decl (((instantiate unique_ptr (Foo)) p = (funcall make_unique<Foo> 42))))
-;; 或 C++14 以前：
-(decl (((instantiate unique_ptr (Foo)) p ((new (Foo 42))))))   ; 花括號版
+(class Widget ()
+  (public
+   (decl ((int id)))
+   (constructor ((int id)) :init ((id id))
+     (<< cout "Widget " id " created" endl))
+   (destructor
+     (<< cout "Widget " id " destroyed" endl))
+   (function work () -> void
+     (<< cout "Widget " id " working" endl))))
 
-;; shared
-(decl (((instantiate shared_ptr (Foo)) sp = (funcall make_shared<Foo> 1 2 3))))
+(function main () -> int
+  ;; unique_ptr（C++14）
+  (decl (((instantiate unique_ptr (Widget)) p
+            = (funcall (instantiate make_unique (Widget)) 1)))
+    (p->work)
+    ;; p 在這裡離開 scope，Widget 自動銷毀
+    )
+
+  ;; shared_ptr
+  (decl (((instantiate shared_ptr (Widget)) a
+            = (funcall (instantiate make_shared (Widget)) 2))
+         ((instantiate shared_ptr (Widget)) b = a))   ; 共享
+    (<< cout "use_count=" (a.use_count) endl)    ; 2
+    (a->work))
+
+  (return 0))
 ```
 
-`make_unique<Foo>` 這種「帶模板參數的符號」可以寫 `#:make_unique<Foo>` 直接當一個字面符號，或乾脆用 `(instantiate make_unique (Foo))` 再 `funcall`。
+`make_unique<Widget>` 寫成 `(instantiate make_unique (Widget))`，再用 `funcall` 呼叫。
 
-## 五、move / forward / 右值參考
+---
 
-右值參考 `&&` C-Mera 沒有專用符號；直接寫成符號：
+## 五、move / forward
+
 ```lisp
-(function take ((Foo&& f)) -> void       ; Foo&& f
-  ...)
+(include <utility>)
+(include <string>)
+(include <iostream>)
+(using-namespace std)
 
-(decl ((Foo f))
-  (take (funcall #:std::move f)))        ; std::move(f)
-```
+;; move
+(decl ((string s = "hello"))
+  (decl ((string t = (funcall #:std::move s))))
+    ; s 現在是空字串，t 是 "hello"
+  (<< cout "s=" s " t=" t endl))
 
-完美轉發：
-```lisp
+;; perfect forward
 (template ((typename T))
-  (function wrap ((T&& x)) -> void
-    (funcall inner (funcall (instantiate #:std::forward (T)) x))))
+  (function relay ((T&& x)) -> T&&
+    (return (funcall (instantiate #:std::forward (T)) x))))
 ```
+
+---
 
 ## 六、exception / noexcept
 
 ```lisp
-(function maybe-throw () -> int
-  (throw (runtime_error "oops"))
-  (return 0))
+(function safe-divide ((int a) (int b)) noexcept -> int
+  (if (== b 0) (return 0))
+  (return (/ a b)))
 
-;; noexcept qualifier 寫在 qualifier 位置
-(function safe () noexcept -> int
-  (return 0))
+(function risky ((int x)) -> int
+  (if (< x 0)
+      (throw (runtime_error "negative")))
+  (return x))
+
+;; noexcept 的 qualifier 位置
+(function get-value () noexcept -> int (return 42))
+(function process () const noexcept -> void ...)
 ```
 
-try-catch 在 C-Mera 叫 `catching`（`tests/cxx.misc.trycatch.00.lisp`）：
-```lisp
-(catching (((int i)
-            (<< cout "caught int: " i endl))
-           ((runtime_error &e)
-            (<< cout "runtime: " (e.what) endl))
-           ((exception &e)
-            (<< cout "base: " (e.what) endl))
-           (t                                  ; catch (...)
-            (<< cout "???" endl)))
-  (throw (runtime_error "bad")))
-```
-語法：`(catching (clauses...) body)`，每個 clause 是 `(參數宣告 body...)`；`t` 代表 `catch(...)`。
+---
 
-## 七、auto 與 decltype
+## 七、Lisp macro × C++ template（組合玩法）
 
-`auto` 就寫 `auto`：
-```lisp
-(decl ((auto x = 42))
-      ((auto& r = v)))
-```
+用 C-Mera 最獨特的方式：**macro 產生多個具體的模板容器列印函式**，不用手寫 template。
 
-`decltype` 當型別用：
-```lisp
-(decl (((decltype x) y = x)))
-```
-在函式回傳位置也能用（C++14 `decltype(auto)` 同理）：
-```lisp
-(function get-ref () -> (decltype (cpp "(v[0])"))
-  (return v[0]))
-```
-`decltype` 的內容要完整的表達式時，最乾淨的做法是用 `cpp "..."` 嵌。
-
-## 八、STL + lambda 綜合
-
-經典「排序 + 去重 + 取奇數」：
 ```lisp
 (include <vector>)
-(include <algorithm>)
+(include <list>)
+(include <set>)
+(include <iostream>)
 (using-namespace std)
 
-(function clean ((vector<int>& v)) -> void
-  (funcall sort   (v.begin) (v.end))
-  (decl ((auto last = (funcall unique (v.begin) (v.end)))))
-  (funcall (oref v erase) last (v.end))
-  (funcall (oref v erase)
-           (funcall remove_if (v.begin) (v.end)
-                    (lambda-function () ((int x)) (return (== 0 (% x 2)))))
-           (v.end)))
-```
-
-## 九、Lisp macro ✕ C++ template（真正的玩法）
-
-假設你要為多種 container 產生 `print_container`：
-```lisp
-(defmacro def-print (name container-type)
-  `(function ,name ((const ,container-type& c)) -> void
-     (<< #:std::cout "[ ")
+(defmacro def-print-container (fn-name container-type elem-type)
+  `(function ,fn-name ((const ,container-type& c) (const char* label)) -> void
+     (<< cout label ": [")
      (for ((const auto& x) c)
-       (<< #:std::cout x " "))
-     (<< #:std::cout "]" #:std::endl)))
+       (<< cout x " "))
+     (<< cout "]" endl)))
 
-(def-print print-vec (instantiate vector (int)))
-(def-print print-list (instantiate list (double)))
-(def-print print-set (instantiate set (string)))
+(def-print-container print-ivec  (instantiate vector (int))    int)
+(def-print-container print-dlist (instantiate list   (double)) double)
+(def-print-container print-sset  (instantiate set    (string)) string)
+
+(function main () -> int
+  (decl (((instantiate vector (int))    v { 1 2 3 4 5 })
+         ((instantiate list   (double)) l { 1.1 2.2 3.3 })
+         ((instantiate set    (string)) s { "c" "a" "b" }))
+    (print-ivec  v "ints")
+    (print-dlist l "doubles")
+    (print-sset  s "strings"))
+  (return 0))
 ```
-**這是 template 都做不到的**——template 要寫 `template<typename C>`，C-Mera 的 `defmacro` 是在展開期直接產生具體類別。兩者可混用：macro 產生 template 函式，template 處理多型。
 
-下一篇會專門講 macro 和 template 合體的技巧。
+產生的 C++：
+```cpp
+void print_ivec(const vector<int>& c, const char* label) {
+    cout << label << ": [";
+    for (const auto& x : c) cout << x << " ";
+    cout << "]" << endl;
+}
+// ... 另外兩個類似的函式
+```
+
+**template 做不到這個**——template 要寫 `template<typename C>` 一個版本；C-Mera 的 macro 在展開期直接產生三個具體函式，各自有明確型別。
+
+---
+
+## 常見坑
+
+| 坑 | 原因 | 解法 |
+|---|---|---|
+| lambda 用 `lambda` 而非 `lambda-function` | `lambda` 是 Common Lisp 的 macro，會被它攔截 | 一律用 `lambda-function` |
+| `(v.begin)` 沒括號 `v.begin` | 前者是呼叫，後者是取成員 | STL algorithm 都要傳呼叫結果，記得加括號 |
+| `funcall sort ...` 但參數順序錯 | C-Mera 沒有特殊對待，`funcall` 就是函式呼叫 | 和 C++ 的參數順序完全相同 |
+| `(oref v erase)` 很奇怪 | 這是 `v.erase` 的顯式寫法 | `(funcall (oref v erase) iter)` = `v.erase(iter)` |

@@ -1,221 +1,413 @@
-# 教學 08：現代 C++ 特性的 C-Mera 寫法
+# 教學 08：現代 C++ 特性（C++11/14/17/20）
 
-C++11/14/17/20 常見特性在 C-Mera 都可以寫出來；有些有專門語法，有些需要繞一下。這篇把你會用到的特性都列出來，每個給一段可跑的範例。
+C++11/14/17/20 的常見特性在 C-Mera 幾乎都能寫；有些有專門語法，有些需要用 `cpp "..."` 橋接。這篇每個特性都給一段可以直接跑的範例。
 
-## 特性對照總表
+---
 
-| C++ 特性 | C-Mera 語法 | 備註 |
+## 特性支援速查表
+
+| C++ 特性 | C-Mera 語法 | 支援度 |
 |---|---|---|
-| `auto` | `(decl ((auto x = 1)))` | 直接寫 |
-| `decltype(x)` | `((decltype x) y)` | 括號內放運算式 |
-| range-based for | `(for ((T x) container) body)` | 兩段式 |
-| lambda | `(lambda-function ...)` | 見教學 07 |
-| rvalue ref `T&&` | 符號裡含 `&&` 直接寫 | `(T&& x)` |
-| `std::move` | `(funcall #:std::move x)` | |
-| `nullptr` | `nullptr` | 當一般符號 |
-| `override` / `final` | qualifier 位置 | 見下方 |
-| `noexcept` | qualifier 位置 | `function foo () noexcept -> int` |
-| `constexpr` | specifier | `(decl ((constexpr int x = 1)))` |
-| `static_assert` | `(cpp "static_assert(...)")` 或自製 macro | 沒專屬 |
-| `enum class` | `(enum class Name ...)` | |
-| range init list | `{ ... }` 寫法 | 僅 C++ |
-| structured binding | `(cpp "auto [a, b] = ...;")` | 目前沒專用 |
-| initializer_list | 花括號 `{ ... }` | 自動 |
-| `this` | 寫 `this` | 當變數 |
-| uniform init | `(Name arg1 arg2)` 或 `(Name { ... })` | |
-| variadic template | `#:|Args...|` 符號技巧 | 醜 |
-| fold expression | `(cpp "(... + args)")` | 目前沒專用 |
-| concepts (C++20) | `(cpp "requires ...")` | 目前沒專用 |
+| `auto` | `(decl ((auto x = 1)))` | ✓ 完整 |
+| `decltype(x)` | `((decltype x) y)` | ✓ 完整 |
+| range-based for | `(for ((T x) container) body)` | ✓ 完整 |
+| lambda | `(lambda-function ...)` | ✓ 完整 |
+| rvalue ref `T&&` | 符號直接寫 `T&&` | ✓ 完整 |
+| `std::move` / `std::forward` | `(funcall #:std::move x)` | ✓ 完整 |
+| `nullptr` | `nullptr` | ✓ 完整 |
+| `override` / `final` | qualifier 位置 | ✓ 完整 |
+| `noexcept` | qualifier 位置 | ✓ 完整 |
+| `constexpr` | specifier 位置 | ✓ 完整 |
+| `enum class` | `(enum class Name ...)` | ✓ 完整 |
+| initializer_list `{ }` | 花括號寫法 | ✓ 僅 C++ |
+| `static_assert` | `(cpp "static_assert(...)")` | △ 靠 cpp |
+| structured binding `auto [a,b]` | `(cpp "auto [a, b] = ...;")` | △ 靠 cpp |
+| `if constexpr` | `(cpp "if constexpr ...")` | △ 靠 cpp |
+| fold expression | `(cpp "(... + args)")` | △ 靠 cpp |
+| concepts (C++20) | `(cpp "requires ...")` | △ 靠 cpp |
+
+---
 
 ## 一、override / final
 
-當 qualifier 寫（和 `virtual`、`pure`、`const` 同位置）：
+qualifier 放在參數列表後、`->` 前：
+
 ```lisp
+(include <iostream>)
+(using-namespace std)
+
 (class Base ()
   (public
-   (function greet () pure -> void)))
+   (function greet ((const char* name)) pure -> void)
+   (destructor virtual)))
 
-(class Derived ((public Base))
+(class Child ((public Base))
   (public
-   (function greet () override -> void            ; override
-     (<< #:std::cout "hi" #:std::endl))))
+   (function greet ((const char* name)) override -> void
+     (<< cout "Hello from Child, " name endl))))
 
 (class Sealed ((public Base))
   (public
-   (function greet () final -> void               ; final
-     (<< #:std::cout "done" #:std::endl))))
+   (function greet ((const char* name)) final -> void
+     (<< cout "Sealed: " name endl))))
+
+(function main () -> int
+  (decl ((Base* b = (new Child)))
+    (b->greet "world")    ; Hello from Child, world
+    (delete b))
+  (return 0))
 ```
 
-## 二、constexpr / constinit
+產生的 C++（片段）：
+```cpp
+virtual void greet(const char* name) override { ... }
+virtual void greet(const char* name) final { ... }
+```
+
+---
+
+## 二、constexpr / consteval
+
+`constexpr` 放在 specifier 位置（型別的前面）：
 
 ```lisp
-(decl ((constexpr int MAX = 1024))
-      ((constexpr double PI = 3.14159)))
+(include <iostream>)
+(using-namespace std)
 
+;; constexpr 全域常數
+(decl ((constexpr int MAX_SIZE = 1024)
+       (constexpr double PI = 3.14159265358979)))
+
+;; constexpr 函式
 (template ((typename T))
-  (function constexpr sq ((T x)) -> T            ; constexpr 寫在 specifier
+  (function constexpr sq ((T x)) -> T
     (return (* x x))))
+
+;; constexpr class
+(class Point ()
+  (public
+   (decl ((int x) (int y)))
+   (constructor constexpr ((int x) (int y)) :init ((x x) (y y)))
+   (function constexpr manhattan () const -> int
+     (return (+ (if (< x 0) (- x) x)
+                (if (< y 0) (- y) y))))))
+
+(function main () -> int
+  (decl ((constexpr int a = (sq 7))))          ; 49，編譯期計算
+  (decl ((constexpr Point p 3 -4)))
+  (<< cout (p.manhattan) endl)   ; 7
+  (return 0))
 ```
-C-Mera 的 specifier 是 vararg，所以 `(constexpr inline static int ...)` 都可以。
+
+---
 
 ## 三、enum class
 
 ```lisp
-(enum class Color red green blue)                ; 基本型
-(enum class (Priority : int) low medium high)    ; 指定底層型別
+(include <iostream>)
+(using-namespace std)
+
+;; 基本 enum class
+(enum class Color red green blue)
+; => enum class Color { red, green, blue };
+
+;; 指定底層型別
+(enum class (Status : int) ok error timeout)
+; => enum class Status : int { ok, error, timeout };
 
 ;; 使用
-(decl ((Color c = Color::red)))
-(if (== c Color::green) ...)
-```
-指定底層型別的寫法需要用括號包住整個 `(Name : type)`；C-Mera 會把冒號當成識別字字元。若不工作，fallback：`(cpp "enum class Priority : int { ... };")`。
+(function describe ((Color c)) -> (const char*)
+  (switch (cast int c)
+    (0 (return "red"))
+    (1 (return "green"))
+    (2 (return "blue"))
+    (default (return "unknown"))))
 
-## 四、右值參考、move 語意
+(function main () -> int
+  (decl ((Color c = Color::green))
+    (<< cout (describe c) endl)   ; green
+
+    ;; 比較
+    (if (== c Color::green)
+        (<< cout "it's green!" endl)))
+  (return 0))
+```
+
+`(cast int c)` 可以把 enum class 轉成底層整數。
+
+---
+
+## 四、右值參考與 move 語意
+
+完整的「Rule of Five」實作：
 
 ```lisp
+(include <iostream>)
+(include <cstring>)
 (include <utility>)
-(include <string>)
 (using-namespace std)
 
 (class Buffer ()
-  (private (decl ((char* data)) ((int n)))))
+  (private
+   (decl ((char* data))
+         ((int n))))
+
   (public
-   (constructor ((int n)) :init ((n n)) (set data (new char[n])))
+   ;; 一般建構子
+   (constructor ((int size))
+     :init ((n size))
+     (set data (new char[size]))
+     (funcall memset data 0 size)
+     (<< cout "Buffer(" size ") created" endl))
+
+   ;; 解構子
+   (destructor
+     (delete[] data)
+     (<< cout "Buffer destroyed" endl))
 
    ;; 拷貝建構子
    (constructor ((const Buffer& o))
      :init ((n o.n))
      (set data (new char[o.n]))
-     (funcall memcpy data o.data o.n))
+     (funcall memcpy data o.data o.n)
+     (<< cout "Buffer copy" endl))
 
    ;; 搬移建構子
    (constructor ((Buffer&& o))
      :init ((data o.data) (n o.n))
-     (set o.data nullptr o.n 0))
+     (set o.data nullptr o.n 0)
+     (<< cout "Buffer move" endl))
+
+   ;; 拷貝賦值
+   (function operator= ((const Buffer& o)) -> Buffer&
+     (if (!= this &o)
+         (progn
+           (delete[] data)
+           (set n o.n
+                data (new char[o.n]))
+           (funcall memcpy data o.data o.n)))
+     (return *this))
 
    ;; 搬移賦值
    (function operator= ((Buffer&& o)) -> Buffer&
      (if (!= this &o)
          (progn
            (delete[] data)
-           (set data o.data n o.n
-                o.data nullptr o.n 0)))
+           (set data o.data
+                n    o.n
+                o.data nullptr
+                o.n    0)))
      (return *this))
 
-   (destructor (delete[] data)))
+   (function write ((const char* s)) -> void
+     (funcall strncpy data s (- n 1))
+     (set data[(- n 1)] #\null))
+
+   (function read () const -> (const char*)
+     (return data))))
+
+(function make-buffer ((int size)) -> Buffer
+  (decl ((Buffer b size))
+    (b.write "hello")
+    (return (funcall #:std::move b))))    ; 觸發搬移
+
+(function main () -> int
+  (decl ((Buffer b1 = (make-buffer 64)))   ; move
+    (<< cout (b1.read) endl)               ; hello
+
+    (decl ((Buffer b2 = b1)))              ; copy
+      (<< cout (b2.read) endl))            ; hello
+
+  (return 0))
 ```
+
+---
 
 ## 五、initializer_list 建構子
 
 ```lisp
 (include <initializer_list>)
+(include <vector>)
+(include <iostream>)
+(using-namespace std)
 
-(class IntSet ()
+(class IntBag ()
+  (private
+   (decl (((instantiate vector (int)) data))))
   (public
+   ;; initializer_list 建構子
    (constructor (((instantiate #:std::initializer_list (int)) lst))
      (for ((int x) lst)
-       (funcall this->insert x)))))
+       (data.push_back x)))
 
-(decl ((IntSet s { 1 2 3 4 5 })))
+   (function sum () const -> int
+     (decl ((int s = 0))
+       (for ((int x) data)
+         (+= s x))
+       (return s)))
+
+   (function size () const -> int
+     (return (data.size)))))
+
+(function main () -> int
+  (decl ((IntBag bag { 1 2 3 4 5 6 7 8 9 10 }))
+    (<< cout "size=" (bag.size) " sum=" (bag.sum) endl))
+  ; size=10 sum=55
+  (return 0))
 ```
 
-## 六、structured binding（C++17）
+---
 
-沒專屬語法，直接用 `cpp`：
+## 六、structured binding（C++17，靠 cpp）
+
+C-Mera 沒有 `auto [a, b] = ...` 的原生語法，用 `cpp` 橋接：
+
 ```lisp
 (include <tuple>)
 (include <string>)
+(include <iostream>)
+(using-namespace std)
 
-(function info () -> (instantiate #:std::tuple (int) (#:std::string))
-  (return (funcall (instantiate make_tuple (int) (#:std::string)) 42 "ok")))
+(function get-result () -> (instantiate #:std::tuple (int) (string) (double))
+  (return (funcall (instantiate make_tuple (int) (string) (double))
+                   42 "ok" 3.14)))
 
 (function main () -> int
-  (cpp "auto [code, msg] = info();")
-  (<< #:std::cout (cpp "code") ":" (cpp "msg") #:std::endl)
+  (cpp "auto [code, msg, val] = get_result();")
+  (<< cout (cpp "code") " " (cpp "msg") " " (cpp "val") endl)
+  ; 42 ok 3.14
   (return 0))
 ```
-可讀性不佳——這是 sexp 先天限制之一。若頻繁使用，寫 macro 包：
+
+若常用，可以包一個 macro：
+
 ```lisp
-(defmacro bind2 (a b expr)
-  `(cpp ,(format nil "auto [~a, ~a] = <expr>;" a b)))
+(defmacro bind (vars expr)
+  (let ((vars-str (format nil "~{~a~^, ~}" vars)))
+    `(cpp ,(format nil "auto [~a] = ~a;" vars-str expr))))
+
+;; 使用
+(bind (x y z) (get_result()))
+; => auto [x, y, z] = get_result();
 ```
 
-## 七、if constexpr（C++17）
+---
+
+## 七、if constexpr（C++17，靠 cpp）
 
 ```lisp
+(include <type_traits>)
+(include <iostream>)
+(using-namespace std)
+
 (template ((typename T))
   (function process ((T x)) -> void
-    (cpp "if constexpr (std::is_integral<T>::value) {")
-    (<< #:std::cout "int: " x #:std::endl)
+    (cpp "if constexpr (std::is_integral_v<T>) {")
+    (<< cout "integer: " x endl)
+    (cpp "} else if constexpr (std::is_floating_point_v<T>) {")
+    (<< cout "float: " x endl)
     (cpp "} else {")
-    (<< #:std::cout "other: " x #:std::endl)
+    (<< cout "other" endl)
     (cpp "}")))
-```
-目前 C-Mera 沒有 `if-constexpr` 專門巨集，用 `cpp "..."` 嵌。要漂亮：自己寫一個 macro 把 `(if-constexpr cond then else)` 展開為上述字串。
 
-## 八、concept / requires（C++20）
+(function main () -> int
+  (process 42)      ; integer: 42
+  (process 3.14)    ; float: 3.14
+  (process "hi")    ; other
+  (return 0))
+```
+
+想要漂亮的 sexp 版本，自己包一個 macro：
 
 ```lisp
+(defmacro if-constexpr (cond-str then &optional else)
+  (if else
+      `(progn
+         (cpp ,(format nil "if constexpr (~a) {" cond-str))
+         ,then
+         (cpp "} else {")
+         ,else
+         (cpp "}"))
+      `(progn
+         (cpp ,(format nil "if constexpr (~a) {" cond-str))
+         ,then
+         (cpp "}"))))
+
+;; 使用
+(template ((typename T))
+  (function show ((T x)) -> void
+    (if-constexpr "std::is_integral_v<T>"
+      (<< cout "int: " x endl)
+      (<< cout "other: " x endl))))
+```
+
+---
+
+## 八、concepts（C++20，靠 cpp）
+
+```lisp
+(include <concepts>)
+(include <iostream>)
+(using-namespace std)
+
+;; 定義 concept（用 cpp）
 (cpp "template<typename T> concept Numeric = std::is_arithmetic_v<T>;")
 
+;; 在 template 裡使用 requires
 (template ((typename T))
   (function add ((T a) (T b)) -> T
     (cpp "requires Numeric<T>")
     (return (+ a b))))
-```
-同樣是 `cpp` 嵌碼。要純 sexp 寫法目前沒有。
 
-## 九、Lambda 捕獲進階
-
-```lisp
-;; C++14 init-capture (move)
-(decl ((auto f = (lambda-function ((= ptr (funcall #:std::move uptr))) () 
-                    -> void
-                    (ptr->work)))))
-```
-對應 `[ptr = std::move(uptr)]() { ptr->work(); }`。捕獲列表的元素 `(= ptr (move uptr))` 會被 C-Mera 的 `make-declaration-node` 當成初始化宣告處理。
-
-## 十、模板實務：policy-based design
-
-```lisp
-(template ((typename T) (typename Policy))
-  (class Container ()
-    (private
-     (decl ((Policy policy))))
-    (public
-     (function add ((const T& x)) -> void
-       (funcall policy.check x)
-       ...))))
-
-(class StrictPolicy ()
-  (public
-   (template ((typename T))
-     (function check ((const T& x)) -> void
-       (if (funcall x.invalid) (throw (runtime_error "bad")))))))
-
-(typedef (instantiate Container (int) (StrictPolicy)) SafeIntBag)
+(function main () -> int
+  (<< cout (add 1 2) endl)         ; 3
+  (<< cout (add 1.5 2.5) endl)     ; 4
+  ; (add "a" "b")  <- 編譯錯誤，string 不是 Numeric
+  (return 0))
 ```
 
-## 十一、終極技巧：用 Lisp 把 C++ 醜陋部分包掉
+---
 
-如果某段 C++ 在 C-Mera 裡寫得很醜（例如 variadic template、fold expression、complex SFINAE），**寫 Lisp 巨集產生整段字串**再交給 `cpp`：
+## 九、終極技巧：用 Lisp macro 包裝醜陋的 C++ 部分
+
+C-Mera 最強的心法：**sexp 寫起來醜的地方，就用 Lisp macro 產生字串，再交給 cpp**。
+
+範例：`std::variant`（C++17）
 
 ```lisp
 (defmacro define-variant (name &rest types)
   (let ((type-list (format nil "~{~a~^, ~}" types)))
     `(cpp ,(format nil "using ~a = std::variant<~a>;" name type-list))))
 
-(define-variant Value int double "std::string" bool)
-;; => using Value = std::variant<int, double, std::string, bool>;
+(define-variant Value "int" "double" "#:std::string" "bool")
+; => using Value = std::variant<int, double, std::string, bool>;
 ```
 
-這個心法可以總結成一句話：**C-Mera 的 sexp 不是要打贏 C++ 的語法，而是要讓你在外面套一層 Lisp 去控制 C++ 程式碼的生成**。sexp 醜的地方就用 macro 包，macro 不方便就用 `cpp` 原樣嵌；兩把工具合起來幾乎沒有寫不出來的東西。
+範例：fold expression
 
-## 十二、調試與建議流程
+```lisp
+(defmacro fold-sum (&rest args)
+  (let ((args-str (format nil "~{~a~^, ~}" args)))
+    `(cpp ,(format nil "(~a)" args-str))))   ; 需要手動補 ... 語法
+```
 
-1. 先用 `cpp "..."` 把你要的 C++ 原封不動丟進去跑通。
-2. 跑通後，把變動部分逐步改回 sexp / template。
-3. 覺得 sexp 寫太醜，退一步用 `defmacro` 把它包起來（給自己用，不是給別人看）。
-4. 最後檢查 `cm c++ file.lisp`（不加 `-o`）的輸出 C++ 是不是你預期的樣子。
+範例：`static_assert`
 
-這樣的流程比「一開始就想用 sexp 寫完」輕鬆很多，而且保留所有現代 C++ 特性的可能性。
+```lisp
+(defmacro static-assert-eq (a b msg)
+  `(cpp ,(format nil "static_assert(~a == ~a, \"~a\");" a b msg)))
+
+(static-assert-eq "sizeof(int)" 4 "int must be 4 bytes")
+; => static_assert(sizeof(int) == 4, "int must be 4 bytes");
+```
+
+---
+
+## 十、調試與建議流程
+
+1. **先用 `cpp "..."` 把目標 C++ 跑通**，不要一開始就想用 sexp 寫。
+2. **確認能跑後，把改動部分逐步換回 sexp**。
+3. **sexp 太醜就包成 macro**（給自己用，不是對外 API）。
+4. **最後驗證**：`cm c++ file.lisp`（不加 `-o`）看輸出的 C++ 是不是預期的。
+
+這個「cpp → sexp → macro」的遞進流程，比「一開始就想用純 sexp 寫完所有現代 C++」輕鬆很多，且幾乎沒有寫不出來的東西。
