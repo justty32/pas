@@ -14,4 +14,5 @@
 - 2026-05-12: 建立 Python API 使用指南 (`tutorial/python_api_guide.md`)，涵蓋訓練 (DFC)、推論 (HailoRT Python) 及 GStreamer 整合。
 - 2026-05-12: [修正] 深入檢查 codebase 後，修正 Python API 指南。明確區分了「PC 訓練/導出」與「設備端推論」的職責，並補充了 CLIP 專案特有的權重提取工作流。
 - 2026-05-12: 建立 HailoRT Python API 實戰教學 (`tutorial/hailort_python_tutorial.md`)，提供同步與非同步推論範例。
-
+- 2026-05-25: 重新啟動分析，補寫 Level 1 總覽 (`architecture/level1_overview.md`)，涵蓋三大子模組架構、Stage-based Pipeline 與配置系統。
+- 2026-05-25: 研究 GRU ONNX 對 Hailo DFC 的支援情況，確認 fused GRU 算子不支援，整理三條迂迴路線於 `answers/gru_onnx_support.md`。
