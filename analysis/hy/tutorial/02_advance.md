@@ -30,8 +30,8 @@ Hy 的函數支援 Python 的所有參數特性（默認值、*args, **kwargs）
 (defn add [a b]
   (+ a b))
 
-;; 帶有默認參數與可變參數
-(defn complex-func [x [y 10] &rest args &kwargs kwargs]
+;; 帶有默認參數與可變參數（Hy 1.x：#* 取代 &rest、#** 取代 &kwargs）
+(defn complex-func [x [y 10] #* args #** kwargs]
   (print f"x: {x}, y: {y}")
   (print f"其餘位置參數: {args}")
   (print f"關鍵字參數: {kwargs}"))
