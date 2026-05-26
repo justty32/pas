@@ -76,13 +76,13 @@
 - **結構**：`index.html`（入口頁，含頂部導覽列 + 卡片連結）＋ 各主題 `*.html` ＋ 共用 `_shared.css`（同一單位共用一份）。
 - **連結**：以相對路徑連回同層或上層的 .md，讓使用者能在導覽頁與原始文件間往返。
 - **觸發時機**：使用者要求，或 Agent 判斷 .md 已多到造成認知負擔時主動生成／更新。
-- **參考範例**：`others/ai_core/html/`（`index.html` + 主題頁 + `_shared.css` 的完整實作）。
+- **參考範例**：`analysis/c-mera/html/`（`index.html` + 主題頁 + `_shared.css` 的完整實作）。
 
 ### 7. 圖表呈現（架構圖／流程圖）
 **禁止用 ASCII art 畫框線圖**。本工作區內容以繁體中文為主，全形字與框線字元（`─│┌┐`）寬度不一致，等寬字體也無法對齊，且 Agent 生成時極易算錯字元數導致圖形錯亂。改用語意化（不靠字元對齊）方式：
 
 - **`.md` 內（真相層）**：首選 **Mermaid** 程式碼塊（` ```mermaid `，以語法描述節點與連線，多數 Markdown 檢視器可渲染）；簡單關係改用**巢狀列點**或 **Markdown 表格**。
-- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現視覺化分層架構，沿用 `others/ai_core/html/_shared.css` 既有類別（卡片 `.card` + `.card-accent-*`、格線 `.g2`/`.g3`/`.g4`、區段 `.section`）；需要流程連線時於 html 內嵌 Mermaid 或用箭頭元素串接卡片。
+- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現視覺化分層架構，沿用 `analysis/c-mera/html/_shared.css` 既有類別（卡片 `.card` + `.card-accent-*`、格線 `.g2`/`.g3`/`.g4`、區段 `.section`）；需要流程連線時於 html 內嵌 Mermaid 或用箭頭元素串接卡片。
 
 ## 專案遷移與分析進度表 (Migration & Analysis Progress)
 

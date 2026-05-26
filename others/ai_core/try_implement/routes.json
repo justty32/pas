@@ -1,7 +1,0 @@
-{
-  "routes": {
-    "upper": {"path": "funcs/upper.py", "type": "exec"},
-    "c_lint": {"path": "funcs/c_linter.sh", "type": "exec"},
-    "py_lint": {"path": "funcs/py_linter.sh", "type": "exec"}
-  }
-}

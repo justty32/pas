@@ -85,7 +85,7 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 **禁止用 ASCII art 畫框線圖**。內容以繁體中文為主，全形字與框線字元寬度不一致，等寬字體也無法對齊，且 Agent 生成時極易算錯字元數導致圖形錯亂。改用語意化（不靠字元對齊）方式：
 
 - **`.md` 內（真相層）**：首選 **Mermaid** 程式碼塊（` ```mermaid `）；簡單關係改用巢狀列點或 Markdown 表格。
-- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現分層架構，沿用 `others/ai_core/html/_shared.css` 的 `.card` / `.card-accent-*` / `.g2`–`.g4` / `.section` 等類別；流程連線於 html 內嵌 Mermaid 或用箭頭元素串接。
+- **html 導覽層（呈現層）**：用 **CSS 分層卡片**呈現分層架構，沿用 `analysis/c-mera/html/_shared.css` 的 `.card` / `.card-accent-*` / `.g2`–`.g4` / `.section` 等類別；流程連線於 html 內嵌 Mermaid 或用箭頭元素串接。
 
 ---
 
@@ -205,7 +205,7 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 - **結構**：`index.html`（入口頁，含頂部導覽列 + 卡片連結）＋ 各主題 `*.html` ＋ 共用 `_shared.css`。
 - **連結**：以相對路徑連回同層或上層的 .md，讓使用者能在導覽頁與原始文件間往返。
 - **觸發時機**：使用者要求，或 Agent 判斷 .md 已多到造成認知負擔時主動生成／更新。
-- **參考範例**：`others/ai_core/html/`。
+- **參考範例**：`analysis/c-mera/html/`。
 
 ---
 

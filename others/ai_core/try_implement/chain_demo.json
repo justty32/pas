@@ -1,7 +1,0 @@
-{
-  "name": "demo",
-  "stages": [
-    {"path": "funcs/upper.py", "type": "exec"},
-    {"path": "funcs/reverse.py", "type": "exec"}
-  ]
-}
