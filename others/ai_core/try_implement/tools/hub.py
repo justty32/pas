@@ -143,6 +143,7 @@ def render_md(skills: list[dict]) -> str:
 
 def main() -> int:
     ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
 
     p = argparse.ArgumentParser(prog="hub", description="把函式生態轉成給 LLM 的 skill 清單")
     p.add_argument("--scan", required=True, help="要掃描的函式資料夾")

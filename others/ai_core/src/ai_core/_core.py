@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any
+from typing import Any, Callable
 
 _KNOWN_FIELDS = frozenset({
     "entries", "lifecycle", "state", "state_dirs",
     "resources", "interruptible", "guarantee", "dry_run",
+    "nondeterministic",
 })
 
 _LIFECYCLE_VALUES = frozenset({"one_shot", "persistent"})
@@ -17,30 +18,90 @@ _INTERRUPTIBLE_STRING_VALUES = frozenset({
     "safe", "unsafe", "resettable", "rollback", "resumable", "graceful",
 })
 
-_registered = False
-_metadata: dict[str, Any] = {}
+# 全域 metadata 登記表。
+# 設計（拒絕 import-time 副作用）：register* 系列只「宣告」，純粹寫入下面三個全域，
+# 不讀 sys.argv、不攔截、不 sys.exit。攔截 --metadata 由 intercept() 顯式負責。
+# 因此工具可被當 library import 而無副作用；register 應在 __main__ 區塊呼叫
+# （見 core_nature/lib_spec.md「register 的 import-time 副作用」一節）。
+_top_metadata: dict[str, Any] = {}
+_subcommands: dict[str, dict[str, Any]] = {}
+_resolver: Callable[[str, str | None], dict[str, Any] | None] | None = None
 
 
 def register(**kwargs: Any) -> None:
-    global _registered, _metadata
+    """宣告程式頂層 metadata（dispatcher 的預設行為）。
 
-    if _registered:
-        raise RuntimeError("ai_core.register() called twice; it must be called exactly once")
+    純宣告、無副作用：不讀 sys.argv、不攔截 --metadata、不 sys.exit。
+    要讓 --metadata 生效，須在 main / __main__ 顯式呼叫 intercept()。
+    可重複呼叫（last-write-wins），但慣例上每個程式只在 __main__ 呼叫一次。
+    """
+    global _top_metadata
+    _top_metadata = _validate(kwargs)
 
-    _registered = True
-    _metadata = _validate(kwargs)
-    _intercept()
+
+def register_subcommand(name: str, **kwargs: Any) -> None:
+    """宣告某個靜態子命令的 scoped metadata（可與頂層不同 lifecycle）。
+
+    解決「單一執行檔含多種 lifecycle 子命令」——頂層描述 dispatcher 的預設行為，
+    各子命令各自覆寫。intercept() 會處理 ``prog <name> --metadata``。
+    """
+    _subcommands[name] = _validate(kwargs)
 
 
-def _intercept() -> None:
-    argv = sys.argv[1:]
-    if "--metadata" not in argv:
-        return
-    if len(argv) == 1:
-        print(json.dumps(_metadata))
-        sys.exit(0)
-    print("--metadata must be used alone with no other arguments", file=sys.stderr)
-    sys.exit(1)
+def register_subcommand_resolver(
+    fn: Callable[[str, str | None], dict[str, Any] | None],
+) -> None:
+    """註冊動態子命令解析器：``fn(name, store_override) -> metadata dict | None``。
+
+    用於子命令名稱來自外部資料（如 SFC 的 tiny function 來自 store）的情形：
+    靜態登記查不到時，再交給 resolver 去查。回傳 None 表示查無此子命令。
+    """
+    global _resolver
+    _resolver = fn
+
+
+def _emit(md: dict[str, Any]) -> None:
+    print(json.dumps(md, ensure_ascii=False))
+    sys.exit(0)
+
+
+def intercept(argv: list[str] | None = None) -> None:
+    """放寬版 ``--metadata`` 攔截。命中 metadata 查詢則輸出並 ``sys.exit``；否則 return 交還控制權。
+
+    攔截規則（先吃掉可選的前導 ``--store DIR``，使 ``prog --store DIR <sub> --metadata`` 也成立）：
+
+    1. ``argv == ["--metadata"]``          → 印頂層 metadata，exit 0
+    2. ``argv == [<name>, "--metadata"]``  → 依序查 靜態子命令 → 動態 resolver；
+       命中印該 scoped metadata exit 0；查無 → stderr 報錯 exit 1
+    3. 其餘                                 → return（一般 dispatch，交回 caller）
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    work = list(argv)
+    store_override: str | None = None
+    if len(work) >= 2 and work[0] == "--store":
+        store_override = work[1]
+        work = work[2:]
+
+    # 規則 1：頂層 metadata
+    if work == ["--metadata"]:
+        _emit(_top_metadata)
+
+    # 規則 2：subcommand-scoped metadata
+    if len(work) == 2 and work[1] == "--metadata":
+        name = work[0]
+        if name in _subcommands:
+            _emit(_subcommands[name])
+        if _resolver is not None:
+            md = _resolver(name, store_override)
+            if md is not None:
+                _emit(md)
+        print(f"--metadata: unknown subcommand/function {name!r}", file=sys.stderr)
+        sys.exit(1)
+
+    # 規則 3：非 metadata 查詢 → 交還控制權
+    return
 
 
 def _validate(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -97,6 +158,9 @@ def _validate(kwargs: dict[str, Any]) -> dict[str, Any]:
 
     if "dry_run" in kwargs:
         result["dry_run"] = _validate_dry_run(kwargs["dry_run"])
+
+    if "nondeterministic" in kwargs:
+        result["nondeterministic"] = _validate_nondeterministic(kwargs["nondeterministic"])
 
     return result
 
@@ -177,3 +241,15 @@ def _validate_dry_run(v: Any) -> Any:
     if isinstance(v, dict):
         return v
     raise TypeError(f"dry_run must be bool or dict, got {type(v).__name__}")
+
+
+def _validate_nondeterministic(v: Any) -> Any:
+    # bool 形式：未認證的 LLM 留白（開機期；僅標記「此環節是隨機的」，馴化框架的觸發根）。
+    # dict 形式：證書——已認證的隨機環節。自由 key-value（沿用 §4 resources 的設計），
+    #   建議的預定義 key：model（用哪個模型）/ test_set（測試組）/ stability（認證穩定度）。
+    #   value 格式不強制、可自由擴充；validation 只確保型別正確（從粗糙到嚴整）。
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, dict):
+        return v
+    raise TypeError(f"nondeterministic must be bool or dict, got {type(v).__name__}")

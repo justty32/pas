@@ -81,6 +81,7 @@ def derive_metadata(spec: dict, base_dir: Path) -> dict:
 
 def main() -> int:
     ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
 
     p = argparse.ArgumentParser(prog="chain", description="宣告式管線：stdin 依序流過各 stage")
     p.add_argument("--spec", required=True, help="pipeline 設定檔（JSON）")

@@ -72,24 +72,23 @@ import json
 import sys
 from pathlib import Path
 
-import meta_core as meta  # Gap A/B 修法原型：放寬版 --metadata 攔截 + subcommand-scoped
-from _common import ensure_lib_importable
+from _common import ensure_ai_core_importable, ensure_lib_importable
 
+ensure_ai_core_importable()
 ensure_lib_importable()
+import ai_core as meta  # noqa: E402  # Gap A/B/F 已扶正進 _core.py：宣告/攔截拆分 + subcommand-scoped
 from lib import trace  # noqa: E402  # forge dispatch 的調用鏈追蹤
 
 
-# ====== Gap A/B 的修法（已從土法繞過改為走 meta_core 提案原型）======
-# 原本 sfc.py 必須土法繞過 ai_core.register()（只在 argv 剛好是 bare --metadata 時才呼叫，
-# 其餘自理），因為 register() 的 --metadata 攔截要求「--metadata 必須是唯一引數」，與
-# git-style 的 `sfc <fn> --metadata` 不相容。
-#
-# 現在改用 try_implement/tools/meta_core.py 這個【提案原型】：
+# ====== Gap A/B/F 的修法（已扶正進 src/ai_core/_core.py）======
+# 原本 register() 的 --metadata 攔截要求「--metadata 必須是唯一引數」，與 git-style 的
+# `sfc <fn> --metadata` 不相容（Gap A）；register 又在 import 時就讀 argv/攔截/exit（Gap F）。
+# 現在 ai_core 已採「宣告/攔截拆分」模型，sfc 直接用真 library（上方 `import ai_core as meta`）：
 #   - meta.register(...)              宣告 SFC 頂層 metadata（dispatcher，預設 one_shot）
 #   - meta.register_subcommand(...)   讓 forge 宣告成 persistent（解 Gap B：單檔多 lifecycle）
 #   - meta.register_subcommand_resolver(...)  tiny function 名稱來自 store → 動態解析
-#   - meta.intercept(argv)            一次處理所有 --metadata 變體；非查詢則交還控制權
-# 真正的 src/ai_core/_core.py 完全沒動。
+#   - meta.intercept(argv)            純宣告後顯式攔截所有 --metadata 變體；非查詢則交還控制權
+# meta_core.py 原型已功成身退並刪除。
 
 
 def _resolve_tiny_metadata(name: str, store_override: str | None) -> dict | None:

@@ -41,8 +41,6 @@ ensure_lib_importable()
 import ai_core  # noqa: E402
 from lib import trace  # noqa: E402  # dispatch 的調用鏈追蹤 + 跨 process 傳遞
 
-ai_core.register(lifecycle="one_shot", state="stateless")
-
 
 def load_routes(routes_path: Path) -> dict:
     data = json.loads(routes_path.read_text(encoding="utf-8"))
@@ -73,6 +71,10 @@ def resolve_command(target: dict, base_dir: Path) -> list[str]:
 
 
 def main() -> int:
+    # register 純宣告（無 import 副作用，A3）；intercept 顯式處理 --metadata。
+    ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
+
     parser = argparse.ArgumentParser(
         prog="router",
         description="name → 可執行物 mapping，查表後 dispatch",

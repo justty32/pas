@@ -54,10 +54,6 @@ _METADATA = {
     "resources": {"singleton": True, "consume_dimensions": ["token"]},
 }
 
-# --metadata（唯一引數時）由 library 攔截輸出
-ai_core.register(**_METADATA)
-
-
 def build_server(limit_token: float | None, backend: llm_call.Backend) -> server.NDJSONServer:
     srv = server.NDJSONServer("llm_entry_manager")
     limits = {"token": limit_token} if limit_token is not None else {}
@@ -88,6 +84,9 @@ def build_server(limit_token: float | None, backend: llm_call.Backend) -> server
 
 
 def main() -> int:
+    ai_core.register(**_METADATA)
+    ai_core.intercept()
+
     p = argparse.ArgumentParser(prog="llm_entry_manager")
     p.add_argument("--limit-token", type=float, default=None,
                    help="token 預算上限；超過後 complete 回 rate limit")

@@ -35,10 +35,10 @@ from _common import ensure_ai_core_importable
 ensure_ai_core_importable()
 import ai_core  # noqa: E402
 
-# 注意：register() 的呼叫放在 main() 裡，而非 module 頂層。
-# 原因（一個發現的缺口，見 README）：register() 在 import 時就跑 _intercept 並可能 exit，
-# 也會佔住「只能 register 一次」的全域旗標。若放頂層，其他工具（如 hub）就無法 import 本檔
-# 重用 build_index——一 import 就會觸發 register。把它移進 main() 後，本檔可當 library 被 import。
+# 注意：register() + intercept() 都放在 main() 裡，而非 module 頂層（慣例，見 lib_spec.md）。
+# 現行 ai_core 採「宣告/攔截拆分」：register* 已無 import 副作用，但頂層 metadata 是 module-global
+# 單例；若放頂層，其他工具（如 hub）import 本檔重用 build_index 時，會與自己的宣告互相覆寫。
+# 留在 main() 內＝只在「確定以腳本身分執行」時宣告，import 重用完全無副作用。
 
 
 # 視為可執行的副檔名（即使沒有 exec 權限位元，這些也嘗試呼叫）
@@ -137,8 +137,9 @@ def render_markdown(index: dict) -> str:
 
 
 def main() -> int:
-    # --metadata 攔截需在 argparse 之前；register 只攔截「--metadata 為唯一引數」的情況
+    # register 純宣告（無 import 副作用，A3）；intercept 顯式處理 --metadata（須在 argparse 之前）。
     ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
 
     parser = argparse.ArgumentParser(
         prog="indexer",

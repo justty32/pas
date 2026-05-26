@@ -51,8 +51,6 @@ from _common import ensure_ai_core_importable
 ensure_ai_core_importable()
 import ai_core  # noqa: E402
 
-ai_core.register(lifecycle="one_shot", state="stateless")
-
 
 def resolve_command(target: dict, base_dir: Path) -> list[str]:
     """與 router.resolve_command 同邏輯（spike 不抽共用模組，見 README 缺口回報）。"""
@@ -91,6 +89,9 @@ def pick_target(spec: dict, value: str | None) -> dict | None:
 
 
 def main() -> int:
+    ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
+
     parser = argparse.ArgumentParser(
         prog="switch",
         description="條件式 dispatcher：依輸入條件路由到不同目標",

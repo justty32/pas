@@ -18,6 +18,11 @@
 | **執行保證** | 對系統狀態的承諾，獨立於執行次數或中途失敗 | idempotent、transactional（ACID）、dry-run |
 | **組合模式** | 執行單元如何與其他單元構成更大的結構 | fan-out/fan-in、proxy/wrapper、hook/callback、agentic loop |
 | **環境模式** | 執行環境是預先存在還是動態建立與銷毀 | 固定環境、ephemeral/JIT |
+| **確定性 / 隨機性** | 同輸入是否同輸出；隨機環節（LLM）的認證狀態 | deterministic（預設）、nondeterministic（未認證 / 帶證書）；見 [`axis_spec.md §9`](axis_spec.md) |
+
+> 「確定性 / 隨機性」是繼前八軸之後**新增的第九軸**。前八軸隱含「函式是確定性的」前提，無一能描述
+> LLM 這種天生隨機的函式，且此性質無法由任何既有軸隱含——故獨立成軸。它同時承載治理原則的證書
+> （見 `roadmap.md §3.4`）。詳見 `axis_spec.md §9` 與 `lib_spec.md §9`。
 
 同一個執行單元可以在多個軸上各有描述，例如：
 - `terraform apply`：one-shot（生命週期）× idempotent + transactional（執行保證）× 固定環境（環境模式）

@@ -15,10 +15,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import ai_core  # noqa: E402
 
-ai_core.register(lifecycle="one_shot", state="stateless")
-
 
 def main() -> int:
+    ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
+
     text = sys.stdin.read().rstrip("\n")
     sys.stdout.write(text[::-1])
     return 0

@@ -5,8 +5,10 @@
 全程只用 **Python 3.11+ 標準庫**（argparse / json / subprocess / pathlib / urllib…），
 無任何外部相依，遵守 ai_core 的設計哲學（KISS / Lightweight / No wheel-remake / Least dependency）。
 
-> ⚠️ 範圍：本資料夾下所有東西都是提案 / 實驗。**真正的 `src/ai_core/_core.py` 與
-> `core_nature/` 規範一行都沒動。** 任何要扶正進規範 / library 的決策，由使用者定奪。
+> ⚠️ 範圍：本資料夾下多數東西仍是提案 / 實驗。**例外（2026-05-26 已扶正）**：A1/A2/A3
+> （register 的「宣告／攔截拆分」）與 C（`nondeterministic` 第九軸）已**進入** `src/ai_core/_core.py`
+> 與 `core_nature/` 規範——見 [`DECISIONS.md`](DECISIONS.md) 頂部「✅ 已收斂」。其餘待扶正項仍由
+> 使用者定奪。
 
 涵蓋三大塊：
 
@@ -30,8 +32,8 @@
 | `tools/indexer.py` | **Indexer**。掃描資料夾的可執行檔，逐一呼叫 `--metadata`，彙整成靜態索引（JSON / markdown）。One-shot、stateless。 |
 | `tools/router.py` | **Router**（thinking_sfc Layer 1b）。讀 JSON 設定檔，name → 可執行物 mapping，subprocess dispatch（透傳 stdin/stdout/exit code）。One-shot、stateless。 |
 | `tools/switch.py` | **Switch**。有條件邏輯的 router；依「switch 變數值」走規則表分支到不同 target。One-shot、stateless。 |
-| `tools/sfc.py` | **SFC（Small Function Center）**。Layer 0（store）/ 1a（intake）/ 1b（router）/ 2（forge server）/ **3（動態 add/remove/persist）/ 4（shell-kind timeout + 標準錯誤封套）**。git-style subcommand CLI。**已改用 `meta_core` 解 Gap A/B；forge dispatch 已 trace-aware。** |
-| `tools/meta_core.py` | **Gap A/B 修法提案原型**。放寬版 `--metadata` 攔截 + subcommand-scoped metadata（`register` / `register_subcommand` / `register_subcommand_resolver` / `intercept`）。建在真 library 之上，不改它。 |
+| `tools/sfc.py` | **SFC（Small Function Center）**。Layer 0（store）/ 1a（intake）/ 1b（router）/ 2（forge server）/ **3（動態 add/remove/persist）/ 4（shell-kind timeout + 標準錯誤封套）**。git-style subcommand CLI。**已改接真 `ai_core`（宣告/攔截拆分，`import ai_core as meta`）解 Gap A/B/F；forge dispatch 已 trace-aware。** |
+| ~~`tools/meta_core.py`~~ | **已刪除（2026-05-26）**。其「放寬攔截 + `register_subcommand` + resolver」已扶正進 `src/ai_core/_core.py`，原型功成身退。 |
 | `tools/hub.py` | **Function Hub**（規範未定，本版自定義）。掃描函式 → 轉成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。 |
 | `tools/llm_entry_manager.py` | **LLM Entry Manager**（CLAUDE.md 元件 1）。singleton 資源 = persistent server（lib/server）+ consume rate（lib/singleton）+ mock backend（lib/llm_call）。 |
 | `tools/chain.py` | **chain**（組合維度的 CLI）。用 JSON 宣告 pipeline，stdin 依序流過各 stage；`--derive` 用 compose_meta 從各 stage 的 `--metadata` 推導複合 metadata。串起 call+compose+trace+compose_meta。 |
@@ -82,9 +84,9 @@
 ```bash
 cd try_implement
 
-# 兩套煙霧測試（合計 104 斷言）
-python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager（57）
-python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta（63）
+# 兩套煙霧測試（合計 140 斷言）
+python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager（72）
+python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta（68）
 
 # --- 各工具單獨玩 ---
 
@@ -232,9 +234,10 @@ spike 等級的薄防護（非沙箱），明示「tiny function 不該亂搞」
 
 ## 過程中發現的設計缺口 / 與既有規範衝突（最重要，供細調規範）
 
-> **✅ 已做提案原型修法**：`tools/meta_core.py` 實作了放寬版攔截 + subcommand-scoped
-> metadata，`sfc.py` 已改用它。`sfc <fn> --metadata`、`sfc forge --metadata` 都正常運作。
-> 真 `_core.py` 未動。下方為原始缺口描述與建議，供使用者決定是否扶正。
+> **✅ 已扶正進 `_core.py`（2026-05-26）**：放寬版攔截 + subcommand-scoped metadata（採「宣告／
+> 攔截拆分」模型）已納入真 `src/ai_core/_core.py` 與 `lib_spec.md`，`meta_core.py` 原型已刪、
+> `sfc.py` 改接真 library。`sfc <fn> --metadata`、`sfc forge --metadata` 都正常運作。下方為原始
+> 缺口描述，留作脈絡。
 
 ### A. `register()` 的 `--metadata` 攔截策略與 git-style subcommand CLI 不相容【阻塞級】
 
@@ -254,8 +257,8 @@ spike 等級的薄防護（非沙箱），明示「tiny function 不該亂搞」
 `register_subcommand(name, **kwargs)`，或攔截邏輯放寬為「`--metadata` 出現在最後且前面只有
 subcommand 路徑」。目前每個 dispatcher 都得自己繞過 library，違背「library 統一處理 metadata」的初衷。
 
-> **✅ 已做提案原型修法**：`meta_core.register_subcommand("forge", lifecycle="persistent")`
-> 讓 forge 子命令宣告與頂層不同的 lifecycle。`sfc forge --metadata` 現在回 `persistent`、
+> **✅ 已扶正進 `_core.py`（2026-05-26）**：`ai_core.register_subcommand("forge", lifecycle="persistent")`
+> 讓 forge 子命令宣告與頂層不同的 lifecycle。`sfc forge --metadata` 回 `persistent`、
 > `sfc --metadata` 回 `one_shot`。下方為原始缺口描述。
 
 ### B. 單一程式有多種 lifecycle 時，metadata 是單值，難以表達
@@ -311,6 +314,10 @@ in-process 換來速度，卻失去 subprocess 的天然隔離邊界。規範需
 對 in-process 函式的適用範圍（可能只能對 shell-kind 生效，或 python-kind 需退回 subprocess）。
 
 ### F. `register()` 在 module 頂層呼叫，使工具無法被當 library import（新發現）
+
+> **✅ 已根治（2026-05-26）**：拆分模型讓 `register*` 系列變成純宣告、零副作用（不讀 argv、不
+> 攔截、不 exit），且去掉「只能 register 一次」的全域旗標——import 即安全。`lib_spec.md` 另補
+> 「register 應在 `__main__`/`main()` 呼叫」的慣例。下方為原始缺口描述，留作脈絡。
 
 寫 `hub.py` 時要重用 `indexer.py` 的 `build_index()`，但 `indexer.py` 原本在 module 頂層
 呼叫 `ai_core.register(...)`——一 `import indexer` 就會：(1) 跑 `_intercept()` 讀 `sys.argv`、

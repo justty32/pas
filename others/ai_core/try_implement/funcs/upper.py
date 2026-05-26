@@ -18,10 +18,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import ai_core  # noqa: E402
 
-ai_core.register(lifecycle="one_shot", state="stateless")
-
 
 def main() -> int:
+    ai_core.register(lifecycle="one_shot", state="stateless")
+    ai_core.intercept()
+
     parser = argparse.ArgumentParser(prog="upper", description="轉大寫")
     parser.add_argument("--input", help="輸入檔；未指定時讀 stdin")
     args = parser.parse_args()
