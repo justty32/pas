@@ -16,3 +16,8 @@
 - 2026-05-26（修訂）：更新 docs/01 §2 reader 段（quoty 階段 cook）與 §6 索引；更新 CLAUDE.md 開發約定對齊新方向。
 - 2026-05-26（修訂）：src/ 骨架補 `generic.hy`、`syntax/quoty.hy`；拆 `passes/blocker.hy` 為 `if_blocker.hy` + `decl_blocker.hy`。檔案總計 38。
 - 2026-05-26（修訂）：設計階段完成（修訂版），等待使用者再次審閱。
+- 2026-05-26（實作起步）：使用者核可後開工。建 venv + editable install（Hy 1.3.0）；套件根改 `__init__.py`（import hy bootstrap）。
+- 2026-05-26（實作）：完成 `generic.hy`（GenericFunction + defgeneric/defmethod，:before/:after/:self 方法組合），smoke test 通過（三限定詞順序、:self 接管正確）。踩坑：迴圈變數勿命名 `fn`、`+` 不可當值傳（改 `sum`）。
+- 2026-05-26（實作）：完成 `ast/base.hy`（Node/Expression/Statement/Leaf/NodeList/Proxy + 五件套定義宏），smoke test 通過。關鍵修正：槽名改用 `hy.mangle`（與 kwarg/屬性存取一致）；base 用裸符號（hy.I 無法用字串組 Symbol）。
+- 2026-05-26（實作）：完成 `ast/c_nodes.hy`（全套 ~30 種 C 節點），載入與建構 smoke test 通過。
+- 2026-05-26（實作）：進度存於 `progress.md`（含構建指令、剩餘 Phase、5 個關鍵踩坑）。Phase 3 剩 traverser/passes、Phase 4-6 待續。
