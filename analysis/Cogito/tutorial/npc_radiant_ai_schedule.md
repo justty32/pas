@@ -109,17 +109,15 @@ func get_current_scheduled_state() -> String:
 
 ### 掛載到 NPC 場景
 
-```
-CogitoNPC (CharacterBody3D + cogito_npc.gd)
-├── NPC_State_Machine
-│   ├── idle
-│   ├── chase
-│   ├── attack
-│   ├── work       ← 新增
-│   └── sleep      ← 新增
-└── ScheduleComponent (+ schedule_component.gd)
-    └── Inspector: npc_state_machine = ../NPC_State_Machine
-```
+- **CogitoNPC** (CharacterBody3D + cogito_npc.gd)
+  - **NPC_State_Machine**
+    - idle
+    - chase
+    - attack
+    - work（新增）
+    - sleep（新增）
+  - **ScheduleComponent** (+ schedule_component.gd)
+    - Inspector: npc_state_machine = ../NPC_State_Machine
 
 ---
 
@@ -293,15 +291,13 @@ func _play_work_animation() -> void:
 
 在場景中放置導航標記，並加入對應群組：
 
-```
-Scene
-├── CogitoNPC
-│   └── ScheduleComponent
-├── BedMarker (Marker3D)           ← 加入群組 "Bed"
-│   └── (位於床頭，Y 偏移與 NPC 腳底對齊)
-└── WorkstationMarker (Marker3D)   ← 加入群組 "WorkStation"
-    └── (位於鐵砧或工作台前)
-```
+- **Scene**
+  - **CogitoNPC**
+    - ScheduleComponent
+  - **BedMarker** (Marker3D)（加入群組 "Bed"）
+    - 位於床頭，Y 偏移與 NPC 腳底對齊
+  - **WorkstationMarker** (Marker3D)（加入群組 "WorkStation"）
+    - 位於鐵砧或工作台前
 
 **群組加入方式**：選取 Marker3D → Node 面板 → Groups → 輸入群組名稱。
 

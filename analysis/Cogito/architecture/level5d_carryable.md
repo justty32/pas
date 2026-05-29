@@ -182,8 +182,7 @@ PIC.Get_Look_Direction():
 
 ```
 CarryableComponent 繼承鏈：
-  InteractionComponent
-    └─ CarryableComponent
+  InteractionComponent → CarryableComponent
 
 // interact() 入口（玩家按下互動鍵）
 interact(PIC):

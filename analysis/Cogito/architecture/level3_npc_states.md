@@ -5,16 +5,15 @@
 **位置**：`addons/cogito/CogitoNPC/cogito_npc.gd`，繼承 `CharacterBody3D`。
 
 ### 節點結構
-```
-CogitoNPC (CharacterBody3D)
-├── NavigationAgent3D        ← 路徑規劃
-├── AnimationTree            ← 動畫混合樹（Movement blend + UpperBodyState）
-├── LookAtArea (Area3D)      ← 定期偵測玩家是否在視野範圍內
-├── Rig/Skeleton3D/LookAtModifier3D  ← 頭部朝向玩家
-├── VelocityDebugShape       ← 除錯用速度視覺化
-├── FootstepPlayer           ← 動態腳步音效
-└── NPC_State_Machine        ← 狀態機節點（含各狀態子節點）
-```
+
+- **CogitoNPC** (CharacterBody3D)
+  - **NavigationAgent3D** — 路徑規劃
+  - **AnimationTree** — 動畫混合樹（Movement blend + UpperBodyState）
+  - **LookAtArea** (Area3D) — 定期偵測玩家是否在視野範圍內
+  - **Rig/Skeleton3D/LookAtModifier3D** — 頭部朝向玩家
+  - **VelocityDebugShape** — 除錯用速度視覺化
+  - **FootstepPlayer** — 動態腳步音效
+  - **NPC_State_Machine** — 狀態機節點（含各狀態子節點）
 
 ### 關鍵共用方法
 
@@ -289,27 +288,27 @@ _state_enter():
 
 ## 四、NPC 狀態轉換圖
 
-```
-         ┌─────────────────────────────────────┐
-         ▼                                     │
-      [idle]                            [load_previous_state]
-    等待 3 秒後                                 ▲
-         │                                     │
-         ▼                              [switch_stance]
-  [patrol_on_path]                    （瞬時，立即返回）
-  沿路點循環移動
-         │                                     
-  （attention_target 設置時，外部呼叫 goto("chase")）
-         │
-         ▼
-      [chase]
-   CHASING → 追擊
-   WAITING → 目標不可達
-   CAUGHT  ──────────────────────────────────►[attack]
-   LOST    ── load_previous_state() ──────►[patrol/idle]   攻擊完成
-                                                      │  goto(state_after_attack)
-                                                      ▼
-                                                   [chase]
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> patrol_on_path : 等待 3 秒後自動跳轉
+
+    patrol_on_path --> chase : attention_target 設置時<br/>外部呼叫 goto("chase")
+
+    state chase {
+        [*] --> CHASING
+        CHASING --> WAITING : 目標不可達
+        WAITING --> CHASING : 目標重新可達
+        CHASING --> CAUGHT : 進入攻擊距離
+        WAITING --> LOST : giveup_chase_time 到期
+    }
+    chase --> attack : CAUGHT
+    chase --> patrol_on_path : LOST → load_previous_state()
+    chase --> idle : LOST → load_previous_state()
+
+    attack --> chase : 攻擊完成<br/>goto(state_after_attack)
+
+    switch_stance --> switch_stance : 瞬時狀態<br/>進入後立即 load_previous_state() 返回前一狀態
 ```
 
 ---

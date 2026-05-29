@@ -2,22 +2,20 @@
 
 ## 一、節點層級結構
 
-```
-CogitoPlayer (CharacterBody3D)
-  ├─ Body (Node3D)                    ← 水平旋轉（Y 軸，滑鼠左右）
-  │   └─ Neck (Node3D)               ← 自由視角旋轉（Y 軸）
-  │       └─ Head (Node3D)           ← 蹲伏/頭部偏移
-  │           └─ Eyes (Node3D)       ← 頭部晃動 + 視角傾斜
-  │               ├─ Camera (Camera3D)
-  │               └─ AnimationPlayer ← jump/landing/roll 動畫
-  ├─ StandingCollisionShape
-  ├─ CrouchingCollisionShape
-  ├─ CrouchRayCast                   ← 偵測頭頂是否有障礙（不可站起）
-  ├─ SlidingTimer
-  ├─ JumpCooldownTimer               ← 防連跳
-  ├─ FootstepPlayer (FootstepSurfaceDetector)
-  └─ NavigationAgent3D               ← 離座位後尋找安全落點用
-```
+- **CogitoPlayer** (CharacterBody3D)
+  - **Body** (Node3D) — 水平旋轉（Y 軸，滑鼠左右）
+    - **Neck** (Node3D) — 自由視角旋轉（Y 軸）
+      - **Head** (Node3D) — 蹲伏/頭部偏移
+        - **Eyes** (Node3D) — 頭部晃動 + 視角傾斜
+          - **Camera** (Camera3D)
+          - **AnimationPlayer** — jump/landing/roll 動畫
+  - **StandingCollisionShape**
+  - **CrouchingCollisionShape**
+  - **CrouchRayCast** — 偵測頭頂是否有障礙（不可站起）
+  - **SlidingTimer**
+  - **JumpCooldownTimer** — 防連跳
+  - **FootstepPlayer** (FootstepSurfaceDetector)
+  - **NavigationAgent3D** — 離座位後尋找安全落點用
 
 ---
 
@@ -391,28 +389,25 @@ for col_idx in get_slide_collision_count():
 
 ## 十五、移動系統整體流程圖
 
-```
-_physics_process(delta)
-  │
-  ├─ is_sitting → _process_on_sittable() [return]
-  ├─ on_ladder  → _process_on_ladder()   [return]
-  │
-  ├─ input_dir（WASD）
-  ├─ Crouch（toggle/hold + raycast 防站起）
-  │    └─ Slide（sprint + crouch + moving → sliding_timer）
-  │
-  ├─ Speed lerp：CROUCH → WALK → SPRINT（bunny_hop 累積）
-  ├─ Headbob wiggle（wiggle_index 三角函數）
-  ├─ Free Look（neck vs body 旋轉分離）
-  │
-  ├─ 重力（落地清零，空中累積）
-  ├─ 跳躍（jump_timer 防連跳 + stamina 消耗 + slide_jump_mod）
-  ├─ 方向 lerp（地面 LERP_SPEED，空中 AIR_LERP_SPEED）
-  │
-  ├─ step_check（三次 body_test_motion：上→前→下）
-  │    └─ 成功 → 偏移 origin + 平滑 head offset
-  │
-  ├─ velocity = main_velocity; move_and_slide()
-  ├─ RigidBody 推力
-  └─ 腳步聲（wiggle_vector.y 觸發節奏）
+```mermaid
+flowchart TD
+    P["_physics_process(delta)"]
+    P --> SIT{"is_sitting?"}
+    SIT -- 是 --> SITP["_process_on_sittable() [return]"]
+    SIT -- 否 --> LAD{"on_ladder?"}
+    LAD -- 是 --> LADP["_process_on_ladder() [return]"]
+    LAD -- 否 --> IN["input_dir（WASD）"]
+    IN --> CR["Crouch（toggle/hold + raycast 防站起）"]
+    CR --> SL["Slide（sprint + crouch + moving → sliding_timer）"]
+    SL --> SP["Speed lerp：CROUCH → WALK → SPRINT（bunny_hop 累積）"]
+    SP --> HB["Headbob wiggle（wiggle_index 三角函數）"]
+    HB --> FL["Free Look（neck vs body 旋轉分離）"]
+    FL --> GR["重力（落地清零，空中累積）"]
+    GR --> JP["跳躍（jump_timer 防連跳 + stamina 消耗 + slide_jump_mod）"]
+    JP --> DL["方向 lerp（地面 LERP_SPEED，空中 AIR_LERP_SPEED）"]
+    DL --> ST["step_check（三次 body_test_motion：上→前→下）"]
+    ST --> STOK["成功 → 偏移 origin + 平滑 head offset"]
+    STOK --> MV["velocity = main_velocity; move_and_slide()"]
+    MV --> RB["RigidBody 推力"]
+    RB --> FS["腳步聲（wiggle_vector.y 觸發節奏）"]
 ```

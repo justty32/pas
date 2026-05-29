@@ -103,7 +103,7 @@ func action_secondary(is_released: bool) -> void:
         animation_player.play("block_pose")  # 需在 AnimationPlayer 中建立此動畫
 
 
-# ── 輕擊 ──────────────────────────────────────
+# === 輕擊 ===
 func _start_light_attack() -> void:
     if uses_stamina and player_stamina:
         if player_stamina.value_current < light_attack_cost:
@@ -114,7 +114,7 @@ func _start_light_attack() -> void:
     audio_stream_player_3d.play()
 
 
-# ── 重擊 ──────────────────────────────────────
+# === 重擊 ===
 func _start_power_attack() -> void:
     if uses_stamina and player_stamina:
         if player_stamina.value_current < power_attack_cost:
@@ -224,19 +224,17 @@ func decrease_attribute(attribute_name: String, value: float):
 
 ## 五、完整節點結構（wieldable_sword.tscn）
 
-```
-wieldable_sword (Node3D + wieldable_sword.gd)
-├── SwordMesh (Node3D)
-│   └── MeshInstance3D
-├── DamageArea (Area3D)           ← 掛載到 damage_area 欄位
-│   └── CollisionShape3D          ← 劍刃的碰撞形狀（長 CapsuleShape）
-├── AudioStreamPlayer3D
-└── AnimationPlayer
-    ├── swing       ← 輕擊
-    ├── heavy_attack ← 重擊（更大幅度動畫）
-    ├── block_pose  ← 格擋姿勢（靜止）
-    └── idle
-```
+- wieldable_sword (Node3D + wieldable_sword.gd)
+  - SwordMesh (Node3D)
+    - MeshInstance3D
+  - DamageArea (Area3D)　　掛載到 damage_area 欄位
+    - CollisionShape3D　　劍刃的碰撞形狀（長 CapsuleShape）
+  - AudioStreamPlayer3D
+  - AnimationPlayer
+    - swing　　輕擊
+    - heavy_attack　　重擊（更大幅度動畫）
+    - block_pose　　格擋姿勢（靜止）
+    - idle
 
 `CogitoWieldable` 基類（`cogito_wieldable.gd`）需要的 @export 欄位要在 Inspector 填寫：
 - `wieldable_mesh = SwordMesh`

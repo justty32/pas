@@ -2,21 +2,22 @@
 
 ## 一、系統架構概覽
 
-```
-InventoryItemPD（Resource .tres）    ← 物品定義
-InventorySlotPD（Resource）          ← 插槽封裝（物品 + 數量 + 位置）
-CogitoInventory（Resource）          ← 物品欄資料（槽位陣列 + 快捷槽）
-    │
-    ├─ inventory_interface.gd（Control）    ← 頂層協調器
-    │     ├─ InventoryUI.gd（格子 UI）
-    │     │     └─ Slot.gd（SlotPanel，單格）
-    │     ├─ hot_bar_inventory.gd（Hotbar）
-    │     │     └─ Slot.gd（復用）
-    │     └─ CogitoQuickslots（Node）
-    │           └─ CogitoQuickslotContainer.gd（單快捷槽）
-    │
-    └─ ExternalInventoryUI（同 InventoryUI）  ← 外部容器（箱子等）
-```
+**資料層（Resource）**
+
+- `InventoryItemPD`（Resource .tres）：物品定義
+- `InventorySlotPD`（Resource）：插槽封裝（物品 + 數量 + 位置）
+- `CogitoInventory`（Resource）：物品欄資料（槽位陣列 + 快捷槽）
+
+**UI 節點樹**
+
+- `inventory_interface.gd`（Control）：頂層協調器
+  - `InventoryUI.gd`（格子 UI）
+    - `Slot.gd`（SlotPanel，單格）
+  - `hot_bar_inventory.gd`（Hotbar）
+    - `Slot.gd`（復用）
+  - `CogitoQuickslots`（Node）
+    - `CogitoQuickslotContainer.gd`（單快捷槽）
+  - `ExternalInventoryUI`（同 `InventoryUI`）：外部容器（箱子等）
 
 ---
 

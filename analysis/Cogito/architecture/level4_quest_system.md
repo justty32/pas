@@ -2,18 +2,15 @@
 
 ## 一、系統架構概覽
 
-```
-CogitoQuestManager（Autoload Node）
-  ├─ available : AvailableQuestsGroup   ← 可接但尚未接受的任務
-  ├─ active    : ActiveQuestsGroup      ← 進行中任務
-  ├─ completed : CompletedQuestsGroup   ← 已完成任務
-  └─ failed    : FailedQuestsGroup      ← 失敗任務
-
-CogitoQuest（Resource .tres）           ← 任務資料定義
-CogitoQuestUpdater（Node3D）            ← 場景中的觸發橋接組件
-ui_quest_hud.gd（Node）                 ← 任務列表 UI
-QuestEntry（Control）                   ← 單筆任務顯示組件
-```
+- **CogitoQuestManager**（Autoload Node）
+  - `available` : AvailableQuestsGroup — 可接但尚未接受的任務
+  - `active` : ActiveQuestsGroup — 進行中任務
+  - `completed` : CompletedQuestsGroup — 已完成任務
+  - `failed` : FailedQuestsGroup — 失敗任務
+- **CogitoQuest**（Resource .tres）— 任務資料定義
+- **CogitoQuestUpdater**（Node3D）— 場景中的觸發橋接組件
+- **ui_quest_hud.gd**（Node）— 任務列表 UI
+- **QuestEntry**（Control）— 單筆任務顯示組件
 
 ---
 
@@ -77,10 +74,10 @@ update():
 
 **位置**：`QuestSystem/CustomResources/cogito_quest_group.gd`，繼承 `Node`
 
-```
-CogitoQuestGroup
-  └─ quests : Array[CogitoQuest]
+- **CogitoQuestGroup**
+  - `quests` : Array[CogitoQuest]
 
+```
 add_quest(quest)       → quests.append(quest)
 remove_quest(quest)    → quests.erase(quest)
 is_quest_inside(quest) → quest in quests
@@ -339,27 +336,18 @@ _on_quest_activated/completed/failed/updated(quest):
 
 ## 八、任務群組狀態轉移圖
 
-```
-           ┌──────────────────────────────────────┐
-           │                                      │
-        [available]                               │
-    (CogitoQuest .tres 預設狀態)                   │
-           │                                      │
-    start_quest()                                 │
-           │                                      │
-           ▼                                      │
-        [active]                                  │
-    進行中，計數器運作                             │
-           │                                      │
-     ┌─────┴──────┐                               │
-     │            │                               │
-complete_quest() fail_quest()                     │
-     │            │                               │
-     ▼            ▼                               │
- [completed]  [failed]                            │
-     │            │                               │
-     └────────────┴──── move_quest_to_group() ───►┘
-                        （可強制移動，繞過正常流程）
+```mermaid
+stateDiagram-v2
+    available : available（CogitoQuest .tres 預設狀態）
+    active : active（進行中，計數器運作）
+    completed : completed
+    failed : failed
+
+    available --> active : start_quest()
+    active --> completed : complete_quest()
+    active --> failed : fail_quest()
+    completed --> available : move_quest_to_group()（可強制移動，繞過正常流程）
+    failed --> available : move_quest_to_group()（可強制移動，繞過正常流程）
 ```
 
 ---

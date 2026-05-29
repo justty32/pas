@@ -159,7 +159,7 @@ menu_pressed.connect(abort_dialogue)
 
 ```
 場景中的 NPC 或物件
-  └─ DialogicInteraction（InteractionComponent 子類）
+  內含 DialogicInteraction（InteractionComponent 子類）
         @export dialogic_timeline : DialogicTimeline
 
 玩家按下互動鍵

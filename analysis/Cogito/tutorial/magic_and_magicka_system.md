@@ -59,19 +59,18 @@ func notify_cast() -> void:
 ### 1.3 加入玩家場景
 
 在 `cogito_player.tscn` 的 **Attributes** 容器下新增子節點：
-```
-CogitoPlayer
-└── Attributes
-    ├── Health (CogitoHealthAttribute)
-    ├── Stamina (CogitoStaminaAttribute)
-    └── Magicka (CogitoMagickaAttribute)   ← 新增
-        ├── attribute_name = "magicka"
-        ├── attribute_display_name = "Magicka"
-        ├── attribute_color = Color(0.3, 0.5, 1.0)   # 藍色
-        ├── value_max = 100
-        ├── value_start = 100
-        └── attribute_visibility = Hud  ← 自動出現在 HUD
-```
+
+- CogitoPlayer
+  - Attributes
+    - Health (CogitoHealthAttribute)
+    - Stamina (CogitoStaminaAttribute)
+    - Magicka (CogitoMagickaAttribute)   ← 新增
+      - attribute_name = "magicka"
+      - attribute_display_name = "Magicka"
+      - attribute_color = Color(0.3, 0.5, 1.0)   # 藍色
+      - value_max = 100
+      - value_start = 100
+      - attribute_visibility = Hud  ← 自動出現在 HUD
 
 **HUD 自動整合原理**（`cogito_player.gd:230`）：玩家 `_ready()` 用 `find_children("","CogitoAttribute",false)` 掃描所有直接子節點，並以 `attribute_name` 為鍵存入 `player_attributes`。`player_hud_manager.gd:121-137` 接著為每個可見屬性實例化一個 `ui_attribute_prefab` 色條。**只要是 CogitoPlayer 直接子節點，名稱正確，即會自動出現**。
 
@@ -150,13 +149,11 @@ func _spawn_fireball() -> void:
 
 火球應繼承 COGITO 的投射物腳本（`cogito_projectile.gd`）並掛上傷害區域：
 
-```
-FireballProjectile (RigidBody3D 或 Area3D + cogito_projectile.gd)
-├── MeshInstance3D (球形網格 + 火焰材質)
-├── CollisionShape3D
-├── GPUParticles3D (火焰粒子)
-└── OmniLight3D (動態光效)
-```
+- FireballProjectile (RigidBody3D 或 Area3D + cogito_projectile.gd)
+  - MeshInstance3D (球形網格 + 火焰材質)
+  - CollisionShape3D
+  - GPUParticles3D (火焰粒子)
+  - OmniLight3D (動態光效)
 
 ---
 

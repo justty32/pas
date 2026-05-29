@@ -118,14 +118,12 @@ Dialogue Nodes 的 `DialogueBubble` 是一個標準 Control 場景：
 ## 五、在 NPC 上掛載對話組件
 
 ### 節點結構（以 Dialogic 為例）：
-```
-CogitoNPC
-├── NPC_State_Machine
-├── HitboxComponent
-├── DialogicInteraction (Node + dialogic_interaction.gd)  ← 掛在此處
-│   └── Inspector: dialogic_timeline = [選擇 .dtl 時間軸資源]
-└── BasicInteraction  ← 可選：保留其他互動選項
-```
+- CogitoNPC
+  - NPC_State_Machine
+  - HitboxComponent
+  - DialogicInteraction (Node + dialogic_interaction.gd)　← 掛在此處
+    - Inspector: dialogic_timeline = [選擇 .dtl 時間軸資源]
+  - BasicInteraction　← 可選：保留其他互動選項
 
 ### 建立 Dialogic Timeline：
 1. Dialogic 面板 → 新建 Timeline → 命名（如 `npc_shopkeeper.dtl`）。

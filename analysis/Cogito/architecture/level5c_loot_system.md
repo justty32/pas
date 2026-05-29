@@ -2,25 +2,20 @@
 
 ## 一、系統架構概覽
 
-```
-LootTable（Resource .tres）
-  └─ drops : Array[LootDropEntry]（每筆定義一個可能掉落物）
-
-LootDropEntry（Resource .tres）
-  ├─ droptype: NONE / GUARANTEED / CHANCE / QUEST
-  ├─ weight: float（加權隨機用）
-  ├─ inventory_item: InventoryItemPD
-  ├─ quantity_min / quantity_max: int
-  ├─ quest_id: int（-1 = 非任務物品）
-  └─ quest_item_total_count: int
-
-LootGenerator（Node）   ← 暫時性工具節點，用完即刪
-  └─ generate(loot_table, amount) → Array[LootDropEntry]
-
-LootComponent（Node3D）  ← 掛在敵人/物件下，連接死亡信號
-  ├─ SpawningLogic.SPAWN_ITEM → 直接散射物品到世界
-  └─ SpawningLogic.SPAWN_CONTAINER → 生成戰利品袋（可開啟物品欄）
-```
+- **LootTable**（Resource .tres）
+  - `drops` : Array[LootDropEntry]（每筆定義一個可能掉落物）
+- **LootDropEntry**（Resource .tres）
+  - `droptype`: NONE / GUARANTEED / CHANCE / QUEST
+  - `weight`: float（加權隨機用）
+  - `inventory_item`: InventoryItemPD
+  - `quantity_min` / `quantity_max`: int
+  - `quest_id`: int（-1 = 非任務物品）
+  - `quest_item_total_count`: int
+- **LootGenerator**（Node）— 暫時性工具節點，用完即刪
+  - `generate(loot_table, amount)` → Array[LootDropEntry]
+- **LootComponent**（Node3D）— 掛在敵人/物件下，連接死亡信號
+  - `SpawningLogic.SPAWN_ITEM` → 直接散射物品到世界
+  - `SpawningLogic.SPAWN_CONTAINER` → 生成戰利品袋（可開啟物品欄）
 
 ---
 

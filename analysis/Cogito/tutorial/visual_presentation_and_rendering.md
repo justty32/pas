@@ -21,14 +21,12 @@
 4. `Sky Material: PanoramaSkyMaterial → Panorama: [放入 HDR 貼圖]`。
 
 **程序化天空（快速設定）**：
-```
-Sky Material: ProceduralSkyMaterial
-├── Sky Top Color: (0.1, 0.3, 0.8)      # 高空顏色
-├── Sky Horizon Color: (0.6, 0.75, 0.9) # 地平線
-├── Sky Curve: 0.15                      # 天頂到地平線的漸層曲線
-├── Ground Bottom Color: (0.2, 0.15, 0.1)
-└── Sun Angle Max: 30                    # 太陽光暈的大小
-```
+- Sky Material: ProceduralSkyMaterial
+  - Sky Top Color: (0.1, 0.3, 0.8) — 高空顏色
+  - Sky Horizon Color: (0.6, 0.75, 0.9) — 地平線
+  - Sky Curve: 0.15 — 天頂到地平線的漸層曲線
+  - Ground Bottom Color: (0.2, 0.15, 0.1)
+  - Sun Angle Max: 30 — 太陽光暈的大小
 
 ---
 
@@ -37,33 +35,26 @@ Sky Material: ProceduralSkyMaterial
 ### DirectionalLight3D（太陽/月亮）
 
 必要設定：
-```
-DirectionalLight3D
-├── Enabled: true
-├── Shadow: true（必須開啟才有陰影）
-└── Directional Shadow
-    ├── Mode: PSSM 4 Splits（戶外大場景）
-    │         Orthogonal（室內小場景）
-    ├── Max Distance: 150（陰影最遠繪製距離）
-    └── Split 1~4 Bias: 0.1（避免 shadow acne，若有條紋請調高）
-```
+- DirectionalLight3D
+  - Enabled: true
+  - Shadow: true（必須開啟才有陰影）
+  - Directional Shadow
+    - Mode: PSSM 4 Splits（戶外大場景）／ Orthogonal（室內小場景）
+    - Max Distance: 150（陰影最遠繪製距離）
+    - Split 1~4 Bias: 0.1（避免 shadow acne，若有條紋請調高）
 
 **Soft Shadows 設定位置**：
-```
-Project Settings → Rendering → Lights and Shadows
-└── Directional Shadow → Soft Shadow Filter Quality: Medium 或 High
-```
+- Project Settings → Rendering → Lights and Shadows
+  - Directional Shadow → Soft Shadow Filter Quality: Medium 或 High
 
 ### 局部光源最佳化
 
-```
-OmniLight3D / SpotLight3D
-├── Shadow: 通常關閉（貴！只給關鍵光源開）
-├── Distance Fade
-│   ├── Enabled: true
-│   └── Begin: 30, Length: 10  # 30m 外開始淡出，40m 完全消失
-└── Light Bake Mode: Dynamic（動態）或 Static（烘焙，效能最佳）
-```
+- OmniLight3D / SpotLight3D
+  - Shadow: 通常關閉（貴！只給關鍵光源開）
+  - Distance Fade
+    - Enabled: true
+    - Begin: 30, Length: 10 — 30m 外開始淡出，40m 完全消失
+  - Light Bake Mode: Dynamic（動態）或 Static（烘焙，效能最佳）
 
 ---
 
@@ -92,27 +83,23 @@ OmniLight3D / SpotLight3D
 
 ### Tonemapping
 
-```
-Environment → Tonemap
-├── Mode:
-│   ├── Linear: 色彩最鮮艷（動漫風、卡通風推薦）
-│   ├── Reinhard: 柔和過曝（較自然）
-│   ├── Filmic: 電影感（中等飽和度）
-│   └── ACES: 電影標準（高對比，暗部較深）
-├── Exposure: 1.0（正常曝光）
-└── White: 1.0（白點位置，調低讓畫面更亮）
-```
+- Environment → Tonemap
+  - Mode:
+    - Linear: 色彩最鮮艷（動漫風、卡通風推薦）
+    - Reinhard: 柔和過曝（較自然）
+    - Filmic: 電影感（中等飽和度）
+    - ACES: 電影標準（高對比，暗部較深）
+  - Exposure: 1.0（正常曝光）
+  - White: 1.0（白點位置，調低讓畫面更亮）
 
 ### Glow（泛光）
 
-```
-Environment → Glow
-├── Enabled: true
-├── Intensity: 0.8
-├── Bloom: 0.2        # 高亮部分的光暈強度
-├── Blend Mode: Additive（標準發光）
-└── HDR Threshold: 1.0 # 只有超過此亮度的部分才發光
-```
+- Environment → Glow
+  - Enabled: true
+  - Intensity: 0.8
+  - Bloom: 0.2 — 高亮部分的光暈強度
+  - Blend Mode: Additive（標準發光）
+  - HDR Threshold: 1.0 — 只有超過此亮度的部分才發光
 
 讓發光效果生效，發光物件的材質需啟用 `Emission`，且 Emission Energy 要超過 `HDR Threshold`。
 

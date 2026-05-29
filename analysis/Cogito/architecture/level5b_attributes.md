@@ -300,29 +300,23 @@ func check_current_visibility():
 
 ## 七、Attribute 子類關係圖
 
-```
-CogitoAttribute（基類）
-  ├─ CogitoHealthAttribute
-  │     ├─ signal: damage_taken, death
-  │     ├─ spawn_on_death / destroy_on_death
-  │     └─ 三種音效（hit / damage / death）
-  │
-  ├─ CogitoStaminaAttribute
-  │     ├─ _process(): 奔跑扣減 + regen_timer 恢復
-  │     └─ _run_exhaustion(): 坡度感知耗體力
-  │
-  ├─ CogitoSanityAttribute
-  │     ├─ _process(): decay/recover 連續計算
-  │     ├─ 零理智 → player.decrease_attribute("health")
-  │     └─ on_visibility_changed: 與 visibility 信號連接
-  │
-  ├─ CogitoLightmeter
-  │     ├─ SubViewport + 1px 採樣
-  │     └─ get_luminance() → set_attribute(0~100)
-  │
-  └─ CogitoVisibilityAttribute
-        └─ 空殼，值由 LightzoneComponent 外部設定
-```
+- **CogitoAttribute**（基類）
+  - **CogitoHealthAttribute**
+    - signal: damage_taken, death
+    - spawn_on_death / destroy_on_death
+    - 三種音效（hit / damage / death）
+  - **CogitoStaminaAttribute**
+    - `_process()`: 奔跑扣減 + regen_timer 恢復
+    - `_run_exhaustion()`: 坡度感知耗體力
+  - **CogitoSanityAttribute**
+    - `_process()`: decay/recover 連續計算
+    - 零理智 → `player.decrease_attribute("health")`
+    - `on_visibility_changed`: 與 visibility 信號連接
+  - **CogitoLightmeter**
+    - SubViewport + 1px 採樣
+    - `get_luminance()` → `set_attribute(0~100)`
+  - **CogitoVisibilityAttribute**
+    - 空殼，值由 LightzoneComponent 外部設定
 
 ---
 

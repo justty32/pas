@@ -285,23 +285,25 @@ clear_spawned_effects():
 
 ## 十一、架構模式總結
 
-```
-任何物件（CogitoObject / CogitoNPC）
-  └─ CogitoProperties（選配子節點）
-       ├─ 位元旗標：elemental_properties（CONDUCTIVE/FLAMMABLE/WET）
-       ├─ 位元旗標：material_properties（SOFT）
-       ├─ 狀態變數：is_on_fire, is_electric
-       ├─ 閾值計時器：reaction_threshold_time（過濾瞬間接觸）
-       └─ VFX 池：spawned_effects[]（統一管理生命週期）
+**節點組合**：
 
-兩條觸發路徑：
-  ① 接觸型（body_entered → 閾值計時器 → 反應）
-  ② 投射物型（碰撞 → 直接呼叫，無等待）
+- 任何物件（CogitoObject / CogitoNPC）
+  - CogitoProperties（選配子節點）
+    - 位元旗標：elemental_properties（CONDUCTIVE/FLAMMABLE/WET）
+    - 位元旗標：material_properties（SOFT）
+    - 狀態變數：is_on_fire, is_electric
+    - 閾值計時器：reaction_threshold_time（過濾瞬間接觸）
+    - VFX 池：spawned_effects[]（統一管理生命週期）
 
-反應鏈可無限延伸：
-  物件A（燃燒）→ 接觸 物件B（易燃）→ B 點燃
-  物件B（燃燒）→ 接觸 物件C（易燃）→ C 點燃  ...
-```
+**兩條觸發路徑**：
+
+- ① 接觸型（body_entered → 閾值計時器 → 反應）
+- ② 投射物型（碰撞 → 直接呼叫，無等待）
+
+**反應鏈可無限延伸**：
+
+- 物件A（燃燒）→ 接觸 物件B（易燃）→ B 點燃
+- 物件B（燃燒）→ 接觸 物件C（易燃）→ C 點燃 …
 
 **主要設計哲學**：
 - 組件式選配：不需要 Properties 的物件不受影響，效能零開銷

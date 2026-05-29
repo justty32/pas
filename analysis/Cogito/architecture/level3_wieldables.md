@@ -257,28 +257,18 @@ action_primary():
 ## 八、玩家動作完整流程
 
 ### 主要動作觸發鏈
-```
-[玩家按下 input_action_primary]
-  │
-  ▼
-PlayerInteractionComponent._unhandled_input()
-  └─ if equipped_wieldable_item:
-       equipped_wieldable_item.action_primary(equipped_wieldable_item, false)
-         └─ 呼叫場景中的 CogitoWieldable 子類（toy_pistol / laser_rifle / ...）
+```mermaid
+flowchart TD
+    A["玩家按下 input_action_primary"] --> B["PlayerInteractionComponent._unhandled_input()"]
+    B --> C["if equipped_wieldable_item:<br/>equipped_wieldable_item.action_primary(equipped_wieldable_item, false)"]
+    C --> D["呼叫場景中的 CogitoWieldable 子類<br/>（toy_pistol / laser_rifle / ...）"]
 ```
 
 ### 彈藥補充流程（Reload）
-```
-[玩家按 reload]
-  │
-  ▼
-PIC.attempt_reload()
-  linear scan inventory_slots:
-    if slot.inventory_item.name == equipped_item.ammo_item_name:
-      move ammo from slot to equipped_item.charge_current
-      break
-
-→ CogitoWieldable.reload()  // 播放換彈動畫
+```mermaid
+flowchart TD
+    A["玩家按 reload"] --> B["PIC.attempt_reload()<br/>linear scan inventory_slots:<br/>if slot.inventory_item.name == equipped_item.ammo_item_name:<br/>　move ammo from slot to equipped_item.charge_current<br/>　break"]
+    B --> C["CogitoWieldable.reload() — 播放換彈動畫"]
 ```
 
 ### 準心碰撞點（Get_Camera_Collision）

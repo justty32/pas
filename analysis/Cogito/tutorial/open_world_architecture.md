@@ -220,11 +220,9 @@ func _get_terrain3d_surface(pos: Vector3) -> String:
 
 每個 Chunk 放置獨立的 `NavigationRegion3D`，Godot 4 的 Navigation Server 支援多 Region 自動拼接：
 
-```
-Chunk_0_0.tscn
-└── NavigationRegion3D   ← 烘焙好本 Chunk 範圍的 NavMesh
-    └── (地形 + 障礙物的碰撞體在此範圍內)
-```
+- `Chunk_0_0.tscn`
+  - `NavigationRegion3D` ← 烘焙好本 Chunk 範圍的 NavMesh
+    - (地形 + 障礙物的碰撞體在此範圍內)
 
 **跨 Chunk 邊緣拼接要求**：相鄰 Chunk 的 NavigationMesh 在邊界處幾何必須重合（通常讓 NavMesh 稍微超出 Chunk 邊界幾公尺）。
 

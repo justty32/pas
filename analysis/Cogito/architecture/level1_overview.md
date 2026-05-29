@@ -15,15 +15,13 @@
 
 ## 頂層目錄結構
 
-```
-Cogito/
-├── addons/
-│   ├── cogito/           # 核心插件（所有功能主體）
-│   ├── input_helper/     # 輸入重新綁定輔助插件
-│   └── quick_audio/      # 簡易音頻 Autoload 插件
-├── project.godot         # 專案設定（Autoload、Input Map、Physics Layer）
-└── default_bus_layout.tres
-```
+- `Cogito/`
+  - `addons/`
+    - `cogito/` — 核心插件（所有功能主體）
+    - `input_helper/` — 輸入重新綁定輔助插件
+    - `quick_audio/` — 簡易音頻 Autoload 插件
+  - `project.godot` — 專案設定（Autoload、Input Map、Physics Layer）
+  - `default_bus_layout.tres`
 
 ---
 
@@ -42,37 +40,35 @@ Cogito/
 
 ## `addons/cogito/` 子模組一覽
 
-```
-addons/cogito/
-├── Assets/                  # 音效、模型、材質、著色器、VFX
-├── CogitoNPC/               # NPC 基類 + 狀態機 + 各狀態節點
-├── CogitoObjects/           # 所有互動物件（Door, Switch, Player, Container…）
-├── Components/              # 可組合式組件（屬性、互動、UI、戰利品表）
-│   ├── Attributes/          # Health / Stamina / Visibility / Sanity / LightMeter
-│   ├── Interactions/        # InteractionComponent（基類）及各種互動子類
-│   ├── UI/                  # HUD 屬性顯示組件
-│   ├── AutoConsumes/        # 自動消耗邏輯（血量/耐力自動恢復）
-│   ├── LootTables/          # 戰利品表資源
-│   └── Properties/          # 系統屬性（濕/乾、易燃等，WIP）
-├── DemoScenes/              # 主選單、遊玩關卡示範場景
-├── DynamicFootstepSystem/   # 動態腳步音效系統（材質偵測）
-├── EasyMenus/               # 主選單/暫停/選項選單框架
-├── InventoryPD/             # 物品欄系統（Resource 驅動，Grid-based）
-│   ├── CustomResources/     # InventoryItemPD 基類及各子類
-│   ├── Inventories/         # 物品欄 .tres 資源
-│   ├── Items/               # 具體物品 .tres 資源
-│   └── UiScenes/            # 物品欄 UI 場景
-├── Localization/            # 多語言（EN / DE）
-├── PackedScenes/            # 玩家HUD、死亡畫面、撿取物等預製場景
-├── QuestSystem/             # 任務系統（Manager + Resource + UI + Updater）
-├── SceneManagement/         # 場景切換、存/讀檔、持久化
-├── Scripts/                 # 各種通用腳本（Wieldable基類、交互RayCast、HUD管理器…）
-├── Theme/                   # UI 主題
-├── Wieldables/              # 具體武器/道具實作（手電筒、手槍、鐵鎬…）
-├── cogito_globals.gd        # Autoload：全域設定快取
-├── cogito_plugin.gd         # 插件入口
-└── cogito_settings.gd       # 設定資源類別
-```
+- `addons/cogito/`
+  - `Assets/` — 音效、模型、材質、著色器、VFX
+  - `CogitoNPC/` — NPC 基類 + 狀態機 + 各狀態節點
+  - `CogitoObjects/` — 所有互動物件（Door, Switch, Player, Container…）
+  - `Components/` — 可組合式組件（屬性、互動、UI、戰利品表）
+    - `Attributes/` — Health / Stamina / Visibility / Sanity / LightMeter
+    - `Interactions/` — InteractionComponent（基類）及各種互動子類
+    - `UI/` — HUD 屬性顯示組件
+    - `AutoConsumes/` — 自動消耗邏輯（血量/耐力自動恢復）
+    - `LootTables/` — 戰利品表資源
+    - `Properties/` — 系統屬性（濕/乾、易燃等，WIP）
+  - `DemoScenes/` — 主選單、遊玩關卡示範場景
+  - `DynamicFootstepSystem/` — 動態腳步音效系統（材質偵測）
+  - `EasyMenus/` — 主選單/暫停/選項選單框架
+  - `InventoryPD/` — 物品欄系統（Resource 驅動，Grid-based）
+    - `CustomResources/` — InventoryItemPD 基類及各子類
+    - `Inventories/` — 物品欄 .tres 資源
+    - `Items/` — 具體物品 .tres 資源
+    - `UiScenes/` — 物品欄 UI 場景
+  - `Localization/` — 多語言（EN / DE）
+  - `PackedScenes/` — 玩家HUD、死亡畫面、撿取物等預製場景
+  - `QuestSystem/` — 任務系統（Manager + Resource + UI + Updater）
+  - `SceneManagement/` — 場景切換、存/讀檔、持久化
+  - `Scripts/` — 各種通用腳本（Wieldable基類、交互RayCast、HUD管理器…）
+  - `Theme/` — UI 主題
+  - `Wieldables/` — 具體武器/道具實作（手電筒、手槍、鐵鎬…）
+  - `cogito_globals.gd` — Autoload：全域設定快取
+  - `cogito_plugin.gd` — 插件入口
+  - `cogito_settings.gd` — 設定資源類別
 
 ---
 

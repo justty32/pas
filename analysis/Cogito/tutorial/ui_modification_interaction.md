@@ -12,35 +12,31 @@
 
 `Player_HUD.tscn` 的關鍵節點路徑（`player_hud_manager.gd:56-64`）：
 
-```
-Player_HUD (Control + player_hud_manager.gd)
-├── DamageOverlay                          # 受傷紅色閃爍
-├── InventoryInterface                     # 物品欄介面（@onready inventory_interface）
-├── PromptUI
-│   ├── PromptArea                         # 互動提示容器（@onready prompt_area）
-│   └── HoldUI                            # 長按進度環
-├── HintArea                               # 升級/狀態提示容器（@onready hint_area）
-├── Crosshair                              # 準心
-│   └── TextureRect                        # 實際準心圖片（@onready crosshair_texture）
-└── MarginContainer_BottomUI
-    ├── WieldableHud                        # 武器資訊面板
-    └── PlayerAttributes
-        └── MarginContainer
-            └── VBoxContainer              # 屬性條排列區（@onready ui_attribute_area）
-```
+- **Player_HUD** (Control + player_hud_manager.gd)
+  - **DamageOverlay** — 受傷紅色閃爍
+  - **InventoryInterface** — 物品欄介面（@onready inventory_interface）
+  - **PromptUI**
+    - **PromptArea** — 互動提示容器（@onready prompt_area）
+    - **HoldUI** — 長按進度環
+  - **HintArea** — 升級/狀態提示容器（@onready hint_area）
+  - **Crosshair** — 準心
+    - **TextureRect** — 實際準心圖片（@onready crosshair_texture）
+  - **MarginContainer_BottomUI**
+    - **WieldableHud** — 武器資訊面板
+    - **PlayerAttributes**
+      - **MarginContainer**
+        - **VBoxContainer** — 屬性條排列區（@onready ui_attribute_area）
 
 ---
 
 ## 二、修改互動提示樣式（UI_PromptComponent）
 
 `UiPromptComponent`（`UI_PromptComponent.gd:1-17`）節點結構：
-```
-UiPromptComponent (Control)
-└── HBoxContainer
-    ├── Container
-    │   └── InteractionButton  # 按鍵圖示（InputHelper 自動更換為手把/鍵盤圖示）
-    └── InteractionText (RichTextLabel)  # 互動動作文字
-```
+- **UiPromptComponent** (Control)
+  - **HBoxContainer**
+    - **Container**
+      - **InteractionButton** — 按鍵圖示（InputHelper 自動更換為手把/鍵盤圖示）
+    - **InteractionText** (RichTextLabel) — 互動動作文字
 
 **修改步驟**：
 1. 打開 `addons/cogito/Components/UI/UI_PromptComponent.tscn`。

@@ -5,84 +5,59 @@
 ## 1. 玩家系統（`CogitoPlayer`）
 
 ### 節點層級結構
-```
-CogitoPlayer (CharacterBody3D)
-└── Body (Node3D)
-    └── Neck (Node3D)
-        └── Head (Node3D)
-            └── Eyes (Node3D)
-                ├── Camera (Camera3D)
-                └── AnimationPlayer
-└── PlayerInteractionComponent
-└── FootstepPlayer (FootstepSurfaceDetector)
-└── StandingCollisionShape / CrouchingCollisionShape
-└── CrouchRayCast
-└── SlidingTimer / JumpCooldownTimer
-└── NavigationAgent3D       ← 用於起身後尋找安全落點
-└── Wieldables (%節點)
-```
+- CogitoPlayer (CharacterBody3D)
+  - Body (Node3D)
+    - Neck (Node3D)
+      - Head (Node3D)
+        - Eyes (Node3D)
+          - Camera (Camera3D)
+          - AnimationPlayer
+  - PlayerInteractionComponent
+  - FootstepPlayer (FootstepSurfaceDetector)
+  - StandingCollisionShape / CrouchingCollisionShape
+  - CrouchRayCast
+  - SlidingTimer / JumpCooldownTimer
+  - NavigationAgent3D（用於起身後尋找安全落點）
+  - Wieldables (%節點)
 
 ### `_physics_process(delta)` 主迴圈流程
 
-```
-_physics_process(delta)
-│
-├─ [is_sitting] → _process_on_sittable(delta)  ← 坐下時短路
-│
-├─ [on_ladder]  → _process_on_ladder(delta)     ← 爬梯時短路
-│
-├─ 取得 input_dir（is_movement_paused → Vector2.ZERO）
-│
-├─ ── 蹲下/起身 ──
-│   ├─ TOGGLE_CROUCH 模式：just_pressed 切換 try_crouch
-│   └─ HOLD 模式：pressed = try_crouch
-│
-├─ ── 速度狀態機 ──
-│   ├─ 蹲下中：
-│   │   ├─ 若 sprinting+輸入中 → 啟動 sliding_timer，記錄 slide_vector
-│   │   └─ current_speed lerp → CROUCHING_SPEED（滑行中不修改）
-│   └─ 站立中：
-│       ├─ sprint + stamina > 0 → lerp → SPRINTING_SPEED（支援 bunnyhop）
-│       └─ 普通 → lerp → WALKING_SPEED
-│
-├─ 自由視角（free_look 鍵 / 滑行中）：neck 左右偏轉，eyes.z 傾斜
-│  否則：neck.rotation.y 累加回 body.rotation.y
-│
-├─ ── 重力與跳躍 ──
-│   ├─ is_on_floor：gravity_vec = 0
-│   └─ 在空中：gravity_vec += gravity_vector * gravity * delta
-│
-├─ ── 方向計算 ──
-│   direction = (body.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-│
-├─ ── 速度合成 ──
-│   ├─ 地面：main_velocity lerp 至 direction * current_speed
-│   └─ 空中：main_velocity lerp 至 direction * current_speed（AIR_LERP_SPEED）
-│
-├─ ── 跳躍 ──
-│   └─ is_on_floor + jump pressed：main_velocity.y = JUMP_VELOCITY
-│       ├─ 蹲跳：CROUCH_JUMP_VELOCITY
-│       └─ 滑跳：main_velocity.x/z * SLIDE_JUMP_MOD
-│
-├─ ── 樓梯處理（Stair Stepping）──
-│   └─ test_motion() 前方碰撞 → 再 test_motion() 向上偏移 STEP_HEIGHT
-│       若可通行 → 瞬移高度差（smoothed by step_height_camera_lerp）
-│
-├─ velocity = main_velocity + gravity_vec
-│
-├─ move_and_slide()
-│
-├─ ── 推動 RigidBody3D ──
-│   └─ get_slide_collision() → 對 RigidBody3D 施加 PLAYER_PUSH_FORCE
-│
-├─ ── 頭部晃動（Headbob）──
-│   └─ 依 wiggle_index 計算 sin/cos 偏移 → eyes.position
-│
-├─ ── 腳步音效 ──
-│   └─ 依速度 velocity_sqr 決定間隔（walk/sprint），呼叫 footstep_surface_detector
-│
-└─ ── 落地判斷 ──
-    └─ was_in_air && velocity.y < landing_threshold → 播放落地音效
+```mermaid
+flowchart TD
+    Start["_physics_process(delta)"]
+
+    Start --> Sit{"is_sitting？"}
+    Sit -- 是 --> SitShort["_process_on_sittable(delta)（坐下時短路）"]
+    Sit -- 否 --> Ladder{"on_ladder？"}
+    Ladder -- 是 --> LadderShort["_process_on_ladder(delta)（爬梯時短路）"]
+    Ladder -- 否 --> Input["取得 input_dir（is_movement_paused → Vector2.ZERO）"]
+
+    Input --> Crouch["蹲下/起身：<br/>TOGGLE_CROUCH 模式 just_pressed 切換 try_crouch<br/>HOLD 模式 pressed = try_crouch"]
+
+    Crouch --> SpeedSM["速度狀態機"]
+    SpeedSM --> CrouchSpd["蹲下中：<br/>若 sprinting+輸入中 → 啟動 sliding_timer，記錄 slide_vector<br/>current_speed lerp → CROUCHING_SPEED（滑行中不修改）"]
+    SpeedSM --> StandSpd["站立中：<br/>sprint + stamina > 0 → lerp → SPRINTING_SPEED（支援 bunnyhop）<br/>普通 → lerp → WALKING_SPEED"]
+
+    CrouchSpd --> FreeLook
+    StandSpd --> FreeLook
+    FreeLook["自由視角（free_look 鍵 / 滑行中）：neck 左右偏轉，eyes.z 傾斜<br/>否則：neck.rotation.y 累加回 body.rotation.y"]
+
+    FreeLook --> Gravity["重力與跳躍：<br/>is_on_floor → gravity_vec = 0<br/>在空中 → gravity_vec += gravity_vector * gravity * delta"]
+
+    Gravity --> Dir["方向計算：<br/>direction = (body.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()"]
+
+    Dir --> VelMix["速度合成：<br/>地面 → main_velocity lerp 至 direction * current_speed<br/>空中 → main_velocity lerp 至 direction * current_speed（AIR_LERP_SPEED）"]
+
+    VelMix --> Jump["跳躍：<br/>is_on_floor + jump pressed → main_velocity.y = JUMP_VELOCITY<br/>蹲跳 → CROUCH_JUMP_VELOCITY<br/>滑跳 → main_velocity.x/z * SLIDE_JUMP_MOD"]
+
+    Jump --> Stair["樓梯處理（Stair Stepping）：<br/>test_motion() 前方碰撞 → 再 test_motion() 向上偏移 STEP_HEIGHT<br/>若可通行 → 瞬移高度差（smoothed by step_height_camera_lerp）"]
+
+    Stair --> Vel["velocity = main_velocity + gravity_vec"]
+    Vel --> Move["move_and_slide()"]
+    Move --> Push["推動 RigidBody3D：<br/>get_slide_collision() → 對 RigidBody3D 施加 PLAYER_PUSH_FORCE"]
+    Push --> Headbob["頭部晃動（Headbob）：<br/>依 wiggle_index 計算 sin/cos 偏移 → eyes.position"]
+    Headbob --> Footstep["腳步音效：<br/>依速度 velocity_sqr 決定間隔（walk/sprint），呼叫 footstep_surface_detector"]
+    Footstep --> Landing["落地判斷：<br/>was_in_air && velocity.y < landing_threshold → 播放落地音效"]
 ```
 
 ### 屬性系統初始化（`_ready`）
@@ -108,32 +83,32 @@ _physics_process(delta)
 | `is_changing_wieldables` | bool | 換武器動畫播放中，鎖定輸入 |
 
 ### 互動分派流程（`_handle_interaction(action)`）
-```
-_handle_interaction(action)
-│
-├─ [is_carrying]
-│   ├─ carried_object.input_map_action == action → _drop_carried_object()
-│   └─ 否則掃 carry_parent.interaction_nodes
-│       └─ 找到 PickupComponent / BackpackComponent / ExtendedPickupInteraction → node.interact(self)
-│           └─ DualInteraction → await interaction_complete → _rebuild_interaction_prompts()
-│
-└─ [interactable != null && !is_carrying]
-    └─ 掃 interactable.interaction_nodes
-        └─ node.input_map_action == action && !is_disabled → node.interact(self)
-            └─ DualInteraction → await interaction_complete → _rebuild_interaction_prompts()
+```mermaid
+flowchart TD
+    H["_handle_interaction(action)"]
+    H --> Carry{"is_carrying？"}
+
+    Carry -- 是 --> Drop{"carried_object.input_map_action == action？"}
+    Drop -- 是 --> DoDrop["_drop_carried_object()"]
+    Drop -- 否 --> ScanCarry["掃 carry_parent.interaction_nodes"]
+    ScanCarry --> FoundCarry["找到 PickupComponent / BackpackComponent / ExtendedPickupInteraction<br/>→ node.interact(self)"]
+    FoundCarry --> DualCarry["DualInteraction → await interaction_complete → _rebuild_interaction_prompts()"]
+
+    Carry -- "否（interactable != null && !is_carrying）" --> ScanIA["掃 interactable.interaction_nodes"]
+    ScanIA --> MatchIA["node.input_map_action == action && !is_disabled → node.interact(self)"]
+    MatchIA --> DualIA["DualInteraction → await interaction_complete → _rebuild_interaction_prompts()"]
 ```
 
 ### Wieldable 換裝流程（`change_wieldable_to`）
-```
-change_wieldable_to(next_wieldable)
-  1. is_changing_wieldables = true
-  2. 若已持物：舊物 is_being_wielded = false → equipped_wieldable_node.unequip() → await unequip 動畫
-  3. queue_free 舊 node
-  4. equip_wieldable(next_wieldable)
-     ├─ wieldable_item.build_wieldable_scene() → add_child 到 wieldable_container
-     ├─ node.equip(self)
-     └─ await equip 動畫結束 → is_changing_wieldables = false
-```
+`change_wieldable_to(next_wieldable)`：
+
+1. `is_changing_wieldables = true`
+2. 若已持物：舊物 `is_being_wielded = false` → `equipped_wieldable_node.unequip()` → await unequip 動畫
+3. `queue_free` 舊 node
+4. `equip_wieldable(next_wieldable)`
+   - `wieldable_item.build_wieldable_scene()` → `add_child` 到 `wieldable_container`
+   - `node.equip(self)`
+   - await equip 動畫結束 → `is_changing_wieldables = false`
 
 ### 重裝（`attempt_reload`）
 - 從 `inventory_data.inventory_slots` 線性搜尋匹配 `ammo_item_name` 的格子。
@@ -190,13 +165,11 @@ throw_force = clamp(throw_force, 0, max_throw_power)
 **腳本位置**：`InventoryPD/cogito_inventory.gd`（extends Resource）
 
 ### 資料結構
-```
-CogitoInventory (Resource)
-├── inventory_slots : Array[InventorySlotPD]   ← 大小 = size.x * size.y
-├── inventory_size  : Vector2i                  ← (寬, 高)
-├── grid            : bool                      ← 是否啟用網格模式
-└── starter_inventory : Array[InventorySlotPD]  ← 初始物品清單
-```
+- CogitoInventory (Resource)
+  - `inventory_slots : Array[InventorySlotPD]`（大小 = size.x * size.y）
+  - `inventory_size : Vector2i`（寬, 高）
+  - `grid : bool`（是否啟用網格模式）
+  - `starter_inventory : Array[InventorySlotPD]`（初始物品清單）
 
 ### Grid 模式下的空間管理
 - 物品有 `item_size: Vector2`（e.g., 手槍 = (1,2)）。
@@ -227,29 +200,24 @@ grabbed 是 CombinableItemPD && slot.item.name == grabbed.target_item_combine
 
 ## 5. 物品 Resource 繼承鏈
 
-```
-Resource
-└── InventoryItemPD          (基類：名稱、圖示、堆疊設定、掉落場景、音效)
-    ├── ConsumableItemPD     (use() → 對玩家屬性 add/subtract)
-    ├── WieldableItemPD      (use() → take_out/put_away；charge 系統)
-    │   └── [WieldableItemPD 引用 wieldable_scene: PackedScene]
-    ├── KeyItemPD            (use() → 配合 LockInteraction，用後自動消耗)
-    ├── AmmoItemPD           (reload_amount；is_ammo_item() 標記)
-    ├── CombinableItemPD     (target_item_combine, resulting_item)
-    └── CurrencyItemPD       (轉交 CogitoCurrency 節點)
-```
+- Resource
+  - InventoryItemPD（基類：名稱、圖示、堆疊設定、掉落場景、音效）
+    - ConsumableItemPD（use() → 對玩家屬性 add/subtract）
+    - WieldableItemPD（use() → take_out/put_away；charge 系統）
+      - 引用 `wieldable_scene: PackedScene`
+    - KeyItemPD（use() → 配合 LockInteraction，用後自動消耗）
+    - AmmoItemPD（reload_amount；is_ammo_item() 標記）
+    - CombinableItemPD（target_item_combine, resulting_item）
+    - CurrencyItemPD（轉交 CogitoCurrency 節點）
 
 ### `WieldableItemPD.use(target)` 雙態邏輯
-```
-is_being_wielded == false → take_out()
-  └─ is_being_wielded = true
-     update_wieldable_data(PIC)  # emit updated_wieldable_data signal → HUD 更新
-     PIC.change_wieldable_to(self)
-
-is_being_wielded == true → put_away()
-  └─ is_being_wielded = false
-     PIC.change_wieldable_to(null)
-```
+- `is_being_wielded == false` → `take_out()`
+  - `is_being_wielded = true`
+  - `update_wieldable_data(PIC)`（emit updated_wieldable_data signal → HUD 更新）
+  - `PIC.change_wieldable_to(self)`
+- `is_being_wielded == true` → `put_away()`
+  - `is_being_wielded = false`
+  - `PIC.change_wieldable_to(null)`
 
 ---
 
@@ -287,12 +255,10 @@ var value_current : float:
 **腳本位置**：`SceneManagement/cogito_scene_manager.gd`（Autoload Node）
 
 ### 存檔槽架構
-```
-user://
-└── {slot}/                  ← 存檔槽 A / B / C（_active_slot）
-    ├── {player_state_prefix}.res    ← CogitoPlayerState
-    └── {scene_state_prefix}{scene_name}.res  ← CogitoSceneState（每場景一個）
-```
+- `user://`
+  - `{slot}/`（存檔槽 A / B / C，即 `_active_slot`）
+    - `{player_state_prefix}.res`（CogitoPlayerState）
+    - `{scene_state_prefix}{scene_name}.res`（CogitoSceneState，每場景一個）
 
 ### 讀檔流程（`loading_saved_game`）
 ```
@@ -319,28 +285,39 @@ loading_saved_game(slot)
 
 ## 模組互動關係圖
 
+### 結構與引用關係
+
+```mermaid
+flowchart TD
+    Player["CogitoPlayer"]
+    Player -.->|player_attributes{} 子節點掃描| Attr["CogitoAttribute nodes"]
+    Player -.->|inventory_data| Inv["CogitoInventory Resource"]
+    Player --> PIC["PlayerInteractionComponent (PIC)"]
+    PIC -->|interaction_raycast| RC["InteractionRayCast"]
+    PIC -.->|interactable 射線偵測到的物件| IA["互動物件"]
+    PIC -.-> Carried["carried_object"]
+    PIC -.->|equipped_wieldable_item| WI["WieldableItemPD"]
+    PIC -->|equipped_wieldable_node| WN["CogitoWieldable（場景實例）"]
 ```
-CogitoPlayer
-  │  player_attributes{} ← CogitoAttribute nodes（子節點掃描）
-  │  inventory_data ← CogitoInventory Resource
-  └─ PlayerInteractionComponent (PIC)
-       │  interaction_raycast → InteractionRayCast
-       │  interactable ← 射線偵測到的物件
-       │  carried_object
-       │  equipped_wieldable_item ← WieldableItemPD
-       └─ equipped_wieldable_node ← CogitoWieldable (場景實例)
 
-互動觸發鏈：
-  玩家按 F/E
-  → PIC._unhandled_input → _handle_interaction(action)
-  → target.interaction_nodes[i].interact(PIC)
-  → [PickupComponent] → inventory.pick_up_slot_data()
-  → [CarryableComponent] → PIC.start_carrying(node)
-  → [WieldableItem via QuickSlot] → WieldableItemPD.use(player) → PIC.change_wieldable_to()
+### 互動觸發鏈
 
-存檔觸發鏈：
-  暫停選單 Save 按下
-  → CogitoSceneManager.save_player_state(player)
-  → CogitoSceneManager.save_scene_state(scene)
-  → ResourceSaver.save(state, "user://slot/...")
+```mermaid
+flowchart TD
+    Press["玩家按 F/E"]
+    Press --> Unhandled["PIC._unhandled_input → _handle_interaction(action)"]
+    Unhandled --> Interact["target.interaction_nodes[i].interact(PIC)"]
+    Interact --> Pickup["[PickupComponent] → inventory.pick_up_slot_data()"]
+    Interact --> Carryable["[CarryableComponent] → PIC.start_carrying(node)"]
+    Interact --> Wield["[WieldableItem via QuickSlot] → WieldableItemPD.use(player) → PIC.change_wieldable_to()"]
+```
+
+### 存檔觸發鏈
+
+```mermaid
+flowchart TD
+    Save["暫停選單 Save 按下"]
+    Save --> SavePlayer["CogitoSceneManager.save_player_state(player)"]
+    SavePlayer --> SaveScene["CogitoSceneManager.save_scene_state(scene)"]
+    SaveScene --> SaveRes["ResourceSaver.save(state, \"user://slot/...\")"]
 ```

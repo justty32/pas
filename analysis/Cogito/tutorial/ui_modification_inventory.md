@@ -34,15 +34,13 @@
 ## 二、格子外觀修改（Slot.tscn）
 
 `SlotPanel`（`Slot.gd:1`）節點結構：
-```
-SlotPanel (PanelContainer + Slot.gd)
-├── MarginContainer
-│   └── TextureRect           # 物品圖示（@onready texture_rect）
-├── QuantityLabel (Label)     # 數量（右下角，@onready quantity_label）
-├── ChargeLabel (Label)       # 耐久/彈藥數（@onready charge_label）
-├── Selected (Panel)          # 選取高亮框（@onready selection_panel）
-└── Panel                     # 滑鼠 hover 高亮（在 _on_focus_entered 中 show）
-```
+- SlotPanel (PanelContainer + Slot.gd)
+  - MarginContainer
+    - TextureRect — 物品圖示（@onready texture_rect）
+  - QuantityLabel (Label) — 數量（右下角，@onready quantity_label）
+  - ChargeLabel (Label) — 耐久/彈藥數（@onready charge_label）
+  - Selected (Panel) — 選取高亮框（@onready selection_panel）
+  - Panel — 滑鼠 hover 高亮（在 _on_focus_entered 中 show）
 
 **格子尺寸**：固定為 **64×64 px**，多格物品為 `64 * item_size.x × 64 * item_size.y`（`Slot.gd:109`）。修改格子大小需同時調整：
 1. `SlotPanel` 的 `custom_minimum_size`
@@ -73,14 +71,12 @@ SlotPanel (PanelContainer + Slot.gd)
 ## 四、物品資訊面板（InfoPanel）
 
 玩家點擊物品時，`inventory_interface.gd` 會顯示 `info_panel` 並填入資料。節點路徑：
-```
-$InfoPanel/MarginContainer/VBoxContainer/
-├── ItemName (Label)          ← item_name.text = "劍"
-├── ItemDescription (Control) ← item_description
-├── HBoxDrop                  ← 丟棄提示（鍵盤隱藏）
-├── HBoxAssign                ← 快捷鍵提示（鍵盤隱藏）
-└── HBoxUse                   ← 使用提示
-```
+- $InfoPanel/MarginContainer/VBoxContainer/
+  - ItemName (Label) ← item_name.text = "劍"
+  - ItemDescription (Control) ← item_description
+  - HBoxDrop ← 丟棄提示（鍵盤隱藏）
+  - HBoxAssign ← 快捷鍵提示（鍵盤隱藏）
+  - HBoxUse ← 使用提示
 
 鍵盤/手把自動切換（`inventory_interface.gd:53-59`）：
 ```gdscript

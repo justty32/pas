@@ -4,15 +4,12 @@
 
 存讀檔系統由四個核心類別協作：
 
-```
-CogitoSceneManager（Autoload）
-  ├─ CogitoPlayerState（Resource）← 玩家一切狀態
-  ├─ CogitoSceneState（Resource）  ← 場景物件狀態
-  ├─ LoadingScreen（CanvasLayer）  ← 非同步場景切換
-  └─ CogitoScene（Node）           ← 場景根節點，含 Connector 傳送點
-
-CogitoWorldPropertySetter（Node）  ← 跨場景全域旗標寫入
-```
+- **CogitoSceneManager**（Autoload）
+  - **CogitoPlayerState**（Resource）— 玩家一切狀態
+  - **CogitoSceneState**（Resource）— 場景物件狀態
+  - **LoadingScreen**（CanvasLayer）— 非同步場景切換
+  - **CogitoScene**（Node）— 場景根節點，含 Connector 傳送點
+- **CogitoWorldPropertySetter**（Node）— 跨場景全域旗標寫入
 
 ---
 
@@ -20,19 +17,17 @@ CogitoWorldPropertySetter（Node）  ← 跨場景全域旗標寫入
 
 **根目錄**：`user://`（由 `CogitoSceneManager.cogito_state_dir` 定義）
 
-```
-user://
-├── A/
-│   ├── COGITO_player_state_.res         ← 玩家狀態（唯一一個）
-│   ├── COGITO_scene_state_Level1.res    ← Level1 場景狀態
-│   ├── COGITO_scene_state_Level2.res    ← Level2 場景狀態（多場景各有一份）
-│   └── A.png                            ← 存檔截圖
-├── B/
-│   └── ...
-├── autosave/
-│   └── ...
-└── temp/                                ← 臨時緩衝區（場景切換中使用）
-```
+- `user://`
+  - `A/`（存檔槽）
+    - `COGITO_player_state_.res` — 玩家狀態（唯一一個）
+    - `COGITO_scene_state_Level1.res` — Level1 場景狀態
+    - `COGITO_scene_state_Level2.res` — Level2 場景狀態（多場景各有一份）
+    - `A.png` — 存檔截圖
+  - `B/`
+    - ...
+  - `autosave/`
+    - ...
+  - `temp/` — 臨時緩衝區（場景切換中使用）
 
 **前綴常數**（定義於 `cogito_settings.gd`）：
 ```
@@ -298,11 +293,9 @@ _process():
 
 **位置**：`cogito_scene.gd`
 
-```
-CogitoScene (extends Node)
-├── connectors : Array[Node3D]   ← 傳送點陣列（依名稱比對）
-└── save_temp_on_enter : bool    ← 進入場景時是否自動存 temp
-```
+- `CogitoScene`（extends Node）
+  - `connectors : Array[Node3D]` — 傳送點陣列（依名稱比對）
+  - `save_temp_on_enter : bool` — 進入場景時是否自動存 temp
 
 **`move_player_to_connector(name)`**：線性掃描 `connectors` 陣列，找到名稱匹配的 Node3D 後直接設定玩家全域位置與旋轉。
 
@@ -321,11 +314,13 @@ if save_temp_on_enter:
 
 **位置**：`world_property_setter.gd`
 
-```
-CogitoWorldPropertySetter
-├── properties_to_set_ON : Dictionary  ← 收到 true/void 信號時寫入
-└── properties_to_set_OFF : Dictionary ← 收到 false 信號時寫入
+節點結構：
 
+- `CogitoWorldPropertySetter`
+  - `properties_to_set_ON : Dictionary` — 收到 true/void 信號時寫入
+  - `properties_to_set_OFF : Dictionary` — 收到 false 信號時寫入
+
+```
 set_properties(dict):
   for property in dict:
     CogitoSceneManager._current_world_dict[property] = dict[property]
@@ -357,37 +352,45 @@ loading_saved_game(passed_slot):
 
 ## 十、完整流程圖
 
+**手動存檔**：
+
+```mermaid
+flowchart TD
+  A[玩家按 Save] --> B["save_player_state(player, slot)<br/>→ _player_state.write_state(temp)"]
+  A --> C["save_scene_state(name, slot)<br/>→ _scene_state.write_state(temp, name)"]
+  A --> D["copy_temp_saves_to_slot(slot)<br/>temp/ → slot/"]
 ```
-【手動存檔】
-玩家按 Save
-  │
-  ├─ save_player_state(player, slot) → _player_state.write_state("temp")
-  ├─ save_scene_state(name, slot) → _scene_state.write_state("temp", name)
-  └─ copy_temp_saves_to_slot(slot) → temp/ → slot/
 
-【場景切換（含自動儲存）】
-玩家走過傳送門
-  │
-  ├─ (CogitoScene.save_temp_on_enter) 保存當前場景至 temp/
-  └─ load_next_scene(target, connector, "temp", TEMP)
-       └─ LoadingScreen:
-            ├─ 非同步載入新場景 (load_threaded_request)
-            ├─ 釋放舊場景 (current_scene.free())
-            ├─ 載入 temp 場景狀態 (load_scene_state)
-            ├─ 載入 temp 玩家狀態 (load_player_state)
-            └─ move_player_to_connector(connector_name)
+**場景切換（含自動儲存）**：
 
-【讀取存檔】
-玩家選 Slot 讀取
-  │
-  ├─ loading_saved_game(slot)
-  │    ├─ [同場景] load_scene_state + load_player_state → fade_in()
-  │    └─ [跨場景] load_next_scene(load_mode=LOAD_SAVE)
-  │         └─ LoadingScreen → loading_saved_game(slot) 再次執行
-  └─ player.player_state_loaded.emit()
+```mermaid
+flowchart TD
+  A[玩家走過傳送門] --> B["(CogitoScene.save_temp_on_enter)<br/>保存當前場景至 temp/"]
+  A --> C["load_next_scene(target, connector, temp, TEMP)"]
+  C --> D[LoadingScreen]
+  D --> D1["非同步載入新場景 (load_threaded_request)"]
+  D --> D2["釋放舊場景 (current_scene.free())"]
+  D --> D3["載入 temp 場景狀態 (load_scene_state)"]
+  D --> D4["載入 temp 玩家狀態 (load_player_state)"]
+  D --> D5["move_player_to_connector(connector_name)"]
+```
 
-【程式退出】
-_exit_tree() → delete_temp_saves()
+**讀取存檔**：
+
+```mermaid
+flowchart TD
+  A[玩家選 Slot 讀取] --> B["loading_saved_game(slot)"]
+  B --> C["[同場景] load_scene_state + load_player_state → fade_in()"]
+  B --> D["[跨場景] load_next_scene(load_mode=LOAD_SAVE)"]
+  D --> E["LoadingScreen → loading_saved_game(slot) 再次執行"]
+  A --> F["player.player_state_loaded.emit()"]
+```
+
+**程式退出**：
+
+```mermaid
+flowchart LR
+  A["_exit_tree()"] --> B["delete_temp_saves()"]
 ```
 
 ---

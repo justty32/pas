@@ -64,21 +64,19 @@
 
 ### 2E 互動組件基類與子類
 
-```
-InteractionComponent（基類）
-  ├─ BasicInteraction       — 轉發 parent.interact()，可選 AttributeCheck
-  ├─ HoldInteraction        — 長按互動，觸發 HUD 計時 UI
-  │    ├─ DualInteraction   — 快按 + 長按雙操作（整合 LockInteraction）
-  │    └─ ExtendedPickupInteraction — 地上物品直接使用/裝填/裝備
-  ├─ CustomInteraction      — 代理，呼叫 parent_node 指定方法名
-  ├─ ReadableComponent      — 書本/告示 UI（RichTextLabel + 捲軸）
-  ├─ BackpackComponent      — 擴充玩家物品欄大小
-  ├─ CarryableComponent     — 物理搬運（RigidBody 浮動 + 手動旋轉）
-  ├─ PickupComponent        — 撿起物品
-  ├─ LockInteraction        — 橋接鎖定機制
-  ├─ DialogicInteraction    — Dialogic 插件整合（需安裝 + 取消注解）
-  └─ DialogueNodesInteraction — Dialogue Nodes 插件整合（需安裝 + 取消注解）
-```
+- `InteractionComponent`（基類）
+  - `BasicInteraction` — 轉發 parent.interact()，可選 AttributeCheck
+  - `HoldInteraction` — 長按互動，觸發 HUD 計時 UI
+    - `DualInteraction` — 快按 + 長按雙操作（整合 LockInteraction）
+    - `ExtendedPickupInteraction` — 地上物品直接使用/裝填/裝備
+  - `CustomInteraction` — 代理，呼叫 parent_node 指定方法名
+  - `ReadableComponent` — 書本/告示 UI（RichTextLabel + 捲軸）
+  - `BackpackComponent` — 擴充玩家物品欄大小
+  - `CarryableComponent` — 物理搬運（RigidBody 浮動 + 手動旋轉）
+  - `PickupComponent` — 撿起物品
+  - `LockInteraction` — 橋接鎖定機制
+  - `DialogicInteraction` — Dialogic 插件整合（需安裝 + 取消注解）
+  - `DialogueNodesInteraction` — Dialogue Nodes 插件整合（需安裝 + 取消注解）
 
 ### 2F 場景物件
 
@@ -199,15 +197,14 @@ InteractionComponent（基類）
 
 ## 四、存讀檔架構
 
-```
-存檔槽（"permanent" | "temp" | 數字索引）
-  ├─ player_state.json        ← cogito_player_state.gd（Resource 序列化）
-  └─ <scene_name>.json        ← cogito_scene_state.gd
+- 存檔槽（`"permanent"` | `"temp"` | 數字索引）
+  - `player_state.json` ← cogito_player_state.gd（Resource 序列化）
+  - `<scene_name>.json` ← cogito_scene_state.gd
 
 持久化群組：
-  "Persist"           → 跨場景重新實例化
-  "save_object_state" → 原地呼叫 save() / set_state()
-```
+
+- `"Persist"` → 跨場景重新實例化
+- `"save_object_state"` → 原地呼叫 save() / set_state()
 
 ---
 

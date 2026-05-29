@@ -370,33 +370,27 @@ die():
 
 ## 十、互動物件系統架構圖
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                互動物件（各自繼承 Node3D）                 │
-│  CogitoObject        CogitoDoor   CogitoSwitch           │
-│  CogitoContainer     CogitoKeypad CogitoPressurePlate    │
-│  CogitoSnapSlot      CogitoVendor CogitoProjectile       │
-└───────┬─────────────────────┬───────────────────────────┘
-        │ 全部實作             │
-   save() / set_state()    interact(PIC)
-        │                     │
-        ▼                     ▼
- CogitoSceneManager    PlayerInteractionComponent
- (存檔/讀檔掃描              (玩家視角互動分派)
-  "save_object_state")
+```mermaid
+flowchart TD
+  subgraph OBJ["互動物件（各自繼承 Node3D）"]
+    direction LR
+    O1["CogitoObject · CogitoDoor · CogitoSwitch"]
+    O2["CogitoContainer · CogitoKeypad · CogitoPressurePlate"]
+    O3["CogitoSnapSlot · CogitoVendor · CogitoProjectile"]
+  end
+  OBJ -->|"save() / set_state()"| SM["CogitoSceneManager<br/>(存檔/讀檔掃描 \"save_object_state\")"]
+  OBJ -->|"interact(PIC)"| PIC["PlayerInteractionComponent<br/>(玩家視角互動分派)"]
 ```
 
 ### 觸發鏈模式（Trigger Chain）
 
-```
-[玩家互動]
-    │
-    ▼
-CogitoSwitch.interact()
-  └─ call_interact_on_objects()
-       ├─► CogitoDoor.interact()   (開門)
-       ├─► CogitoSwitch.interact() (連鎖觸發另一開關)
-       └─► CogitoVendor 子節點.interact()
+```mermaid
+flowchart TD
+  P["[玩家互動]"] --> SW["CogitoSwitch.interact()"]
+  SW --> CIO["call_interact_on_objects()"]
+  CIO --> D["CogitoDoor.interact() (開門)"]
+  CIO --> S2["CogitoSwitch.interact() (連鎖觸發另一開關)"]
+  CIO --> V["CogitoVendor 子節點.interact()"]
 ```
 
 所有具體物件只要實作 `interact(PIC)` 即可加入觸發鏈，**無需繼承共同基類或實作特定介面**（Duck Typing）。

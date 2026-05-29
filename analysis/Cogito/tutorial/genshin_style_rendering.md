@@ -128,21 +128,20 @@ void fragment() {
 ## 四、風格化環境設定
 
 ### WorldEnvironment 設定
-```
-WorldEnvironment
-└── Environment 資源：
-    ├── Background
-    │   ├── Mode: Sky
-    │   └── Sky: ProceduralSkyMaterial
-    │       ├── Sky Top Color: (0.15, 0.4, 0.9)    # 鮮艷天藍
-    │       ├── Sky Horizon Color: (0.7, 0.85, 1.0) # 淺藍地平線
-    │       └── Ground Bottom Color: (0.3, 0.25, 0.2)
-    ├── Tonemap: Mode = Linear（保持色彩飽和）
-    ├── Glow: Enabled（讓發光材質有光暈效果）
-    │   ├── Intensity = 0.5
-    │   └── Bloom: 0.1（輕微泛光）
-    └── SSAO: Disabled（風格化不需要環境光遮蔽）
-```
+
+- WorldEnvironment
+  - Environment 資源：
+    - Background
+      - Mode: Sky
+      - Sky: ProceduralSkyMaterial
+        - Sky Top Color: (0.15, 0.4, 0.9)    # 鮮艷天藍
+        - Sky Horizon Color: (0.7, 0.85, 1.0) # 淺藍地平線
+        - Ground Bottom Color: (0.3, 0.25, 0.2)
+    - Tonemap: Mode = Linear（保持色彩飽和）
+    - Glow: Enabled（讓發光材質有光暈效果）
+      - Intensity = 0.5
+      - Bloom: 0.1（輕微泛光）
+    - SSAO: Disabled（風格化不需要環境光遮蔽）
 
 ### 風格化草地 Shader（Wind Sway）
 

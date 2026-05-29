@@ -2,28 +2,80 @@
 
 本教學深度說明如何在 COGITO 中建立各類 3D 物件，以及如何整合撿取、物理碰撞、元素特效等系統，確保物件能被正確存讀檔。
 
+> 本文所有行號皆對照 `/home/lorkhan/code/Cogito-1.1.5` 原始碼（版本 1.1.5）實際確認。
+
 ## 前置知識
 - 已閱讀 [Level 3A: 互動物件系統](../architecture/level3_interactive_objects.md)。
 - 已閱讀 [Level 4A: CogitoProperties 物質反應系統](../architecture/level4_properties_system.md)。
 
 ---
 
+## 先釐清三個常見誤解（重要）
+
+進入教學前，先校正三個 COGITO 新手（與舊版教學）常見的錯誤認知，後續設定才不會走偏：
+
+1. **「可互動」由群組決定，不是由 Physics Layer 決定。**
+   玩家的偵測射線 `InteractionRayCast`/`InteractionShapecast` 的 `collision_mask = 3`（即 Layer 1 **加** Layer 2，二進位 `11`），見 `addons/cogito/Components/interaction_raycast.tscn:35,43`。射線打到任何 Layer 1 或 2 的物體後，**還要再用群組過濾**：`addons/cogito/Scripts/interaction_raycast.gd:64`（raycast）與 `:92`（shapecast）只接受 `is_in_group("interactable")` 的碰撞體，其餘一律視為 null。
+   → 所以「裝飾品不會跳出互動提示」的真正原因是**它不在 `interactable` 群組／沒有 InteractionComponent**，而不是「它在 Layer 1」。Layer 2 取名 `Interactables`（`project.godot:249`）只是組織上的命名慣例。
+
+2. **內建互動物件大多直接 `extends Node3D`，並非繼承 `CogitoObject`。**
+   實際上 `CogitoObjects/` 中**只有 `cogito_projectile.gd` 繼承 `CogitoObject`**（`cogito_projectile.gd:3`）。門、開關、按鈕、容器都是各自 `extends Node3D` 並自帶 `class_name`：
+   - `cogito_door.gd:4` `extends Node3D`（class `CogitoDoor`，`:3`）
+   - `cogito_switch.gd:3` `extends Node3D`（class `CogitoSwitch`，`:2`）
+   - `cogito_button.gd:2` `extends Node3D`（class `CogitoButton`，`:3`）
+   - `cogito_container.gd:2` `extends Node3D`（class `CogitoContainer`，`:3`）；`cogito_lootable_container.gd:1` 才再繼承 `CogitoContainer`
+   → 因此「自訂互動物件一定要繼承 CogitoObject」是錯的。你可以繼承 `CogitoObject` 取得它的存檔/AABB/properties 掃描，**也可以**像門/容器那樣只繼承 `Node3D` 自己實作。下文會標明每種做法。
+
+3. **存檔有兩套群組，用途不同。**
+   - `"Persist"`：整個節點會被**刪除後重新實例化**（需 `.tscn` 來源 + `save()`）。`CogitoObject._ready()` 自動加入此群組（`cogito_object.gd:51`）。
+   - `"save_object_state"`：節點本身**留在場景**，只還原其狀態（門開關、容器內容等）。門與容器加入的是這個群組（`cogito_door.gd:137`、`cogito_container.gd:42`）。
+   兩者由 `cogito_scene_manager.gd` 分別處理：Persist 在 `:391` 起、save_object_state 在 `:421` 起。
+
+---
+
 ## 物件類型決策樹
 
+```mermaid
+flowchart TD
+    Q{我的物件需要…} --> A[只是裝飾<br/>玩家無法互動]
+    A --> T1[類型一：純靜態擺設<br/>StaticBody3D，不加任何 Cogito 腳本]
+    Q --> B[玩家可看向並按鍵互動]
+    B --> B1[固定不動] --> T2[類型二：可互動靜態物件<br/>CogitoStaticInteractable 或 CogitoObject]
+    B --> B2[可被推動／搬運] --> T3[類型三：可搬運物理物件<br/>CogitoObject + RigidBody3D + CarryableComponent]
+    B --> B3[可撿進物品欄] --> T4[類型四：可撿取物品<br/>CogitoObject + RigidBody3D + PickupComponent]
+    Q --> C[需要元素反應<br/>著火／通電／變濕] --> T5[在上述任一類型<br/>加掛 CogitoProperties 子節點]
 ```
-我的物件需要…
-├── 只是裝飾 (玩家無法互動)
-│   └── → 類型一：純靜態擺設
-├── 玩家可以「看向並按鍵互動」
-│   ├── 固定在場景中，不移動
-│   │   └── → 類型二：可互動靜態物件 (StaticBody3D + CogitoObject)
-│   ├── 可以被推動或搬運
-│   │   └── → 類型三：可搬運物理物件 (RigidBody3D + CogitoObject)
-│   └── 可以被撿進物品欄
-│       └── → 類型四：可撿取物品 (RigidBody3D + CogitoObject + PickupComponent)
-└── 需要元素反應 (著火、通電等)
-    └── → 在上述任何類型加上 CogitoProperties 組件
+
+> 注意：類型二「固定可互動」其實有兩條路（見下文）——用內建 `CogitoStaticInteractable`（不存檔、最輕量），或用 `CogitoObject`（含完整存檔）。
+
+## 物件類別階層
+
+下圖呈現 `CogitoObjects/` 中各腳本的實際繼承關係（已逐一以 `extends` 確認）：
+
+```mermaid
+classDiagram
+    Node3D <|-- CogitoObject
+    Node3D <|-- CogitoStaticInteractable
+    Node3D <|-- CogitoDoor
+    Node3D <|-- CogitoSwitch
+    Node3D <|-- CogitoButton
+    Node3D <|-- CogitoContainer
+    CogitoObject <|-- CogitoProjectile
+    CogitoContainer <|-- LootableContainer
+    InteractionComponent <|-- PickupComponent
+    InteractionComponent <|-- CogitoCarryableComponent
+    class CogitoObject {
+        加入 interactable + Persist 群組
+        save() 含位置/旋轉/RigidBody 速度
+        get_aabb() 計算掉落體積
+    }
+    class CogitoStaticInteractable {
+        只加入 interactable 群組
+        無 save()，不被存檔
+    }
 ```
+
+重點：互動「組件」（`PickupComponent`、`CogitoCarryableComponent`）繼承的是 `InteractionComponent`（`PickupComponent.gd:1`、`CarryableComponent.gd:1`），掛在物件之下；互動「物件」彼此多半是平行的 `Node3D` 子類，**不是**一條長繼承鏈。
 
 ---
 
@@ -32,11 +84,9 @@
 最簡單的物件，不參與任何遊戲邏輯。
 
 ### 節點結構
-```
-StaticBody3D
-├── MeshInstance3D
-└── CollisionShape3D
-```
+- `StaticBody3D`
+  - `MeshInstance3D`
+  - `CollisionShape3D`
 
 ### Physics Layer 設定
 - **Layer 1 (Environment)**：勾選此 Layer。
@@ -52,22 +102,18 @@ StaticBody3D
 固定在場景中、玩家可以看向並互動的物件（如書架、佈告欄）。
 
 ### 節點結構
-```
-CogitoStaticInteractable (StaticBody3D + cogito_static_interactable.gd)
-├── MeshInstance3D
-├── CollisionShape3D
-└── BasicInteraction
-    └── (此節點已繼承自 InteractionComponent)
-```
+- `CogitoStaticInteractable` (StaticBody3D + cogito_static_interactable.gd)
+  - `MeshInstance3D`
+  - `CollisionShape3D`
+  - `BasicInteraction`
+    - (此節點已繼承自 InteractionComponent)
 
 或者，若要完整 CogitoObject 功能（含存檔）：
-```
-CogitoObject (Node3D + cogito_object.gd)
-├── StaticBody3D
-│   ├── MeshInstance3D
-│   └── CollisionShape3D
-└── BasicInteraction
-```
+- `CogitoObject` (Node3D + cogito_object.gd)
+  - `StaticBody3D`
+    - `MeshInstance3D`
+    - `CollisionShape3D`
+  - `BasicInteraction`
 
 ### Physics Layer 設定
 - **Layer 2 (Interactables)**：物件的 `StaticBody3D` 或 `RigidBody3D` 應勾選此 Layer，讓 `InteractionRayCast` 能掃描到它。
@@ -109,14 +155,12 @@ func _on_basic_interaction_was_interacted_with(_text, _action):
 可以被推動，或可以被玩家「撿起並攜帶」的物件（如箱子、瓶子）。
 
 ### 節點結構
-```
-CogitoObject (Node3D + cogito_object.gd)   ← 掛此腳本以支援存檔
-└── RigidBody3D
-    ├── MeshInstance3D
-    ├── CollisionShape3D
-    ├── ImpactSounds               ← 碰撞音效
-    └── CarryableComponent         ← 允許玩家抬起
-```
+- `CogitoObject` (Node3D + cogito_object.gd) ← 掛此腳本以支援存檔
+  - `RigidBody3D`
+    - `MeshInstance3D`
+    - `CollisionShape3D`
+    - `ImpactSounds` ← 碰撞音效
+    - `CarryableComponent` ← 允許玩家抬起
 
 **重要**：`CogitoObject` 的 `save()` 會向上爬父節點尋找 `RigidBody3D`（`cogito_object.gd:122-128`），因此根節點是 `Node3D` 而 `RigidBody3D` 是其子節點的結構是正確的。
 
@@ -147,13 +191,11 @@ CogitoObject (Node3D + cogito_object.gd)   ← 掛此腳本以支援存檔
 玩家可以撿進物品欄的道具。
 
 ### 節點結構
-```
-CogitoObject (Node3D + cogito_object.gd)
-└── RigidBody3D
-    ├── MeshInstance3D
-    ├── CollisionShape3D
-    └── PickupComponent            ← 撿取進物品欄
-```
+- `CogitoObject` (Node3D + cogito_object.gd)
+  - `RigidBody3D`
+    - `MeshInstance3D`
+    - `CollisionShape3D`
+    - `PickupComponent` ← 撿取進物品欄
 
 ### PickupComponent 設定（`PickupComponent.gd:4-5`）
 最關鍵的欄位是 `slot_data`（`InventorySlotPD` Resource）。
@@ -183,12 +225,10 @@ CogitoObject (Node3D + cogito_object.gd)
 | `spawn_on_electrified` | 物件通電時 |
 
 **特效場景建立範例：**
-```
-FireEffect.tscn
-└── GPUParticles3D
-    ├── (設定 Amount、Lifetime、EmissionShape 等)
-    └── (粒子材質使用 ParticleProcessMaterial)
-```
+- `FireEffect.tscn`
+  - `GPUParticles3D`
+    - (設定 Amount、Lifetime、EmissionShape 等)
+    - (粒子材質使用 ParticleProcessMaterial)
 
 **已知 Bug（`cogito_properties.gd:276`）**：`spawn_elemental_vfx()` 中的上限判斷條件寫反：
 ```gdscript
