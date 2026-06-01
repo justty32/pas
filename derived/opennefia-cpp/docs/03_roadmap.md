@@ -19,17 +19,20 @@
 
 ---
 
-## Phase 1 — ECS 地基
+## Phase 1 — ECS 地基 ✅ 完成 2026-06-01
 
 **目標**：registry + 基礎 component + 自由函式系統 + 事件匯流排能跑。
 
-- [ ] `core/util/`：Vector2i、ResourcePath 等（翻新自既有骨架）。
-- [ ] `core/ecs/`：薄 `EntityManager`（封裝 `entt::registry`，提供 `SpawnEntity` 佔位）、`ServiceContext`、`SystemCtx`。
-- [ ] `core/components/`：`MetaDataComponent`、`SpatialComponent`（座標 + 父子）。
-- [ ] **事件匯流排**（本專案重點，medps 沒有）：`entt::dispatcher` 包廣播；自製定向 `EventBus`（`RaiseLocalEvent(entity, ev)` + 明確 `Subscribe`）。
-- [ ] 系統註冊：明確 vector + 順序執行的 `tick()`（仿 `global_manager.cpp:130`）。
+- [x] `core/util/`：`Vector2i`、`ResourcePath`。
+- [x] `core/ecs/`：薄 `EntityManager`（`entt::registry` + 系統 vector + `tick()`）；`SystemCtx`（Phase 1：只有 `EventBus&`）；`EventBus`（定向 void* 抹除 + `entt::dispatcher` 廣播）。
+- [x] `core/services/`：`ServiceContext`（Phase 1：spdlog logger；預設 null logger）。
+- [x] `core/components/`：`MetaDataComponent`（proto_id + is_alive）、`SpatialComponent`（x/y + parent entity；serialize 預留 Phase 3）。
+- [x] 系統註冊：明確 vector + 順序執行的 `tick()`（仿 `medps/global_manager.cpp:130`）。
+- [x] **事件匯流排**：void* 類型抹除的定向 `raise_local` + `entt::dispatcher` 廣播。
 
-**判準**：一個示範系統訂閱事件、發送定向事件、修改 component，測試驗證。
+**判準**：✅ 8 test cases，20 assertions 全綠（system 訂閱 + 發送定向事件 + handler 修改 component）。
+
+> **注意**：doctest v2.4.11 在 MSVC 2022 中需要 `DOCTEST_CONFIG_USE_STD_HEADERS`（讓 doctest 用完整 `<sstream>` 取代前向宣告，避免 `string_view` 的 `operator<<` 因 ostream 不完整而報錯）。已寫入 `tests/CMakeLists.txt`。
 
 ---
 

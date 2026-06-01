@@ -84,5 +84,6 @@ GitHub Repo：（尚無；如日後推送由使用者手動建立並於此記錄
 ## 9. 進度
 
 - 2026-06-01：專案初始化，完成 PROJECT.md 與設計文件 01–03。尚未開始實作（src/ 空）。
-- 2026-06-01：**Phase 0 完成**。CMakeLists.txt（FetchContent：EnTT v3.16.0 / cereal v1.3.2 / spdlog v1.14.1 / doctest v2.4.11），`opennefia_core` STATIC 靜態庫編譯通過，`version()` smoke test 綠燈（1/1）。**下一步**：Phase 1 ECS 地基。
+- 2026-06-01：**Phase 0 完成**。CMakeLists.txt（FetchContent：EnTT v3.16.0 / cereal v1.3.2 / spdlog v1.14.1 / doctest v2.4.11），`opennefia_core` STATIC 靜態庫編譯通過，`version()` smoke test 綠燈（1/1）。
+- 2026-06-01：**Phase 1 完成**。`core/ecs/`（EntityManager + EventBus + SystemCtx）、`core/services/`（ServiceContext）、`core/components/`（MetaDataComponent + SpatialComponent）、`core/util/`（Vector2i + ResourcePath）。8 test cases / 20 assertions 全綠。**下一步**：Phase 2 原型系統（yaml-cpp + PrototypeId + SpawnEntity）。
 </content>
