@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenNefia 分析 — C++ 重寫計畫</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:720px){.doc-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">OpenNefia</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="cpp_plan.html" class="active">C++ 重寫計畫</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>C++ 重寫計畫（Raylib 版）</h1>
+  <p>將 C# / .NET 版 OpenNefia 以 C++ 重新實作，並用 raylib 取代 Love2D。重寫嚴格遵循原始碼架構，把各 C# 子系統逐一遷移。卡片連回 <code>../details/plan_cpp/*.md</code>。</p>
+</div>
+
+<!-- 技術棧對照 -->
+<div class="section">
+  <div class="section-title">核心技術棧選擇（C# → C++）</div>
+  <table>
+    <thead><tr><th>功能</th><th>C# 原方案</th><th>C++ 函式庫</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>圖形 / 音訊 / 輸入</td><td>Love2D (Love2dCS)</td><td><span class="badge badge-cyan">raylib</span></td><td>單一函式庫涵蓋三項</td></tr>
+      <tr><td>ECS 核心</td><td>自製 EntityManager</td><td><span class="badge badge-green">EnTT</span></td><td>高效能成熟 C++ ECS</td></tr>
+      <tr><td>YAML 解析</td><td>YamlDotNet</td><td><span class="badge badge-orange">yaml-cpp</span></td><td>原型系統與序列化</td></tr>
+      <tr><td>日誌</td><td>Serilog</td><td><span class="badge badge-blue">spdlog</span></td><td>高效能非同步日誌</td></tr>
+      <tr><td>配置</td><td>Nett (TOML)</td><td><span class="badge badge-purple">tomlplusplus</span></td><td>TOML 設定檔</td></tr>
+      <tr><td>依賴注入</td><td>反射 + [Dependency]</td><td><span class="badge badge-red">自製 ServiceLocator</span></td><td>C++ 無反射，改強型別定位器</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 最大挑戰 -->
+<div class="section">
+  <div class="section-title">重寫的根本挑戰：C# 反射不存在於 C++</div>
+  <div class="g3">
+    <div class="card card-accent-red">
+      <h3>① 依賴注入</h3>
+      <p>C# 靠反射掃描 <code>[Dependency]</code> 欄位自動注入；C++ 必須改用強型別 <code>ServiceLocator</code>，手動 <code>Resolve&lt;T&gt;()</code>。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>② 序列化</h3>
+      <p>C# 靠 <code>[DataField]</code> 屬性自動讀寫；C++ 需手寫 <code>Deserialize()</code> 或用宏 / 程式碼生成減少樣板。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>③ 系統 / 組件自動註冊</h3>
+      <p>C# 靠 Assembly 掃描找出所有 EntitySystem 子類；C++ 需手動註冊或靜態自註冊樣板（self-registration）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 五階段路線圖 -->
+<div class="section">
+  <div class="section-title">重寫階段與優先順序</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">① Foundation</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">② ECS Core</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">③ Prototypes</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">④ Rendering / Input</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">⑤ Game Loop / UI</span>
+  </div>
+</div>
+
+<!-- 文件卡片 -->
+<div class="section">
+  <div class="section-title">計畫文件</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-blue" href="../details/plan_cpp/01_foundation.md">
+      <span class="dc-no">階段一</span>
+      <h3>基礎建設 (Foundation)</h3>
+      <p>CMake 專案結構、ServiceLocator（IoC 替代）、Maths / Utility / ResourcePath、spdlog 日誌、tomlplusplus 配置與 CVar 觀察者模式。</p>
+      <span class="dc-link">→ 01_foundation.md</span>
+    </a>
+    <a class="doc-card card-accent-blue" href="../details/plan_cpp/01_foundation_detail.md">
+      <span class="dc-no">階段一 · 細節</span>
+      <h3>基礎建設（深入）</h3>
+      <p>第一階段的逐項實作細節與程式碼骨架。</p>
+      <span class="dc-link">→ 01_foundation_detail.md</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../details/plan_cpp/02_ecs.md">
+      <span class="dc-no">階段二</span>
+      <h3>ECS 與事件系統</h3>
+      <p>用 EnTT registry 封裝 EntityManager、MetaData / Spatial 組件、以 <code>entt::dispatcher</code> 實作廣播 / 定向事件匯流排、EntitySystem 生命週期。</p>
+      <span class="dc-link">→ 02_ecs.md</span>
+    </a>
+    <a class="doc-card card-accent-orange" href="../details/plan_cpp/03_prototypes.md">
+      <span class="dc-no">階段三</span>
+      <h3>原型與序列化</h3>
+      <p>yaml-cpp 序列化、<code>PrototypeId&lt;T&gt;</code> 強型別封裝、PrototypeManager 多型別存放，與 parent 欄位的繼承合併（依賴圖排序）。</p>
+      <span class="dc-link">→ 03_prototypes.md</span>
+    </a>
+    <a class="doc-card card-accent-cyan" href="../details/plan_cpp/04_graphics_ui.md">
+      <span class="dc-no">階段四 / 五</span>
+      <h3>渲染與 UI</h3>
+      <p>raylib Graphics 後端、分層 MapRenderer（Tile / Entity / Fov）、UiLayer 堆疊系統、InputManager 動作綁定與上下文、FontManager 中日英字符集。</p>
+      <span class="dc-link">→ 04_graphics_ui.md</span>
+    </a>
+    <a class="doc-card card-accent-cyan" href="../details/plan_cpp/04_graphics_ui_detail.md">
+      <span class="dc-no">階段四 / 五 · 細節</span>
+      <h3>渲染與 UI（深入）</h3>
+      <p>渲染與 UI 子系統的逐項實作細節與骨架。</p>
+      <span class="dc-link">→ 04_graphics_ui_detail.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 檔案對照表 -->
+<div class="section">
+  <div class="section-title">C# → C++ 檔案對照表（Core）</div>
+  <table>
+    <thead><tr><th>C# Namespace / 目錄</th><th>C++ 目錄 (src/)</th><th>關鍵類別</th></tr></thead>
+    <tbody>
+      <tr><td><code>OpenNefia.Core.IoC</code></td><td><code>core/ioc/</code></td><td>ServiceLocator</td></tr>
+      <tr><td><code>OpenNefia.Core.GameObjects</code></td><td><code>core/ecs/</code></td><td>EntityManager, EntitySystem</td></tr>
+      <tr><td><code>OpenNefia.Core.Prototypes</code></td><td><code>core/prototypes/</code></td><td>PrototypeManager</td></tr>
+      <tr><td><code>OpenNefia.Core.Serialization</code></td><td><code>core/serialization/</code></td><td>SerializationManager</td></tr>
+      <tr><td><code>OpenNefia.Core.Graphics</code></td><td><code>core/graphics/</code></td><td>RaylibGraphics</td></tr>
+      <tr><td><code>OpenNefia.Core.UserInterface</code></td><td><code>core/ui/</code></td><td>UIManager</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="highlight-box hl-blue" style="margin-top:8px">
+  骨架原始碼位於 <code>../details/implements/</code>（含 <code>OpenNefia.Core/</code> 風格的 .hpp 介面與 <code>src/core/</code> 的初步實作）。
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  卡片連結指向 <code>../details/plan_cpp/*.md</code>；真實來源為 Markdown，HTML 僅為導覽呈現層。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

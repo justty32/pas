@@ -1,1 +1,2 @@
 - 2026-04-15: 遷移 OpenNefia 分析資料與 C++ 實作計畫。
+- 2026-06-01: 核對源碼修正 01_project_overview（.NET 6.0→8.0、補全依賴表、更新目錄圖）；新增 14_xaml_wisp_ui.md（XAML IL 注入 + Wisp 控件框架深化）；更新 architecture/README.md 索引與快速概念摘要（Claude Code Sonnet 4.6）。
