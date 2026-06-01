@@ -5,7 +5,7 @@
 #include <entt/entt.hpp>
 #include <cereal/archives/portable_binary.hpp>
 #include <cereal/types/string.hpp>   // MetaDataComponent::proto_id (std::string)
-// 新增含有 STL 容器的 component 時，在此補對應的 cereal/types/*.hpp
+#include <cereal/types/vector.hpp>   // MapData::tiles (std::vector<Tile>)
 #include <filesystem>
 #include <fstream>
 #include <sstream>

@@ -72,16 +72,19 @@
 
 ---
 
-## Phase 4 — 地圖邏輯 + 最小遊戲循環骨幹
+## Phase 4 — 地圖邏輯 + 最小遊戲循環骨幹 ✅ 完成 2026-06-01
 
 **目標**：把前三者串成「可推進的世界」（仍無圖形）。
 
-- [ ] `core/maps/`：`MapData` 帶 `tdarray<Tile>` 稠密網格 component（仿 `area_terrain.h`）；`Tile` 含可走 / 擋視線 flags。
-- [ ] 實體佈局：在地圖上 spawn / 移動實體（`SpatialComponent`）。
-- [ ] 回合 / tick 骨幹：`update()` 跑註冊系統一輪（驅動者是測試）。
-- [ ] 是否需要多 registry / streaming：依 Elona 地圖規模評估——初版單 / 少數 registry 即可，但序列化路徑已照 medps，可平滑擴張。
+- [x] `core/maps/tile.h`：`Tile { terrain, flags }`；`TILE_WALKABLE / TILE_BLOCKS_SIGHT` 旗標（仿 medps area_terrain.h）。
+- [x] `core/maps/map_data.h`：`MapData { width, height, vector<Tile> }`；`at(x,y) / get(x,y) / in_bounds`；稠密網格在單一「地圖實體」上，可移動演員是獨立 entity（仿 medps Rimworld-style 設計）。
+- [x] `AllComponents` 加入 `MapData`；`save_load.h` 加入 `<cereal/types/vector.hpp>`。
+- [x] 實體佈局：`SpatialComponent` + 可走性判斷系統（tick 時向右移動，碰牆停下）。
+- [x] 回合 / tick 骨幹：`EntityManager::add_system + tick()`（Phase 1 已在，本階段串接地圖邏輯）。
+- [x] 多 registry 評估：Elona 地圖規模無需 zone streaming，維持單 registry；序列化路徑已仿 medps，未來可平滑擴張。
 
-**判準**：跑一段「載入原型 → 生成地圖與角色 → tick N 回合 → 存檔 → 還原」的整合測試，綠燈。達成即等同 `PROJECT.md` §5 完成定義。
+**判準**：✅ 36 test cases / 139 assertions 全綠。
+整合測試覆蓋：原型生成 → 地圖可走性設定 → tick 3 回合（牆阻擋正確）→ save → 清空 → restore → 驗證 hero 座標 + 地圖 tile 旗標 ≡ PROJECT.md §5 完成定義。
 
 ---
 
