@@ -1,0 +1,375 @@
+# opennefia-cpp — 架構總結
+
+> 建立於 2026-06-01。本文為 `derived/opennefia-cpp/` 衍生小專案的分析文件，記錄 Phase 0–4（godot-free C++ 核心）完成後的架構決策、實作成果與關鍵坑點。
+>
+> 源碼位置：`../../derived/opennefia-cpp/`（本工作區相對路徑）。
+
+---
+
+## 1. 專案概覽
+
+### 目標
+
+以 **godot-free 純 C++20 靜態庫**重寫 OpenNefia 的引擎核心，架構藍本取自使用者自有的 `medps`（C++20 4X 模擬核心，EnTT + cereal，25/25 測試綠燈）。
+
+核心命題：OpenNefia 的 C# 架構大量依賴**反射**（DI 注入、系統自動發現、欄位序列化）；C++ 沒有反射，但可以**順著 C++ 的紋理**用更少抽象表達同樣意圖。
+
+### 完成範圍
+
+| 階段 | 內容 | 狀態 |
+|---|---|---|
+| Phase 0 | CMake 雙目標骨架（godot-free STATIC + 測試）| ✅ 完成 |
+| Phase 1 | ECS 地基（EntityManager + EventBus + SystemCtx）| ✅ 完成 |
+| Phase 2 | 原型系統（yaml-cpp 載入 + 繼承解析 + spawn）| ✅ 完成 |
+| Phase 3 | 序列化三件套（AllComponents + entt_cereal + save_load）| ✅ 完成 |
+| Phase 4 | 地圖邏輯 + 整合測試（Tile + MapData + round-trip）| ✅ 完成 |
+| F1–F4 | Godot GDExtension 前端綁定 | ⏸ 暫緩 |
+
+**測試結果**：36 test cases / 139 assertions 全綠（2026-06-01）
+
+### 技術棧
+
+| 功能 | 函式庫 | 版本 |
+|---|---|---|
+| ECS | EnTT | v3.16.0 |
+| 序列化 | cereal | v1.3.2 |
+| YAML 原型 | yaml-cpp | 0.8.0 |
+| 日誌 | spdlog | v1.14.1 |
+| 測試 | doctest | v2.4.11 |
+| 構建 | CMake | ≥ 3.14 |
+
+---
+
+## 2. 分層架構
+
+```mermaid
+graph TD
+    subgraph opennefia_core ["opennefia_core（STATIC，godot-free）"]
+        subgraph ecs ["core/ecs/"]
+            EM[EntityManager]
+            EB[EventBus]
+            SC[SystemCtx]
+        end
+        subgraph components ["core/components/"]
+            MD[MetaDataComponent]
+            SP[SpatialComponent]
+        end
+        subgraph proto ["core/prototypes/"]
+            PM[PrototypeManager]
+            PID[PrototypeId&lt;T&gt;]
+        end
+        subgraph ser ["core/serialize/"]
+            AC[AllComponents type_list]
+            ECA[entt_cereal_archive]
+            SL[save_load]
+            SS[SaveStore / FolderSaveStore]
+        end
+        subgraph maps ["core/maps/"]
+            TD[Tile / TILE_WALKABLE / TILE_BLOCKS_SIGHT]
+            MD2[MapData]
+        end
+        subgraph svc ["core/services/"]
+            SVC[ServiceContext - spdlog]
+        end
+    end
+    DATA["data/*.yaml"] --> PM
+    PM --> EM
+    EM --> SL
+    AC --> SL
+    ECA --> SL
+```
+
+---
+
+## 3. Phase 1 — ECS 地基
+
+### EntityManager（`src/core/ecs/entity_manager.h`）
+
+薄封裝 `entt::registry`，持有一組 `std::vector<SystemFn>` 自由函式；`tick(ctx)` 依序呼叫每個系統。
+
+```cpp
+// entity_manager.h:34
+using SystemFn = std::function<void(entt::registry&, SystemCtx&)>;
+void add_system(SystemFn fn);
+void tick(SystemCtx& ctx);
+entt::registry& registry();
+```
+
+### EventBus（`src/core/ecs/event_bus.h`）
+
+兩層派發：
+
+- **定向（Directed）**：`raise_local<Event>(reg, entity, event)`。用 `void*` 類型抹除，以 `std::type_index` 為鍵分派給訂閱者 lambda。
+- **廣播（Broadcast）**：透過 `entt::dispatcher`，`broadcast<Event>()` / `dispatcher().sink<Event>().connect()`。
+
+```cpp
+// event_bus.h:18
+template<typename Event>
+void subscribe(std::function<void(entt::registry&, entt::entity, Event&)> handler) {
+    directed_[std::type_index(typeid(Event))].emplace_back(...);
+}
+template<typename Event>
+void raise_local(entt::registry& reg, entt::entity target, Event& ev);
+```
+
+---
+
+## 4. Phase 2 — 原型系統
+
+### 設計
+
+- **`PrototypeId<T>`**（`src/core/prototypes/prototype_id.h`）：強型別 id 包裝 `std::string`，以空 Tag 型別區分不同原型域。
+- **`PrototypeManager`**（`src/core/prototypes/prototype_manager.h+cpp`）：
+  1. `load_file()` — 用 yaml-cpp 讀入 YAML 序列，建立 raw_defs_ map。
+  2. `resolve_inheritance()` — DFS 拓撲排序，把父原型的 component 深複製給子原型（flat merge）。
+  3. `spawn(em, proto_id)` — 在 EntityManager 建新 entity，對每個已登錄的 `ComponentLoader` 呼叫，生出帶完整 component 的實體。
+
+### ComponentLoader（零反射登錄）
+
+```cpp
+// prototype_manager.h:17
+using ComponentLoader = std::function<void(entt::registry&, entt::entity, const YAML::Node&)>;
+void register_loader(const std::string& type_name, ComponentLoader loader);
+```
+
+呼叫方只需：
+```cpp
+pm.register_loader("Spatial", [](auto& reg, auto e, const auto& n) {
+    SpatialComponent s;
+    if (n["x"]) s.x = n["x"].as<int>();
+    reg.emplace_or_replace<SpatialComponent>(e, s);
+});
+```
+
+### YAML 格式（`data/test_prototypes.yaml`）
+
+```yaml
+- id: BaseEntity
+  components:
+    Spatial: {x: 0, y: 0}
+- id: BaseChara
+  parent: BaseEntity
+  components:
+    MetaData: {name: chara}
+- id: Putit
+  parent: BaseChara
+  components:
+    CharaStats: {max_hp: 30, attack: 3}
+```
+
+3 層繼承（BaseEntity → BaseChara → Putit / EliteWarrior）+ 獨立 SimpleItem，20 test cases 全綠。
+
+### 關鍵坑：YAML::Node 共享 detail::node 污染
+
+yaml-cpp 的 `YAML::Node` map 複製只複製 handle（引用計數 + 共享底層 `detail::node`）。子原型繼承父原型 component 後，若任一原型對該 node 賦值，會透過 `AssignNode → set_ref` 修改**所有共享 handle**——導致其他所有繼承同一父原型的子類靜默被污染。
+
+**修正**：繼承 merge 時，對父原型每個 component node 呼叫 `YAML::Clone()`，確保獨立的 `detail::node`；子原型自身的 override 也同樣 Clone。
+
+---
+
+## 5. Phase 3 — 序列化三件套
+
+直接移植 medps 已驗證的做法，三個檔案構成完整體系。
+
+### AllComponents（`src/core/serialize/all_components.h`）
+
+```cpp
+using AllComponents = entt::type_list<
+    MetaDataComponent,
+    SpatialComponent,
+    MapData
+>;
+```
+
+新增 component 型別只改這裡，save/load 自動覆蓋。
+
+### entt_cereal_archive（`src/core/serialize/entt_cereal_archive.h`）
+
+薄 adapter 橋接 EnTT snapshot API 與 cereal，把 `entt::entity`（強型別 enum）轉成底層整數再存：
+
+```cpp
+struct output_archive {
+    cereal::PortableBinaryOutputArchive& ar;
+    void operator()(entt::entity e) {
+        ar(static_cast<std::underlying_type_t<entt::entity>>(e));
+    }
+    template<typename T>
+    void operator()(entt::entity e, const T& c) {
+        ar(static_cast<entt_id_t>(e), c);
+    }
+};
+```
+
+### save_load（`src/core/serialize/save_load.h`）
+
+fold expression 展開 AllComponents，單次 `snap.get<Cs>(out)` 覆蓋所有型別：
+
+```cpp
+template<typename... Cs>
+void save_impl(entt::registry& reg, output_archive& out, entt::type_list<Cs...>) {
+    auto snap = entt::snapshot{reg};
+    snap.get<entt::entity>(out);
+    (snap.get<Cs>(out), ...);    // ← 對每個 component 型別各存一次
+}
+```
+
+三層 API：stream（`std::ostream`）、path（檔案路徑）、SaveStore（抽象後端）。
+
+### SpatialComponent 的 save/load split
+
+`parent` 欄位型別為 `entt::entity`，無法對稱序列化。改用 cereal 的 asymmetric split：
+
+```cpp
+// spatial_component.h:22
+template<class Archive>
+void save(Archive& ar) const {
+    ar(x, y);
+    ar(static_cast<std::underlying_type_t<entt::entity>>(parent));
+}
+template<class Archive>
+void load(Archive& ar) {
+    ar(x, y);
+    std::underlying_type_t<entt::entity> raw{};
+    ar(raw);
+    parent = static_cast<entt::entity>(raw);
+}
+```
+
+### 關鍵坑
+
+- `entt::entity == entt::null_t` 在 doctest `CHECK()` 中與 EnTT 的 template `operator==<T>` 產生 C2593 歧義 → 先求值成 `bool` 再 `CHECK(parent_null)`。
+- `std::string` 序列化需 `#include <cereal/types/string.hpp>`；`std::vector` 需 `<cereal/types/vector.hpp>`（兩者均無則 cereal static_assert「找不到序列化函式」）。
+
+---
+
+## 6. Phase 4 — 地圖邏輯
+
+### MapData（`src/core/maps/map_data.h`）
+
+稠密 tile 網格掛在**單一地圖 entity** 上（仿 medps Rimworld-style，不是一格一 entity）：
+
+```cpp
+struct MapData {
+    int width{0}, height{0};
+    std::vector<Tile> tiles;
+    void resize(int w, int h);
+    bool in_bounds(int x, int y) const;
+    Tile& at(int x, int y)       { return tiles[(size_t)x * height + y]; }
+    Tile* get(int x, int y);     // 越界返回 nullptr
+    template<class Archive> void serialize(Archive& ar) { ar(width, height, tiles); }
+};
+```
+
+column-major 索引（`x * height + y`）。
+
+### Tile（`src/core/maps/tile.h`）
+
+```cpp
+inline constexpr uint8_t TILE_WALKABLE     = 1 << 0;
+inline constexpr uint8_t TILE_BLOCKS_SIGHT = 1 << 1;
+
+struct Tile {
+    uint16_t terrain{0};
+    uint8_t  flags{0};
+    bool is_walkable()   const { return (flags & TILE_WALKABLE) != 0; }
+    bool blocks_sight()  const { return (flags & TILE_BLOCKS_SIGHT) != 0; }
+    template<class Archive> void serialize(Archive& ar) { ar(terrain, flags); }
+};
+```
+
+### Phase 4 整合測試（`tests/src/test_phase4.cpp`）
+
+完整驗證 PROJECT.md §5 完成定義：
+
+```
+原型生成（yaml-cpp，Putit 原型）
+→ 地圖可走性設定（20×20，y=5 整行可走，x=10 為牆）
+→ 移動系統 tick 3 回合（hero: x=3→4→5→6，牆在 x=10 正確阻擋）
+→ FolderSaveStore save（"world" slot）
+→ EntityManager 清空
+→ restore from store
+→ 驗證 hero.x==6、map tile 旗標正確
+```
+
+另有：牆阻擋測試（英雄無法走入不可走格）、多實體並存（地圖 + hero + NPC 同時序列化 round-trip）。
+
+---
+
+## 7. 構建細節
+
+### CMake 相容性（`CMakeLists.txt`）
+
+yaml-cpp 0.8.0 與 doctest v2.4.11 的 `cmake_minimum_required(VERSION 2.8.12)` 在 CMake 4.0+ 下報錯（4.0+ 移除 `< 3.5` 的向後相容性）。修正：
+
+```cmake
+if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+    set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING
+        "Allow FetchContent deps that still declare cmake_minimum_required < 3.5")
+endif()
+```
+
+### MSVC 2022 特有問題
+
+**doctest 的 ostream forward declaration**：doctest v2.4.11 在沒有完整 `<sstream>` 的情況下前向宣告 `std::basic_ostream`，但 MSVC 2022 的 `string_view::operator<<` 需要完整 ostream 型別。修正：
+
+```cmake
+target_compile_definitions(opennefia_test PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+```
+
+---
+
+## 8. 目錄結構（最終）
+
+```
+derived/opennefia-cpp/
+├── CMakeLists.txt
+├── PROJECT.md
+├── CLAUDE.md
+├── data/
+│   └── test_prototypes.yaml
+├── src/core/
+│   ├── version.h / version.cpp
+│   ├── ecs/          entity_manager.h+cpp, event_bus.h, system_ctx.h
+│   ├── components/   meta_data_component.h, spatial_component.h
+│   ├── prototypes/   prototype_id.h, prototype.h, prototype_manager.h+cpp
+│   ├── serialize/    all_components.h, entt_cereal_archive.h, save_load.h, save_store.h
+│   ├── maps/         tile.h, map_data.h
+│   ├── services/     service_context.h+cpp
+│   └── util/         vector2i.h, resource_path.h
+├── tests/
+│   ├── CMakeLists.txt
+│   └── src/
+│       ├── main.cpp
+│       ├── smoke_test.cpp     (Phase 0)
+│       ├── test_ecs.cpp       (Phase 1: 8 cases)
+│       ├── test_prototypes.cpp(Phase 2: 12 cases)
+│       ├── test_serialize.cpp (Phase 3: 9 cases)
+│       └── test_phase4.cpp    (Phase 4: 7 cases)
+└── docs/
+    ├── 01_core_architecture.md
+    ├── 02_subsystem_mapping.md
+    └── 03_roadmap.md
+```
+
+---
+
+## 9. 三大反射難題的實際解法（對照 analysis/OpenNefia/details/plan_cpp/05_lessons_from_medps.md）
+
+| 難題 | OpenNefia C# 做法 | opennefia-cpp 實作 |
+|---|---|---|
+| ① 依賴注入 | `[Dependency]` 反射注入 | `SystemCtx` 顯式傳遞；服務用 `ServiceContext` 強型別單例 |
+| ② 序列化 | `[DataField]` 反射讀寫 | `AllComponents type_list` + fold expression + cereal adapter |
+| ③ 系統發現 | Assembly 掃描 `GetAllChildren<IEntitySystem>` | `add_system()` 顯式 vector 登錄；系統為自由函式 lambda |
+
+---
+
+## 10. 未來工作（F1–F4，暫緩）
+
+- **F1 前端綁定**：建 `gbind/`（仿 medps），`opennefia_gd` GDExtension 目標，把核心狀態 / 事件以 POD 橋接給 Godot。
+- **F2 渲染**：Godot TileMapLayer 畫 tile 層；Sprite2D / MultiMesh 畫實體；FOV overlay。
+- **F3 UI**：Godot Control / .tscn 取代 Wisp（**不移植 XAML**）；UI 邏輯仍在核心。
+- **F4 輸入 / 音效**：Godot InputMap action ↔ 核心指令；AudioStreamPlayer 接核心音效事件。
+
+---
+
+*真實來源（source of truth）為 `derived/opennefia-cpp/` 目錄下的源碼與 `docs/*.md`。本文件為分析摘要層，便於跨專案引用。*

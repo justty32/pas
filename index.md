@@ -12,7 +12,8 @@
 | **Luanti (Minetest)**| 遊戲引擎 | 極高 (Level 1-12) | 已遷移 | 完整的引擎剖析、Lua API 綁定、渲染管線與 13 篇開發教學。 |
 | **Godot** | 遊戲引擎 | 高 (GDExtension) | 已遷移 | 核心對象系統、物理、渲染分析，以及大量 GDExtension 教學。 |
 | **Veloren** | 開源遊戲 (Rust)| 高 (Full System) | 已遷移 | 包含氣候、經濟、AI 行為與網絡同步的深度分析。 |
-| **OpenNefia** | 遊戲實作 (C#) | 高 (Architecture 14 篇) + HTML | 分析中 (源碼核對 2026-06-01) | Elona 開源重製引擎（C# .NET 8.0）。三大支柱：ECS（純資料 Component + EntitySystem + EntityEventBus 解耦）、IoC（thread-local 容器 + `[Dependency]` 反射注入）、YAML 資料驅動原型（可繼承可熱重載）。源碼核對修正舊分析：.NET 6.0→8.0、補全 17 項依賴（XamlX/Harmony/ImageSharp 等）。新增 14_xaml_wisp_ui.md：XamlX 編譯期將 .xaml 注入為 IL（同 Avalonia 技術，含「假裝是 Avalonia」騙過 Rider 的技巧）+ Wisp 自動版面 UI 框架。附 C++ 重寫計畫（raylib+EnTT+yaml-cpp，五階段路線圖）與 HTML 導覽層。 |
+| **OpenNefia** | 遊戲實作 (C#) | 高 (Architecture 14 篇) + HTML | 分析中 (源碼核對 2026-06-01) | Elona 開源重製引擎（C# .NET 8.0）。三大支柱：ECS（純資料 Component + EntitySystem + EntityEventBus 解耦）、IoC（thread-local 容器 + `[Dependency]` 反射注入）、YAML 資料驅動原型（可繼承可熱重載）。源碼核對修正舊分析：.NET 6.0→8.0、補全 17 項依賴（XamlX/Harmony/ImageSharp 等）。新增 14_xaml_wisp_ui.md：XamlX 編譯期將 .xaml 注入為 IL（同 Avalonia 技術，含「假裝是 Avalonia」騙過 Rider 的技巧）+ Wisp 自動版面 UI 框架。附 C++ 重寫計畫（EnTT+cereal+yaml-cpp，Godot GDExtension 方向）與 HTML 導覽層。核心 Phase 0–4 已完成（詳見 opennefia-cpp）。 |
+| **opennefia-cpp** | 衍生小專案分析 (C++20) | 事後分析（Architecture 1 篇）+ HTML | 分析完成 (2026-06-01) | derived/opennefia-cpp/ 的事後架構分析。godot-free 純 C++20 引擎核心重寫（仿 medps 藍本）。Phase 0–4 全部完成：CMake 雙目標骨架（cmake 4.0+ 相容）→ ECS（EntityManager + EventBus void* 定向派發 + entt::dispatcher 廣播）→ 原型系統（yaml-cpp 拓撲繼承解析 + YAML::Clone 防污染 + ComponentLoader 零反射登錄）→ 序列化三件套（AllComponents type_list + entt_cereal_archive + save_load fold expression + FolderSaveStore）→ 地圖邏輯（MapData 稠密 tile + 可走性系統 + 整合測試）。36 test cases / 139 assertions 全綠。 |
 | **MC Mod** | 遊戲模組 | 高 (Architecture) | 已遷移 | Millenaire-Reborn 的村莊邏輯、AI 目標系統與文化體系分析。 |
 | **T-Engine** | 遊戲引擎 | 中 (ToME4) | 已遷移 | 引擎架構分析與 17 篇模組/插件開發教學。 |
 | **OpenStartbound** | 遊戲引擎 | 中 (Universe) | 已遷移 | 宇宙生成、實體層級、渲染管線與 Lua 整合分析。 |
@@ -42,7 +43,7 @@
 
 ---
 ## 統計摘要
-- **總計分析專案**：33 個
+- **總計分析專案**：34 個
 - **最近更新日期**: 2026-06-01
 - **維護 Agent**: Gemini CLI / Claude Code
 

@@ -239,5 +239,32 @@ OpenNefia 的 `MapManager`（`05_map_area_system.md`）管多張 Map。medps 把
 - medps 前端：`C:/code/mine/medps/src/gbind/`、`CMakeLists.txt`
 - OpenNefia C# 對照：`EntitySystemManager.cs:133`、`IoC/DependencyCollection.cs`、`GameObjects/EntityEventBus.Directed.cs`
 - 本計畫其他篇：`02_ecs.md`、`03_prototypes.md`、`04_graphics_ui.md`、`README.md`
+
+---
+
+## 8. 後記（2026-06-01）：opennefia-cpp 核心階段全部完成
+
+> 本節為實作完成後補記。上述 2–5 節的「計畫回寫建議」已全數落地於 `derived/opennefia-cpp/`。
+
+### 驗證結果
+
+| 難題 | 本文建議的 C++ 解法 | opennefia-cpp 實作 | 狀態 |
+|---|---|---|---|
+| ② 序列化 | `AllComponents type_list` + fold expression + cereal adapter | `core/serialize/all_components.h` + `entt_cereal_archive.h` + `save_load.h` | ✅ 36 cases 全綠 |
+| ③ 系統登錄 | `add_system()` 顯式 vector，不用 self-registration | `entity_manager.h` `add_system(SystemFn)` | ✅ |
+| ① 依賴注入 | 縮到全域單例服務；系統無狀態 | `SystemCtx` 顯式傳遞；`ServiceContext` 單例 spdlog | ✅ |
+| 前端分離 | 核心 godot-free，`gbind/` 薄殼（方案 B） | `OPENNEFIA_BUILD_GDEXTENSION OFF` 編譯邊界；前端暫緩 | ✅ 邊界驗證 |
+
+### 補充坑點（建立過程新增，本文第 2–5 節未覆蓋）
+
+**YAML::Clone 必要性（`prototype_manager.cpp`）**：`YAML::Node` map 複製只複製 handle，底層 `detail::node` 共享。子原型繼承父原型的 component node 後，一旦對其賦值（`proto.components["X"] = new_node`），`AssignNode → set_ref` 會靜默污染所有繼承同一父原型的子類。修正：繼承 merge 時對每個 node 呼叫 `YAML::Clone()`。
+
+**`entt::entity == entt::null_t` 在 doctest CHECK() 歧義**：doctest 的 `Expression_lhs<entt::entity>` 的 template `operator==<T>` 與 EnTT 的 `operator==(entity, null_t)` 同等匹配，MSVC 報 C2593。修正：`bool b = (e == entt::null); CHECK(b);`。
+
+**cereal 的 container include 必要**：`std::string` 需 `<cereal/types/string.hpp>`；`std::vector` 需 `<cereal/types/vector.hpp>`。缺少時 cereal static_assert「找不到序列化函式」，錯誤訊息不直觀。
+
+### 實作成果
+
+Phase 0–4 全部完成（2026-06-01），36 test cases / 139 assertions 全綠，`PROJECT.md §5` 完成定義五點達成。分析文件見 `analysis/opennefia-cpp/`（含 HTML 導覽層）。
 </content>
 </invoke>

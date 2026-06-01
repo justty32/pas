@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>opennefia-cpp — 分析首頁</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:2.8rem;font-weight:800;
+  background:linear-gradient(135deg,var(--green) 0%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.hero .sub{font-size:1rem;color:var(--muted);margin-top:10px;max-width:660px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--cyan);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--cyan);align-self:flex-end;}
+
+.oneliner{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;margin-bottom:32px;font-size:.95rem;font-style:italic;
+  color:var(--text);border-left:4px solid var(--green);line-height:1.8;}
+.oneliner strong{color:var(--green);}
+
+.completion-banner{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);
+  border-radius:10px;padding:20px 24px;margin-bottom:28px;display:flex;align-items:center;gap:16px;}
+.cb-check{font-size:2rem;flex-shrink:0;}
+.cb-text h3{font-size:.95rem;font-weight:700;color:var(--green);margin-bottom:4px;}
+.cb-text p{font-size:.82rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">opennefia-cpp</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>opennefia-cpp</h1>
+  <p class="sub">以 godot-free 純 C++20 重寫 OpenNefia 引擎核心<br>
+  架構藍本：medps（EnTT + cereal + 自由函式系統）</p>
+  <p class="sub2">— analysis/opennefia-cpp · 事後架構分析 · Phase 0–4 核心完成 —</p>
+  <div class="badge-row">
+    <span class="badge badge-blue">C++20</span>
+    <span class="badge badge-green">EnTT v3.16.0</span>
+    <span class="badge badge-orange">cereal v1.3.2</span>
+    <span class="badge badge-purple">yaml-cpp 0.8.0</span>
+    <span class="badge badge-cyan">doctest v2.4.11</span>
+    <span class="badge badge-gray">CMake 3.14+</span>
+  </div>
+</div>
+
+<!-- Completion Banner -->
+<div class="completion-banner">
+  <div class="cb-check">✅</div>
+  <div class="cb-text">
+    <h3>核心階段 Phase 0–4 全部完成（2026-06-01）</h3>
+    <p>36 test cases / 139 assertions 全綠。PROJECT.md §5「完成定義」五點達成。godot-free 靜態庫可獨立編譯、YAML 原型 spawn、ECS 事件、地圖 round-trip 存讀全數驗證。</p>
+  </div>
+</div>
+
+<!-- One-liner -->
+<div class="oneliner">
+  <strong>opennefia-cpp</strong> = 把 OpenNefia C# 引擎核心的「反射依賴注入 / 系統掃描自動發現 / DataField 序列化」三大 C# 專屬特性，以 C++20 的 <strong>entt::type_list + fold expression</strong>、<strong>自由函式明確 vector 登錄</strong>、<strong>SystemCtx 顯式傳遞</strong>取代，在 medps 已驗證架構上重現同樣意圖，不依賴任何前端。
+</div>
+
+<!-- 三大反射取代 -->
+<div class="section">
+  <div class="section-title">C++ 沒有反射，三大問題的實際解法</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>① 依賴注入</h3>
+      <p>C# <code>[Dependency]</code> → <code>SystemCtx</code> 顯式傳遞（系統為無狀態自由函式，根本不需要 DI）；全域服務用 <code>ServiceContext</code> 強型別單例。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>② 序列化</h3>
+      <p>C# <code>[DataField]</code> 反射 → <code>AllComponents type_list</code> + fold expression + cereal adapter。新增 component 型別只改一行清單，存讀自動覆蓋。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>③ 系統發現</h3>
+      <p>C# Assembly 掃描 → <code>add_system(lambda)</code> 顯式 vector 登錄。順序即執行序，無啟動期反射開銷，可斷點可預測。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Phase Pipeline -->
+<div class="section">
+  <div class="section-title">實作階段（全部完成）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">Phase 0<br><small>CMake 骨架</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">Phase 1<br><small>ECS 地基</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">Phase 2<br><small>原型系統</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">Phase 3<br><small>序列化</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">Phase 4<br><small>地圖 + 整合</small></span>
+  </div>
+</div>
+
+<!-- 頁面導覽 -->
+<div class="section">
+  <div class="section-title">文件導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="architecture.html">
+      <div class="nc-icon">🏗</div>
+      <h3>架構分析</h3>
+      <p>ECS 地基 / EventBus 設計、原型系統 YAML 繼承解析（YAML::Clone 坑）、序列化三件套移植、MapData 稠密網格設計、CMake / MSVC 相容坑點、三大反射取代對照表。</p>
+      <span class="nc-arrow">→ architecture.html</span>
+    </a>
+
+    <a class="nav-card" href="../architecture/summary.md">
+      <div class="nc-icon">📄</div>
+      <h3>架構總結（.md）</h3>
+      <p>完整 Markdown 版本，10 節涵蓋所有 Phase 的設計決策與程式碼片段（source of truth）。</p>
+      <span class="nc-arrow">→ architecture/summary.md</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- 數字快照 -->
+<div class="section">
+  <div class="section-title">實作成果快照（2026-06-01）</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>測試通過</h3>
+      <p>smoke + ECS + 原型 + 序列化 + 地圖整合。</p>
+      <div style="margin-top:8px">
+        <span class="badge badge-green">36 cases</span>
+        <span class="badge badge-green" style="margin-left:4px">139 assertions</span>
+      </div>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>核心 .h 檔</h3>
+      <p>不含 gbind/ 前端，純 godot-free 核心標頭。</p>
+      <div style="margin-top:8px"><span class="badge badge-blue">18 個</span></div>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>原型繼承層級</h3>
+      <p>BaseEntity → BaseChara → Putit / EliteWarrior（3 層）+ SimpleItem。</p>
+      <div style="margin-top:8px"><span class="badge badge-orange">5 原型</span></div>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>FetchContent 依賴</h3>
+      <p>EnTT / cereal / yaml-cpp / spdlog / doctest 全部 vendored。</p>
+      <div style="margin-top:8px"><span class="badge badge-purple">5 套件</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 後續 -->
+<div class="section">
+  <div class="section-title">後續計畫（F1–F4，暫緩）</div>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <h3>F1 前端綁定</h3>
+      <p>建 <code>gbind/</code>（仿 medps），<code>opennefia_gd</code> GDExtension 目標，把核心狀態 / 事件以 POD 橋接給 Godot。</p>
+      <div style="margin-top:8px"><span class="status-pending">⏸ 暫緩</span></div>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>F2–F4 渲染 / UI / 輸入音效</h3>
+      <p>Godot TileMapLayer + Sprite2D 渲染、Godot Control 取代 Wisp、InputMap 動作綁定、AudioStreamPlayer 接音效事件。</p>
+      <div style="margin-top:8px"><span class="status-pending">⏸ 暫緩</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="highlight-box hl-blue" style="margin-top:8px">
+  源碼位置：<code>../../derived/opennefia-cpp/</code>（本工作區相對路徑）。分析參照：<a href="../../analysis/OpenNefia/html/cpp_plan.html">analysis/OpenNefia C++ 計畫</a> / <a href="../../analysis/OpenNefia/details/plan_cpp/05_lessons_from_medps.md">medps 印證文件</a>。
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽層；內容真實來源 (source of truth) 為 <code>architecture/summary.md</code> 與 <code>../../derived/opennefia-cpp/</code> 下的源碼。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

@@ -107,8 +107,8 @@
 
     <a class="nav-card" href="cpp_plan.html">
       <div class="nc-icon">⚙️</div>
-      <h3>C++ 重寫計畫（Raylib 版）</h3>
-      <p>將 C# 引擎以 C++ 重新實作的五階段路線圖：raylib + EnTT + yaml-cpp + spdlog + tomlplusplus；含 C# → C++ 檔案對照表與已完成的骨架原始碼。</p>
+      <h3>C++ 重寫計畫 <span class="badge badge-green" style="font-size:.65rem;vertical-align:middle">核心完成</span></h3>
+      <p>godot-free 純 C++20 核心 Phase 0–4 已實作完成（2026-06-01）。技術棧：EnTT + cereal + yaml-cpp + spdlog，前端改 Godot 4 GDExtension（初期 Raylib 方向已棄）。含三大反射難題的實際解法與 medps 印證。36 tests 全綠。</p>
       <span class="nc-arrow">→ cpp_plan.html</span>
     </a>
 
@@ -134,10 +134,13 @@
       <p>遊戲內容層負責 Elona 玩法相關的所有邏輯。</p>
       <div style="margin-top:8px"><span class="badge badge-orange">57 個</span></div>
     </div>
-    <div class="card card-accent-purple">
-      <h3>C++ 計畫</h3>
-      <p><code>details/plan_cpp/</code> 五階段路線圖 + <code>implements/</code> 骨架源碼。</p>
-      <div style="margin-top:8px"><span class="badge badge-purple">5 階段</span></div>
+    <div class="card card-accent-green">
+      <h3>C++ 核心實作</h3>
+      <p><code>derived/opennefia-cpp/</code> godot-free 核心 Phase 0–4 完成。分析見 <code>analysis/opennefia-cpp/</code>。</p>
+      <div style="margin-top:8px">
+        <span class="badge badge-green">36 tests ✅</span>
+        <span class="badge badge-green" style="margin-left:4px">139 assertions</span>
+      </div>
     </div>
   </div>
 </div>
