@@ -69,7 +69,9 @@
     // 偽代碼示例
     if (Event.current.type == EventType.MouseDown && Event.current.button == 1) { // 右鍵
         List<FloatMenuOption> options = new List<FloatMenuOption>();
-        foreach (var material in Map.resourceCounter.AllCountedAmounts) {
+        // ⚠️ 核對 2026-06-01：Map.resourceCounter 寫法有誤，Map 不是靜態類別。
+        // ✅ 正確用法：Find.CurrentMap.resourceCounter.AllCountedAmounts（見 Designator_Build.cs:49）
+        foreach (var material in Find.CurrentMap.resourceCounter.AllCountedAmounts) {
             options.Add(new FloatMenuOption(material.Key.LabelCap, () => SelectMaterial(slotId, material.Key)));
         }
         Find.WindowStack.Add(new FloatMenu(options));

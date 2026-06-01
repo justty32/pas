@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RimWorld 1.6 Mod 開發分析</title>
+  <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">RimWorld 1.6 Mod 開發分析</span>
+  <div class="navbar-links">
+    <a href="index.html" class="active">總覽</a>
+    <a href="architecture.html">架構</a>
+    <a href="tutorial.html">教學</a>
+    <a href="details.html">實作細節</a>
+    <a href="others.html">設計構想</a>
+    <a href="answers.html">問答</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">RimWorld 1.6 Mod 開發分析</h1>
+    <p class="page-subtitle">核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01 · 共 70 份文件</p>
+  </div>
+
+  <!-- 主導覽卡片 -->
+  <div class="section">
+    <h2 class="section-title">文件分區</h2>
+    <div class="g2">
+
+      <div class="nav-card nav-card-accent-blue">
+        <div class="nav-card-title"><a href="architecture.html">架構分析</a></div>
+        <div class="nav-card-count">10 份文件</div>
+        <div class="nav-card-desc">
+          核心系統架構總覽：實體系統（Def/Thing/ThingComp）、AI 決策框架、派系機制、地圖與世界系統，
+          以及 Mod 開發入門、開放世界策略、哨站封存策略。適合初次閱讀先從這裡開始。
+        </div>
+      </div>
+
+      <div class="nav-card nav-card-accent-orange">
+        <div class="nav-card-title"><a href="tutorial.html">開發教學</a></div>
+        <div class="nav-card-count">29 份文件</div>
+        <div class="nav-card-desc">
+          目標導向的開發教學，涵蓋：Mod 基礎技術（Harmony、存檔、除錯、發布）、Pawn 系統、
+          世界與大地圖、戰鬥與事件、地圖生成、派系外交、環境系統、UI 介面等主題。
+        </div>
+      </div>
+
+      <div class="nav-card nav-card-accent-red">
+        <div class="nav-card-title"><a href="details.html">C# 實作細節</a></div>
+        <div class="nav-card-count">15 份文件</div>
+        <div class="nav-card-desc">
+          各子系統的深入原始碼剖析：ARPG 子系統、任務系統、地緣政治、哨站管理、
+          領導與社群、魔紋系統、Mod 設定整合等。已有完整 C# 實作分析，適合實作參照。
+        </div>
+      </div>
+
+      <div class="nav-card nav-card-accent-purple">
+        <div class="nav-card-title"><a href="others.html">設計構想</a></div>
+        <div class="nav-card-count">14 份文件</div>
+        <div class="nav-card-desc">
+          尚在設計或規劃階段的子系統構想，是 details/ 的前置文件：魔紋設計、ARPG 轉換方案、
+          哨站擴充、動態世界派系、地緣屏障、RPG 任務、社群模擬、權威領導體系等。
+        </div>
+      </div>
+
+      <div class="nav-card nav-card-accent-cyan">
+        <div class="nav-card-title"><a href="answers.html">問答</a></div>
+        <div class="nav-card-count">2 份文件</div>
+        <div class="nav-card-desc">
+          Mod 可行性審查（含 20+ API 核對結果）與 1.6 API 變更速查表。
+          實作前務必先查閱這兩份，可直接避開版本相容性問題。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 快速索引 -->
+  <div class="section">
+    <h2 class="section-title">常用起點</h2>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../architecture/overview.md">架構總覽</a></div>
+        <div class="card-desc">第一次接觸時的推薦起點，了解整體系統分布</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../architecture/modding_entry.md">Mod 開發入門</a></div>
+        <div class="card-desc">Mod 開發必備基礎知識：目錄、XML、Harmony、載入順序</div>
+      </div>
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../answers/api_changes_1_6.md">1.6 API 變更速查表</a></div>
+        <div class="card-desc">實作前快速確認 API 在 1.6 的現況</div>
+      </div>
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../answers/mod_feasibility_review.md">Mod 可行性審查</a></div>
+        <div class="card-desc">20+ API 核對結果，確認設計方案可行性</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/harmony_patching.md">Harmony Patching</a></div>
+        <div class="card-desc">最常用的 Mod 技術：Prefix / Postfix / Transpiler</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/data_persistence.md">資料持久化</a></div>
+        <div class="card-desc">ExposeData 與 Scribe 系統，存檔相容性</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分析概況 -->
+  <div class="section">
+    <h2 class="section-title">分析概況</h2>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <div class="card-title">架構分析</div>
+        <div class="card-desc">10 份 · 系統架構、AI、世界、派系</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title">開發教學</div>
+        <div class="card-desc">29 份 · 目標導向分主題教學</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title">C# 實作細節</div>
+        <div class="card-desc">15 份 · 深入原始碼剖析</div>
+      </div>
+      <div class="card card-accent-purple">
+        <div class="card-title">設計構想</div>
+        <div class="card-desc">14 份 · 規劃/設計階段文件</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  RimWorld 1.6 Mod 開發分析 · 核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01
+</footer>
+
+</body>
+</html>

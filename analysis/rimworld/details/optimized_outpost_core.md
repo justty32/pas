@@ -45,6 +45,11 @@ public class ProductivitySnapshot : IExposable
         // 1. 獲取當前地圖所有資源
         // 2. 與 T0 (進入地圖時) 的數據對比
         // 3. 計算平均值並存入 dailyProduction
+        // ⚠️ 核對 2026-06-01：map.resourceCounter.AllCountedAmounts 只統計「儲存格」裡的物品
+        // （HaulDestinationManager 的 HeldThings，且 CountAsResource=true，每 204 tick 更新一次）。
+        // 漏掉地上未入庫物、Pawn 背包、作物、動物、CountAsResource=false 的物品。
+        // 名稱應改為「儲存區 Delta」而非「全地圖快照」；真正的全圖須掃 map.listerThings。
+        // 詳見 analysis/rimworld/answers/mod_feasibility_review.md §2
         foreach (var count in map.resourceCounter.AllCountedAmounts)
         {
             float delta = count.Value - GetT0Count(count.Key);
@@ -94,7 +99,9 @@ private void ApplyDiplomacyBonus()
         if (settlement.Faction != null && !settlement.Faction.IsPlayer)
         {
             // 每日增加微量好感度 (0.01 ~ 0.05)
-            settlement.Faction.TryAffectGoodwillWith(Faction.OfPlayer, 0.02f, false, false);
+            // ⚠️ 核對 2026-06-01：TryAffectGoodwillWith(Faction, int, bool, bool, ...) 第二參數是 int，0.02f 會編譯錯誤。
+            // ✅ goodwillChange 須是整數（最小有意義值為 1），以具名參數避免混淆：
+            settlement.Faction.TryAffectGoodwillWith(Faction.OfPlayer, 1, canSendMessage: false, canSendHostilityLetter: false);
         }
     }
 }

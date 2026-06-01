@@ -37,7 +37,7 @@ public static class Patch_TrackResourceOrigin
 {
     public static void Postfix(Thing __instance, Map map)
     {
-        if (__instance.def.IsResource())
+        if (__instance.def.CountAsResource) // ✅ 核對 2026-06-01：IsResource() 不存在，是屬性 CountAsResource（ThingDef.cs:657）
         {
             // 檢查該物品是否由「採礦」、「收穫」或「製作」產生
             if (Current.ProgramState == ProgramState.Playing && IsLocalProduction())

@@ -40,12 +40,18 @@ public class CompEventHub : WorldObjectComp
 
 攔截事件執行前的參數設置，動態修改事件的發生目標。
 
+> ⚠️ **核對 2026-06-01（三個坑，見 `answers/mod_feasibility_review.md §1⚠️`）**：
+> 1. `ref IncidentParms parms` 加 `ref` 會讓 Harmony 比對失敗；去掉 `ref`，直接改 `parms.target` 欄位即可（類別本身是 reference type）。
+> 2. `parms.target` 型別是 `IIncidentTarget`；`WorldObject`/`MapParent` 預設**未實作** `IIncidentTarget`，`hub.parent` 指定後，任何做 `parms.target as Map` 的 Worker 都會 crash。自訂的 `OutpostWorldObject` 需自己實作 `IIncidentTarget` 的全部成員。
+> 3. 重定向只對「不需要真實 Map」的事件安全（商隊、訪客等），傷病、建築類 Worker 不可重定向。
+
 ```csharp
 [HarmonyPatch(typeof(IncidentWorker), "TryExecute")]
 public static class Patch_IncidentRouting
 {
     [HarmonyPrefix]
-    public static void Prefix(IncidentDef ___def, ref IncidentParms parms)
+    // ✅ 去掉 ref，直接改 parms.target 欄位
+    public static void Prefix(IncidentDef ___def, IncidentParms parms)
     {
         // 僅當目標是主基地地圖時進行重定向
         if (parms.target is Map map && map.IsPlayerHome)
@@ -57,7 +63,7 @@ public static class Patch_IncidentRouting
 
             if (hub != null)
             {
-                // 將事件目標重新導向為哨所 (WorldObject)
+                // ⚠️ hub.parent 需實作 IIncidentTarget，且僅對白名單 IncidentDef 啟用
                 parms.target = hub.parent;
             }
         }

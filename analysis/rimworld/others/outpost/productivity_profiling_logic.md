@@ -7,7 +7,7 @@
 ### A. 產量加權移動平均 (Weighted Moving Average)
 不只看最後一天的庫存，而是計算整個採樣期（如 10 天）的日均增量。
 *   公式：`日均產出 = (Σ 每日新增資源 - Σ 每日消耗資源) / 採樣天數`
-*   **防作弊**: 外部搬入的物資會被標記為 `IncomingTrade` 或 `CaravanTransfer`，不計入「本地產出」。
+*   **防作弊**: ⚠️ 核對 2026-06-01：`IncomingTrade` 與 `CaravanTransfer` 作為物資標記機制並不存在於引擎中（`CaravanTransfer` 僅是 UI 函式名稱，不是物品屬性；`IncomingTrade` 原始碼中完全不存在）。若要追蹤物資來源，需自行在 `ThingComp` 或 `WorldComponent` 中實作標記機制，由商隊卸貨鉤點（如 Harmony patch `CaravanEnterMapUtility.Enter`）主動打標，才能與「本地產出」區分。
 
 ### B. 基於工作效率的「理論產出」 (Theoretical Output)
 與其看實際箱子裡多了什麼，不如看小人做了多少活。

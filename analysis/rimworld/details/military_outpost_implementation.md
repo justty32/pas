@@ -31,7 +31,9 @@ public class WorldObject_Outpost : WorldObject
     public override void ExposeData()
     {
         base.ExposeData();
-        Scribe_Collections.Look(ref garrison, "garrison", LookMode.Deep);
+        // ✅ 核對 2026-06-01：Pawn 是世界管理的 entity，必須用 LookMode.Reference；
+        // LookMode.Deep 會試圖序列化整個 Pawn，造成重複儲存且存檔崩潰。
+        Scribe_Collections.Look(ref garrison, "garrison", LookMode.Reference);
         Scribe_Defs.Look(ref productionTarget, "productionTarget");
         Scribe_Values.Look(ref productionProgress, "productionProgress");
         Scribe_Values.Look(ref lastDeliveryTick, "lastDeliveryTick");

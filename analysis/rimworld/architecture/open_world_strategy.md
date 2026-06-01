@@ -25,7 +25,8 @@ RimWorld 原本的設計是「封閉地圖 (Local Map) + 宏觀世界 (World Map
 1.  **攔截地圖離開邏輯**: 使用 Harmony Patch 攔截 `CaravanExitMapUtility` 或是邊緣走到 (`JobDriver_ExitMap`) 的邏輯。
 2.  **查詢相鄰 Tile**: 透過 `Find.WorldGrid` 找出小人所在位置 (Tile ID) 的相鄰 Tile。
 3.  **動態生成/加載地圖**: 
-    *   呼叫 `MapGenerator.GenerateMap(tile, mapParent, mapSize)` 生成相鄰的地圖。
+    *   ⚠️ 核對 2026-06-01：`MapGenerator.GenerateMap(tile, mapParent, mapSize)` 簽章錯誤。實際簽章為 `MapGenerator.GenerateMap(IntVec3 mapSize, MapParent parent, MapGeneratorDef mapGenerator, ...)` — 沒有 `tile` 參數，tile 資訊嵌在 `MapParent` 物件內。
+    *   ✅ 建議改用 `GetOrGenerateMapUtility.GetOrGenerateMap(PlanetTile tile, IntVec3 size, WorldObjectDef suggestedMapParentDef)` — 此 helper 封裝了 MapParent 建立與 GenerateMap 呼叫。
     *   或者從存檔中喚醒 (Load) 已存在的該板塊地圖。
 4.  **跨地圖傳送**: 
     *   將小人從 `Map A` 進行 `De-spawn`。

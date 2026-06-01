@@ -1,0 +1,254 @@
+/* RimWorld Mod 分析 — 共用樣式表 */
+
+/* ── 重置與基底 ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #1a1a2e;
+  --bg2:        #16213e;
+  --bg3:        #0f3460;
+  --surface:    #1e2a45;
+  --surface2:   #243352;
+  --border:     #2e3f66;
+  --text:       #e0e6f0;
+  --text-dim:   #8899bb;
+  --text-muted: #556688;
+  --accent-blue:   #4a9eff;
+  --accent-green:  #3ecf8e;
+  --accent-orange: #ff8c42;
+  --accent-purple: #a78bfa;
+  --accent-red:    #f87171;
+  --accent-cyan:   #22d3ee;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a { color: var(--accent-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── 頂部導覽列 ── */
+.navbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.navbar-links a {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.navbar-links a:hover,
+.navbar-links a.active {
+  background: var(--surface2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* ── 主要容器 ── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* ── 頁面標題 ── */
+.page-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+/* ── 區段 ── */
+.section {
+  margin-bottom: 2.5rem;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── 格線 ── */
+.g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+@media (max-width: 900px) {
+  .g4 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .g4, .g3, .g2 { grid-template-columns: 1fr; }
+}
+
+/* ── 卡片 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1rem 1rem 1.25rem;
+  border-left: 4px solid var(--border);
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.card:hover {
+  background: var(--surface2);
+}
+
+.card-accent-blue   { border-left-color: var(--accent-blue); }
+.card-accent-green  { border-left-color: var(--accent-green); }
+.card-accent-orange { border-left-color: var(--accent-orange); }
+.card-accent-purple { border-left-color: var(--accent-purple); }
+.card-accent-red    { border-left-color: var(--accent-red); }
+.card-accent-cyan   { border-left-color: var(--accent-cyan); }
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.card-title a {
+  color: inherit;
+}
+
+.card-title a:hover {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+.card-desc {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.card-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: auto;
+  padding-top: 0.3rem;
+}
+
+/* ── 大型導覽卡片（index.html 用）── */
+.nav-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+  border-left: 5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.nav-card:hover {
+  background: var(--surface2);
+  transform: translateY(-2px);
+}
+
+.nav-card-accent-blue   { border-left-color: var(--accent-blue); }
+.nav-card-accent-green  { border-left-color: var(--accent-green); }
+.nav-card-accent-orange { border-left-color: var(--accent-orange); }
+.nav-card-accent-purple { border-left-color: var(--accent-purple); }
+.nav-card-accent-red    { border-left-color: var(--accent-red); }
+.nav-card-accent-cyan   { border-left-color: var(--accent-cyan); }
+
+.nav-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.nav-card-title a { color: inherit; }
+.nav-card-title a:hover { color: var(--accent-blue); text-decoration: none; }
+
+.nav-card-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.nav-card-desc {
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ── 提示橫幅 ── */
+.banner {
+  background: #1a2a1a;
+  border: 1px solid #2d5a2d;
+  border-left: 4px solid var(--accent-green);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #a3d9a3;
+  margin-bottom: 2rem;
+}
+
+.banner a { color: var(--accent-green); }
+
+/* ── 頁腳 ── */
+.footer {
+  margin-top: 4rem;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}

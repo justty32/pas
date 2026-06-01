@@ -61,9 +61,11 @@ public class ARPG_Mod : Mod
 
         // 快捷欄設定
         listing.Label($"快捷欄總頁數: {settings.totalActionPages}");
-        // 使用整數滑桿或輸入框
-        float tempPages = settings.totalActionPages;
-        listing.IntSetter(ref settings.totalActionPages, 1, 1, 20); // 1~20 頁
+        // ⚠️ 核對 2026-06-01：IntSetter 簽章是 (ref int val, int target, string label, float width=42f)
+        // listing.IntSetter(ref val, 1, 1, 20) 的第三/四參數對應 label(int)、width(int)，型別錯且語意不對。
+        // ✅ 用 IntEntry 做可輸入的整數框，或用 Slider + 取整：
+        string pagesBuf = settings.totalActionPages.ToString();
+        listing.IntEntry(ref settings.totalActionPages, ref pagesBuf); // 文字框輸入
 
         listing.Gap();
 

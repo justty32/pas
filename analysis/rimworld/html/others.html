@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設計構想 — RimWorld Mod 開發分析</title>
+  <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">RimWorld 1.6 Mod 開發分析</span>
+  <div class="navbar-links">
+    <a href="index.html">總覽</a>
+    <a href="architecture.html">架構</a>
+    <a href="tutorial.html">教學</a>
+    <a href="details.html">實作細節</a>
+    <a href="others.html" class="active">設計構想</a>
+    <a href="answers.html">問答</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">設計構想</h1>
+    <p class="page-subtitle">14 份文件 · 按子系統分組 · 對應實作詳見 <a href="details.html">details/</a> · 索引：<a href="../others/index.md">others/index.md</a></p>
+  </div>
+
+  <!-- 魔紋 -->
+  <div class="section">
+    <h2 class="section-title">magic_tattoo/ — 魔紋系統</h2>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../others/magic_tattoo/magic_tattoo_mod_design.md">魔紋 Mod 設計</a></div>
+        <div class="card-desc">素材→汁液→Hediff 整體流程；CompMagicInk、Recipe_ApplyMagicTattoo 設計</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../others/magic_tattoo/magic_tattoo_ui_design.md">魔紋 UI 設計</a></div>
+        <div class="card-desc">汁液物品說明、健康面板、鍊藥鍋互動 UI、視覺紋身圖層設計</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARPG -->
+  <div class="section">
+    <h2 class="section-title">arpg/ — ARPG 轉換</h2>
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../others/arpg/arpg_conversion_design.md">ARPG 轉換設計</a></div>
+        <div class="card-desc">WASD 移動、Cleave/Mana 機制、技能欄/天賦樹 UI、熱鍵系統整體架構構想</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 哨站 -->
+  <div class="section">
+    <h2 class="section-title">outpost/ — 帝國哨站</h2>
+    <div class="g3">
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../others/outpost/military_outpost_extension.md">軍事哨站擴充</a></div>
+        <div class="card-desc">哨站 WorldObject 封存抽象化、屬性映射、空投補給機制構想</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../others/outpost/simplified_outpost_logic.md">簡化哨站邏輯</a></div>
+        <div class="card-desc">低複雜度哨站設計：最小可行邏輯、資源節點抽象、與主基地的互動介面</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../others/outpost/productivity_profiling_logic.md">生產力剖析邏輯</a></div>
+        <div class="card-desc">產出採樣方法（移動平均 / 理論產出）、屬性映射、防作弊機制構想</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地緣/世界 -->
+  <div class="section">
+    <h2 class="section-title">geopolitics/ — 地緣 / 世界</h2>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../others/geopolitics/global_influence_extension.md">全局影響力擴充</a></div>
+        <div class="card-desc">全球影響力擴散、WorldComponent 全球增益、多哨站影響力聚合設計</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../others/geopolitics/event_routing_extension.md">事件路由擴充</a></div>
+        <div class="card-desc">事件重定向（轉運站 Hub）、地緣攔截、跨地圖事件鏈設計</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../others/geopolitics/geopolitical_barrier_extension.md">地緣屏障擴充</a></div>
+        <div class="card-desc">動態派系邊界、邊境長城、影響力衝突；山脈海洋阻隔係數設計</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../others/geopolitics/dynamic_world_factions.md">動態世界派系</a></div>
+        <div class="card-desc">派系動態擴張、聚落分級（AoW 模式）、實體行動隊（Squads）構想</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../others/geopolitics/dynamic_world_activity.md">動態世界活動</a></div>
+        <div class="card-desc">世界在玩家不操作時的自主演化：貿易隊、軍事移動、自然災害事件框架</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生活/政治 -->
+  <div class="section">
+    <h2 class="section-title">life_politics/ — 生活 / 政治</h2>
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../others/life_politics/rpg_quest_system.md">RPG 任務系統</a></div>
+        <div class="card-desc">冒險者公會、佈告欄任務系統、QuestPart 自訂、聲望獎勵設計</div>
+      </div>
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../others/life_politics/sims_mode_community.md">Sims 模式社群</a></div>
+        <div class="card-desc">ThinkTree/FloatMenu 掛鉤、人際關係深度模擬、社交需求驅動設計</div>
+      </div>
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../others/life_politics/authority_leadership_system.md">權威領導系統</a></div>
+        <div class="card-desc">基於階級/聲望/職位的動態指揮權；職位體系、信任度機制、政變與繼任規則</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  RimWorld 1.6 Mod 開發分析 · 核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01
+</footer>
+
+</body>
+</html>

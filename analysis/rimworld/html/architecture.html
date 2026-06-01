@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>架構分析 — RimWorld Mod 開發分析</title>
+  <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">RimWorld 1.6 Mod 開發分析</span>
+  <div class="navbar-links">
+    <a href="index.html">總覽</a>
+    <a href="architecture.html" class="active">架構</a>
+    <a href="tutorial.html">教學</a>
+    <a href="details.html">實作細節</a>
+    <a href="others.html">設計構想</a>
+    <a href="answers.html">問答</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">架構分析</h1>
+    <p class="page-subtitle">10 份文件 · 涵蓋核心系統架構、AI、派系、地圖、世界與 Mod 開發入口</p>
+  </div>
+
+  <!-- 基礎架構 -->
+  <div class="section">
+    <h2 class="section-title">基礎架構總覽</h2>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../architecture/overview.md">總覽（Overview）</a></div>
+        <div class="card-desc">整體遊戲架構、主要子系統一覽、Mod 生態系定位，適合初次閱讀的起點</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../architecture/entity_system.md">實體系統</a></div>
+        <div class="card-desc">Def / Thing / ThingComp 三層結構，資料驅動設計與執行期物件生命週期</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../architecture/modding_entry.md">Mod 開發入門</a></div>
+        <div class="card-desc">Mod 開發必備知識：目錄結構、XML 注入、Harmony Patch、載入順序</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 系統 -->
+  <div class="section">
+    <h2 class="section-title">AI 系統</h2>
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../architecture/ai_system.md">AI 系統概覽</a></div>
+        <div class="card-desc">Pawn AI 決策框架：ThinkTree、JobGiver、Duty 與 Lord 的協作機制</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../architecture/ai_deep_dive.md">AI 深度剖析</a></div>
+        <div class="card-desc">深入 AI 執行細節：優先序解析、Job 衝突處理、自訂 JobGiver 實作模式</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 世界與地圖 -->
+  <div class="section">
+    <h2 class="section-title">世界與地圖系統</h2>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../architecture/map_system.md">地圖系統</a></div>
+        <div class="card-desc">Map 物件結構、格子資料、MapComponent、室溫/電力/大氣等子系統掛載點</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../architecture/world_system_deep_dive.md">世界系統深度剖析</a></div>
+        <div class="card-desc">大地圖（World）架構：WorldObject、WorldPawn、大地圖 Tick、持久化方式</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 派系與策略 -->
+  <div class="section">
+    <h2 class="section-title">派系與開放世界策略</h2>
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../architecture/faction_system.md">派系系統</a></div>
+        <div class="card-desc">Faction、FactionDef、關係值、外交事件與 NPC 集落的運作邏輯</div>
+      </div>
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../architecture/open_world_strategy.md">開放世界策略</a></div>
+        <div class="card-desc">在 RimWorld 框架內建立開放世界感的設計策略：動態事件、多地點並存、世界狀態同步</div>
+      </div>
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../architecture/outpost_archiving_strategy.md">哨站封存策略</a></div>
+        <div class="card-desc">哨站（Outpost）離線期間的狀態封存與重載策略，解決 RimWorld 無後台地圖的限制</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  RimWorld 1.6 Mod 開發分析 · 核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01
+</footer>
+
+</body>
+</html>

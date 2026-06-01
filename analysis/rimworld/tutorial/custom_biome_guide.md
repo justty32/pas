@@ -27,7 +27,9 @@
 ```csharp
 public class BiomeWorker_CrystalForest : BiomeWorker
 {
-    public override float GetScore(Tile tile, int tileID)
+    // ⚠️ 核對 2026-06-01：1.6 簽章改為 GetScore(BiomeDef biome, Tile tile, PlanetTile planetTile)
+    // 多了第一個 BiomeDef 參數；tileID 由 int 改為 PlanetTile。
+    public override float GetScore(BiomeDef biome, Tile tile, PlanetTile planetTile)
     {
         // 1. 基礎條件：如果是有水的，排除掉
         if (tile.WaterCovered) return -100f;
