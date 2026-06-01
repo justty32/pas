@@ -1,2 +1,3 @@
 - 2026-04-15: 遷移 OpenNefia 分析資料與 C++ 實作計畫。
 - 2026-06-01: 核對源碼修正 01_project_overview（.NET 6.0→8.0、補全依賴表、更新目錄圖）；新增 14_xaml_wisp_ui.md（XAML IL 注入 + Wisp 控件框架深化）；更新 architecture/README.md 索引與快速概念摘要（Claude Code Sonnet 4.6）。
+- 2026-06-01: 探勘使用者真實 C++20 ECS 後端 medps（EnTT + cereal），新增 details/plan_cpp/05_lessons_from_medps.md：以 medps 已驗證做法回答 C++ 重寫三大反射難題（序列化用 entt::type_list + fold expression、系統用自由函式明確註冊、DI 縮到全域單例），並補前端 raylib vs Godot GDExtension 薄殼分歧；同步更新 plan_cpp/README.md 索引與 html/cpp_plan.html 導覽卡片與印證 callout。

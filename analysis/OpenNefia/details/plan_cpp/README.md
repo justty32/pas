@@ -43,6 +43,12 @@
 
 ---
 
+## 實戰印證
+
+- **`05_lessons_from_medps.md`**：拿一個已跑起來的真實 C++20 ECS 後端（`C:/code/mine/medps`，EnTT + cereal）對照本計畫提出的三大「沒有反射怎麼辦」難題。序列化用 `entt::type_list` + fold expression、系統用自由函式明確註冊、DI 範圍縮小到全域單例服務、前端 raylib 與 Godot GDExtension 並列。（撰於 2026-06-01）
+
+---
+
 ## 檔案對照表 (Core)
 
 | C# Namespace / Directory | C++ 目錄 (src/) | 關鍵類別 |

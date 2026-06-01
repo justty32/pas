@@ -57,6 +57,9 @@
       <p>C# 靠 Assembly 掃描找出所有 EntitySystem 子類；C++ 需手動註冊或靜態自註冊樣板（self-registration）。</p>
     </div>
   </div>
+  <div class="highlight-box hl-green" style="margin-top:14px">
+    這三題已被一個真實的 C++20 ECS 後端 <code>medps</code>（EnTT + cereal，25/25 測試綠燈）逐一回答 —— 序列化用 <code>entt::type_list</code> + fold expression、系統用自由函式明確註冊、系統無狀態便不需 DI。詳見下方「<a href="../details/plan_cpp/05_lessons_from_medps.md">來自 medps 的真實答案</a>」。
+  </div>
 </div>
 
 <!-- 五階段路線圖 -->
@@ -114,6 +117,12 @@
       <h3>渲染與 UI（深入）</h3>
       <p>渲染與 UI 子系統的逐項實作細節與骨架。</p>
       <span class="dc-link">→ 04_graphics_ui_detail.md</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../details/plan_cpp/05_lessons_from_medps.md">
+      <span class="dc-no">實戰印證</span>
+      <h3>來自 medps 的真實答案</h3>
+      <p>拿一個已跑起來的 C++20 ECS 後端（EnTT + cereal）對照三大反射難題：序列化用 <code>type_list</code> + fold、系統用自由函式明確註冊、DI 縮到單例、前端 raylib vs Godot 並列。<span class="badge badge-green">新增 2026-06-01</span></p>
+      <span class="dc-link">→ 05_lessons_from_medps.md</span>
     </a>
   </div>
 </div>
