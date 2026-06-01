@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>戰鬥系統 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html" class="active">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+  <div class="page-header">
+    <h1>戰鬥系統</h1>
+    <p>Entity 基底、傷害計算、銳利度、裝備流程</p>
+  </div>
+
+  <!-- Entity 數值系統 -->
+  <div class="section">
+    <div class="section-title">Entity 數值系統</div>
+    <div class="g4">
+      <div class="card card-accent-red">
+        <h3>HP 系統</h3>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--text);">
+          <code>hp</code> / <code>hp_max</code><br>
+          <code>hp_regenerable</code><br>
+          <code>hp_regeneration</code>
+        </p>
+        <p style="margin-top:8px;">雙層設計：<code>hp_regenerable</code> 為可自然回復的上限，受傷後由 <code>regenerable</code> 參數（0~1）決定可回復比例。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>耐力系統</h3>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--text);">
+          <code>stamina</code> getter/setter
+        </p>
+        <p style="margin-top:8px;">GDScript setter 自動 <code>emit</code> signal；clamp 至 [0, stamina_max]；不需手動呼叫，耐力變化即時廣播。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>異常狀態</h3>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--text);">
+          <code>ailments: {element: timestamp}</code>
+        </p>
+        <p style="margin-top:8px;">dict 覆蓋語意：重複觸發只刷新 timestamp，不重啟 effect_over_time coroutine；持續時間固定，不因補刀延長。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>狀態機</h3>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--text);">
+          AnimationTree 主狀態
+        </p>
+        <p style="margin-top:8px;"><code>idle-loop ↔ movement → attack → rest → death</code><br><br>移動子狀態：walk / run / dodge / jump / falling</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 傷害計算流程 -->
+  <div class="section">
+    <div class="section-title">傷害計算流程</div>
+    <div class="card card-accent-red">
+      <h3>damage() &mdash; <code>entity.gd:318</code></h3>
+      <pre style="margin-top:12px;">damage(damage_in, regenerable, element=null, weapon=null, entity=null)
+  ├── 死亡保護：hp &gt; 0 才執行（hp==0 也視為已死亡）
+  ├── defence = get_defence()          // Entity=0, Player=防具累加, Monster=0
+  ├── actual_damage = damage_in - defence
+  │       └── 無 clamp：防禦 &gt; 傷害時為負值 → 等效於回血
+  ├── ailments[element] = timestamp    // 記錄異常狀態
+  ├── hp -= actual_damage
+  ├── hp_regenerable = int(hp + damage_in * regenerable)
+  │       └── 致命傷時 hp 為負 → hp_regenerable 可能為負值（died() 會強制歸零）
+  └── hp &lt;= 0 → die() → rpc("died")</pre>
+    </div>
+  </div>
+
+  <!-- 撞牆傷害公式 -->
+  <div class="section">
+    <div class="section-title">撞牆傷害公式</div>
+    <div class="highlight-box hl-orange" style="font-style:normal;">
+      <div style="margin-bottom:10px;font-weight:700;color:var(--orange);">entity.gd:206-208 &mdash; 速度突變傷害</div>
+      <p style="margin-bottom:10px;">
+        <strong>公式：</strong><code>int(pow(acceleration / 10, 7))</code><br>
+        <strong>臨界：</strong>acceleration &gt; 10 才觸發（嚴格大於，等於 10 不觸發）<br>
+        <strong>regenerable：</strong>0.5（撞牆傷害視為暫時性創傷，可自然回復一半）
+      </p>
+      <table style="margin-top:8px;background:transparent;">
+        <thead><tr><th>acceleration</th><th>a = a/10</th><th>傷害（a^7）</th></tr></thead>
+        <tbody>
+          <tr><td>10（臨界，不觸發）</td><td>1.0</td><td>—</td></tr>
+          <tr><td>11</td><td>1.1</td><td>&asymp; 2（int 截斷）</td></tr>
+          <tr><td>15</td><td>1.5</td><td>&asymp; 17</td></tr>
+          <tr><td>20</td><td>2.0</td><td>128</td></tr>
+          <tr><td>25</td><td>2.5</td><td>&asymp; 610</td></tr>
+          <tr><td>30</td><td>3.0</td><td>2187</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px;font-size:.78rem;">7 次方設計意圖：低速時幾乎無傷，高速（a &ge; 2）急劇上升，製造「撞牆就死」非線性懲罰。</p>
+    </div>
+  </div>
+
+  <!-- 耐力恢復分層 -->
+  <div class="section">
+    <div class="section-title">耐力恢復分層</div>
+    <div class="card">
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px;">基準值：<code>stamina_regeneration = 4.0</code>（entity.gd:33）</p>
+      <table>
+        <thead>
+          <tr><th>主狀態</th><th>移動子狀態</th><th>倍率</th><th>每秒耐力變化</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>rest</code></td>
+            <td>—</td>
+            <td><span class="badge badge-green">3×</span></td>
+            <td style="color:var(--green);">+12.0 / s</td>
+          </tr>
+          <tr>
+            <td><code>idle-loop</code></td>
+            <td>—</td>
+            <td><span class="badge badge-blue">1×</span></td>
+            <td style="color:var(--blue);">+4.0 / s</td>
+          </tr>
+          <tr>
+            <td><code>movement</code></td>
+            <td><code>walk-loop</code></td>
+            <td><span class="badge badge-gray">0.5×</span></td>
+            <td>+2.0 / s</td>
+          </tr>
+          <tr>
+            <td><code>movement</code></td>
+            <td><code>run-loop</code></td>
+            <td>—</td>
+            <td style="color:var(--red);">-5.0 / s（消耗）</td>
+          </tr>
+          <tr>
+            <td><code>movement</code></td>
+            <td>dodge / jump / falling</td>
+            <td>—</td>
+            <td style="color:var(--muted);">0（不恢復不消耗）</td>
+          </tr>
+          <tr>
+            <td>stamina &le; 0</td>
+            <td colspan="3">強制切換至 <code>rest</code> → 3× 速率快速恢復（負反饋機制）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 異常狀態系統 -->
+  <div class="section">
+    <div class="section-title">異常狀態（Ailment）系統</div>
+    <div class="card card-accent-orange">
+      <h3>dict 覆蓋語意 &mdash; <code>entity.gd:324-327</code></h3>
+      <p style="margin-top:10px;font-size:.82rem;">
+        <code>ailments[element] = Time.get_ticks_msec()</code> — 無論是否已存在，都直接覆蓋。<br>
+        只有首次（<code>not ailments.has(element)</code>）才 emit <code>ailment_added</code> signal。
+      </p>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <strong style="font-size:.82rem;">火焰效果（player.gd:66-68）</strong>
+        <ul style="margin-top:8px;padding-left:16px;font-size:.8rem;color:var(--text);line-height:2;">
+          <li>觸發：播放 $Flames 粒子效果</li>
+          <li>週期：1 秒間隔，共 3 次</li>
+          <li>每次傷害：<code>damage(10, 0.5)</code>（10 火焰傷害，一半可自然回復）</li>
+          <li>結束：<code>ailments.erase("fire")</code> + 停止粒子</li>
+        </ul>
+        <p style="margin-top:8px;font-size:.78rem;color:var(--muted);">
+          注意：在 effect_over_time 執行中重複受火焰傷害只刷新 timestamp，不延長持續時間、不重啟 coroutine。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 銳利度系統 -->
+  <div class="section">
+    <div class="section-title">銳利度（Sharpness）系統</div>
+    <div class="card card-accent-cyan">
+      <h3>7 等級順序 — 從高到低</h3>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span class="badge badge-purple">purple</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-gray">white</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-blue">blue</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-green">green</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-orange">yellow</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-orange">orange</span>
+        <span style="color:var(--muted);">→</span>
+        <span class="badge badge-red">red</span>
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <strong style="font-size:.82rem;">blunt(amount) — 磨損</strong>
+          <p style="margin-top:6px;font-size:.78rem;color:var(--text);">從最高等級（purple）往下消耗；溢出量自動流入下一層。</p>
+          <p style="margin-top:4px;font-size:.78rem;color:var(--muted);">範例：blue=5, green=10, blunt(7) → blue→0（溢出2），green→8</p>
+        </div>
+        <div>
+          <strong style="font-size:.82rem;">sharpen(amount) — 回復</strong>
+          <p style="margin-top:6px;font-size:.78rem;color:var(--text);">從最高未滿等級開始往下填充，優先填滿頂層。過量填充有修正（<code>s.value += amount</code> 當 amount 為負）。</p>
+          <p style="margin-top:4px;font-size:.78rem;color:var(--muted);">符合 Monster Hunter 原作磨刀石優先恢復頂層銳利度的直覺。</p>
+        </div>
+      </div>
+      <p style="margin-top:12px;font-size:.78rem;color:var(--muted);">
+        注意：銳利度傷害加乘（purple=1.39x ... red=0.50x）尚未實作，<code>get_weapon_damage()</code> 目前只回傳 <code>strength</code>。
+      </p>
+    </div>
+  </div>
+
+  <!-- 已修復 Bug -->
+  <div class="section">
+    <div class="section-title">已修復 Bug — weapon.gd:99</div>
+    <div class="highlight-box" style="background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25);font-style:normal;">
+      <div style="font-weight:700;color:var(--red);margin-bottom:10px;">傳參順序錯誤（已修正）</div>
+      <pre style="background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.15);">// 修正前（錯誤）：element 收到 Weapon，weapon 收到 Player，entity 為 null
+body.damage(get_weapon_damage(body, null), 0.0, self, player)
+
+// 修正後（正確）：null → element，self（Weapon）→ weapon，player → entity
+body.damage(get_weapon_damage(body, null), 0.0, null, self, player)</pre>
+      <p style="margin-top:10px;font-size:.8rem;color:var(--text);">
+        <strong>影響：</strong>修正前，<code>monster.gd:224</code> 的玩家追蹤邏輯（<code>if entity is Player: ...</code>）永遠不觸發，因為 entity 參數收到的是 null；
+        同時 <code>weapon.gd</code> 的 element 參數收到 Weapon 物件，導致元素異常狀態判斷錯誤。所有相關 debug log 也因此靜默失效。
+      </p>
+    </div>
+  </div>
+
+  <!-- 武器 Authority 問題 -->
+  <div class="section">
+    <div class="section-title">武器 Authority 問題（多人情境）</div>
+    <div class="highlight-box hl-orange" style="font-style:normal;">
+      <div style="font-weight:700;color:var(--orange);margin-bottom:10px;">weapon.gd:97-101 — 缺少 is_multiplayer_authority() 檢查</div>
+      <p style="font-size:.82rem;margin-bottom:10px;">
+        <code>_on_body_entered()</code> 在所有端（本地與遠端）都會觸發。非 authority 端揮刀命中時：
+      </p>
+      <ul style="padding-left:16px;font-size:.8rem;color:var(--text);line-height:2;">
+        <li><code>body.damage()</code> 在 client 本地執行 → <code>hp</code> 在 client 本地扣除</li>
+        <li><code>hp_changed</code> lambda 內 <code>is_multiplayer_authority() == false</code> → RPC 不發送</li>
+        <li>傷害靜默丟失，主機端的怪物 HP 不受影響</li>
+        <li><code>blunt(1)</code> 武器磨損也只在 client 本地執行，不同步到主機</li>
+      </ul>
+      <p style="margin-top:10px;font-size:.78rem;color:var(--muted);">
+        根本原因：應由 authority 端執行 <code>body.damage()</code>，或使用 <code>body.rpc("damage", ...)</code> 從 client 送到 server 執行後再廣播結果。
+      </p>
+    </div>
+  </div>
+
+  <!-- 頁尾 -->
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);">
+    <a href="index.html">← 回首頁</a>
+    &nbsp;|&nbsp;
+    <a href="../details/entity_combat_system.md">查看原始文件 (entity_combat_system.md)</a>
+    &nbsp;|&nbsp;
+    <a href="../details/weapon_equipment_system.md">查看原始文件 (weapon_equipment_system.md)</a>
+  </div>
+
+</div>
+</body>
+</html>

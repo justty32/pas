@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>模擬迴圈詳解 — CWS</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">⚡ CWS Analysis</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構</a>
+  <a href="simulation_loop.html" class="active">模擬迴圈</a>
+  <a href="llm_integration.html">LLM 整合</a>
+  <a href="../architecture/02_level2_modules.md">L2 原文 (MD)</a>
+</nav>
+
+<div class="page-header">
+  <h1>模擬迴圈詳解 (Simulator.step)</h1>
+  <p>每次呼叫 <code>step()</code> 推進 1 個遊戲月，共 20 個有序相位 — 核對 2026-06-01</p>
+</div>
+
+<div class="section">
+  <div class="section-title">來源</div>
+  <p style="font-size:.85rem;color:var(--muted);">
+    <code>src/sim/simulator_engine/simulator.py::Simulator.step()</code>
+    ↳ 各相位實作在 <code>src/sim/simulator_engine/phases/</code>
+  </p>
+</div>
+
+<!-- 20 相位列表 -->
+<div class="section">
+  <div class="section-title">20 相位順序</div>
+  <div class="phase-list">
+
+    <div class="phase-item">
+      <span class="phase-num">1</span>
+      <span class="phase-text">
+        <strong>更新感知與知識</strong>
+        — 每位 NPC 更新可觀察區域與已知信息
+        <code>world_phases.phase_update_perception_and_knowledge()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">2</span>
+      <span class="phase-text">
+        <strong>長期目標思考</strong>
+        — LLM 為需要重新規劃的角色生成/修訂長期目標
+        <code>lifecycle.phase_long_term_objective_thinking()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">3</span>
+      <span class="phase-text">
+        <strong>Gathering 系統</strong>
+        — 處理拍賣會、天下武道會、宗門傳道大會、秘境探索等大型聚集事件
+        <code>world_phases.phase_process_gatherings()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">4</span>
+      <span class="phase-text">
+        <strong>AI 決策</strong>
+        — LLM 為所有無計畫角色生成本月行動鏈（移動/修煉/攻擊/交易…）
+        <code>actions.phase_decide_actions()</code>
+        <span class="phase-tag">LLM ★核心</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">5</span>
+      <span class="phase-text">
+        <strong>提交並啟動下一步計畫</strong>
+        — 將 Phase 4 決策的行動鏈提交到角色執行佇列
+        <code>actions.phase_commit_next_plans()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">6</span>
+      <span class="phase-text">
+        <strong>執行當前行動</strong>
+        — 多輪 tick 執行，直到穩定或達到上限（max_action_rounds_per_turn=3）
+        <code>actions.phase_execute_actions()</code>
+        <span class="phase-tag">LLM（部分動作）</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">7</span>
+      <span class="phase-text">
+        <strong>互動事件處理（第1輪）</strong>
+        — 處理動作階段產出的互動事件，讓後續關係演化可在同月看到這些變化
+        <code>social.phase_handle_interactions()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">8</span>
+      <span class="phase-text">
+        <strong>關係演化</strong>
+        — LLM 計算互動對人際關係（friendliness -100~100）的影響，更新關係狀態
+        <code>social.phase_evolve_relations()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">9</span>
+      <span class="phase-text">
+        <strong>死亡結算</strong>
+        — 處理本月死亡角色，更新 living_avatars 列表，寫入 deceased_manager
+        <code>lifecycle.phase_resolve_death()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">10</span>
+      <span class="phase-text">
+        <strong>年齡更新 + 出生/覺醒</strong>
+        — 角色老化、新生兒出生（birth_rate_per_month=0.005）、凡人覺醒成修士
+        <code>lifecycle.phase_update_age_and_birth()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">11</span>
+      <span class="phase-text">
+        <strong>身世背景生成</strong>
+        — LLM 為需要的角色生成 backstory
+        <code>lifecycle.phase_backstory_generation()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">12</span>
+      <span class="phase-text">
+        <strong>被動效果 + 世界性事件</strong>
+        — 效果 tick（天劫/心魔/增益）、奇遇/天災觸發（fortune/misfortune_probability=0.005）
+        <code>world_phases.phase_passive_effects()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">13</span>
+      <span class="phase-text">
+        <strong>角色自主創作 + 小型隨機事件 + 宗門隨機事件</strong>
+        — LLM 生成自主創作、隨機小事件（prob=0.05）、宗門事件（prob=0.03/月）
+        <code>phase_autonomous_custom_creation / phase_random_minor_events / phase_sect_random_event</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">13.5</span>
+      <span class="phase-text">
+        <strong>宗門戰爭遭遇戰</strong>
+        — 處於戰爭狀態的宗門間的遭遇戰結算
+        <code>sect_war.phase_handle_sect_wars()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">14</span>
+      <span class="phase-text">
+        <strong>外號生成</strong>
+        — LLM 根據角色事件累積為達標角色生成江湖外號
+        <code>lifecycle.phase_nickname_generation()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">15</span>
+      <span class="phase-text">
+        <strong>更新天象</strong>
+        — 推進天地靈機（CelestialPhenomenon）持續時間，決定是否到期
+        <code>world_phases.phase_update_celestial_phenomenon()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">16</span>
+      <span class="phase-text">
+        <strong>城市人口 + 王朝 + 官制更新</strong>
+        — 凡人城市人口增減、皇帝/官制狀態更新
+        <code>phase_update_city_population / phase_update_dynasty / phase_update_official_system</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">17</span>
+      <span class="phase-text">
+        <strong>互動事件處理（第2輪）</strong>
+        — 處理後半程新增的互動事件，影響下個月的關係判定
+        <code>social.phase_handle_interactions()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">18</span>
+      <span class="phase-text">
+        <strong>計算型關係更新</strong>
+        — 更新二階關係（如「師兄弟」因共同師父而產生的間接關係）
+        <code>social.phase_update_calculated_relations()</code>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">19</span>
+      <span class="phase-text">
+        <strong>每年1月：年度維護</strong>
+        — 宗門年度思考（SectDecider/SectThinker）、年度排行更新、宗門關係調整
+        <code>annual.run_annual_maintenance()</code>
+        <span class="phase-tag">LLM</span>
+      </span>
+    </div>
+
+    <div class="phase-item">
+      <span class="phase-num">20</span>
+      <span class="phase-text">
+        <strong>收尾：事件入庫 + 推進月份</strong>
+        — finalize_step() 統一入庫、推進 MonthStamp、回傳本回合 Event 列表
+        <code>finalize_step(ctx)</code>
+      </span>
+    </div>
+
+  </div>
+</div>
+
+<!-- LLM 呼叫分布 -->
+<div class="section">
+  <div class="section-title">LLM 呼叫點分布（每月）</div>
+  <div class="g2">
+    <table>
+      <thead><tr><th>相位</th><th>任務名稱</th><th>模式</th></tr></thead>
+      <tbody>
+        <tr><td>2 長期目標</td><td>long_term_objective</td><td><span class="badge badge-blue">normal</span></td></tr>
+        <tr><td>3 Gathering</td><td>story_teller / interaction_feedback</td><td><span class="badge badge-orange">fast</span></td></tr>
+        <tr><td>4 AI 決策</td><td>action_decision</td><td><span class="badge badge-blue">normal</span></td></tr>
+        <tr><td>8 關係演化</td><td>relation_resolver / relation_delta</td><td><span class="badge badge-orange">fast</span></td></tr>
+        <tr><td>11 背景故事</td><td>backstory</td><td><span class="badge badge-orange">fast</span></td></tr>
+        <tr><td>12 被動效果</td><td>history_influence / story_teller</td><td><span class="badge badge-blue">normal</span> / <span class="badge badge-orange">fast</span></td></tr>
+        <tr><td>13 隨機事件</td><td>random_minor_event / sect_random_event</td><td><span class="badge badge-orange">fast</span></td></tr>
+        <tr><td>14 外號</td><td>nickname</td><td><span class="badge badge-blue">normal</span></td></tr>
+        <tr><td>19 年度維護</td><td>sect_decider / sect_thinker</td><td><span class="badge badge-blue">normal</span> / <span class="badge badge-orange">fast</span></td></tr>
+      </tbody>
+    </table>
+    <div>
+      <div class="highlight-box hl-orange" style="margin-bottom:12px;">
+        Phase 4「AI 決策」是最關鍵的 LLM 呼叫點——每位無計畫的存活角色都可能觸發一次 LLM 呼叫，且使用 NORMAL 模式（較慢但品質高）。這是每月最大的 LLM 開銷。
+      </div>
+      <div class="highlight-box hl-blue">
+        所有 LLM 呼叫皆透過 <code>src/utils/llm/client.py</code> 的 asyncio.Semaphore 控制並發上限。Phase 4 透過 <code>asyncio.gather</code> 並行化所有角色的決策呼叫。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- config.yml 關鍵參數 -->
+<div class="section">
+  <div class="section-title">static/config.yml 關鍵參數（影響迴圈行為）</div>
+  <table>
+    <thead><tr><th>參數</th><th>值</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>world.max_action_rounds_per_turn</td><td>3</td><td>Phase 6 每月最多執行幾輪行動 tick</td></tr>
+      <tr><td>world.birth_rate_per_month</td><td>0.005</td><td>每月凡人人口出生率</td></tr>
+      <tr><td>world.fortune_probability</td><td>0.005</td><td>每月奇遇觸發機率</td></tr>
+      <tr><td>world.random_minor_event_prob</td><td>0.05</td><td>每月小型隨機事件觸發機率</td></tr>
+      <tr><td>sect.random_event_prob_per_month</td><td>0.03</td><td>每月宗門隨機事件機率</td></tr>
+      <tr><td>sect.decision_interval_years</td><td>3</td><td>宗門年度決策間隔（年）</td></tr>
+      <tr><td>sect.thinking_interval_years</td><td>5</td><td>宗門年度思考間隔（年）</td></tr>
+      <tr><td>world.gathering.auction_trigger_count</td><td>5</td><td>觸發拍賣會所需物品數量</td></tr>
+      <tr><td>ai.max_parse_retries</td><td>3</td><td>LLM JSON 解析失敗最大重試次數</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

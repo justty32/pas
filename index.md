@@ -37,11 +37,13 @@
 | **TakinGodotTemplate** | Godot 起手模板 (Godot 4.4, GDScript) | Level 1-3 | 分析中 | Takin 模板（靈感自 Maaack）：精選 plugins + 最佳實踐骨架。16 個 autoload 為骨幹，將第三方 plugin 全部 Wrapper 化成 enum/Resource 驅動的型別安全介面，SignalBus 觀察者解耦，UI 採 Component-Driven(Builder 注入)，設定走 INI、存檔走 JSON。亮點：約定式自動註冊設定（節點名=列舉名+型別後綴）、反射式存檔（get_script_property_list 自動序列化 + §§§ 簽章 + 可選加密）、HACKS 文件化（Web 剪貼簿 JS 注入）。整合 scene_manager/resonate/Log/debug_menu 等。 |
 | **godot-demo-projects** | Godot 官方範例集合 (Godot 4.6, GDScript/C#) | 編目 (Level 1-2) + 代表深入 | 分析中 | 官方 demo 集合（非單一架構）：13 分類、137 個 project.godot（含 mono/ C# 版）。level2 為核心分類目錄（2d=26/3d=32/gui=14/audio/compute/loading/misc/mobile/networking/viewport/xr…）+「主題→demo」速查表。深入剖析 4 個：2d/platformer、2d/finite_state_machine、compute/texture（render thread + Texture2DRD + ping-pong 水波）、networking/websocket_chat（poll 驅動 WS）。 |
 | **godot-tactical-rpg** | 戰棋 RPG 範本 (Godot 4.3, GDScript) | Level 1-3 | 分析中 | ramaureirac SRPG 範本（3D 場地 + 2D billboard 角色）。Model/Module/Service 三層(類 MVC)，整局由 TacticsParticipantResource.stage(0~7) 一個整數隱式狀態機驅動。亮點：「射線格子化」（執行期把 Blender 方塊 mesh 轉 StaticBody3D，鄰接靠 RayCast3D 偵測、移動範圍 BFS flood-fill、高度差即跳躍門檻）、陣營制回合、完整敵人 AI 決策鏈、成品級四層樞紐攝影機（鍵鼠/手把雙模）。已知遺留：重複 service 檔、舊 .tres 用廢欄位 mp。 |
+| **cultivation-world-simulator** | AI 驅動修仙世界模擬器 (Python/FastAPI + Vue3) | Level 1-2 | 分析中 (核對 2026-06-01) | 玩家扮演「天道」觀察 LLM 全員驅動的修仙世界自行演化。v3.4.0，Python 3.10+/FastAPI/Uvicorn/WebSocket 後端 + Vue3/PixiJS 前端。Simulator.step() = 1 月/回合，20 相位（感知→AI決策→行動→社交→死亡→年度維護）。LLM 接口用 urllib 直呼 OpenAI 相容/Anthropic 原生，無 SDK 依賴，Semaphore 控制並發。設定三層：只讀 config.yml / 用戶 settings.json / 本局 RunConfig。事件以 SQLite 持久化，query/command 分離 REST API，WebSocket 即時推播 tick 狀態。 |
+| **WuXiaAndJiangHu_Godot** | 武俠 MUD → Godot RPG 移植 (Godot 4.0, GDScript) | Level 1-2 + HTML | 分析中 (2026-06-01) | LPC MUD 武俠遊戲移植至 Godot 4.0 的進行中專案。三大架構：inherit/ 類別繼承層級（GameObject/Char/Room）、adm/daemons/ Daemon 系統（COMBAT_D/CHINESE_D 等）、feature/ Mixin 系統。核心：dbase dict（持久屬性）+ tmp_dbase dict（揮發屬性）的 LPC 相容層；AP/DP/PP 三段式概率戰鬥；10維屬性（str/int/con/dex/sta/spi/kar/per/cps/cor）+ 精力/氣血/內力；kungfu/skill/ 武學技能。大量功能仍在 TODO/注釋狀態，COMBAT_D.gd 有語法錯誤。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：31 個
-- **最近更新日期**: 2026-05-26
+- **總計分析專案**：33 個
+- **最近更新日期**: 2026-06-01
 - **維護 Agent**: Gemini CLI / Claude Code
 
 ---

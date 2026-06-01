@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>架構總覽 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html" class="active">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+  <div class="page-header">
+    <h1>架構總覽</h1>
+    <p>Godot 4.3 · GDScript · 3D 動作 RPG · 整體系統脈絡</p>
+  </div>
+
+  <!-- 專案基本資訊 -->
+  <div class="section">
+    <div class="section-title">專案基本資訊</div>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>引擎 &amp; 語言</h3>
+        <p style="margin-top:8px;">
+          <span class="badge badge-blue">Godot 4.3</span>
+          <span class="badge badge-green" style="margin-left:6px;">GDScript</span>
+        </p>
+        <p style="margin-top:10px;font-size:.8rem;">3D 動作 RPG（仿 Monster Hunter 風格）</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>授權 &amp; 特色</h3>
+        <p style="margin-top:8px;">
+          <span class="badge badge-purple">GPL-3.0-or-later</span>
+        </p>
+        <p style="margin-top:10px;font-size:.8rem;">合作 &amp; PvP 線上多人遊戲、Android 觸控/陀螺儀支援</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Autoload 系統 -->
+  <div class="section">
+    <div class="section-title">Autoload 系統（全域單例）</div>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>GlobalAutoload &mdash; <code>global.gd</code></h3>
+        <p style="margin-top:10px;color:var(--text);font-size:.82rem;">場景生命週期管理、玩家與怪物實例管理</p>
+        <table style="margin-top:12px;">
+          <thead><tr><th>方法</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td><code>start_game()</code></td><td>載入 game.tscn + hud.tscn，生成 Dragon，創建本地玩家</td></tr>
+            <tr><td><code>add_player()</code></td><td>實例化 PlayerScene，設定 multiplayer_authority</td></tr>
+            <tr><td><code>add_monster()</code></td><td>實例化怪物 Scene</td></tr>
+            <tr><td><code>stop_game()</code></td><td>清除遊戲，回到主選單</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>NetworkingAutoload &mdash; <code>networking.gd</code></h3>
+        <p style="margin-top:10px;color:var(--text);font-size:.82rem;">ENet 多人網路、RPC 協議、玩家同步</p>
+        <table style="margin-top:12px;">
+          <thead><tr><th>方法 / 屬性</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td><code>server_start()</code></td><td>建立伺服器，呼叫 global.start_game()</td></tr>
+            <tr><td><code>client_start()</code></td><td>建立客戶端連線</td></tr>
+            <tr><td><code>register_player()</code> <span class="chip">@rpc</span></td><td>雙向同步新玩家資訊給所有 peer</td></tr>
+            <tr><td><code>players {}</code></td><td>{peer_id: Player 節點} 字典</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entity 繼承鏈 -->
+  <div class="section">
+    <div class="section-title">Entity 繼承鏈</div>
+    <div class="card card-accent-green" style="margin-bottom:12px;">
+      <h3>Entity <span class="chip" style="margin-left:8px;">CharacterBody3D</span></h3>
+      <p style="margin-top:8px;font-size:.82rem;color:var(--text);">HP / 耐力 / AnimationTree 狀態機 / 傷害計算 / 復活 &amp; 多人 RPC</p>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="badge badge-blue">hp / hp_max</span>
+        <span class="badge badge-blue">hp_regenerable</span>
+        <span class="badge badge-green">stamina getter/setter</span>
+        <span class="badge badge-orange">damage() RPC</span>
+        <span class="badge badge-purple">AnimationTree</span>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card card-accent-blue" style="padding-left:28px;border-left-width:5px;">
+        <h3>Player <span class="chip" style="margin-left:8px;">extends Entity</span></h3>
+        <p style="margin-top:8px;font-size:.8rem;color:var(--muted);">子類擴充</p>
+        <ul style="margin-top:10px;padding-left:16px;font-size:.8rem;color:var(--text);line-height:2;">
+          <li>鍵盤 / 觸控輸入，相機相對移動方向</li>
+          <li>裝備系統（weapon + 5 部位 armour）</li>
+          <li>Inventory 消耗品物品欄</li>
+          <li>互動偵測（Area3D group="interact"）</li>
+          <li>BoneAttachment3D 動態掛載模型</li>
+        </ul>
+      </div>
+      <div class="card card-accent-orange" style="padding-left:28px;border-left-width:5px;">
+        <h3>Monster <span class="chip" style="margin-left:8px;">extends Entity</span></h3>
+        <p style="margin-top:8px;font-size:.8rem;color:var(--muted);">子類擴充</p>
+        <ul style="margin-top:10px;padding-left:16px;font-size:.8rem;color:var(--text);line-height:2;">
+          <li>AI 狀態機：巡邏 ↔ 狩獵</li>
+          <li>120° FOV + Raycast 視野偵測</li>
+          <li>NavigationAgent3D 路徑導航</li>
+          <li>火焰攻擊傷害判定（RayCast3D）</li>
+          <li>死後腳本替換為 monster drop.gd</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 道具系統類別層級 -->
+  <div class="section">
+    <div class="section-title">道具系統類別層級</div>
+    <div class="card card-accent-purple" style="margin-bottom:12px;">
+      <h3>Item <span class="chip" style="margin-left:8px;">純 GDScript 物件，非 Node</span></h3>
+      <p style="margin-top:6px;font-size:.8rem;">基底屬性：name / icon / quantity / rarity</p>
+    </div>
+    <div class="g2">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card card-accent-orange">
+          <h3>Consumable <span class="chip" style="margin-left:6px;">Template Method</span></h3>
+          <p style="margin-top:6px;font-size:.8rem;"><code>use(player)</code> → <code>effect(player)</code> 由子類實作</p>
+        </div>
+        <div class="g2" style="padding-left:16px;">
+          <div class="card" style="font-size:.78rem;">
+            <strong>Potion</strong>
+            <p style="margin-top:4px;">回血 + drink 動畫</p>
+          </div>
+          <div class="card" style="font-size:.78rem;">
+            <strong>Whetstone</strong>
+            <p style="margin-top:4px;">回復武器銳利度</p>
+          </div>
+          <div class="card" style="font-size:.78rem;">
+            <strong>Meat</strong>
+            <p style="margin-top:4px;">永久增加耐力上限</p>
+          </div>
+          <div class="card" style="font-size:.78rem;">
+            <strong>Barrel</strong>
+            <p style="margin-top:4px;">生成爆炸桶（連鎖爆炸）</p>
+          </div>
+          <div class="card" style="font-size:.78rem;">
+            <strong>CannonBall</strong>
+            <p style="margin-top:4px;">裝填大砲或丟出</p>
+          </div>
+          <div class="card" style="font-size:.78rem;">
+            <strong>Firework</strong>
+            <p style="margin-top:4px;">生成煙火節點升空</p>
+          </div>
+        </div>
+      </div>
+      <div class="card card-accent-cyan" style="align-self:start;">
+        <h3>Collectible</h3>
+        <p style="margin-top:6px;font-size:.8rem;">採集材料，由互動點（monster drop.gd）提供給玩家物品欄</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 多人同步機制 -->
+  <div class="section">
+    <div class="section-title">多人同步機制</div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>機制</th><th>實作方式</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>傳輸層</td>
+            <td><code>ENetMultiplayerPeer</code></td>
+          </tr>
+          <tr>
+            <td>玩家加入</td>
+            <td><code>register_player</code> <span class="chip">@rpc("any_peer")</span> — 伺服器廣播，客戶端接收</td>
+          </tr>
+          <tr>
+            <td>HP 同步</td>
+            <td><code>_update_hp</code> <span class="chip">@rpc("call_remote")</span> — authority 端在 hp_changed signal 觸發</td>
+          </tr>
+          <tr>
+            <td>耐力同步</td>
+            <td><code>_update_stamina</code> <span class="chip">@rpc("call_remote")</span></td>
+          </tr>
+          <tr>
+            <td>死亡同步</td>
+            <td><code>died()</code> <span class="chip">@rpc("any_peer", "call_local")</span></td>
+          </tr>
+          <tr>
+            <td>復活同步</td>
+            <td><code>respawn()</code> <span class="chip">@rpc</span></td>
+          </tr>
+          <tr>
+            <td>怪物 AI</td>
+            <td>只在伺服器/單人端執行（<code>is_multiplayer_authority()</code> 控制）</td>
+          </tr>
+          <tr>
+            <td>怪物移動</td>
+            <td><span class="badge badge-orange">TODO</span> transform 同步尚未完整實作（entity.gd:218 被注解）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 目錄結構 -->
+  <div class="section">
+    <div class="section-title">目錄結構</div>
+    <div class="card">
+<pre>Freedom-Hunter/
+├── project.godot          # 引擎設定：主場景、Autoload、Input Map
+├── src/                   # 所有 GDScript 原始碼
+│   ├── global.gd          # [Autoload] 全域狀態、場景切換、玩家管理
+│   ├── multiplayer/
+│   │   ├── networking.gd  # [Autoload] ENet 多人網路、RPC 玩家同步
+│   │   └── lobby.gd       # 大廳 UI 邏輯
+│   ├── entities/
+│   │   ├── entity.gd      # 基底類別：HP/耐力/狀態機/傷害/復活
+│   │   ├── player.gd      # 玩家控制、輸入、互動、裝備
+│   │   └── monster.gd     # 怪物 AI：巡邏/狩獵/視野/導航
+│   ├── equipment/
+│   │   ├── equipment.gd   # 裝備基底
+│   │   ├── weapon.gd      # 武器：銳利度系統、傷害碰撞
+│   │   └── armour.gd      # 防具：防禦值
+│   ├── items/
+│   │   ├── item.gd        # 道具基底（name/icon/quantity/rarity）
+│   │   ├── consumable.gd  # 消耗品基底
+│   │   ├── collectibles.gd# 收集品
+│   │   └── consumables/   # Potion, Whetstone, Meat, Barrel, CannonBall, Firework
+│   ├── interact/
+│   │   ├── cannon.gd      # 互動：大砲
+│   │   ├── chest.gd       # 互動：寶箱
+│   │   ├── gathering.gd   # 互動：採集點
+│   │   ├── monster drop.gd# 互動：怪物死亡後掉落物
+│   │   ├── mushroom.gd    # 互動：蘑菇
+│   │   └── NPC.gd         # 互動：NPC
+│   ├── interface/
+│   │   ├── hud/           # debug/interact/inventory/names/notification/players_list/respawn
+│   │   ├── items_bar.gd   # 快捷物品列
+│   │   ├── shop.gd        # 商店介面
+│   │   └── status.gd      # 狀態列（HP/耐力/銳利度）
+│   ├── inventory.gd       # 物品欄（Panel，拖放 UI）
+│   ├── camera.gd          # 第三人稱相機（Yaw/Pitch/縮放/陀螺儀）
+│   └── ...
+└── data/
+    ├── scenes/            # .tscn 場景檔（main_menu, game, player, monsters, hud...）
+    └── images/items/      # 道具圖示</pre>
+    </div>
+  </div>
+
+  <!-- 頁尾 -->
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);">
+    <a href="index.html">← 回首頁</a>
+    &nbsp;|&nbsp;
+    <a href="../architecture/overview.md">查看原始文件 (overview.md)</a>
+    &nbsp;|&nbsp;
+    <a href="../architecture/summary.md">查看原始文件 (summary.md)</a>
+  </div>
+
+</div>
+</body>
+</html>
