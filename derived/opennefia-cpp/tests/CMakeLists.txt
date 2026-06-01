@@ -18,4 +18,9 @@ endif()
 # 加此 define 讓 doctest 改用 #include <sstream>（完整標頭）。
 target_compile_definitions(opennefia_test PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 
+# 測試用：資料檔路徑（源碼目錄的 data/）傳入編譯期常數，讓測試直接讀源碼中的 YAML 夾具
+target_compile_definitions(opennefia_test PRIVATE
+    OPENNEFIA_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
+)
+
 add_test(NAME opennefia_test COMMAND opennefia_test)

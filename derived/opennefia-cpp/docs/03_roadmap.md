@@ -36,16 +36,21 @@
 
 ---
 
-## Phase 2 — 原型系統（資料驅動）
+## Phase 2 — 原型系統（資料驅動）✅ 完成 2026-06-01
 
 **目標**：YAML → 記憶體原型 → `SpawnEntity`。
 
-- [ ] `PrototypeId<T>` 強型別 id。
-- [ ] `PrototypeManager`：多型別存放 + `parent` 繼承合併（依賴圖排序）。
-- [ ] yaml-cpp 載入器：把 YAML 節點映射成原型的 component 清單。
-- [ ] `EntityManager::SpawnEntity(protoId)`：依原型 emplace component。
+- [x] `PrototypeId<T>` 強型別 id（`EntityProtoId = PrototypeId<EntityPrototypeTag>`）。
+- [x] `PrototypeManager`：`load_file` → `resolve_inheritance`（拓撲排序 + component flat merge）→ `spawn / apply_to`。
+- [x] yaml-cpp 載入器：`ComponentLoader = std::function<void(registry&, entity, Node&)>` 顯式登錄（零反射）。
+- [x] `EntityManager::spawn(proto_id, pm)` 便利包裝（forward decl 避免循環依賴）。
+- [x] `data/test_prototypes.yaml`：3 層繼承（BaseEntity → BaseChara → Putit/EliteWarrior）+ 獨立 SimpleItem。
 
-**判準**：從 `data/` 的範例 YAML（如一個角色 + 一個物品原型，含繼承）spawn 出帶正確 component 的實體。
+**判準**：✅ 20 test cases / 70 assertions 全綠（繼承解析、值覆蓋、spawn component 正確性）。
+
+> **關鍵坑**：
+> 1. yaml-cpp `for (const auto& x : node)` 回傳 `YAML::detail::iterator_value`，MSVC 多載解析偏向 `template operator=<T>` 而不是 copy assignment，改用 `root[i]` index 存取。
+> 2. `YAML::Node` map copy 只 copy handle（共享底層 `detail::node`），子原型的 `operator=` 會呼叫 `set_ref` 污染所有共享 handle。修正：繼承 merge 時用 `YAML::Clone` 確保節點獨立。
 
 ---
 

@@ -1,5 +1,6 @@
 #include "entity_manager.h"
 #include "system_ctx.h"
+#include <core/prototypes/prototype_manager.h>
 
 namespace opennefia {
 
@@ -23,6 +24,10 @@ void EntityManager::tick(SystemCtx& ctx) {
     for (auto& sys : systems_) {
         sys(reg_, ctx);
     }
+}
+
+entt::entity EntityManager::spawn(const std::string& proto_id, PrototypeManager& pm) {
+    return pm.spawn(*this, proto_id);
 }
 
 } // namespace opennefia

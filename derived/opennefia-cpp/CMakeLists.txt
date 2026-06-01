@@ -46,10 +46,13 @@ FetchContent_Declare(cereal
     GIT_TAG        v1.3.2
     GIT_SHALLOW    TRUE
 )
-# yaml-cpp：Phase 2（原型系統）才需要，屆時再加入。
-# yaml-cpp <= 0.8.0 的 CMakeLists.txt 用 cmake_minimum_required(VERSION 2.8.12)，
-# 與 CMake 4.0+ 不相容（需 3.5+），Phase 0 先略過。
-
+# yaml-cpp 0.8.0：cmake_minimum_required(VERSION 2.8.12) → 靠頂部的
+# CMAKE_POLICY_VERSION_MINIMUM=3.5 降級相容（同 doctest 的解法）。
+FetchContent_Declare(yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG        0.8.0
+    GIT_SHALLOW    TRUE
+)
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG        v1.14.1
@@ -66,12 +69,14 @@ set(SKIP_PERFORMANCE_COMPARISON ON  CACHE BOOL "" FORCE)
 set(BUILD_SANDBOX               OFF CACHE BOOL "" FORCE)
 set(BUILD_DOC                   OFF CACHE BOOL "" FORCE)
 set(WITH_WERROR                 OFF CACHE BOOL "" FORCE)
+# yaml-cpp: 不建測試與工具
+set(YAML_CPP_BUILD_TESTS        OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS        OFF CACHE BOOL "" FORCE)
 # spdlog: 不建範例與測試
 set(SPDLOG_BUILD_EXAMPLE        OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS          OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(entt cereal spdlog doctest)
-# yaml-cpp 在 Phase 2 加入：FetchContent_MakeAvailable(yaml-cpp)
+FetchContent_MakeAvailable(entt cereal yaml-cpp spdlog doctest)
 
 # ---- opennefia_core（godot-free STATIC）----
 set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -88,8 +93,8 @@ target_include_directories(opennefia_core PUBLIC "${SRC}")
 target_link_libraries(opennefia_core PUBLIC
     EnTT::EnTT
     cereal::cereal
+    yaml-cpp::yaml-cpp
     spdlog::spdlog
-    # yaml-cpp::yaml-cpp  ← Phase 2 加入
 )
 
 # ---- 測試 ----

@@ -5,6 +5,7 @@
 
 namespace opennefia {
 struct SystemCtx;
+class PrototypeManager;  // forward declaration；impl include 在 entity_manager.cpp
 
 // EntityManager — entt::registry 的薄封裝。
 //
@@ -51,8 +52,11 @@ public:
     void add_system(SystemFn fn);
     void tick(SystemCtx& ctx);
 
-    // ---- 原型生成佔位（Phase 2 補） ---------------------------
-    // entt::entity spawn(const std::string& proto_id);
+    // ---- 原型生成（Phase 2）------------------------------------
+    // 便利包裝：委託給 PrototypeManager::spawn()。
+    // 授權入口仍是 PrototypeManager（prototype_manager.h）；
+    // 這裡只是讓 em.spawn("Putit", pm) 的呼叫語法成立。
+    entt::entity spawn(const std::string& proto_id, PrototypeManager& pm);
 
     // ---- 底層存取（序列化 / 複雜查詢用） ----------------------
     entt::registry&       registry()       { return reg_; }
