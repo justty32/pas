@@ -8,4 +8,5 @@
 ---
 
 - 2026-06-01: 依 create_workflow.md 初始化專案。建立 PROJECT.md（範圍：只做核心、前端暫緩；技術棧 EnTT/cereal/yaml-cpp/spdlog；完成定義）、CLAUDE.md（agent 鐵則）、docs/01_core_architecture.md（核心分層、ECS、自由函式系統、原型、序列化、服務）、docs/02_subsystem_mapping.md（OpenNefia 子系統範圍表 + 三大反射取代）、docs/03_roadmap.md（Phase 0–4 核心路線圖 + 未來前端）。src/ 尚空，下一步為 Phase 0 CMake 雙目標骨架。
+- 2026-06-01: Phase 0 完成。建立 CMakeLists.txt（FetchContent：EnTT v3.16.0 / cereal v1.3.2 / spdlog v1.14.1 / doctest v2.4.11；CMAKE_POLICY_VERSION_MINIMUM=3.5 相容 CMake 4.0+；yaml-cpp 延至 Phase 2）、src/core/version.h+cpp、tests/CMakeLists.txt、tests/src/smoke_test.cpp。cmake --build 通過，ctest 1/1 綠燈。
 </content>

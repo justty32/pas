@@ -49,7 +49,7 @@
 | 日誌 | spdlog | （medps 尚未引入） |
 | 設定 | tomlplusplus 或自製 CVar | 對應 OpenNefia Configuration |
 | 構建 | CMake ≥3.14 | 同 medps 雙目標式 |
-| 測試 | 待定（Catch2 / doctest） | medp_test |
+| 測試 | doctest v2.4.11 | medp_test |
 
 > 與 OpenNefia 不同：本專案**不採 raylib**（已棄）。前端方向（未來）為 Godot 4 GDExtension，與 medps 一致——但本階段不實作。
 
@@ -83,5 +83,6 @@ GitHub Repo：（尚無；如日後推送由使用者手動建立並於此記錄
 
 ## 9. 進度
 
-- 2026-06-01：專案初始化，完成 PROJECT.md 與設計文件 01–03。尚未開始實作（src/ 空）。**下一步**：依 `docs/03_roadmap.md` Phase 0 建 CMake 雙目標骨架。
+- 2026-06-01：專案初始化，完成 PROJECT.md 與設計文件 01–03。尚未開始實作（src/ 空）。
+- 2026-06-01：**Phase 0 完成**。CMakeLists.txt（FetchContent：EnTT v3.16.0 / cereal v1.3.2 / spdlog v1.14.1 / doctest v2.4.11），`opennefia_core` STATIC 靜態庫編譯通過，`version()` smoke test 綠燈（1/1）。**下一步**：Phase 1 ECS 地基。
 </content>

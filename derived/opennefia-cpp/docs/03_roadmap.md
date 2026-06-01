@@ -5,15 +5,17 @@
 
 ---
 
-## Phase 0 — 構建骨架（編譯邊界先立起來）
+## Phase 0 — 構建骨架（編譯邊界先立起來）✅ 完成 2026-06-01
 
 **目標**：一個能編譯、能跑空測試的雙目標 CMake 專案，核心目標**不連任何前端庫**。
 
-- [ ] `CMakeLists.txt`：仿 `medps/CMakeLists.txt`——`opennefia_core`（STATIC）；`GLOB_RECURSE src/` 並**排除未來的 `/gbind/`**；C++20；選用旗標 `OPENNEFIA_BUILD_GDEXTENSION`（預設 OFF，本階段不開）。
-- [ ] vendoring：EnTT、cereal、yaml-cpp、spdlog（extern/ 或 FetchContent）。
-- [ ] 測試框架接上（doctest / Catch2），一個 `version()` smoke test 綠燈。
+- [x] `CMakeLists.txt`：仿 `medps/CMakeLists.txt`——`opennefia_core`（STATIC）；`GLOB_RECURSE src/` 並排除 `/gbind/`；C++20；選用旗標 `OPENNEFIA_BUILD_GDEXTENSION`（預設 OFF）。
+- [x] vendoring（FetchContent）：EnTT v3.16.0、cereal v1.3.2、spdlog v1.14.1、doctest v2.4.11。yaml-cpp 延至 Phase 2（0.8.0 與 CMake 4.0+ 不相容，待升版）。
+- [x] 測試框架接上（doctest），`version()` smoke test 綠燈（1/1 PASS，0.08s）。
 
-**判準**：`cmake --build` 產出 `opennefia_core` 靜態庫，且其編譯單元無任何前端 / godot include。
+**判準**：✅ `cmake --build` 產出 `opennefia_core.lib`，編譯單元無任何前端 / godot include。
+
+> **注意**：yaml-cpp 0.8.0 在 CMake 4.0+ 下以 `cmake_minimum_required(VERSION 2.8.12)` 報錯。CMakeLists.txt 已用 `CMAKE_POLICY_VERSION_MINIMUM=3.5` 相容 doctest 舊宣告；yaml-cpp 本身延後至 Phase 2 再換版本引入。
 
 ---
 
