@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>武俠和江湖 — LPC 移植狀態</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<nav>
+  <span class="nav-brand">武俠和江湖</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="migration.html" class="active">移植狀態</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>LPC MUD → GDScript 移植狀態</h1>
+  <p>原始 MUD 架構說明、各模組移植進度、關鍵模式與已知問題。</p>
+</div>
+
+<!-- 背景說明 -->
+<div class="section">
+  <div class="section-title">背景：什麼是 LPC MUD？</div>
+  <div class="g2">
+    <div class="card card-accent-orange">
+      <h3>LPC MUD 架構</h3>
+      <p>LPC (Lars Pensjö C) 是 1990 年代武俠 MUD 的核心語言。典型中文 MUD 的三大設計模式：</p>
+      <ul style="margin-top:8px;">
+        <li><strong>Daemon 模式</strong>：全域服務單例（COMBAT_D/CHAR_D/CHANNEL_D）</li>
+        <li><strong>dbase 模式</strong>：每個物件用 mapping（字典）儲存所有屬性，<code>ob→query("str")</code> 統一存取</li>
+        <li><strong>Feature 繼承</strong>：<code>inherit F_ACTION</code> 組合 mixin</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>移植策略</h3>
+      <p>作者採用「保留 + 翻譯並行」策略：</p>
+      <ul style="margin-top:8px;">
+        <li>原始 <code>.c</code> 文件保留原位（設計參考）</li>
+        <li>同名 <code>.gd</code> 文件為 GDScript 翻譯版</li>
+        <li>已完成部分直接執行，未完成以 <code># TODO</code> 或 <code>#</code> 注釋標記</li>
+        <li>LPC 慣用語（<code>living()</code>/<code>userp()</code>/<code>environment()</code>）已對映至 GDScript 等價物</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 移植進度：已完成 -->
+<div class="section">
+  <div class="section-title">已完成模組（可執行）</div>
+  <table>
+    <thead>
+      <tr><th>模組</th><th>文件</th><th>已完成內容</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>dbase 核心</strong></td>
+        <td><code>inherit/GameObject.gd</code></td>
+        <td><code>query()</code>/<code>set()</code>/<code>add()</code>/<code>query_temp()</code>/<code>set_temp()</code>/<code>delete()</code>/<code>delete_temp()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>型別相容層</strong></td>
+        <td><code>inherit/GameObject.gd</code></td>
+        <td><code>mapp()</code>/<code>arrayp()</code>/<code>stringp()</code>/<code>intp()</code>/<code>undefinedp()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>名字系統</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>set_name()</code>/<code>name()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>技能字典</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>set_skill()</code>/<code>delete_skill()</code>/<code>map_skill()</code>/<code>prepare_skill()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>忙碌狀態</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>start_busy()</code>/<code>is_busy()</code>/<code>continue_action()</code>/<code>remove_busy()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>師徒系統</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>create_family()</code>/<code>recruit_apprentice()</code>/<code>assign_apprentice()</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>BBCode 顏色</strong></td>
+        <td><code>inherit/GameObject.gd</code></td>
+        <td>全部 ANSI 色碼常數 → BBCode tag（<code>HIR/HIG/HIY/RED/GRN/CYN</code> 等）— 完整</td>
+      </tr>
+      <tr>
+        <td><strong>戰鬥訊息模板</strong></td>
+        <td><code>adm/daemons/COMBAT_D.gd</code></td>
+        <td><code>guard_msg[]</code>/<code>catch_hunt_msg[]</code>/<code>winner_msg[]</code> — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>傷害描述</strong></td>
+        <td><code>adm/daemons/COMBAT_D.gd</code></td>
+        <td><code>damage_msg(damage, type)</code> — 6 種傷害類型（割傷/刺傷/瘀傷/內傷/抓傷/通用）完整</td>
+      </tr>
+      <tr>
+        <td><strong>血量狀態文字</strong></td>
+        <td><code>adm/daemons/COMBAT_D.gd</code></td>
+        <td><code>eff_status_msg()</code>/<code>status_msg()</code> — 完整（10 段分級描述）</td>
+      </tr>
+      <tr>
+        <td><strong>全域工具</strong></td>
+        <td><code>Global.gd</code></td>
+        <td>存讀檔/目錄掃描/數字轉中文/SpriteFrames 生成 — 完整</td>
+      </tr>
+      <tr>
+        <td><strong>背包 UI</strong></td>
+        <td><code>inventory/</code></td>
+        <td>GridBackpack/EquipmentSlots/ItemDB — 基本完成</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 移植進度：部分完成 -->
+<div class="section">
+  <div class="section-title">部分完成（有 TODO）</div>
+  <table>
+    <thead>
+      <tr><th>模組</th><th>文件</th><th>未完成部分</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>移動系統</strong></td>
+        <td><code>inherit/GameObject.gd::move()</code></td>
+        <td><code>move_object()</code> 仍呼叫 <code>ob.free()</code> 而非正確移到容器</td>
+      </tr>
+      <tr>
+        <td><strong>Room reset</strong></td>
+        <td><code>inherit/Room.gd::reset()</code></td>
+        <td><code>make_inventory()</code> 物件重置邏輯被注釋</td>
+      </tr>
+      <tr>
+        <td><strong>Heart Beat</strong></td>
+        <td><code>inherit/Char.gd::heart_beat()</code></td>
+        <td>攻擊/狀態更新/掛機踢除 全部注釋，目前只是空殼</td>
+      </tr>
+      <tr>
+        <td><strong>short() 顯示</strong></td>
+        <td><code>inherit/Char.gd::short()</code></td>
+        <td>稱號/門派/幫會前綴組合 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>die()/unconcious()</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td>死亡處理、昏迷、鬼魂狀態、復活 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>屬性查詢</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>query_str()</code>/<code>query_int()</code>/<code>query_con()</code> 等派生屬性計算 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>F_CONDITION</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td>狀態更新邏輯（中毒/昏迷/修煉）全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>F_DAMAGE</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>receive_damage()</code>/<code>receive_wound()</code>/<code>receive_heal()</code> 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>F_FINANCE</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td><code>can_afford()</code>/<code>pay_money()</code> 金錢系統 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>F_TEAM</strong></td>
+        <td><code>inherit/Char.gd</code></td>
+        <td>隊伍組建/解散/同步 全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>技能成長</strong></td>
+        <td><code>inherit/Char.gd::improve_skill()</code></td>
+        <td>習武 EXP 累積、學習懲罰（悟性不足降速）全部注釋</td>
+      </tr>
+      <tr>
+        <td><strong>COMBAT_D 核心</strong></td>
+        <td><code>adm/daemons/COMBAT_D.gd</code></td>
+        <td><code>do_attack()</code>/<code>fight()</code> 邏輯完整但有語法錯誤（見下方）</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 尚未翻譯 -->
+<div class="section">
+  <div class="section-title">尚未翻譯（僅有 .c 原始版）</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>Daemon 未翻譯</h3>
+      <ul>
+        <li><code>autosaved.c</code> — 自動存檔</li>
+        <li><code>channeld.c</code> — 頻道系統（門派/江湖公告）</li>
+        <li><code>commandd.c</code> — 命令解析器</li>
+        <li><code>crond.c</code> — 排程系統</li>
+        <li><code>questd.c</code> — 任務追蹤</li>
+        <li><code>shopd.c</code> — 商店系統</li>
+        <li><code>logind.c</code> — 登入流程</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <h3>Feature 未翻譯</h3>
+      <ul>
+        <li><code>feature/action.c</code> — 行動佇列</li>
+        <li><code>feature/command.c</code> — 命令執行</li>
+        <li><code>feature/move.c</code> — 移動命令</li>
+        <li><code>feature/quest.c</code> — 任務接受/完成</li>
+        <li><code>feature/save.c</code> — 存檔序列化</li>
+        <li><code>feature/skill.c</code> — 技能查詢/習練</li>
+        <li>所有 <code>meskill/*.c</code> — 武學模型</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 關鍵移植模式 -->
+<div class="section">
+  <div class="section-title">關鍵移植模式</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>1. dbase 字典取代 LPC 變數</h3>
+      <pre>// LPC 原式
+ob-&gt;query("str")
+
+// GDScript 翻譯
+query("str")          # 透過 GameObject.query()
+# 底層：dbase["str"]</pre>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>2. call_other() → 方法呼叫</h3>
+      <pre>// LPC
+call_other(SKILL_D(skill), "query_action", me, ob)
+
+// GDScript（預計）
+var skill_d = load(
+  "res://kungfu/skill/" + skill + ".gd"
+).new()
+skill_d.query_action(me, ob)</pre>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>3. heart_beat → Timer/_process</h3>
+      <pre>// LPC
+set_heart_beat(1)   // 啟動心跳
+
+// GDScript（預計）
+$Timer.start()      // 連接 timeout 信號
+# 或
+func _process(delta):
+  tick_timer += delta
+  if tick_timer &gt;= 1.0: ...</pre>
+    </div>
+    <div class="card card-accent-green">
+      <h3>4. call_out → await Timer</h3>
+      <pre>// LPC
+call_out("revive", random(70) + 30)
+
+// GDScript
+await get_tree().create_timer(
+  randi() % 70 + 30
+).timeout
+revive()</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 已知語法問題 -->
+<div class="section">
+  <div class="section-title">COMBAT_D.gd 已知語法問題</div>
+  <div class="highlight-box hl-red" style="margin-bottom:16px;">
+    <code>COMBAT_D.gd</code> 目前<strong>不可執行</strong>，含多處 LPC→GDScript 翻譯不完整的語法錯誤。需修正後才能整合至主遊戲。
+  </div>
+  <table>
+    <thead>
+      <tr><th>問題類型</th><th>錯誤範例</th><th>正確 GDScript</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>LPC 風格 elif</td>
+        <td><code>elif: (damage &lt; 20)</code></td>
+        <td><code>elif damage &lt; 20:</code></td>
+      </tr>
+      <tr>
+        <td>字典存取混用</td>
+        <td><code>action["weapon"}</code></td>
+        <td><code>action["weapon"]</code></td>
+      </tr>
+      <tr>
+        <td>括號不匹配</td>
+        <td><code>for userno in range(player.size() :</code></td>
+        <td><code>for userno in range(player.size()):</code></td>
+      </tr>
+      <tr>
+        <td>未定義常數</td>
+        <td><code>SKILL_USAGE_ATTACK</code></td>
+        <td>需在文件頂部定義 <code>const SKILL_USAGE_ATTACK = 0</code></td>
+      </tr>
+      <tr>
+        <td>字串拼接錯誤</td>
+        <td><code>HIG + + "文字"</code>（雙 +）</td>
+        <td><code>HIG + "文字"</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:32px;">
+  核對於 2026-06-01 · <a href="../architecture/03_lpc_migration_status.md">原始 .md</a> ·
+  <a href="index.html">← 回首頁</a>
+</p>
+
+</div>
+</body>
+</html>
