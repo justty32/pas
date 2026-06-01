@@ -54,17 +54,21 @@
 
 ---
 
-## Phase 3 — 序列化 / 存讀檔（移植 medps 三件套）
+## Phase 3 — 序列化 / 存讀檔（移植 medps 三件套）✅ 完成 2026-06-01
 
 **目標**：整張地圖 snapshot 存檔 → 還原，round-trip 正確。
 
-- [ ] `serialize/all_components.h`：`AllComponents` type_list 單一來源。
-- [ ] `serialize/entt_cereal_archive.h`：entt↔cereal adapter（仿 `medps/.../entt_cereal_archive.h`）。
-- [ ] `serialize/save_load.h`：fold expression snapshot / loader（仿 `medps/.../zone_io.h`）。
-- [ ] 每個 component 的 cereal `serialize()`（POD 慣例）。
-- [ ] 存檔後端：先 `FolderZoneStore` 式單檔；介面留可換（medps `zone_store.h`）。
+- [x] `serialize/all_components.h`：`AllComponents = entt::type_list<MetaDataComponent, SpatialComponent>` 單一來源。
+- [x] `serialize/entt_cereal_archive.h`：entt↔cereal adapter（直接移植 medps）。
+- [x] `serialize/save_load.h`：fold expression snapshot / loader（移植 medps zone_io.h）；三層 API（stream / path / SaveStore）。
+- [x] `SpatialComponent` 換成 `save()/load()` split（parent entt::entity → raw int round-trip）。
+- [x] 存檔後端：`save_store.h` `SaveStore` 抽象 + `FolderSaveStore` 實作（string slot name 取代 ZoneKey，仿 medps zone_store.h）。
 
-**判準**：建一張地圖（tile 網格 component + 數個實體）→ 存 → 清空 → 載 → 狀態一致。
+**判準**：✅ 29 test cases / 95 assertions 全綠（stream round-trip、parent entity 引用、is_alive、空 registry、無 Spatial entity、檔案 API、FolderSaveStore 存取）。
+
+> **坑記錄**：
+> 1. `entt::entity == entt::null_t` 在 doctest `CHECK()` 中與 EnTT template operator== 歧義 → 先求值成 `bool` 再 `CHECK`。
+> 2. cereal 序列化 `std::string` 需 `<cereal/types/string.hpp>`（沒有 include 時 cereal static_assert 報「找不到序列化函式」）→ 加入 `save_load.h`。
 
 ---
 

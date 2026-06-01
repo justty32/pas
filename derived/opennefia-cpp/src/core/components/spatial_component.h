@@ -10,10 +10,22 @@ struct SpatialComponent {
     int x{}, y{};
     entt::entity parent{entt::null};  // 父實體（用於場景圖；null = 頂層）
 
+    // 非對稱 save/load split：entt::entity 是強型別 enum，需手動轉換成底層整數。
+    // 仿 medps cross_zone_ref.h 的做法（C:/code/mine/medps/src/gcore/components/cross_zone_ref.h）。
     template<class Archive>
-    void serialize(Archive& ar) {
+    void save(Archive& ar) const {
         ar(x, y);
-        // parent 的序列化在 Phase 3 用 save/load split 處理（entt::entity → raw int）
+        using raw_t = std::underlying_type_t<entt::entity>;
+        ar(static_cast<raw_t>(parent));
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        ar(x, y);
+        using raw_t = std::underlying_type_t<entt::entity>;
+        raw_t raw{};
+        ar(raw);
+        parent = static_cast<entt::entity>(raw);
     }
 };
 

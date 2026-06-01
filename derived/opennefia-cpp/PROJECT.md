@@ -86,5 +86,6 @@ GitHub Repo：（尚無；如日後推送由使用者手動建立並於此記錄
 - 2026-06-01：專案初始化，完成 PROJECT.md 與設計文件 01–03。尚未開始實作（src/ 空）。
 - 2026-06-01：**Phase 0 完成**。CMakeLists.txt（FetchContent：EnTT v3.16.0 / cereal v1.3.2 / spdlog v1.14.1 / doctest v2.4.11），`opennefia_core` STATIC 靜態庫編譯通過，`version()` smoke test 綠燈（1/1）。
 - 2026-06-01：**Phase 1 完成**。`core/ecs/`（EntityManager + EventBus + SystemCtx）、`core/services/`（ServiceContext）、`core/components/`（MetaDataComponent + SpatialComponent）、`core/util/`（Vector2i + ResourcePath）。8 test cases / 20 assertions 全綠。
-- 2026-06-01：**Phase 2 完成**。`core/prototypes/`（PrototypeId + Prototype + PrototypeManager：yaml-cpp 載入、拓撲繼承解析、ComponentLoader 顯式登錄、spawn）；`data/test_prototypes.yaml`（3 層繼承 + 獨立原型）。20 test cases / 70 assertions 全綠。**下一步**：Phase 3 序列化（移植 medps 三件套）。
+- 2026-06-01：**Phase 2 完成**。`core/prototypes/`（PrototypeId + Prototype + PrototypeManager：yaml-cpp 載入、拓撲繼承解析、ComponentLoader 顯式登錄、spawn）；`data/test_prototypes.yaml`（3 層繼承 + 獨立原型）。20 test cases / 70 assertions 全綠。
+- 2026-06-01：**Phase 3 完成**。`core/serialize/`（AllComponents type_list + entt_cereal_archive + save_load 三層 API + SaveStore/FolderSaveStore）；`SpatialComponent` save/load split（parent entity round-trip）。29 test cases / 95 assertions 全綠。**下一步**：Phase 4 地圖邏輯 + 最小遊戲循環。
 </content>
