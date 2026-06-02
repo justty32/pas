@@ -71,6 +71,20 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
     recompute_fov();  // 初始視野（英雄出生位置）
 }
 
+// ---- 在地化初始化（只跑一次）----------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::init_locale() {
+    if (svc_.locale.has("npc.putit")) return;
+    svc_.locale.load(std::string(OPENNEFIA_DATA_DIR) + "/locale/zh-TW.yaml");
+}
+
+// NPC 實例 id（如 "putit_0"）→ 基礎型別名稱（"putit"）
+static std::string npc_base_type(const std::string& proto_id) {
+    auto pos = proto_id.rfind('_');
+    if (pos != std::string::npos && pos > 0) return proto_id.substr(0, pos);
+    return proto_id;
+}
+
 // ---- CVar 初始化（只跑一次）-----------------------------------------------
 
 void opennefia_gd::OpenNefiaWorld::init_cvars() {
@@ -134,6 +148,7 @@ void opennefia_gd::OpenNefiaWorld::init_prototypes() {
 //
 // 委派給 setup_map()；NPC AI 系統只注冊一次。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
+    init_locale();
     init_cvars();
     init_prototypes();
     setup_map();
@@ -246,6 +261,8 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
             if (chance(rng) >= svc_.cvars.get<int>("game.item_spawn_pct")) continue;
             auto e = pm_.spawn(em_, "HealthPotion");
             reg.emplace<opennefia::SpatialComponent>(e, rooms[r].x + 1, rooms[r].y + 1);
+            // proto_id 統一為小寫（與在地化 key "item.health_potion" 一致）
+            reg.get<opennefia::MetaDataComponent>(e).proto_id = "health_potion";
             // 層數縮放：base_value + (floor-1)*value_per_floor
             auto& item = reg.get<opennefia::ItemComponent>(e);
             item.value += (current_floor_ - 1) * item.value_per_floor;
@@ -417,19 +434,21 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
         const auto& npc_sp = npc_view.get<opennefia::SpatialComponent>(e);
         if (npc_sp.x == nx && npc_sp.y == ny) {
             const auto& meta = npc_view.get<opennefia::MetaDataComponent>(e);
-            String npc_id(meta.proto_id.c_str());
+            // 在地化 NPC 名稱：由基礎型別名查語言表，找不到則回傳原 id
+            std::string base = npc_base_type(meta.proto_id);
+            String npc_disp(svc_.locale.get("npc." + base, meta.proto_id).c_str());
 
             auto* npc_hp = reg.try_get<opennefia::HealthComponent>(e);
             if (npc_hp) {
                 npc_hp->hp -= 3;
                 if (npc_hp->hp <= 0) {
                     reg.destroy(e);
-                    emit_signal("npc_died", npc_id);
+                    emit_signal("npc_died", npc_disp);
                 } else {
-                    emit_signal("hero_bumped_npc", npc_id);
+                    emit_signal("hero_bumped_npc", npc_disp);
                 }
             } else {
-                emit_signal("hero_bumped_npc", npc_id);
+                emit_signal("hero_bumped_npc", npc_disp);
             }
             advance_turn();
             return true;
@@ -459,7 +478,8 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
                 if (hp) hp->hp = std::min(hp->hp + item.value, hp->max_hp);
             }
             int heal_done = item.value;
-            String iname(meta.proto_id.c_str());
+            // 在地化道具名稱
+            String iname(svc_.locale.get("item." + meta.proto_id, meta.proto_id).c_str());
             reg.destroy(pickup_ent);
             emit_signal("item_picked_up", iname, heal_done);
         }

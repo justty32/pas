@@ -62,6 +62,7 @@ public:
 
 private:
     void init_cvars();       // 登錄遊戲設計參數 CVar（只跑一次）
+    void init_locale();      // 載入語言檔（只跑一次）
     void init_prototypes();  // 登錄 ComponentLoader + 載入 game_prototypes.yaml（只跑一次）
     void setup_test_world();
     void setup_map();        // 生成新地圖 + 放置英雄/NPC/樓梯（可重複呼叫）

@@ -1,0 +1,16 @@
+# opennefia-cpp 繁體中文語言包
+
+# ── NPC 名稱 ──────────────────────────────────────────────────────────────────
+npc.putit: "普提特"
+npc.warrior: "戰士"
+npc.bat: "蝙蝠"
+
+# ── 道具名稱 ──────────────────────────────────────────────────────────────────
+item.health_potion: "治癒藥草"
+
+# ── 訊息模板（{var} 為占位符）────────────────────────────────────────────────
+msg.npc_died: "{name} 倒下了！"
+msg.npc_attacked_hero: "{name} 攻擊了你！"
+msg.item_picked_up: "拾取了 {name}，回復 {heal} HP"
+msg.floor_changed: "進入第 {floor} 層"
+msg.game_over: "遊戲結束——英雄倒下了。"

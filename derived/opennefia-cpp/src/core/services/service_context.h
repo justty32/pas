@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include "core/cvar/cvar_registry.h"
+#include "core/locale/locale_registry.h"
 
 namespace spdlog { class logger; }
 
@@ -24,7 +25,8 @@ public:
 
     spdlog::logger& log();
 
-    CvarRegistry cvars;  // 具名型別設定變數；由呼叫端在啟動時 reg() 初始化
+    CvarRegistry   cvars;   // 具名型別設定變數；由呼叫端在啟動時 reg() 初始化
+    LocaleRegistry locale;  // 在地化字串查找；由呼叫端 load() 語言檔
 
 private:
     std::shared_ptr<spdlog::logger> log_;
