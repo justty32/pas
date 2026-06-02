@@ -91,9 +91,9 @@
 - [x] `nickname`：外號有成就感（前綴+主題+後綴池，10 runs 皆唯一）— `src/local_ai/epithets.py`
 - [x] `backstory`：背景故事多樣（起源/天賦/早期/現狀/抱負五段模板）— `src/local_ai/narrative.py`
 
-### Phase 3（組織智能）
-- [ ] `sect_decider`：宗門會做出合理策略決策
-- [ ] `sect_thinker`：宗門有年度反思文字
+### Phase 3（組織智能）✅ 完成
+- [x] `sect_decider`：決策樹（外交/招募/驅逐/獎勵/扶持五維度）— `src/local_ai/sect_ai.py`
+- [x] `sect_thinker`：宗門年度思考文字模板（30-100 字，境界/財力/戰局感知）— `src/local_ai/sect_ai.py`
 
 ### Phase 4（完整等價）
 - [ ] 所有 16 個任務完整實作
@@ -109,5 +109,5 @@
 - [x] Phase 0：全任務 stub + shim 部署（待實機驗證）
 - [x] Phase 1：核心 AI（action_decision Utility AI、relation_delta 公式、long_term_objective 模板）
 - [x] Phase 2：敘事系統（詞庫、模板）
-- [ ] Phase 3：宗門 AI
+- [x] Phase 3：宗門 AI
 - [ ] Phase 4：完整等價測試

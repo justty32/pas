@@ -24,3 +24,5 @@
 - 2026-06-02：Phase 2 — 建立 narrative.py（story_teller 詞庫組合、interaction_feedback 動作分類回應、backstory 五段模板）
 - 2026-06-02：Phase 2 — 建立 epithets.py（nickname 前綴+主題+後綴詞庫，5% 稀有特殊外號，境界感知前綴池）
 - 2026-06-02：Phase 2 單元驗證：story/backstory 結構正確，nickname 10 次全唯一，部署至 projects/cultivation-world-simulator/src/local_ai/
+- 2026-06-02：Phase 3 — 建立 sect_ai.py（sect_decider 五維度決策樹、sect_thinker 30-100 字思考模板）
+- 2026-06-02：Phase 3 單元驗證：7 項斷言全通過（招募/驅逐/求和邏輯正確，thinker 字數合規），部署至 projects/
