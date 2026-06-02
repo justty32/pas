@@ -19,3 +19,5 @@
 - 2026-06-02：patch sect_random_event.py 的 _generate_reason_fragment() 加 local AI shim，返回 stub reason fragment 跳過 LLM
 - 2026-06-02：patch autonomous_custom_content_service.py 的 should_trigger() 在本地 AI 模式下返回 False
 - 2026-06-02：實機驗證 Phase 0：102→107 年模擬無崩潰、零 ERROR、零非法動作警告（9 個角色存活）
+- 2026-06-02：Phase 1 — 建立 decision.py（softmax 效用 AI）、goals.py（目標模板生成）、relations.py（relation_delta 公式引擎）
+- 2026-06-02：Phase 1 實機驗證：103→108 年 17 月模擬無崩潰，10 個角色存活，動作多樣化（Respire/Retreat/Plant）

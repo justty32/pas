@@ -80,10 +80,11 @@
 - [x] `autonomous_custom_content_service.py::should_trigger()` 本地模式直接 return False
 - [x] 實機驗證：102→107 年模擬無崩潰、零 ERROR、零非法動作（9 個角色存活）
 
-### Phase 1（可玩性）
-- [ ] `action_decision`：效用 AI 讓 NPC 做出合理決策（不亂動）
-- [ ] `relation_resolver/delta`：關係演化有公式邏輯
-- [ ] `long_term_objective`：角色有合理目標
+### Phase 1（可玩性）✅ 完成
+- [x] `action_decision`：softmax 效用 AI，NPC 動作多樣化（Respire/Retreat/Plant 等）— `src/local_ai/decision.py`
+- [x] `relation_delta`：互動類型公式引擎 + 好感度偏移 — `src/local_ai/relations.py`
+- [x] `long_term_objective`：情境感知模板生成器（宗門/戰爭/靈石條件分支）— `src/local_ai/goals.py`
+- [x] 實機驗證：103→108 年 17 月模擬無崩潰，10 個角色存活，動作多樣化
 
 ### Phase 2（有趣性）
 - [ ] `story_teller / interaction_feedback`：詞庫組合文字有變化性
@@ -106,7 +107,7 @@
 - [x] 衍生目標定義
 - [x] 設計文件 (`docs/design_overview.md`)
 - [x] Phase 0：全任務 stub + shim 部署（待實機驗證）
-- [ ] Phase 1：核心 AI（action_decision、relation、objectives）
+- [x] Phase 1：核心 AI（action_decision Utility AI、relation_delta 公式、long_term_objective 模板）
 - [ ] Phase 2：敘事系統（詞庫、模板）
 - [ ] Phase 3：宗門 AI
 - [ ] Phase 4：完整等價測試

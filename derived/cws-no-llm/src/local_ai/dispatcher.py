@@ -1,6 +1,8 @@
 """
 Phase 0: 全任務 stub。返回最小合法值讓遊戲可以跑。
-Phase 1+: 逐步替換為真正的本地 AI 實作。
+Phase 1: action_decision → decision.py 效用 AI
+         long_term_objective → goals.py 模板生成器
+         relation_delta → relations.py 公式引擎
 
 返回格式全部以 projects/cultivation-world-simulator/src 原始碼核對（2026-06-02）：
   - action_decision   : ai.py:84 — {avatar_name: {"action_name_params_pairs": [...]}}
@@ -19,6 +21,10 @@ Phase 1+: 逐步替換為真正的本地 AI 實作。
   NOTE: history_influence / custom_content_generation 原始碼未找到呼叫，保留為 None fallback。
 """
 import logging
+
+from src.local_ai.decision import decide_action
+from src.local_ai.goals import gen_long_term_objective
+from src.local_ai.relations import calc_relation_delta
 
 logger = logging.getLogger("local_ai")
 
@@ -177,10 +183,11 @@ def _stub_single_choice(infos: dict) -> dict:
 # ── Handler 映射表 ─────────────────────────────────────────────────────────────
 
 _HANDLERS = {
-    "action_decision":          _stub_action_decision,
-    "long_term_objective":      _stub_long_term_objective,
-    "relation_resolver":        _stub_relation_resolver,
-    "relation_delta":           _stub_relation_delta,
+    # Phase 1 實作（取代 Phase 0 stub）
+    "action_decision":          decide_action,
+    "long_term_objective":      gen_long_term_objective,
+    "relation_resolver":        _stub_relation_resolver,   # Phase 1 維持 stub（changed=False）
+    "relation_delta":           calc_relation_delta,
     "story_teller":             _stub_story_teller,
     "interaction_feedback":     _stub_interaction_feedback,
     "backstory":                _stub_backstory,
