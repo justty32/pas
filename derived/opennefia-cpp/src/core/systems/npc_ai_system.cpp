@@ -3,6 +3,7 @@
 #include "core/components/npc_ai_component.h"
 #include "core/components/spatial_component.h"
 #include "core/components/health_component.h"
+#include "core/components/combat_stats_component.h"
 #include "core/maps/map_data.h"
 
 #include <random>
@@ -31,11 +32,15 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
     }
 
     std::uniform_int_distribution<int> dir_dist(0, 3);
-    std::uniform_int_distribution<int> act_dist(0, 1);  // 50% 機率行動
+    std::uniform_int_distribution<int> pct_dist(0, 99);
 
     auto view = reg.view<NpcAiComponent, SpatialComponent>();
     for (auto e : view) {
-        if (act_dist(s_rng) == 0) continue;  // 50% 站原地
+        // 使用 CombatStatsComponent 的 move_chance（無則預設 50%）
+        int move_chance = 50;
+        if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
+            move_chance = stats->move_chance;
+        if (pct_dist(s_rng) >= move_chance) continue;
 
         auto& sp = view.get<SpatialComponent>(e);
 
@@ -51,7 +56,10 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
                 // 鄰接時直接攻擊英雄（不移動）
                 if (chebyshev == 1) {
                     if (auto* hero_hp = reg.try_get<HealthComponent>(hero_ent)) {
-                        hero_hp->hp -= 2;
+                        int dmg = 2;
+                        if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
+                            dmg = stats->attack;
+                        hero_hp->hp -= dmg;
                         if (hero_hp->hp < 0) hero_hp->hp = 0;
                     }
                 } else {

@@ -5,6 +5,7 @@
 #include "core/components/npc_ai_component.h"
 #include "core/components/health_component.h"
 #include "core/components/item_component.h"
+#include "core/components/combat_stats_component.h"
 #include "core/maps/map_data.h"
 #include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
@@ -126,17 +127,47 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         stair_tile.flags |= opennefia::TILE_STAIR_DOWN;
     }
 
-    // NPC：從第二個房間起，每間放一隻，最多 (4 + current_floor_) 隻，上限 8
+    // NPC：依樓層生成 Putit / Warrior / Bat，各有不同 HP / 攻擊力 / 移動機率
+    auto pick_variant = [&](int npc_idx) -> opennefia::NpcVariant {
+        std::uniform_int_distribution<int> d(0, 9);
+        int r = d(rng);
+        if (current_floor_ <= 2) {
+            return (r < 7) ? opennefia::NpcVariant::putit : opennefia::NpcVariant::bat;
+        } else if (current_floor_ <= 4) {
+            if (r < 3) return opennefia::NpcVariant::putit;
+            if (r < 7) return opennefia::NpcVariant::warrior;
+            return opennefia::NpcVariant::bat;
+        } else {
+            if (r < 2) return opennefia::NpcVariant::putit;
+            if (r < 7) return opennefia::NpcVariant::warrior;
+            return opennefia::NpcVariant::bat;
+        }
+    };
+
     int npc_cap = std::min(4 + current_floor_, 8);
     int npc_count = 0;
     for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < npc_cap; ++r, ++npc_count) {
-        std::string npc_id = "npc_" + std::to_string(npc_count);
-        int npc_hp = 10 + (current_floor_ - 1) * 2;  // 隨樓層加血
+        auto variant = pick_variant(npc_count);
+        int npc_hp, atk, mv;
+        std::string vname;
+        switch (variant) {
+            case opennefia::NpcVariant::putit:
+                npc_hp = 6  + (current_floor_ - 1);     atk = 1; mv = 40; vname = "putit";   break;
+            case opennefia::NpcVariant::warrior:
+                npc_hp = 15 + (current_floor_ - 1) * 3; atk = 3; mv = 65; vname = "warrior"; break;
+            case opennefia::NpcVariant::bat:
+                npc_hp = 5  + (current_floor_ - 1);     atk = 2; mv = 90; vname = "bat";     break;
+            default:
+                npc_hp = 10; atk = 2; mv = 50; vname = "npc"; break;
+        }
+        std::string npc_id = vname + "_" + std::to_string(npc_count);
         auto e = em_.create();
         em_.emplace<opennefia::MetaDataComponent>(e, npc_id, true);
         em_.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
         em_.emplace<opennefia::NpcAiComponent>(e);
         em_.emplace<opennefia::HealthComponent>(e, npc_hp, npc_hp);
+        em_.emplace<opennefia::CombatStatsComponent>(e,
+            opennefia::CombatStatsComponent{ atk, mv, variant });
     }
 
     // 物品：中間房間（跳過英雄房 0 與樓梯房 back）各有 60% 機率出現回血藥
@@ -260,13 +291,23 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
             img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), item_color);
     }
 
-    // NPC（紅點，只在可見格顯示）
+    // NPC（依類型著色，只在可見格顯示）
+    // putit=紫(0.6,0.2,0.7)  warrior=橙(0.9,0.5,0.1)  bat=青(0.2,0.8,0.9)
     auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
                                         opennefia::SpatialComponent>();
     for (auto e : npc_view) {
         const auto& sp = npc_view.get<opennefia::SpatialComponent>(e);
-        if (map.is_visible(sp.x, sp.y))
-            img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), npc_color);
+        if (!map.is_visible(sp.x, sp.y)) continue;
+        Color nc = npc_color;
+        if (const auto* stats = em_.registry().try_get<opennefia::CombatStatsComponent>(e)) {
+            switch (stats->variant) {
+                case opennefia::NpcVariant::putit:   nc = Color(0.60f, 0.20f, 0.70f); break;
+                case opennefia::NpcVariant::warrior: nc = Color(0.90f, 0.50f, 0.10f); break;
+                case opennefia::NpcVariant::bat:     nc = Color(0.20f, 0.80f, 0.90f); break;
+                default: break;
+            }
+        }
+        img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), nc);
     }
 
     // Hero（黃點，永遠顯示，疊在最上層）

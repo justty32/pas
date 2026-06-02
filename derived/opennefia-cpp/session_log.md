@@ -29,3 +29,4 @@
 - 2026-06-02: 多樓層完成。tile.h 加 TILE_STAIR_DOWN + is_stair_down()；setup_map() 抽出（可重複呼叫）；setup_test_world 改用 systems_ready_ 防止重複 add_system；末尾房間放樓梯（金黃渲染）；next_floor() 銷毀舊 NPC+地圖重生成英雄保留 HP；restart() 完整重置；move() 踩樓梯觸發 next_floor；floor_changed 信號；NPC 隨層數加血（10 + (floor-1)*2），數量上限 min(4+floor, 8)；GDScript 接 floor_changed + R 重置 + InfoLabel 顯示層數。Build 成功。
 
 - 2026-06-02: 物品/拾取完成。新增 item_component.h（ItemType::health_potion, value）；AllComponents 加 ItemComponent；setup_map 末尾房間（跳過英雄房與樓梯房）60% 機率生成回血藥（heal 隨層數增加）；物品銷毀納入 setup_map 清理流程；move() 踩到物品自動拾取回 HP（capped at max_hp），emit item_picked_up；generate_map_image 加綠點渲染（層級 tiles→items→NPC→hero）；GDScript 接 item_picked_up 信號。Build 成功。
+- 2026-06-02: NPC 多類型完成。新增 combat_stats_component.h（NpcVariant::putit/warrior/bat，attack, move_chance）；AllComponents 加 CombatStatsComponent；npc_ai_system 改用 CombatStatsComponent 的 move_chance（0-100
