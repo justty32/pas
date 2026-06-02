@@ -107,11 +107,52 @@
 
 ---
 
-## 未來
+## F2 — 地圖資料橋接 + Image 渲染 ✅ 完成 2026-06-02
 
-- **F2 渲染**：Godot TileMapLayer 畫 tile 層；Sprite2D / MultiMesh 畫實體；FOV overlay。
-- **F3 UI**：Godot Control / .tscn 取代 Wisp（**不移植 XAML**）；UI 邏輯（顯示什麼 / 觸發什麼）仍在核心。
-- **F4 輸入 / 音效**：Godot InputMap action ↔ 核心指令；AudioStreamPlayer 接核心音效事件。
+**目標**：核心地圖資料透過 gbind 過到 Godot 並畫出來。
+
+- [x] `src/gbind/opennefia_world_gd.h/.cpp`：`OpenNefiaWorld : Node`，持有 `EntityManager` + `ServiceContext`；`setup_test_world()` 建 20×15 測試地圖；`generate_map_image()` 產三色 `Image`（牆 / 地板 / 演員）。
+- [x] `register_types.cpp` 註冊 `OpenNefiaWorld`。
+- [x] `godot_test/map_view.gd`：動態建 World、`Image → ImageTexture → Sprite2D`、`Camera2D` 置中。
+
+**判準**：✅ `opennefia_gd.dll` 更新至 4.9 MB，Godot 端顯示地圖。
+
+---
+
+## F3 — 輸入 → 核心移動 → Signal 刷新 + UI ✅ 完成 2026-06-02
+
+**目標**：玩家輸入經核心推進、用 Godot signal 回推刷新。
+
+- [x] `OpenNefiaWorld`：`move(dx,dy)` / `wait_turn()` / `get_hero_x/y()` / `turn_count()` + `world_changed` signal。
+- [x] `map_view.gd`：`_unhandled_input`（WASD / 方向鍵 / numpad 8 向 + wait）；`_on_world_changed` 刷新 Sprite2D；`InfoLabel` 顯示座標 + 回合數。
+
+**判準**：✅ 輸入→核心→signal→刷新閉環跑通（5.1 MB DLL）。
+
+---
+
+## 遊戲性擴充（F2/F3 後在 Godot 前端上長出的可玩 roguelike）✅ 2026-06-02
+
+> 以下每一波都遵循「邏輯在核心、橋接層暴露 POD/signal、GDScript 只接線」的分工。對應 component / system 已納入 `AllComponents` 與序列化。
+
+- [x] **NPC AI（wander）**：`components/npc_ai_component.h`（空標記型別）+ `systems/npc_ai_system.h/.cpp`（固定種子 RNG，4 方向試探）；`OpenNefiaWorld` 加 `EventBus` + `advance_turn()`（tick EM + emit `world_changed`）。坑：EnTT 空型別 `emplace` 回傳 `void`，`entity_manager.h` 改 `decltype(auto)`。
+- [x] **FOV + 追蹤 + 碰撞信號**：`systems/fov_system.h/.cpp`（Bresenham LOS，radius=8）；`map_data.h` 加 `visible/explored` 陣列 + split save/load；NPC 改為 8 格內追蹤英雄（大 delta 軸優先）否則 wander；`hero_bumped_wall` / `hero_bumped_npc` signal + `recompute_fov()`；三層 FOV 渲染（未探索 / 暗 / 原色）。
+- [x] **F4 音效框架**：`map_view.gd` 接碰撞信號 + `AudioStreamPlayer`（plug-in `.ogg` 即啟用）。
+- [x] **戰鬥系統**：`components/health_component.h`（hp/max_hp，cereal serialize）；Hero 20/20、NPC 10/10；hero 撞 NPC 扣 3 HP（致死 → destroy + `npc_died`，否則 `hero_bumped_npc`）；NPC 在 Chebyshev==1 時攻擊 hero 扣 2 HP；hero HP≤0 → `game_over` + 鎖輸入；`InfoLabel` 顯示 HP。
+- [x] **BSP 地城生成**：`maps/map_gen.h/.cpp`（遞迴分割、葉節點挖房間、L 形走廊、回傳 `Room` 列表）；地圖升級 60×40；hero 放第一房間、NPC 依序放後續房間（最多 5）；鏡頭跟隨英雄；`get_npc_count()`。
+- [x] **多樓層**：`tile.h` 加 `TILE_STAIR_DOWN` + `is_stair_down()`；`setup_map()` 抽出可重呼叫（`systems_ready_` 防重複 add_system）；末尾房間放樓梯；`next_floor()`（銷毀舊 NPC + 地圖重生成、英雄保留 HP）；`restart()` 完整重置；踩樓梯觸發 + `floor_changed` signal；NPC 隨層加血 `10+(floor-1)*2`、數量 `min(4+floor, 8)`；GDScript 接 `floor_changed` + R 重置。
+- [x] **物品 / 拾取**：`components/item_component.h`（`ItemType::health_potion`, value）；`setup_map` 末尾房間 60% 機率生回血藥（heal 隨層數）；踩到自動拾取回 HP（capped at max_hp）+ `item_picked_up` signal；綠點渲染（tiles→items→NPC→hero 分層）。
+- [x] **NPC 多類型**：`components/combat_stats_component.h`（`NpcVariant::{putit,warrior,bat}`, attack, move_chance）；`npc_ai_system` 改用 `move_chance` 決定移動傾向。
+- [x] **存讀檔（F5/F9）**：`components/world_state_component.h`（turn_count + current_floor，掛在 `map_entity_` 上隨 `AllComponents` 序列化）；`save_game/load_game/has_save_game`（cereal `PortableBinary`）；`load_game` 清空 registry 後以 `proto_id=hero` 重建指標並還原狀態；GDScript F5 存 / F9 讀（`ProjectSettings.globalize_path` 解析 `user://`，`game_over` 後仍可操作）。
+
+> **事後分析**：以上全數同步至 `../../analysis/opennefia-cpp/`（architecture/summary.md §11–§13 + tutorial 五篇 + html 導覽層）。
+
+---
+
+## 未來（真正剩餘）
+
+- **Linux 前端實機驗證**：先前 GDExtension 只在 Windows 產出 `.dll`；本機（GCC 16）尚未建 `.so` 並用 Godot 4.4+ 開 `godot_test/` 跑過。`GODOT_CPP_DIR` 預設已改為相對 repo（`../../projects/godot-cpp`），但 godot-cpp 尚未在本機編譯。
+- **內容深化**：法術 / 能力系統、物品欄 UI、近戰 / 遠程武器、更多敵人類型與 AI 行為。
+- **核心回歸題**：原型 YAML 擴充（角色 / 物品定義資料化，取代硬編生成）、在地化資料、CVar 設定系統（PROJECT.md §3 列為範圍內但尚未實作）。
 
 ---
 

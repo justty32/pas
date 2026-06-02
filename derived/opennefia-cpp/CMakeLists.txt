@@ -78,6 +78,13 @@ set(SPDLOG_BUILD_TESTS          OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(entt cereal yaml-cpp spdlog doctest)
 
+# yaml-cpp 0.8.0 的 emitterutils.cpp 用了 uint16_t 卻沒 #include <cstdint>。
+# 在 GCC 13+ / 新版 libstdc++（本機 GCC 16）下標頭不再間接帶入而編譯失敗；
+# MSVC 與舊 GCC 因標頭傳遞鏈不同未觸發。對該目標強制前置 include 修正。
+if(TARGET yaml-cpp AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+    target_compile_options(yaml-cpp PRIVATE -include cstdint)
+endif()
+
 # ---- opennefia_core（godot-free STATIC）----
 set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB_RECURSE core_src
@@ -106,7 +113,9 @@ add_subdirectory(tests)
 option(OPENNEFIA_BUILD_GDEXTENSION
     "Build the Godot 4 GDExtension facade (src/gbind)" OFF)
 if(OPENNEFIA_BUILD_GDEXTENSION)
-    set(GODOT_CPP_DIR "C:/code/mine/pas/projects/godot-cpp"
+    # 預設指向本 repo 的 projects/godot-cpp（derived/opennefia-cpp/ 往上兩層）；
+    # 可用 -DGODOT_CPP_DIR=... 覆寫到其他 checkout。
+    set(GODOT_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../projects/godot-cpp"
         CACHE PATH "Path to the godot-cpp checkout")
     add_subdirectory("${GODOT_CPP_DIR}" "${CMAKE_BINARY_DIR}/godot-cpp-build")
 
