@@ -47,8 +47,9 @@ func _input(event: InputEvent) -> void:
 				_radius = minf(10.0, _radius + ZOOM_SPEED)
 
 	elif event is InputEventMouseMotion and _dragging:
-		var d := event.position - _last_mouse
-		_last_mouse = event.position
+		var mm := event as InputEventMouseMotion
+		var d := mm.position - _last_mouse
+		_last_mouse = mm.position
 		_yaw   -= d.x * ORBIT_SPEED
 		_pitch -= d.y * ORBIT_SPEED
 		_pitch  = clampf(_pitch, PITCH_MIN, PITCH_MAX)
