@@ -49,13 +49,34 @@ def dispatch(task_name: str, infos: dict):
 
 def _stub_action_decision(infos: dict) -> dict:
     """
-    Phase 0: 永遠選 meditate。
+    Phase 0: 從 general_action_infos 取第一個可用動作（偏好修煉系：Respire > Meditate > Rest）。
     返回格式: {avatar_name: {"action_name_params_pairs": [[name, params], ...]}}
+    注意 action_name 必須是 class 名（PascalCase），如 "Meditate", "Respire"。
     """
+    import json
     avatar_name = infos.get("avatar_name", "unknown")
+
+    # 解析可用動作列表（JSON string）
+    action_name = "Rest"  # 最安全的 fallback
+    raw = infos.get("general_action_infos", "")
+    if raw:
+        try:
+            available: dict = json.loads(raw)
+            # 依優先序嘗試找修煉類動作
+            for preferred in ("Respire", "Meditate", "Retreat", "Rest"):
+                if preferred in available:
+                    action_name = preferred
+                    break
+            else:
+                # 取第一個
+                if available:
+                    action_name = next(iter(available))
+        except (json.JSONDecodeError, StopIteration):
+            pass
+
     return {
         avatar_name: {
-            "action_name_params_pairs": [["meditate", {}]],
+            "action_name_params_pairs": [[action_name, {}]],
             "avatar_thinking": "[stub] 靜心修煉",
             "short_term_objective": "突破境界",
             "current_emotion": "平靜",

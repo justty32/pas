@@ -73,11 +73,12 @@
 
 ## 完成定義
 
-### Phase 0（最低可用）
+### Phase 0（最低可用）✅ 完成
 - [x] 所有 LLM 任務有 stub 實作（返回合法最小值）— `src/local_ai/dispatcher.py`
 - [x] Shim 打入 `src/utils/llm/client.py::call_llm_with_task_name()`
-- [ ] 遊戲可在無網路環境啟動並運行完整月份模擬（待實機測試）
-- [ ] 不崩潰，事件入庫正常（待實機測試）
+- [x] `sect_random_event.py::_generate_reason_fragment()` 加 local shim（stub reason fragment）
+- [x] `autonomous_custom_content_service.py::should_trigger()` 本地模式直接 return False
+- [x] 實機驗證：102→107 年模擬無崩潰、零 ERROR、零非法動作（9 個角色存活）
 
 ### Phase 1（可玩性）
 - [ ] `action_decision`：效用 AI 讓 NPC 做出合理決策（不亂動）

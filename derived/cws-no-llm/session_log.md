@@ -15,3 +15,7 @@
 - 2026-06-02：複製 local_ai 模組到 projects/cultivation-world-simulator/src/local_ai/
 - 2026-06-02：打 shim 至 projects/cultivation-world-simulator/src/utils/llm/client.py（call_llm_with_task_name 函數）
 - 2026-06-02：更新 docs/task_interface_spec.md（填入原始碼核對的實際格式，標記 sect_random_event 不走 dispatcher）
+- 2026-06-02：修正 dispatcher action_decision stub — action_name 需大寫 PascalCase 且從 general_action_infos 選可用動作（Respire > Meditate > Retreat > Rest）
+- 2026-06-02：patch sect_random_event.py 的 _generate_reason_fragment() 加 local AI shim，返回 stub reason fragment 跳過 LLM
+- 2026-06-02：patch autonomous_custom_content_service.py 的 should_trigger() 在本地 AI 模式下返回 False
+- 2026-06-02：實機驗證 Phase 0：102→107 年模擬無崩潰、零 ERROR、零非法動作警告（9 個角色存活）
