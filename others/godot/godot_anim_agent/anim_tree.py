@@ -161,6 +161,21 @@ def load_sm(path: str) -> dict:
         return {"Start": 0, "End": 1}.get(s["name"], 2)
     states.sort(key=_rank)
 
+    # Godot 4.4+ 格式不再序列化 Start/End sub_resource，但 transitions 仍可引用。
+    # 補回虛擬節點，讓後續邏輯（_find_state、cmd_summary 端點檢查）不報假錯。
+    existing_names = {s["name"] for s in states}
+    for tr in transitions:
+        for endpoint, ntype, default_pos in [
+            (tr["from"], START_TYPE, (40, 50)),
+            (tr["to"],   END_TYPE,   (460, 50)),
+        ]:
+            if endpoint in ("Start", "End") and endpoint not in existing_names:
+                ntype_use = START_TYPE if endpoint == "Start" else END_TYPE
+                states.insert(0, {"name": endpoint, "node_type": ntype_use,
+                                  "node_props": {}, "pos": None})
+                existing_names.add(endpoint)
+    states.sort(key=_rank)
+
     return {
         "uid": data["header"].get("uid"),
         "graph_offset": _parse_vector2(rprops["graph_offset"]) if "graph_offset" in rprops else None,
@@ -204,12 +219,19 @@ def _nondefault_trans_props(props: dict) -> dict:
 
 
 def dump_sm(model: dict) -> str:
-    """模型 → 完整 .tres 文字，自動重算 load_steps。"""
-    states, transitions = model["states"], model["transitions"]
+    """模型 → 完整 .tres 文字（Godot 4.4+ 格式）。
 
-    # 各 sub_resource 區塊
+    Start / End 是引擎內建節點：不輸出對應的 sub_resource，也不輸出
+    states/Start/ 或 states/End/ 條目——Godot 自動管理它們。
+    load_steps 已在 Godot 4.4+ 格式移除，不輸出。
+    """
+    states, transitions = model["states"], model["transitions"]
+    # Start/End 不寫入 .tres（引擎內建，Godot 自動管理）
+    regular_states = [s for s in states if s["node_type"] not in (START_TYPE, END_TYPE)]
+
+    # 各 sub_resource 區塊（只輸出非 Start/End 狀態）
     blocks = []
-    for st in states:
+    for st in regular_states:
         sid = _state_sub_id(st)
         lines = [f'[sub_resource type="{st["node_type"]}" id="{sid}"]']
         for k, v in st["node_props"].items():
@@ -222,17 +244,15 @@ def dump_sm(model: dict) -> str:
             lines.append(f"{k} = {v}")
         blocks.append("\n".join(lines))
 
-    load_steps = len(blocks) + 1
     uid = model.get("uid")
-    header = (f'[gd_resource type="AnimationNodeStateMachine" '
-              f'load_steps={load_steps} format=3'
+    header = (f'[gd_resource type="AnimationNodeStateMachine" format=3'
               + (f' uid="{uid}"' if uid else "") + "]")
 
-    # [resource] 區塊
+    # [resource] 區塊（只輸出非 Start/End 狀態）
     res_lines = []
     if model.get("state_machine_type") is not None:
         res_lines.append(f'state_machine_type = {model["state_machine_type"]}')
-    for st in states:
+    for st in regular_states:
         res_lines.append(f'states/{st["name"]}/node = SubResource("{_state_sub_id(st)}")')
         pos = st["pos"] if st["pos"] is not None else (0, 0)
         res_lines.append(f'states/{st["name"]}/position = {_vec2(pos)}')
@@ -243,8 +263,9 @@ def dump_sm(model: dict) -> str:
             elems.append(f'"{tr["to"]}"')
             elems.append(f'SubResource("{_trans_sub_id(tr)}")')
         res_lines.append("transitions = [" + ", ".join(elems) + "]")
-    if model.get("graph_offset") is not None:
-        res_lines.append(f'graph_offset = {_vec2(model["graph_offset"])}')
+    go = model.get("graph_offset")
+    if go is not None and (go[0] != 0 or go[1] != 0):
+        res_lines.append(f'graph_offset = {_vec2(go)}')
 
     parts = [header, ""]
     for b in blocks:

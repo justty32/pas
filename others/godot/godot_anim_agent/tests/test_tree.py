@@ -21,14 +21,17 @@ from tests.helpers import SM, FIGHTER, META, copy_fixture, capture
 class TestLoadDumpRoundTrip(unittest.TestCase):
     def test_load_gives_correct_state_count(self):
         model = load_sm(str(SM))
-        # state_machine_sample: Start, End, idle, punch = 4
-        self.assertEqual(len(model["states"]), 4)
+        # state_machine_sample: Start(virtual) + idle + punch = 3
+        # End 不在此檔（無轉場指向 End），故不計入
+        self.assertEqual(len(model["states"]), 3)
 
-    def test_load_has_start_end(self):
+    def test_load_has_start(self):
         model = load_sm(str(SM))
         names = {s["name"] for s in model["states"]}
+        # Start 由 transitions 補回（虛擬節點）；End 不在此範例
         self.assertIn("Start", names)
-        self.assertIn("End", names)
+        self.assertIn("idle", names)
+        self.assertIn("punch", names)
 
     def test_load_idle_punch_states(self):
         model = load_sm(str(SM))
@@ -51,15 +54,18 @@ class TestLoadDumpRoundTrip(unittest.TestCase):
         self.assertIn("punch", text)
         self.assertIn("[resource]", text)
 
-    def test_load_steps_correct(self):
-        # 4 sub_resources (Start, End, idle_node, punch_node) + 3 transitions = 7; +1 = 8
+    def test_no_load_steps_in_output(self):
+        # Godot 4.4+ 格式不包含 load_steps
         model = load_sm(str(SM))
         text = dump_sm(model)
-        import re
-        m = re.search(r'load_steps=(\d+)', text)
-        self.assertIsNotNone(m)
-        # states(4) + transitions(3) + 1 = 8
-        self.assertEqual(int(m.group(1)), 8)
+        self.assertNotIn("load_steps=", text)
+
+    def test_no_start_end_subresource_in_output(self):
+        # Start/End 是引擎內建節點，不應出現在 sub_resource 塊
+        model = load_sm(str(SM))
+        text = dump_sm(model)
+        self.assertNotIn("AnimationNodeStartState", text)
+        self.assertNotIn("AnimationNodeEndState", text)
 
     def test_xfade_preserved(self):
         model = load_sm(str(SM))

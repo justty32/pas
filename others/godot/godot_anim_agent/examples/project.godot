@@ -1,0 +1,13 @@
+; Engine configuration file.
+; It's best edited using the editor GUI and not directly,
+; but the file format allows edits by hand.
+
+[application]
+
+config/name="anim_agent_verify"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
