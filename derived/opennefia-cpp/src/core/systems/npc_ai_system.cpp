@@ -4,6 +4,7 @@
 #include "core/components/spatial_component.h"
 #include "core/components/health_component.h"
 #include "core/components/combat_stats_component.h"
+#include "core/components/item_component.h"
 #include "core/maps/map_data.h"
 #include "core/systems/fov_system.h"
 
@@ -26,9 +27,12 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
     if (map_ent == entt::null) return;
     const auto& map = reg.get<MapData>(map_ent);
 
-    // 找英雄實體（有 SpatialComponent 但沒有 NpcAiComponent 者）
+    // 找英雄實體：有 Spatial + Health、且非 NPC、非物品。
+    // （舊版只 exclude<NpcAiComponent>，物品也有 Spatial 無 NpcAi → 可能誤選物品，
+    //   攻擊就打到沒有 HealthComponent 的物品上，英雄永遠不掉血。）
     entt::entity hero_ent = entt::null;
-    for (auto e : reg.view<SpatialComponent>(entt::exclude<NpcAiComponent>)) {
+    for (auto e : reg.view<SpatialComponent, HealthComponent>(
+                      entt::exclude<NpcAiComponent, ItemComponent>)) {
         hero_ent = e; break;
     }
 
@@ -37,16 +41,19 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
 
     auto view = reg.view<NpcAiComponent, SpatialComponent>();
     for (auto e : view) {
-        // 使用 CombatStatsComponent 的 move_chance（無則預設 50%）
-        int move_chance = 50;
-        if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
-            move_chance = stats->move_chance;
-        if (pct_dist(s_rng) >= move_chance) continue;
-
         auto& sp = view.get<SpatialComponent>(e);
         auto& ai = view.get<NpcAiComponent>(e);
 
-        // ---- 視野 + 警覺狀態更新 ----
+        // 戰鬥數值（無 CombatStatsComponent 則用預設）
+        int move_chance = 50;
+        int attack      = 2;
+        if (const auto* stats = reg.try_get<CombatStatsComponent>(e)) {
+            move_chance = stats->move_chance;
+            attack      = stats->attack;
+        }
+
+        // ---- 視野 + 警覺狀態更新（每回合必做，不受行動機率影響）----
+        // 否則 move_chance 偏低的 NPC 連「發現英雄」都會被機率閘門吃掉。
         if (hero_ent != entt::null) {
             const auto& hero_sp = reg.get<SpatialComponent>(hero_ent);
             int chebyshev = std::max(std::abs(hero_sp.x - sp.x),
@@ -62,50 +69,56 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
             }
         }
 
-        // ---- 追蹤模式（已警覺）----
-        bool chasing = false;
+        // ---- 鄰接攻擊：警覺且貼身時「必定」攻擊（不受 move_chance 閘門）----
+        // move_chance 是「移動頻率」，不該連攻擊一起擋掉；否則低 move_chance 的
+        // 弱怪（如 putit mv=40）在 2 下就被打死的短兵相接中常常一次都還不了手。
         if (ai.alerted && hero_ent != entt::null) {
             const auto& hero_sp = reg.get<SpatialComponent>(hero_ent);
             int chebyshev = std::max(std::abs(hero_sp.x - sp.x),
                                      std::abs(hero_sp.y - sp.y));
-            chasing = true;
-
             if (chebyshev == 1) {
-                // 鄰接：攻擊英雄
                 if (auto* hero_hp = reg.try_get<HealthComponent>(hero_ent)) {
-                    int dmg = 2;
-                    if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
-                        dmg = stats->attack;
-                    hero_hp->hp -= dmg;
+                    hero_hp->hp -= attack;
                     if (hero_hp->hp < 0) hero_hp->hp = 0;
                 }
-            } else {
-                // 移動朝英雄（大 delta 軸優先）
-                int hdx = hero_sp.x - sp.x;
-                int hdy = hero_sp.y - sp.y;
-                int cx = (hdx > 0) - (hdx < 0);
-                int cy = (hdy > 0) - (hdy < 0);
-
-                int try_x[2], try_y[2];
-                if (std::abs(hdx) >= std::abs(hdy)) {
-                    try_x[0] = cx; try_y[0] = 0;
-                    try_x[1] = 0;  try_y[1] = cy;
-                } else {
-                    try_x[0] = 0;  try_y[0] = cy;
-                    try_x[1] = cx; try_y[1] = 0;
-                }
-
-                bool moved = false;
-                for (int i = 0; i < 2; ++i) {
-                    int nx = sp.x + try_x[i];
-                    int ny = sp.y + try_y[i];
-                    if (nx == hero_sp.x && ny == hero_sp.y) continue;
-                    if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
-                        sp.x = nx; sp.y = ny; moved = true; break;
-                    }
-                }
-                if (!moved) chasing = false;
+                continue;  // 攻擊即為本回合行動
             }
+        }
+
+        // ---- 行動機率閘門：以下「移動」（追蹤 / 徘徊）才受 move_chance 限制 ----
+        if (pct_dist(s_rng) >= move_chance) continue;
+
+        // ---- 追蹤模式（已警覺，尚未貼身）----
+        bool chasing = false;
+        if (ai.alerted && hero_ent != entt::null) {
+            const auto& hero_sp = reg.get<SpatialComponent>(hero_ent);
+            chasing = true;
+
+            // 移動朝英雄（大 delta 軸優先）
+            int hdx = hero_sp.x - sp.x;
+            int hdy = hero_sp.y - sp.y;
+            int cx = (hdx > 0) - (hdx < 0);
+            int cy = (hdy > 0) - (hdy < 0);
+
+            int try_x[2], try_y[2];
+            if (std::abs(hdx) >= std::abs(hdy)) {
+                try_x[0] = cx; try_y[0] = 0;
+                try_x[1] = 0;  try_y[1] = cy;
+            } else {
+                try_x[0] = 0;  try_y[0] = cy;
+                try_x[1] = cx; try_y[1] = 0;
+            }
+
+            bool moved = false;
+            for (int i = 0; i < 2; ++i) {
+                int nx = sp.x + try_x[i];
+                int ny = sp.y + try_y[i];
+                if (nx == hero_sp.x && ny == hero_sp.y) continue;
+                if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
+                    sp.x = nx; sp.y = ny; moved = true; break;
+                }
+            }
+            if (!moved) chasing = false;
         }
 
         // ---- Wander 模式（未警覺或追蹤受阻）----
