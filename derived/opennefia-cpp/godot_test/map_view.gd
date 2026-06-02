@@ -3,6 +3,8 @@ extends Node2D
 # F3 地圖場景：輸入 → 核心移動 → Signal 刷新顯示。
 # F4 音效框架：hero_bumped_wall / hero_bumped_npc 信號 → AudioStreamPlayer。
 # 戰鬥：hero 攻擊 NPC（3 dmg）；NPC 鄰接攻擊 hero（2 dmg）；game_over 偵測。
+# 存讀檔：F5 存檔（user://opennefia_save.bin），F9 讀檔。
+#   兩者皆可在 game_over 後操作（不受 _dead 限制）。
 #
 # 建議場景結構：
 #   MapView (Node2D)          ← 此腳本
@@ -17,6 +19,7 @@ extends Node2D
 
 var world: OpenNefiaWorld
 const CELL_PX := 16
+const SAVE_PATH := "user://opennefia_save.bin"
 
 var _dead := false  # game over 後鎖定輸入
 
@@ -58,9 +61,15 @@ func _setup_audio() -> void:
 	# sfx_bump_npc.stream = load("res://sounds/hit.ogg")
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _dead: return
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
+
+	# 存讀檔不受 _dead 限制（game over 後仍可存 / 讀）
+	match event.keycode:
+		KEY_F5: _do_save(); return
+		KEY_F9: _do_load(); return
+
+	if _dead: return
 
 	match event.keycode:
 		KEY_UP,    KEY_W, KEY_KP_8: world.move( 0, -1)
@@ -110,6 +119,25 @@ func _do_restart() -> void:
 	_dead = false
 	world.restart()
 	print("— 重新開始 —")
+
+func _do_save() -> void:
+	var real_path := ProjectSettings.globalize_path(SAVE_PATH)
+	if world.save_game(real_path):
+		print("★ 存檔成功（F%d，第 %d 回合）" % [world.get_current_floor(), world.get_turn_count()])
+		_refresh_ui()
+	else:
+		print("★ 存檔失敗（地圖或英雄未初始化）")
+
+func _do_load() -> void:
+	var real_path := ProjectSettings.globalize_path(SAVE_PATH)
+	if not world.has_save_game(real_path):
+		print("★ 找不到存檔，請先按 F5 存檔")
+		return
+	if world.load_game(real_path):
+		_dead = false
+		print("★ 讀檔成功（F%d，第 %d 回合）" % [world.get_current_floor(), world.get_turn_count()])
+	else:
+		print("★ 讀檔失敗")
 
 func _refresh_display() -> void:
 	var img := world.generate_map_image(CELL_PX)

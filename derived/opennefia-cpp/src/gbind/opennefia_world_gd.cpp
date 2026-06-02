@@ -10,7 +10,10 @@
 #include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
 #include "core/systems/fov_system.h"
+#include "core/components/world_state_component.h"
+#include "core/serialize/save_load.h"
 #include <random>
+#include <filesystem>
 
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -36,6 +39,10 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_npc_count"),   &OpenNefiaWorld::get_npc_count);
     ClassDB::bind_method(D_METHOD("get_current_floor"), &OpenNefiaWorld::get_current_floor);
     ClassDB::bind_method(D_METHOD("restart"),           &OpenNefiaWorld::restart);
+
+    ClassDB::bind_method(D_METHOD("save_game", "path"),     &OpenNefiaWorld::save_game);
+    ClassDB::bind_method(D_METHOD("load_game", "path"),     &OpenNefiaWorld::load_game);
+    ClassDB::bind_method(D_METHOD("has_save_game", "path"), &OpenNefiaWorld::has_save_game);
 
     ADD_SIGNAL(MethodInfo("world_changed"));
     ADD_SIGNAL(MethodInfo("floor_changed",
@@ -104,6 +111,9 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
     // 建立新地圖
     map_entity_ = em_.create();
     auto& map = em_.emplace<opennefia::MapData>(map_entity_, W, H);
+    // WorldStateComponent 掛在 map_entity_ 上，隨 save/load 自動序列化
+    em_.emplace<opennefia::WorldStateComponent>(map_entity_,
+        opennefia::WorldStateComponent{ turn_count_, current_floor_ });
 
     std::mt19937 rng(std::random_device{}());
     auto rooms = opennefia::generate_bsp_dungeon(map, rng);
@@ -462,4 +472,70 @@ int opennefia_gd::OpenNefiaWorld::get_hero_max_hp() const {
 
 int opennefia_gd::OpenNefiaWorld::get_npc_count() const {
     return static_cast<int>(em_.registry().view<opennefia::NpcAiComponent>().size());
+}
+
+// ---- 存讀檔 -----------------------------------------------------------------
+
+bool opennefia_gd::OpenNefiaWorld::save_game(const godot::String& path_gd) {
+    if (map_entity_ == entt::null || hero_entity_ == entt::null) return false;
+
+    // 存檔前同步最新遊戲狀態至 WorldStateComponent
+    auto* ws = em_.registry().try_get<opennefia::WorldStateComponent>(map_entity_);
+    if (ws) {
+        ws->turn_count    = turn_count_;
+        ws->current_floor = current_floor_;
+    }
+
+    std::filesystem::path path{ std::string(path_gd.utf8().get_data()) };
+    opennefia::serialize::save(em_.registry(), path);
+    return true;
+}
+
+bool opennefia_gd::OpenNefiaWorld::load_game(const godot::String& path_gd) {
+    std::filesystem::path path{ std::string(path_gd.utf8().get_data()) };
+    if (!std::filesystem::exists(path)) return false;
+
+    // 清空 registry（保留 systems_ vector，不重置 systems_ready_）
+    em_.registry().clear();
+    map_entity_  = entt::null;
+    hero_entity_ = entt::null;
+    game_over_   = false;
+
+    // 反序列化（entt::snapshot_loader 填入所有 component）
+    opennefia::serialize::load(em_.registry(), path);
+
+    // 重建 C++ 指標：map_entity_ 為持有 MapData 的實體
+    auto& reg = em_.registry();
+    for (auto e : reg.view<opennefia::MapData>()) { map_entity_ = e; break; }
+
+    // hero_entity_：MetaDataComponent::proto_id == "hero"
+    for (auto e : reg.view<opennefia::MetaDataComponent>()) {
+        if (reg.get<opennefia::MetaDataComponent>(e).proto_id == "hero") {
+            hero_entity_ = e;
+            break;
+        }
+    }
+
+    // 從 WorldStateComponent 還原遊戲狀態
+    if (map_entity_ != entt::null) {
+        if (const auto* ws = reg.try_get<opennefia::WorldStateComponent>(map_entity_)) {
+            turn_count_    = ws->turn_count;
+            current_floor_ = ws->current_floor;
+        }
+    }
+
+    // 系統只需注冊一次（systems_ vector 不序列化，但 systems_ready_ 跨呼叫保持 true）
+    if (!systems_ready_) {
+        em_.add_system(opennefia::npc_ai_system);
+        systems_ready_ = true;
+    }
+
+    recompute_fov();
+    emit_signal("world_changed");
+    return true;
+}
+
+bool opennefia_gd::OpenNefiaWorld::has_save_game(const godot::String& path_gd) const {
+    std::filesystem::path path{ std::string(path_gd.utf8().get_data()) };
+    return std::filesystem::exists(path);
 }

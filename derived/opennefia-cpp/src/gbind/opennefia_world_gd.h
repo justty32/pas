@@ -54,6 +54,11 @@ public:
     int  get_current_floor() const;
     void restart();        // 完整重置（英雄重建，回到 1 層）
 
+    // ---- 存讀檔 ----
+    bool save_game(const godot::String& path);         // 序列化 registry → 二進位檔
+    bool load_game(const godot::String& path);         // 反序列化並重建 C++ 指標
+    bool has_save_game(const godot::String& path) const; // 存檔是否存在
+
 private:
     void setup_test_world();
     void setup_map();      // 生成新地圖 + 放置英雄/NPC/樓梯（可重複呼叫）
