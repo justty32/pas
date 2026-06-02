@@ -37,8 +37,10 @@
 | 多樓層 | TILE_STAIR_DOWN + next_floor() + 樓層縮放難度 | ✅ 完成 |
 | BSP 地城 | 60×40 BSP 生成，Room struct 控制英雄 / NPC / 物品 / 樓梯落點 | ✅ 完成 |
 | 存讀檔 | WorldStateComponent + F5 存 / F9 讀 + game_over 後仍可操作 | ✅ 完成 |
+| F5 Linux .so | godot-cpp 4.6 本機編 `libopennefia_gd.so` + headless `verify.gd` VERIFY PASSED | ✅ 完成 |
+| F6 GUI + 修復 | 圖形視窗實玩；修「英雄不掉血」雙重缺陷；HeroComponent 正規化辨識 | ✅ 完成 |
 
-**測試結果**：36 test cases / 139 assertions 全綠（2026-06-02）
+**測試結果**：40 test cases / 146 assertions 全綠（2026-06-02，含 `test_npc_combat.cpp` 戰鬥回歸 4 案例）
 
 ### 技術棧
 
@@ -733,7 +735,7 @@ struct WorldStateComponent {
 **讀檔流程**（`load_game(path)`）：
 1. `em_.registry().clear()` — 清空 ECS；`systems_` vector 不受影響，`systems_ready_` 保持 `true`。
 2. `opennefia::serialize::load(em_.registry(), path)` — snapshot_loader 還原全部實體。
-3. `map_entity_` ← 首個持有 `MapData` 的實體；`hero_entity_` ← `MetaDataComponent::proto_id == "hero"`。
+3. `map_entity_` ← 首個持有 `MapData` 的實體；`hero_entity_` ← `view<HeroComponent>` 首個（F6 起；舊作法 `MetaDataComponent::proto_id == "hero"` 已棄，見 §14）。
 4. 從 `WorldStateComponent` 還原 `turn_count_` / `current_floor_`。
 5. `recompute_fov()` + emit `world_changed`。
 
@@ -741,6 +743,65 @@ struct WorldStateComponent {
 - `ProjectSettings.globalize_path("user://opennefia_save.bin")` 取得真實檔案路徑。
 - F5/F9 在 `_unhandled_input` 的 `if _dead: return` 前攔截，允許 game_over 後仍可存/讀。
 - 讀檔成功後設 `_dead = false`，恢復玩家輸入。
+
+## 14. F6 — GUI 實機觀察、戰鬥 bug 修復與英雄辨識正規化（2026-06-02）
+
+把核心 + 前端首次放上**圖形視窗實玩**（godot-mono 4.6.3，NVIDIA OpenGL）後抓到一個只在真機才浮現的戰鬥 bug，順藤摸瓜挖出一條值得立為通則的設計教訓。
+
+### 14.1 症狀與雙重缺陷
+
+**症狀**：英雄撞 NPC 能造成傷害，但英雄自身永遠不掉血（HP 卡在 20/20）。
+
+| 缺陷 | 層級 | 成因 | 修法 |
+|---|---|---|---|
+| **英雄辨識選錯實體** | 主因 | `npc_ai_system` 舊用 `view<SpatialComponent>(exclude<NpcAiComponent>)` 取「首個非 NPC 有座標實體」當英雄；但**物品也符合**（有 Spatial、無 NpcAi）。EnTT 單一 component 的 view **由 storage 尾端往前迭代**，真機建立順序為「英雄 → NPC → 物品」，物品落在尾端 → `hero_ent` 誤指向某物品（無 `HealthComponent`）→ NPC 攻擊 `try_get<HealthComponent>` 回 null、傷害打空 | 見 §14.2 正規化 |
+| **行動機率閘門位置** | 次因 | `if (pct_dist >= move_chance) continue;` 擺在系統迴圈最前，把視野更新 + 鄰接攻擊一起擋掉，低 `move_chance` 弱怪短兵相接時常還不了手 | 重構為**視野每回合必更新、警覺且鄰接必定攻擊**，閘門下移到只管移動 |
+
+**單元測試為何沒先抓到**：初版回歸測試把物品建在英雄**之前**，反向迭代剛好先碰到英雄、矇混過關——這本身就是排除法脆弱性的鐵證。修正後的 `test_npc_combat.cpp` 案例 2 刻意把物品建在英雄／NPC **之後**（對齊 `setup_test_world` 真機順序），才真正重現 bug。
+
+### 14.2 根因消除——HeroComponent 正向標記
+
+確立設計準則並落地（詳見 `docs/decisions/01_entity_identification.md`）：
+
+> **辨識某一類實體，給它一個正向 tag component，用 `view<Tag, ...>` 查；不要用 `exclude<...>` 列舉「它不是什麼」。**
+
+```cpp
+// src/core/components/hero_component.h —— 空 tag
+struct HeroComponent {
+    template<class Archive> void serialize(Archive&) {}   // 空型別，no-op
+};
+
+// npc_ai_system.cpp —— 正向唯一鎖定
+entt::entity hero_ent = entt::null;
+for (auto e : reg.view<HeroComponent, SpatialComponent>()) { hero_ent = e; break; }
+```
+
+要點：
+
+1. **正確性**：`HeroComponent` 表達「這個實體**是**英雄」，不隨新增實體類型（物品 / 陷阱 / 投射物）被打破。
+2. **抗迭代順序**：不依賴 EnTT view 的迭代方向或 pool 排列。
+3. **可序列化**：`HeroComponent` 列入 `serialize/all_components.h`（末位）；`std::is_empty_v == true` → EnTT snapshot 走**空型別最佳化**，只存 entity id、不呼叫 `serialize()`、payload 為零成本。存讀檔後英雄仍可辨識。
+4. **載入路徑一致**：`gbind` 建英雄時 `emplace<HeroComponent>`；`load_game` 改用 `view<HeroComponent>` 找回 `hero_entity_`（取代掃 `proto_id == "hero"`）。
+
+### 14.3 GUI 實機工具鏈
+
+| 檔案 | 角色 |
+|---|---|
+| `godot_test/map_view.tscn`（新）| 主場景：MapView(Node) / Sprite2D（`centered=false`）/ Camera2D / CanvasLayer(`layer=1`) / InfoLabel；以**路徑** `res://map_view.gd` 引用 script（非 uid）|
+| `godot_test/project.godot` | 設 `run/main_scene="res://map_view.tscn"`；移除不存在的 `config/icon` 行 |
+
+實玩確認：移動 / 等待 / 重開 / 存讀檔 / 攻擊（含英雄掉血）全部正常。`.uid` 沿既有慣例不納版控；`bin/*.so`、`.godot/` 為產物。
+
+### 14.4 回歸測試（`tests/src/test_npc_combat.cpp`，新）
+
+四案例，ctest 由 39→**40 cases / 146 assertions 全綠**：
+
+1. 警覺且鄰接時攻擊英雄（核心戰鬥邏輯，HP 20→15）。
+2. 物品建於英雄之後時仍正確攻擊英雄（真機 pool 順序回歸——重現主因 bug）。
+3. `move_chance=0` 的鄰接警覺 NPC 仍必定攻擊（3 tick × 3 dmg，HP 20→11——驗證次因修法）。
+4. HeroComponent 空 tag 序列化 round-trip 後仍可辨識英雄（`hero_count == 1`、座標保持）。
+
+> 對應 `derived/` 的 `docs/03_roadmap.md` F6 段、`docs/decisions/01_entity_identification.md`、`PROJECT.md §9`。
 
 ---
 

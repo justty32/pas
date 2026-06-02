@@ -66,8 +66,8 @@
 <div class="completion-banner">
   <div class="cb-check">✅</div>
   <div class="cb-text">
-    <h3>核心 Phase 0–4 + 前端 F1–F4 + NPC AI + FOV + 戰鬥 + 物品 + 多樓層 + 存讀檔 全部完成（2026-06-02）</h3>
-    <p>核心：36 test cases / 139 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。</p>
+    <h3>核心 Phase 0–4 + 前端 F1–F6 + 完整 roguelike 玩法迴路 全部完成（2026-06-02）</h3>
+    <p>核心：40 test cases / 146 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。<strong>F6：Linux/godot-mono 圖形視窗實玩通過，修復「英雄不掉血」雙重缺陷並以 HeroComponent 正向標記正規化實體辨識。</strong></p>
   </div>
 </div>
 
@@ -128,6 +128,10 @@
     <span class="pipe-step pipe-purple">物品 + 樓層<br><small>藥水 + BSP</small></span>
     <span class="pipe-arrow">→</span>
     <span class="pipe-step pipe-cyan">存讀檔<br><small>F5 / F9</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">F5 .so<br><small>Linux 實機</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">F6 GUI + 修復<br><small>HeroComponent</small></span>
   </div>
 </div>
 
@@ -159,7 +163,7 @@
 
     <a class="nav-card" href="frontend.html">
       <div class="nc-icon">🎮</div>
-      <h3>前端綁定（F1–F5）</h3>
+      <h3>前端綁定（F1–F6）</h3>
       <p>GDExtension 工具鏈打通、OpenNefiaWorld Node 設計、完整 API 表（動作 / 查詢 / Signals / 存讀檔）、輸入迴路說明。</p>
       <span class="nc-arrow">→ frontend.html</span>
     </a>
@@ -175,8 +179,8 @@
       <h3>測試通過</h3>
       <p>smoke + ECS + 原型 + 序列化 + 地圖整合。</p>
       <div style="margin-top:8px">
-        <span class="badge badge-green">36 cases</span>
-        <span class="badge badge-green" style="margin-left:4px">139 assertions</span>
+        <span class="badge badge-green">40 cases</span>
+        <span class="badge badge-green" style="margin-left:4px">146 assertions</span>
       </div>
     </div>
     <div class="card card-accent-blue">
@@ -199,7 +203,7 @@
 
 <!-- 後續 -->
 <div class="section">
-  <div class="section-title">前端進度（F1–F4）</div>
+  <div class="section-title">前端進度（F1–F6）</div>
   <div class="g2">
     <div class="card card-accent-green">
       <h3>F1 工具鏈 ✅</h3>
@@ -235,6 +239,11 @@
       <h3>存讀檔 F5/F9 ✅</h3>
       <p><code>WorldStateComponent</code>（turn_count + current_floor）掛在 map_entity_，隨 AllComponents 一併 cereal PortableBinary 序列化。<code>save_game()</code> / <code>load_game()</code> / <code>has_save_game()</code>；game_over 後仍可 F9 讀檔。</p>
       <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-red">
+      <h3>F6 GUI 實玩 + 戰鬥修復 ✅</h3>
+      <p>Linux/godot-mono 圖形視窗實玩通過。修「英雄不掉血」<strong>雙重缺陷</strong>：主因＝<code>exclude</code> 排除法誤把物品當英雄（EnTT view 反向迭代）、次因＝行動機率閘門擋掉攻擊。以空 tag <code>HeroComponent</code> 正規化辨識，立準則「正向 tag 不用排除法」。新增 <code>test_npc_combat.cpp</code> 4 案例回歸。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span><span class="badge badge-red" style="margin-left:4px">決策 01</span></div>
     </div>
   </div>
 </div>

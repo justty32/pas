@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>opennefia-cpp — 前端綁定 F1–F5</title>
+<title>opennefia-cpp — 前端綁定 F1–F6</title>
 <link rel="stylesheet" href="_shared.css">
 <style>
 .flow-box{background:var(--card);border:1px solid var(--border);border-radius:8px;
@@ -17,14 +17,14 @@
   <a href="index.html">首頁</a>
   <a href="architecture.html">架構分析</a>
   <a href="tutorial.html">擴充教學</a>
-  <a href="frontend.html" class="active">前端綁定 F1–F5</a>
+  <a href="frontend.html" class="active">前端綁定 F1–F6</a>
   <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
 </nav>
 
 <div style="max-width:1100px;margin:0 auto;">
 
 <div class="page-header">
-  <h1>前端綁定 F1–F5</h1>
+  <h1>前端綁定 F1–F6</h1>
   <p>opennefia-cpp 的 GDExtension 橋接層——把 godot-free C++ 核心狀態透過薄殼 facade 暴露給 Godot 4 GDScript，實現完整的「輸入 → 核心 → FOV → 渲染 + 戰鬥 + 物品 + 樓層 + 存讀檔」迴路。</p>
 </div>
 
@@ -128,7 +128,22 @@ cmake --build build --target opennefia_gd</pre>
     </div>
   </div>
   <div class="highlight-box hl-blue" style="margin-top:12px">
-    <strong>godot-cpp 版本</strong>：v4.4（本地 checkout：<code>C:/code/mine/pas/projects/godot-cpp</code>）。<code>gdextension/extension_api.json</code> 預設為 4.5 API。<code>opennefia.gdextension</code> 設定 <code>compatibility_minimum = "4.4"</code>。
+    <strong>godot-cpp 版本</strong>：4.6（本地 checkout：repo 內 <code>projects/godot-cpp</code>）。Linux 實機驗證用 <strong>godot-mono 4.6.3</strong>（<code>/usr/bin/godot-mono</code>）。先前開發在 Windows/MSVC（出 .dll），2026-06-02 已移植到本機 Linux/GCC 16（出 <code>libopennefia_gd.so</code>）。
+  </div>
+</div>
+
+<!-- F6 GUI -->
+<div class="section">
+  <div class="section-title">F6 — Linux 圖形視窗實玩（2026-06-02）</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>實機場景</h3>
+      <p><code>godot_test/map_view.tscn</code>（MapView/Sprite2D/Camera2D/CanvasLayer/InfoLabel）+ <code>project.godot</code> 設 <code>run/main_scene</code>。godot-mono 開窗實玩（NVIDIA OpenGL），移動/等待/重開/存讀檔/攻擊全綠。<code>.uid</code> 沿慣例不納版控、tscn 以路徑引用 script。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>headless 驗證</h3>
+      <p><code>godot-mono --headless --path . -s res://verify.gd</code> → <strong>VERIFY PASSED</strong>（版本/地圖/HP/NPC/map image/wait/move/save-load 全綠，存讀檔已改吃 <code>HeroComponent</code>）。實機抓到並修了「英雄不掉血」雙重缺陷，詳見 <a href="architecture.html">架構分析 F6 段</a>。</p>
+    </div>
   </div>
 </div>
 

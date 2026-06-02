@@ -479,11 +479,50 @@
   </div>
   <div class="pitfall" style="margin-top:12px">
     <div class="pt-title">load 後 entity 指標失效</div>
-    <p><code>registry.clear()</code> 後所有 <code>entt::entity</code> handle 作廢。需重查：<code>map_entity_</code> ← <code>view&lt;MapData&gt;</code> 第一個；<code>hero_entity_</code> ← <code>MetaDataComponent::proto_id == "hero"</code>。不能依賴 exclude 模式（未來可能有其他無 NpcAi 的實體）。</p>
+    <p><code>registry.clear()</code> 後所有 <code>entt::entity</code> handle 作廢。需重查：<code>map_entity_</code> ← <code>view&lt;MapData&gt;</code> 第一個；<code>hero_entity_</code> ← <code>view&lt;HeroComponent&gt;</code> 第一個（F6 起；舊用 <code>proto_id == "hero"</code>）。此處早已預警「不能依賴 exclude 模式」——F6 在 <code>npc_ai_system</code> 印證了這個脆弱性，見下節。</p>
   </div>
   <div class="solution">
     <div class="sol-title">設計決策：以語意查詢重建指標，而非快取</div>
-    <p>每次 <code>load_game()</code> 都用語意查詢（MapData / proto_id）重建所有 C++ 指標。既無需快取機制，也不依賴實體 ID 的穩定性（snapshot_loader 能保留原始 entity ID，但此做法更不脆弱）。</p>
+    <p>每次 <code>load_game()</code> 都用語意查詢（MapData / HeroComponent）重建所有 C++ 指標。既無需快取機制，也不依賴實體 ID 的穩定性（snapshot_loader 能保留原始 entity ID，但此做法更不脆弱）。</p>
+  </div>
+</div>
+
+<!-- F6 -->
+<div class="section">
+  <div class="section-title">F6 — GUI 實機觀察 + 戰鬥 bug 修復 + 英雄辨識正規化（2026-06-02）</div>
+  <p style="color:var(--muted);font-size:.85rem;">首次在 Linux/godot-mono 圖形視窗實玩，抓到只在真機浮現的戰鬥 bug：<strong>英雄撞 NPC 能傷敵，但自身永遠不掉血</strong>。挖出雙重缺陷與一條設計通則。</p>
+
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">主因：排除法辨識英雄選錯實體</div>
+    <p><code>npc_ai_system</code> 舊用 <code>view&lt;SpatialComponent&gt;(exclude&lt;NpcAiComponent&gt;)</code> 取「首個非 NPC 有座標實體」當英雄，但<strong>物品也符合</strong>（有 Spatial、無 NpcAi）。EnTT 單 component view <strong>由 storage 尾端往前迭代</strong>，真機建立順序「英雄 → NPC → 物品」使物品落尾端 → <code>hero_ent</code> 誤指向物品（無 Health）→ 攻擊 <code>try_get&lt;Health&gt;</code> 回 null 打空。</p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">次因：行動機率閘門擋掉攻擊</div>
+    <p><code>if (pct_dist &gt;= move_chance) continue;</code> 擺在系統迴圈最前，把視野更新 + 鄰接攻擊一起擋掉，低 <code>move_chance</code> 弱怪短兵相接常還不了手。</p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">單元測試為何沒先抓到</div>
+    <p>初版回歸測試把物品建在英雄<strong>之前</strong>，反向迭代剛好先碰到英雄、矇混過關——正是排除法脆弱性的鐵證。修正後案例 2 刻意把物品建在英雄/NPC <strong>之後</strong>（對齊真機順序）才重現 bug。</p>
+  </div>
+
+  <div class="solution">
+    <div class="sol-title">根因消除：HeroComponent 正向標記（決策 01）</div>
+    <p>準則：<strong>辨識某類實體就給它正向 tag，用 <code>view&lt;Tag,...&gt;</code> 查；不要用 <code>exclude</code> 列舉「它不是什麼」</strong>。新增空 tag <code>HeroComponent</code>（<code>is_empty</code> → snapshot 空型別最佳化、零 payload），系統改 <code>view&lt;HeroComponent, SpatialComponent&gt;</code> 唯一鎖定；列入 <code>all_components.h</code>，gbind 建立時 <code>emplace</code>、load 路徑改用它找回 <code>hero_entity_</code>。詳見 <code>../../derived/opennefia-cpp/docs/decisions/01_entity_identification.md</code>。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">次因修法 + 回歸測試</div>
+    <p>重構為<strong>視野每回合必更新、警覺且鄰接必定攻擊</strong>，閘門下移只管移動。新增 <code>tests/src/test_npc_combat.cpp</code> 4 案例（核心戰鬥 / 真機 pool 順序 / move_chance=0 仍攻擊 / 空 tag round-trip）。ctest <strong>40 cases / 146 assertions 全綠</strong>。</p>
+  </div>
+
+  <div class="g2" style="margin-top:12px">
+    <div class="card card-accent-red">
+      <h3>GUI 實機工具鏈</h3>
+      <p><code>godot_test/map_view.tscn</code>（MapView/Sprite2D/Camera2D/CanvasLayer/InfoLabel，script 以路徑引用）+ <code>project.godot</code> 設 <code>run/main_scene</code>。godot-mono 4.6.3 開窗實玩（NVIDIA OpenGL），移動/等待/重開/存讀檔/攻擊全綠。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>HeroComponent — 空 tag 可序列化</h3>
+      <p><code>std::is_empty_v == true</code> → EnTT snapshot 只存 entity id、不呼叫 <code>serialize()</code>，零成本。存讀檔後英雄辨識邏輯與執行期完全一致。</p>
+    </div>
   </div>
 </div>
 
