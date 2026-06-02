@@ -1,0 +1,64 @@
+# opennefia-cpp 遊戲原型定義
+# F7：原型 YAML 資料化（取代 opennefia_world_gd.cpp 的硬編生成）
+#
+# 繼承關係：
+#   BaseNpc ← Putit / Warrior / Bat
+#   （無父） ← HealthPotion / Hero
+
+# ── NPC ──────────────────────────────────────────────────────────────────────
+
+# 所有 NPC 共用的 tag（只有 NpcAiComponent）
+- id: "BaseNpc"
+  components:
+    NpcAi: {}
+
+# Putit：弱・慢（紫）  HP = 6 + 1/層  ATK 1  MOV 40
+- id: "Putit"
+  parent: "BaseNpc"
+  components:
+    CombatStats:
+      base_hp: 6
+      hp_per_floor: 1
+      attack: 1
+      move_chance: 40
+      variant: 0
+
+# Warrior：強・中（橙）  HP = 15 + 3/層  ATK 3  MOV 65
+- id: "Warrior"
+  parent: "BaseNpc"
+  components:
+    CombatStats:
+      base_hp: 15
+      hp_per_floor: 3
+      attack: 3
+      move_chance: 65
+      variant: 1
+
+# Bat：弱・極快（青）  HP = 5 + 1/層  ATK 2  MOV 90
+- id: "Bat"
+  parent: "BaseNpc"
+  components:
+    CombatStats:
+      base_hp: 5
+      hp_per_floor: 1
+      attack: 2
+      move_chance: 90
+      variant: 2
+
+# ── 道具 ──────────────────────────────────────────────────────────────────────
+
+# HealthPotion：回血藥  效果量 = 8 + 2/層
+- id: "HealthPotion"
+  components:
+    Item:
+      base_value: 8
+      value_per_floor: 2
+
+# ── 英雄 ──────────────────────────────────────────────────────────────────────
+
+# Hero：玩家角色（HP 20；Spatial 由 setup_map 依房間位置注入）
+- id: "Hero"
+  components:
+    Health:
+      hp: 20
+    Hero: {}

@@ -13,8 +13,11 @@
 #include "core/systems/fov_system.h"
 #include "core/components/world_state_component.h"
 #include "core/serialize/save_load.h"
+#include <algorithm>
+#include <cctype>
 #include <random>
 #include <filesystem>
+#include <yaml-cpp/yaml.h>
 
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -68,10 +71,57 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
     recompute_fov();  // 初始視野（英雄出生位置）
 }
 
+// ---- 原型系統初始化（只跑一次）--------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::init_prototypes() {
+    if (pm_ready_) return;
+
+    pm_.register_loader("NpcAi",
+        [](entt::registry& reg, entt::entity e, const YAML::Node&) {
+            reg.emplace_or_replace<opennefia::NpcAiComponent>(e);
+        });
+
+    pm_.register_loader("CombatStats",
+        [](entt::registry& reg, entt::entity e, const YAML::Node& n) {
+            opennefia::CombatStatsComponent s;
+            if (n["attack"])       s.attack       = n["attack"].as<int>();
+            if (n["move_chance"])  s.move_chance  = n["move_chance"].as<int>();
+            if (n["variant"])      s.variant      = static_cast<opennefia::NpcVariant>(
+                                                        n["variant"].as<int>());
+            if (n["base_hp"])      s.base_hp      = n["base_hp"].as<int>();
+            if (n["hp_per_floor"]) s.hp_per_floor = n["hp_per_floor"].as<int>();
+            reg.emplace_or_replace<opennefia::CombatStatsComponent>(e, s);
+        });
+
+    pm_.register_loader("Health",
+        [](entt::registry& reg, entt::entity e, const YAML::Node& n) {
+            int hp = n["hp"] ? n["hp"].as<int>() : 10;
+            reg.emplace_or_replace<opennefia::HealthComponent>(e, hp, hp);
+        });
+
+    pm_.register_loader("Item",
+        [](entt::registry& reg, entt::entity e, const YAML::Node& n) {
+            opennefia::ItemComponent item;
+            if (n["base_value"])     item.value          = n["base_value"].as<int>();
+            if (n["value_per_floor"]) item.value_per_floor = n["value_per_floor"].as<int>();
+            reg.emplace_or_replace<opennefia::ItemComponent>(e, item);
+        });
+
+    pm_.register_loader("Hero",
+        [](entt::registry& reg, entt::entity e, const YAML::Node&) {
+            reg.emplace_or_replace<opennefia::HeroComponent>(e);
+        });
+
+    pm_.load_file(std::string(OPENNEFIA_DATA_DIR) + "/game_prototypes.yaml");
+    pm_.resolve_inheritance();
+    pm_ready_ = true;
+}
+
 // ---- 測試世界建構 -----------------------------------------------------------
 //
 // 委派給 setup_map()；NPC AI 系統只注冊一次。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
+    init_prototypes();
     setup_map();
     if (!systems_ready_) {
         em_.add_system(opennefia::npc_ai_system);
@@ -119,15 +169,12 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
     std::mt19937 rng(std::random_device{}());
     auto rooms = opennefia::generate_bsp_dungeon(map, rng);
 
-    // 英雄：若無實體則新建（第一次）；否則只更新位置
+    // 英雄：第一次從原型生成；之後只更新位置（保留 HP）
     int hx = rooms.empty() ? W / 2 : rooms[0].cx();
     int hy = rooms.empty() ? H / 2 : rooms[0].cy();
     if (hero_entity_ == entt::null) {
-        hero_entity_ = em_.create();
-        em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
+        hero_entity_ = pm_.spawn(em_, "Hero");
         em_.emplace<opennefia::SpatialComponent>(hero_entity_, hx, hy);
-        em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
-        em_.emplace<opennefia::HeroComponent>(hero_entity_);  // 正向辨識標記
     } else {
         auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
         if (sp) { sp->x = hx; sp->y = hy; }
@@ -139,61 +186,55 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         stair_tile.flags |= opennefia::TILE_STAIR_DOWN;
     }
 
-    // NPC：依樓層生成 Putit / Warrior / Bat，各有不同 HP / 攻擊力 / 移動機率
-    auto pick_variant = [&](int npc_idx) -> opennefia::NpcVariant {
+    // NPC：依樓層機率選原型 id，生成後套用層數 HP 縮放
+    auto pick_proto = [&](int /*idx*/) -> std::string {
         std::uniform_int_distribution<int> d(0, 9);
         int r = d(rng);
-        if (current_floor_ <= 2) {
-            return (r < 7) ? opennefia::NpcVariant::putit : opennefia::NpcVariant::bat;
-        } else if (current_floor_ <= 4) {
-            if (r < 3) return opennefia::NpcVariant::putit;
-            if (r < 7) return opennefia::NpcVariant::warrior;
-            return opennefia::NpcVariant::bat;
-        } else {
-            if (r < 2) return opennefia::NpcVariant::putit;
-            if (r < 7) return opennefia::NpcVariant::warrior;
-            return opennefia::NpcVariant::bat;
+        if (current_floor_ <= 2)
+            return (r < 7) ? "Putit" : "Bat";
+        if (current_floor_ <= 4) {
+            if (r < 3) return "Putit";
+            if (r < 7) return "Warrior";
+            return "Bat";
         }
+        if (r < 2) return "Putit";
+        if (r < 7) return "Warrior";
+        return "Bat";
     };
 
-    int npc_cap = std::min(4 + current_floor_, 8);
-    int npc_count = 0;
+    int  npc_cap   = std::min(4 + current_floor_, 8);
+    int  npc_count = 0;
+    auto& reg = em_.registry();
     for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < npc_cap; ++r, ++npc_count) {
-        auto variant = pick_variant(npc_count);
-        int npc_hp, atk, mv;
-        std::string vname;
-        switch (variant) {
-            case opennefia::NpcVariant::putit:
-                npc_hp = 6  + (current_floor_ - 1);     atk = 1; mv = 40; vname = "putit";   break;
-            case opennefia::NpcVariant::warrior:
-                npc_hp = 15 + (current_floor_ - 1) * 3; atk = 3; mv = 65; vname = "warrior"; break;
-            case opennefia::NpcVariant::bat:
-                npc_hp = 5  + (current_floor_ - 1);     atk = 2; mv = 90; vname = "bat";     break;
-            default:
-                npc_hp = 10; atk = 2; mv = 50; vname = "npc"; break;
+        std::string proto_id = pick_proto(npc_count);
+        auto e = pm_.spawn(em_, proto_id);
+
+        reg.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
+
+        // 層數縮放：base_hp + (floor-1)*hp_per_floor → 套用至 HealthComponent
+        if (const auto* stats = reg.try_get<opennefia::CombatStatsComponent>(e)) {
+            int hp = stats->base_hp + (current_floor_ - 1) * stats->hp_per_floor;
+            reg.emplace_or_replace<opennefia::HealthComponent>(e, hp, hp);
         }
-        std::string npc_id = vname + "_" + std::to_string(npc_count);
-        auto e = em_.create();
-        em_.emplace<opennefia::MetaDataComponent>(e, npc_id, true);
-        em_.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
-        em_.emplace<opennefia::NpcAiComponent>(e);
-        em_.emplace<opennefia::HealthComponent>(e, npc_hp, npc_hp);
-        em_.emplace<opennefia::CombatStatsComponent>(e,
-            opennefia::CombatStatsComponent{ atk, mv, variant });
+
+        // 唯一實例 ID（小寫 proto_id + "_" + 序號）
+        std::string lower_id = proto_id;
+        std::transform(lower_id.begin(), lower_id.end(), lower_id.begin(),
+                       [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+        reg.get<opennefia::MetaDataComponent>(e).proto_id = lower_id + "_" + std::to_string(npc_count);
     }
 
     // 物品：中間房間（跳過英雄房 0 與樓梯房 back）各有 60% 機率出現回血藥
     {
         std::uniform_int_distribution<int> chance(0, 99);
-        int heal_val = 8 + (current_floor_ - 1) * 2;  // 深層回更多血
         int n_rooms = static_cast<int>(rooms.size());
         for (int r = 1; r < n_rooms - 1; ++r) {
-            if (chance(rng) >= 60) continue;  // 40% 不生成
-            auto e = em_.create();
-            em_.emplace<opennefia::MetaDataComponent>(e, "health_potion", true);
-            em_.emplace<opennefia::SpatialComponent>(e, rooms[r].x + 1, rooms[r].y + 1);
-            em_.emplace<opennefia::ItemComponent>(e);
-            em_.get<opennefia::ItemComponent>(e).value = heal_val;
+            if (chance(rng) >= 60) continue;
+            auto e = pm_.spawn(em_, "HealthPotion");
+            reg.emplace<opennefia::SpatialComponent>(e, rooms[r].x + 1, rooms[r].y + 1);
+            // 層數縮放：base_value + (floor-1)*value_per_floor
+            auto& item = reg.get<opennefia::ItemComponent>(e);
+            item.value += (current_floor_ - 1) * item.value_per_floor;
         }
     }
 }

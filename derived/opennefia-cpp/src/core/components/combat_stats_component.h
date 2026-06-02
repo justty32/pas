@@ -10,12 +10,14 @@ enum class NpcVariant : uint8_t {
 };
 
 struct CombatStatsComponent {
-    int        attack{ 2 };        // 攻擊傷害
-    int        move_chance{ 50 };  // 行動機率 0-100
+    int        attack{ 2 };
+    int        move_chance{ 50 };
     NpcVariant variant{ NpcVariant::putit };
+    int        base_hp{ 0 };       // 第 1 層基礎 HP（YAML 原型填入；0 = 不由原型控制）
+    int        hp_per_floor{ 0 };  // 每層 HP 增量
 
     template<class Archive>
-    void serialize(Archive& ar) { ar(attack, move_chance, variant); }
+    void serialize(Archive& ar) { ar(attack, move_chance, variant, base_hp, hp_per_floor); }
 };
 
 } // namespace opennefia

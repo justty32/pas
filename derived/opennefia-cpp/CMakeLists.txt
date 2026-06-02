@@ -124,4 +124,8 @@ if(OPENNEFIA_BUILD_GDEXTENSION)
     set_target_properties(opennefia_gd PROPERTIES CXX_STANDARD 20)
     target_include_directories(opennefia_gd PRIVATE "${SRC}")
     target_link_libraries(opennefia_gd PRIVATE opennefia_core godot-cpp)
+    # 資料目錄（原型 YAML 等）傳入編譯期常數
+    target_compile_definitions(opennefia_gd PRIVATE
+        OPENNEFIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
+    )
 endif()

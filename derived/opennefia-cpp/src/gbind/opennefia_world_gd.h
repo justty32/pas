@@ -7,6 +7,7 @@
 #include "core/ecs/event_bus.h"
 #include "core/ecs/system_ctx.h"
 #include "core/services/service_context.h"
+#include "core/prototypes/prototype_manager.h"
 
 #include <entt/entt.hpp>
 
@@ -60,15 +61,18 @@ public:
     bool has_save_game(const godot::String& path) const; // 存檔是否存在
 
 private:
+    void init_prototypes();  // 登錄 ComponentLoader + 載入 game_prototypes.yaml（只跑一次）
     void setup_test_world();
-    void setup_map();      // 生成新地圖 + 放置英雄/NPC/樓梯（可重複呼叫）
-    void next_floor();     // 下一層：銷毀舊地圖+NPC，重新生成，英雄保留 HP
-    void advance_turn();    // tick EntityManager（NPC AI 等系統）並 emit world_changed
-    void recompute_fov();   // 從英雄位置重算視野
+    void setup_map();        // 生成新地圖 + 放置英雄/NPC/樓梯（可重複呼叫）
+    void next_floor();       // 下一層：銷毀舊地圖+NPC，重新生成，英雄保留 HP
+    void advance_turn();     // tick EntityManager（NPC AI 等系統）並 emit world_changed
+    void recompute_fov();    // 從英雄位置重算視野
 
-    opennefia::EntityManager  em_;
-    opennefia::EventBus       bus_;
-    opennefia::ServiceContext svc_;
+    opennefia::EntityManager    em_;
+    opennefia::EventBus         bus_;
+    opennefia::ServiceContext   svc_;
+    opennefia::PrototypeManager pm_;
+    bool pm_ready_{ false };
 
     entt::entity map_entity_{ entt::null };
     entt::entity hero_entity_{ entt::null };
