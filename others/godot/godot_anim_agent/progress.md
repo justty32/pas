@@ -82,4 +82,10 @@
 - **Phase 3 ② 自行逆向格式解鎖**：`anim_tree.py`（9 指令：summary[--lib]/add-state/rm-state/add-transition/rm-transition/set-blend/derive/bake-combo/scaffold-scene）+ 合成 `state_machine_sample.tres` + `combo.tres` + `fighter_tree.tscn` + `details/` 格式 reference。
 - **Phase 2 補洞**：`anim_compose fix-seam`（非全程軌道頭/尾補靜止 key，rest 值由呼叫者給）。
 - **文檔**：端到端教學 `tutorial/anim_agent_workflow.md`。
-- **待續**：工具鏈自動化測試（/loop 進行中）。
+- **自動化測試（2026-06-02）**：`tests/` 目錄，6 個測試模組，102 test cases 全綠（unittest discover）。
+  覆蓋：inspector（parse/summary/tracks/set-key/scale-time/offset/scale-value）、metadata（init/tag/compat）、compose（concat/blend/root-motion/check-seams/fix-seam）、events（list/add/rm/scaffold）、pose（IK 數學 + cmd_aim）、tree（load/dump/add-rm-state/transition/derive）。
+
+## 接續點
+
+- A. Phase 3 ② 真機驗證：開 Godot 載入 `examples/fighter_tree.tscn` → 確認狀態圖 + 播放 + `git diff`。
+- B. 3D 動畫軌道：等含 Skeleton3D 的 `.tres` 匯出。
