@@ -88,14 +88,30 @@
 
 ---
 
-## 未來（核心穩定後，另開路線，本階段不做）
+## F1 — GDExtension 工具鏈 + Smoke Test ✅ 完成 2026-06-02
 
-- **F1 前端綁定**：建 `gbind/`（仿 medps），`opennefia_gd` GDExtension 目標，把核心狀態 / 事件以 POD 橋接給 Godot。
+**目標**：建 `gbind/`（仿 medps），`opennefia_gd` GDExtension 目標，工具鏈端到端打通。
+
+- [x] `src/gbind/opennefia_core_gd.h/.cpp`：`OpenNefiaCore : RefCounted`，暴露 `version()` → 呼叫核心 `opennefia::version()`。
+- [x] `src/gbind/register_types.h/.cpp`：GDExtension 進入點 `opennefia_library_init`，`MODULE_INITIALIZATION_LEVEL_SCENE` 層級註冊。
+- [x] `CMakeLists.txt` 已有 `OPENNEFIA_BUILD_GDEXTENSION=ON` 開關，`add_subdirectory(godot-cpp)` + `target_link_libraries(opennefia_gd PRIVATE opennefia_core godot-cpp)`。
+- [x] `godot_test/opennefia.gdextension`：entry_symbol + compatibility_minimum 4.4。
+- [x] `godot_test/bin/opennefia_gd.dll`（1.4 MB）已產出。
+- [x] `godot_test/smoke_test.gd`：`OpenNefiaCore.new().version()` 呼叫腳本。
+
+**判準**：✅ `cmake --build --target opennefia_gd` 通過，`opennefia_gd.dll` 產出。Godot 端載入驗證待手動開啟 godot_test/ 確認（見下方說明）。
+
+> **godot-cpp 版本**：4.4（`projects/godot-cpp`），`gdextension/extension_api.json` 預設 4.5 API。CMakeLists.txt 已以 `GODOT_CPP_DIR` 指向本地 checkout，不走 FetchContent。
+
+> **驗證步驟**：用 Godot 4.4+ 開啟 `godot_test/`，將 `smoke_test.gd` 掛在場景根節點執行，確認主控台印出 `opennefia core version: 0.0.1-alpha` 及 `smoke test PASSED`。
+
+---
+
+## 未來
+
 - **F2 渲染**：Godot TileMapLayer 畫 tile 層；Sprite2D / MultiMesh 畫實體；FOV overlay。
 - **F3 UI**：Godot Control / .tscn 取代 Wisp（**不移植 XAML**）；UI 邏輯（顯示什麼 / 觸發什麼）仍在核心。
 - **F4 輸入 / 音效**：Godot InputMap action ↔ 核心指令；AudioStreamPlayer 接核心音效事件。
-
-> 前端方向確定為 Godot 4 GDExtension（與 medps 一致，raylib 已棄），但細節待核心完成後再規劃。
 
 ---
 

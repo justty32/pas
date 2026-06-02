@@ -88,5 +88,6 @@ GitHub Repo：（尚無；如日後推送由使用者手動建立並於此記錄
 - 2026-06-01：**Phase 1 完成**。`core/ecs/`（EntityManager + EventBus + SystemCtx）、`core/services/`（ServiceContext）、`core/components/`（MetaDataComponent + SpatialComponent）、`core/util/`（Vector2i + ResourcePath）。8 test cases / 20 assertions 全綠。
 - 2026-06-01：**Phase 2 完成**。`core/prototypes/`（PrototypeId + Prototype + PrototypeManager：yaml-cpp 載入、拓撲繼承解析、ComponentLoader 顯式登錄、spawn）；`data/test_prototypes.yaml`（3 層繼承 + 獨立原型）。20 test cases / 70 assertions 全綠。
 - 2026-06-01：**Phase 3 完成**。`core/serialize/`（AllComponents type_list + entt_cereal_archive + save_load 三層 API + SaveStore/FolderSaveStore）；`SpatialComponent` save/load split（parent entity round-trip）。29 test cases / 95 assertions 全綠。
-- 2026-06-01：**Phase 4 完成（核心完成定義達成）**。`core/maps/`（Tile + MapData 稠密網格）；AllComponents 更新；整合測試：原型生成 → 地圖可走性 → 移動系統 tick 3 輪 + 牆阻擋 → FolderSaveStore 存讀 → 驗證座標與地圖旗標。36 test cases / 139 assertions 全綠。**核心階段 Phase 0–4 全部完成。下一步：F1 前端綁定（gbind/ GDExtension facade）。**
+- 2026-06-01：**Phase 4 完成（核心完成定義達成）**。`core/maps/`（Tile + MapData 稠密網格）；AllComponents 更新；整合測試：原型生成 → 地圖可走性 → 移動系統 tick 3 輪 + 牆阻擋 → FolderSaveStore 存讀 → 驗證座標與地圖旗標。36 test cases / 139 assertions 全綠。**核心階段 Phase 0–4 全部完成。**
+- 2026-06-02：**F1 完成（GDExtension 工具鏈）**。`src/gbind/`（`OpenNefiaCore : RefCounted` + `register_types`）；`godot_test/`（`.gdextension` + `project.godot` + `smoke_test.gd` + `bin/opennefia_gd.dll`）。`-DOPENNEFIA_BUILD_GDEXTENSION=ON` 建置通過，1.4 MB DLL 產出。**下一步：F2 TileMapLayer 渲染。**
 </content>
