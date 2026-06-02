@@ -19,3 +19,5 @@
 </content>
 
 - 2026-06-02: NPC AI 完成。新增 core/components/npc_ai_component.h（空 struct，已加入 AllComponents）、core/systems/npc_ai_system.h+cpp（wander AI，固定種子 RNG，4 方向試探）；OpenNefiaWorld 新增 EventBus + advance_turn()（tick EM + emit world_changed）；setup_test_world 生成 3 隻 NPC（帶 NpcAiComponent）；generate_map_image 四色（牆/地板/NPC紅/英雄黃）；修復 entity_manager.h emplace 回傳型別（decltype(auto)，EnTT 空型別 emplace 回傳 void）。36/36 tests 仍全綠，DLL 更新完成。
+
+- 2026-06-02: FOV + NPC chase + 碰撞信號 + F4 音效框架完成。新增 fov_system.h+cpp（Bresenham LOS 射線 FOV，radius=8）；map_data.h 加 visible/explored 陣列 + split save/load；npc_ai_system 改為距離 8 格以內追蹤英雄（大 delta 軸優先），否則 wander；OpenNefiaWorld 加 hero_bumped_wall / hero_bumped_npc 信號 + recompute_fov()；generate_map_image 改三層 FOV 渲染（未探索/暗/原色）；map_view.gd 接收碰撞信號 + AudioStreamPlayer 音效框架（plug-in .ogg 即可啟用）。36 tests 仍全綠。

@@ -14,9 +14,10 @@ namespace opennefia_gd {
 
 // OpenNefiaWorld — 持有核心模擬狀態的 Node。
 //
-// F1/F2：地圖查詢 + Image 渲染。
+// F1/F2：地圖查詢 + Image 渲染（FOV 版：三層霧中戰爭）。
 // F3：move/wait_turn + world_changed signal。
 // NPC AI：EntityManager 帶 npc_ai_system；每次玩家動作後推進一個 tick。
+// 碰撞信號：hero_bumped_wall / hero_bumped_npc(npc_id)。
 class OpenNefiaWorld : public godot::Node {
     GDCLASS(OpenNefiaWorld, godot::Node)
 
@@ -34,12 +35,13 @@ public:
     int  get_map_height() const;
     bool is_walkable(int x, int y) const;
 
-    // 生成色彩地圖圖片（floor / wall / hero=黃 / NPC=紅）
+    // 生成 FOV 色彩地圖圖片（未探索=黑、探索未見=暗、可見=原色）
     godot::Ref<godot::Image> generate_map_image(int cell_px) const;
 
     // ---- 動作介面 ----
-    bool move(int dx, int dy);    // 移動 hero → tick NPC AI → emit world_changed
-    void wait_turn();             // 等待 → tick NPC AI → emit world_changed
+    // move：若碰牆→emit hero_bumped_wall 回傳 false；碰 NPC→emit hero_bumped_npc 並推進回合；否則正常移動
+    bool move(int dx, int dy);
+    void wait_turn();
 
     // ---- 狀態查詢 ----
     int get_hero_x()     const;
@@ -48,7 +50,8 @@ public:
 
 private:
     void setup_test_world();
-    void advance_turn();          // tick EntityManager（NPC AI 等系統）
+    void advance_turn();    // tick EntityManager（NPC AI 等系統）並 emit world_changed
+    void recompute_fov();   // 從英雄位置重算視野
 
     opennefia::EntityManager  em_;
     opennefia::EventBus       bus_;

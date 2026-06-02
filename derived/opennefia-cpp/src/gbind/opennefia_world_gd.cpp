@@ -5,6 +5,7 @@
 #include "core/components/npc_ai_component.h"
 #include "core/maps/map_data.h"
 #include "core/systems/npc_ai_system.h"
+#include "core/systems/fov_system.h"
 
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -27,6 +28,9 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_turn_count"), &OpenNefiaWorld::get_turn_count);
 
     ADD_SIGNAL(MethodInfo("world_changed"));
+    ADD_SIGNAL(MethodInfo("hero_bumped_wall"));
+    ADD_SIGNAL(MethodInfo("hero_bumped_npc",
+        PropertyInfo(Variant::STRING, "npc_id")));
 }
 
 // ---- ctor / lifecycle -------------------------------------------------------
@@ -35,6 +39,7 @@ opennefia_gd::OpenNefiaWorld::OpenNefiaWorld() = default;
 
 void opennefia_gd::OpenNefiaWorld::_ready() {
     setup_test_world();
+    recompute_fov();  // 初始視野（英雄出生位置）
 }
 
 // ---- 測試世界建構 -----------------------------------------------------------
@@ -70,9 +75,9 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
     // 3 隻 NPC（放在可走格，遠離邊界）
     struct NpcSpawn { int x, y; const char* id; };
     constexpr NpcSpawn SPAWNS[3] = {
-        { 3,  3, "npc_a" },
-        { W-4, 3, "npc_b" },
-        { W/2, H-4, "npc_c" },
+        { 3,     3,    "npc_a" },
+        { W - 4, 3,    "npc_b" },
+        { W / 2, H-4,  "npc_c" },
     };
     for (auto& s : SPAWNS) {
         auto e = em_.create();
@@ -83,6 +88,16 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
 
     // 註冊 NPC AI 系統
     em_.add_system(opennefia::npc_ai_system);
+}
+
+// ---- 視野計算 ---------------------------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::recompute_fov() {
+    if (hero_entity_ == entt::null || map_entity_ == entt::null) return;
+    const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
+    if (!sp) return;
+    auto& map = em_.get<opennefia::MapData>(map_entity_);
+    opennefia::compute_fov(map, sp->x, sp->y, 8);
 }
 
 // ---- 地圖查詢 ---------------------------------------------------------------
@@ -104,9 +119,10 @@ bool opennefia_gd::OpenNefiaWorld::is_walkable(int x, int y) const {
     return map.at(x, y).is_walkable();
 }
 
-// ---- 圖片生成 ---------------------------------------------------------------
+// ---- 圖片生成（FOV 三層霧中戰爭）------------------------------------------
 //
-// 四色：地板=棕 / 牆=暗 / hero=黃 / NPC=紅
+// 未探索：黑  ／  探索未見：40% 亮度  ／  可見：原色
+// NPC：只在可見格顯示（紅）；Hero 永遠顯示（黃，疊在最上層）
 
 godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int cell_px) const {
     if (map_entity_ == entt::null) return {};
@@ -119,24 +135,34 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
     const Color wall_color (0.12f, 0.10f, 0.08f);
     const Color hero_color (1.00f, 0.90f, 0.20f);
     const Color npc_color  (0.90f, 0.20f, 0.20f);
+    const Color black      (0.00f, 0.00f, 0.00f);
 
-    // 地板 / 牆
-    for (int x = 0; x < map.width; ++x)
+    // 地板 / 牆（依 FOV 狀態決定亮度）
+    for (int x = 0; x < map.width; ++x) {
         for (int y = 0; y < map.height; ++y) {
-            Color c = map.at(x, y).is_walkable() ? floor_color : wall_color;
+            Color c;
+            if (map.is_visible(x, y)) {
+                c = map.at(x, y).is_walkable() ? floor_color : wall_color;
+            } else if (map.is_explored(x, y)) {
+                Color base = map.at(x, y).is_walkable() ? floor_color : wall_color;
+                c = Color(base.r * 0.4f, base.g * 0.4f, base.b * 0.4f);
+            } else {
+                c = black;
+            }
             img->fill_rect(Rect2i(x*cell_px, y*cell_px, cell_px, cell_px), c);
         }
+    }
 
-    // NPC（紅點）
+    // NPC（紅點，只在可見格顯示）
     auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
                                         opennefia::SpatialComponent>();
     for (auto e : npc_view) {
         const auto& sp = npc_view.get<opennefia::SpatialComponent>(e);
-        if (map.in_bounds(sp.x, sp.y))
+        if (map.is_visible(sp.x, sp.y))
             img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), npc_color);
     }
 
-    // Hero（黃點，疊在 NPC 之上）
+    // Hero（黃點，永遠顯示，疊在最上層）
     if (em_.registry().valid(hero_entity_)) {
         const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
         if (sp && map.in_bounds(sp->x, sp->y))
@@ -157,8 +183,28 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
     int nx = sp->x + dx;
     int ny = sp->y + dy;
     const auto& map = em_.get<opennefia::MapData>(map_entity_);
-    if (!map.in_bounds(nx, ny) || !map.at(nx, ny).is_walkable()) return false;
 
+    // 牆壁碰撞
+    if (!map.in_bounds(nx, ny) || !map.at(nx, ny).is_walkable()) {
+        emit_signal("hero_bumped_wall");
+        return false;
+    }
+
+    // NPC 碰撞（英雄嘗試走入 NPC 格 → 碰撞事件，時間照常流逝）
+    auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
+                                        opennefia::SpatialComponent,
+                                        opennefia::MetaDataComponent>();
+    for (auto e : npc_view) {
+        const auto& npc_sp = npc_view.get<opennefia::SpatialComponent>(e);
+        if (npc_sp.x == nx && npc_sp.y == ny) {
+            const auto& meta = npc_view.get<opennefia::MetaDataComponent>(e);
+            emit_signal("hero_bumped_npc", String(meta.proto_id.c_str()));
+            advance_turn();
+            return true;
+        }
+    }
+
+    // 正常移動
     sp->x = nx;
     sp->y = ny;
     advance_turn();
@@ -171,8 +217,9 @@ void opennefia_gd::OpenNefiaWorld::wait_turn() {
 
 void opennefia_gd::OpenNefiaWorld::advance_turn() {
     ++turn_count_;
+    recompute_fov();                  // 先算 FOV（英雄移動後的視野）
     opennefia::SystemCtx ctx{ bus_ };
-    em_.tick(ctx);          // 執行所有已登錄系統（npc_ai_system 等）
+    em_.tick(ctx);                    // 執行所有系統（npc_ai_system 等）
     emit_signal("world_changed");
 }
 
