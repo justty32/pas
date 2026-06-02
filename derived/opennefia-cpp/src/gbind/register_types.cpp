@@ -1,5 +1,6 @@
 #include "register_types.h"
 #include "opennefia_core_gd.h"
+#include "opennefia_world_gd.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/godot.hpp>
@@ -11,6 +12,7 @@ using namespace godot;
 void initialize_opennefia_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
     GDREGISTER_CLASS(opennefia_gd::OpenNefiaCore);
+    GDREGISTER_CLASS(opennefia_gd::OpenNefiaWorld);
 }
 
 void uninitialize_opennefia_module(ModuleInitializationLevel p_level) {
