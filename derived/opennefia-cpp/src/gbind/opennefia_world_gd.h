@@ -15,8 +15,7 @@ namespace opennefia_gd {
 // 設計原則：
 // - 繼承 Node（有場景樹生命週期）；GDScript 把它加入場景樹，_ready 時建好測試世界。
 // - EntityManager + ServiceContext 是成員，跟隨 Node 生命週期。
-// - GDScript 透過此 Node 查詢地圖資料，驅動 TileMapLayer / Sprite2D 渲染（F2）。
-// - tick() 供 GDScript 在玩家輸入後推進模擬。
+// - GDScript 透過 move/wait_turn 提交動作，核心處理後 emit world_changed 通知刷新。
 class OpenNefiaWorld : public godot::Node {
     GDCLASS(OpenNefiaWorld, godot::Node)
 
@@ -38,8 +37,16 @@ public:
     // cell_px：每格像素大小（建議 8–16）
     godot::Ref<godot::Image> generate_map_image(int cell_px) const;
 
-    // 推進一個 tick（目前為空，未來接移動 AI）
-    void tick();
+    // ---- 動作介面（F3）----
+    // 嘗試移動 hero (dx, dy)；成功回傳 true，並 emit world_changed。
+    bool move(int dx, int dy);
+    // 原地等待一回合；永遠成功，emit world_changed。
+    void wait_turn();
+
+    // ---- 狀態查詢（供 UI Label 顯示）----
+    int get_hero_x()     const;
+    int get_hero_y()     const;
+    int get_turn_count() const;
 
 private:
     void setup_test_world();
@@ -49,6 +56,7 @@ private:
 
     entt::entity map_entity_{ entt::null };
     entt::entity hero_entity_{ entt::null };
+    int turn_count_{ 0 };
 };
 
 } // namespace opennefia_gd

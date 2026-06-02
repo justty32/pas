@@ -12,11 +12,23 @@ using namespace godot;
 // ---- static binding --------------------------------------------------------
 
 void opennefia_gd::OpenNefiaWorld::_bind_methods() {
+    // 地圖查詢
     ClassDB::bind_method(D_METHOD("get_map_width"),  &OpenNefiaWorld::get_map_width);
     ClassDB::bind_method(D_METHOD("get_map_height"), &OpenNefiaWorld::get_map_height);
     ClassDB::bind_method(D_METHOD("is_walkable", "x", "y"), &OpenNefiaWorld::is_walkable);
     ClassDB::bind_method(D_METHOD("generate_map_image", "cell_px"), &OpenNefiaWorld::generate_map_image);
-    ClassDB::bind_method(D_METHOD("tick"), &OpenNefiaWorld::tick);
+
+    // 動作介面（F3）
+    ClassDB::bind_method(D_METHOD("move", "dx", "dy"), &OpenNefiaWorld::move);
+    ClassDB::bind_method(D_METHOD("wait_turn"), &OpenNefiaWorld::wait_turn);
+
+    // 狀態查詢（F3 UI）
+    ClassDB::bind_method(D_METHOD("get_hero_x"),     &OpenNefiaWorld::get_hero_x);
+    ClassDB::bind_method(D_METHOD("get_hero_y"),     &OpenNefiaWorld::get_hero_y);
+    ClassDB::bind_method(D_METHOD("get_turn_count"), &OpenNefiaWorld::get_turn_count);
+
+    // Signal：每次動作成功後 emit，通知 GDScript 刷新渲染（Signal Bus 慣例）
+    ADD_SIGNAL(MethodInfo("world_changed"));
 }
 
 // ---- ctor / lifecycle -------------------------------------------------------
@@ -43,10 +55,10 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
             bool is_border = (x == 0 || x == W-1 || y == 0 || y == H-1);
             auto& tile = map.at(x, y);
             if (is_border) {
-                tile.terrain = 1;  // 牆地形 id
-                tile.flags   = opennefia::TILE_BLOCKS_SIGHT;  // !walkable
+                tile.terrain = 1;
+                tile.flags   = opennefia::TILE_BLOCKS_SIGHT;
             } else {
-                tile.terrain = 0;  // 地板地形 id
+                tile.terrain = 0;
                 tile.flags   = opennefia::TILE_WALKABLE;
             }
         }
@@ -78,9 +90,7 @@ bool opennefia_gd::OpenNefiaWorld::is_walkable(int x, int y) const {
 }
 
 // ---- 圖片生成 ---------------------------------------------------------------
-//
-// 三色：地板 = 棕 / 牆 = 深黑 / hero = 黃
-// 回傳 FORMAT_RGB8 的 Image；GDScript 用 ImageTexture.create_from_image() 轉為貼圖。
+
 godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int cell_px) const {
     if (map_entity_ == entt::null) return {};
 
@@ -101,7 +111,6 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
         }
     }
 
-    // hero 標記（疊蓋在地板色之上）
     if (em_.registry().valid(hero_entity_)) {
         const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
         if (sp && map.in_bounds(sp->x, sp->y)) {
@@ -112,8 +121,47 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
     return img;
 }
 
-// ---- tick -------------------------------------------------------------------
+// ---- 動作介面（F3）---------------------------------------------------------
 
-void opennefia_gd::OpenNefiaWorld::tick() {
-    // Phase F2：目前為空；未來接移動 AI、回合推進。
+bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
+    if (hero_entity_ == entt::null || map_entity_ == entt::null) return false;
+
+    auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
+    if (!sp) return false;
+
+    int nx = sp->x + dx;
+    int ny = sp->y + dy;
+
+    const auto& map = em_.get<opennefia::MapData>(map_entity_);
+    if (!map.in_bounds(nx, ny) || !map.at(nx, ny).is_walkable()) return false;
+
+    sp->x = nx;
+    sp->y = ny;
+    ++turn_count_;
+
+    emit_signal("world_changed");
+    return true;
+}
+
+void opennefia_gd::OpenNefiaWorld::wait_turn() {
+    ++turn_count_;
+    emit_signal("world_changed");
+}
+
+// ---- 狀態查詢（F3 UI）------------------------------------------------------
+
+int opennefia_gd::OpenNefiaWorld::get_hero_x() const {
+    if (!em_.registry().valid(hero_entity_)) return -1;
+    const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
+    return sp ? sp->x : -1;
+}
+
+int opennefia_gd::OpenNefiaWorld::get_hero_y() const {
+    if (!em_.registry().valid(hero_entity_)) return -1;
+    const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
+    return sp ? sp->y : -1;
+}
+
+int opennefia_gd::OpenNefiaWorld::get_turn_count() const {
+    return turn_count_;
 }
