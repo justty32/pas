@@ -1,40 +1,64 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://cxnk8l460ss34"]
 
-[ext_resource type="AnimationLibrary" path="res://fighter.tres" id="1_lib"]
-[ext_resource type="AnimationNodeStateMachine" path="res://state_machine_sample.tres" id="2_sm"]
+[ext_resource type="AnimationLibrary" uid="uid://bkppl1r7t1xir" path="res://fighter.tres" id="1_lib"]
+[ext_resource type="AnimationNodeStateMachine" uid="uid://b8sm0fighter" path="res://state_machine_sample.tres" id="2_sm"]
+[ext_resource type="Script" uid="uid://nmauhqcilr5i" path="res://fighter_controller.gd" id="3_ctrl"]
 
-[node name="Fighter" type="Node2D"]
+[node name="Fighter" type="Node2D" unique_id=1460938384]
+script = ExtResource("3_ctrl")
 
-[node name="Vis" type="Polygon2D" parent="."]
-color = Color(0.9, 0.5, 0.3, 1)
+[node name="Camera2D" type="Camera2D" parent="." unique_id=123456789]
+position = Vector2(5, 0)
+zoom = Vector2(3, 3)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=847083633]
+libraries/ = ExtResource("1_lib")
+
+[node name="Armature" type="Node2D" parent="." unique_id=616034393]
+
+[node name="Head" type="Node2D" parent="Armature" unique_id=200100001]
+position = Vector2(0, -50)
+
+[node name="Vis" type="Polygon2D" parent="Armature/Head" unique_id=200100002]
+color = Color(0.95, 0.82, 0.6, 1)
 polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-&"": ExtResource("1_lib")
-}
+[node name="Torso" type="Node2D" parent="Armature" unique_id=1596424538]
+position = Vector2(0, -30)
 
-[node name="Armature" type="Node2D" parent="."]
-
-[node name="ForeArm" type="Node2D" parent="Armature"]
-
-[node name="Vis" type="Polygon2D" parent="Armature/ForeArm"]
-color = Color(0.4, 0.7, 0.9, 1)
-polygon = PackedVector2Array(-6, 0, 6, 0, 6, 44, -6, 44)
-
-[node name="Torso" type="Node2D" parent="Armature"]
-
-[node name="Vis" type="Polygon2D" parent="Armature/Torso"]
+[node name="Vis" type="Polygon2D" parent="Armature/Torso" unique_id=977850999]
 color = Color(0.5, 0.85, 0.5, 1)
-polygon = PackedVector2Array(-6, 0, 6, 0, 6, 44, -6, 44)
+polygon = PackedVector2Array(-12, 0, 12, 0, 12, 50, -12, 50)
 
-[node name="UpperArm" type="Node2D" parent="Armature"]
+[node name="UpperArm" type="Node2D" parent="Armature" unique_id=765259930]
+position = Vector2(15, -25)
 
-[node name="Vis" type="Polygon2D" parent="Armature/UpperArm"]
+[node name="Vis" type="Polygon2D" parent="Armature/UpperArm" unique_id=155848905]
 color = Color(0.85, 0.8, 0.4, 1)
-polygon = PackedVector2Array(-6, 0, 6, 0, 6, 44, -6, 44)
+polygon = PackedVector2Array(-7, 0, 7, 0, 7, 38, -7, 38)
 
-[node name="AnimationTree" type="AnimationTree" parent="."]
+[node name="ForeArm" type="Node2D" parent="Armature" unique_id=1335407138]
+position = Vector2(15, 13)
+
+[node name="Vis" type="Polygon2D" parent="Armature/ForeArm" unique_id=1729358446]
+color = Color(0.4, 0.7, 0.9, 1)
+polygon = PackedVector2Array(-6, 0, 6, 0, 6, 30, -6, 30)
+
+[node name="LeftLeg" type="Node2D" parent="Armature" unique_id=300100001]
+position = Vector2(-4, 20)
+
+[node name="Vis" type="Polygon2D" parent="Armature/LeftLeg" unique_id=300100002]
+color = Color(0.35, 0.65, 0.35, 1)
+polygon = PackedVector2Array(-5, 0, 5, 0, 5, 30, -5, 30)
+
+[node name="RightLeg" type="Node2D" parent="Armature" unique_id=400100001]
+position = Vector2(6, 20)
+
+[node name="Vis" type="Polygon2D" parent="Armature/RightLeg" unique_id=400100002]
+color = Color(0.35, 0.65, 0.35, 1)
+polygon = PackedVector2Array(-5, 0, 5, 0, 5, 30, -5, 30)
+
+[node name="AnimationTree" type="AnimationTree" parent="." unique_id=1074590973]
 tree_root = ExtResource("2_sm")
 anim_player = NodePath("../AnimationPlayer")
-active = true
+parameters/conditions/do_punch = false

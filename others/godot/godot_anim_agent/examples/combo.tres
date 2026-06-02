@@ -1,6 +1,4 @@
-[gd_resource type="AnimationNodeStateMachine" load_steps=13 format=3]
-
-[sub_resource type="AnimationNodeStartState" id="AnimationNodeStartState_start"]
+[gd_resource type="AnimationNodeStateMachine" format=3]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_idle"]
 animation = &"idle"
@@ -15,12 +13,8 @@ animation = &"guard"
 animation = &"step_in"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="Transition_punch_idle"]
-xfade_time = 0.12
-switch_mode = 2
-advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="Transition_idle_punch"]
-xfade_time = 0.25
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="Transition_guard_punch"]
 
@@ -33,8 +27,6 @@ xfade_time = 0.25
 [sub_resource type="AnimationNodeStateMachineTransition" id="Transition_Start_idle"]
 
 [resource]
-states/Start/node = SubResource("AnimationNodeStartState_start")
-states/Start/position = Vector2(40, 50)
 states/idle/node = SubResource("AnimationNodeAnimation_idle")
 states/idle/position = Vector2(200, 160)
 states/punch/node = SubResource("AnimationNodeAnimation_punch")

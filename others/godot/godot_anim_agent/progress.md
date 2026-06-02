@@ -37,9 +37,12 @@
 - `fighter.tres` — 2D 格鬥角色，4 段動畫：`idle` / `guard` / `step_in`（前踏 24px）/ `punch`（含 method 軌道 spawn_hit_spark）
 - `fighter.anim.meta.json` — 四段的 tags 與 compatible_after
 - `fighter_events.gd` — scaffold 示範產物
+- `fighter_controller.gd` — 互動控制腳本：Space 觸發 AnimationTree 狀態機出拳、1/2/3/4 直播 AnimationPlayer、T 切純播放模式；含 `spawn_hit_spark()` stub
 - `state_machine_sample.tres` — Phase 3 ② 合成範本（idle/punch+Start/End、3 轉場其中 2 條調離預設）；**待真機驗證**
 - `combo.tres` — `anim_tree.py derive` 產物示範（吃 fighter.tres+meta 烘出 4 狀態+6 推導轉場+Start→idle）
-- `fighter_tree.tscn` — `anim_tree.py scaffold-scene` 產物：可載入驗證的場景（root Node2D + AnimationPlayer 掛 fighter.tres + 自動建的 Armature 骨架 + AnimationTree 接 state_machine_sample.tres）。**這就是真機驗證入口**
+- `fighter_tree.tscn` — **肉眼可視 demo 場景**：完整人形骨架（頭/軀幹/上臂/前臂/左右腿，各有顏色區分的 Polygon2D）+ AnimationPlayer + AnimationTree（接 state_machine_sample）+ Camera2D 掛在 Fighter 根節點下跟隨動畫位移。**雙擊開啟即可肉眼觀察動畫效果。**
+- `project.godot` — Godot 4.6 專案設定（主場景 fighter_tree.tscn，viewport 800×450）
+- `icon.svg` — 佔位圖示（藍底白 A）
 
 ## ✅ A. Phase 3 ② AnimationTree（已自行解鎖，待真機驗證）
 
@@ -84,8 +87,9 @@
 - **文檔**：端到端教學 `tutorial/anim_agent_workflow.md`。
 - **自動化測試（2026-06-02）**：`tests/` 目錄，6 個測試模組，102 test cases 全綠（unittest discover）。
   覆蓋：inspector（parse/summary/tracks/set-key/scale-time/offset/scale-value）、metadata（init/tag/compat）、compose（concat/blend/root-motion/check-seams/fix-seam）、events（list/add/rm/scaffold）、pose（IK 數學 + cmd_aim）、tree（load/dump/add-rm-state/transition/derive）。
+- **肉眼 demo 場景（2026-06-02）**：`examples/fighter_tree.tscn` 完整人形骨架重建（頭/軀幹/上臂/前臂/雙腿，顏色各異）；`fighter_controller.gd` 互動腳本（Space/1-4/T）；Camera2D 掛在 Fighter 根節點下跟隨動畫位移（解決 `.:position` 軌道把角色推離螢幕的問題）；`combo.tres` 格式更新為 Godot 4.6 相容版；`icon.svg` 佔位圖示補建。
 
 ## 接續點
 
-- A. Phase 3 ② 真機驗證：開 Godot 載入 `examples/fighter_tree.tscn` → 確認狀態圖 + 播放 + `git diff`。
+- A. Phase 3 ② 真機驗證：開 Godot 載入 `examples/fighter_tree.tscn`，Space 按住觸發出拳狀態機 → 確認狀態圖 + 播放 + `git diff`。
 - B. 3D 動畫軌道：等含 Skeleton3D 的 `.tres` 匯出。

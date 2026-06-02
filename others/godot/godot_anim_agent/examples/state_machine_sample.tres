@@ -16,9 +16,9 @@ advance_condition = &"do_punch"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="Transition_punch_idle"]
 xfade_time = 0.15
+break_loop_at_end = true
 switch_mode = 2
 advance_mode = 2
-break_loop_at_end = true
 
 [resource]
 states/idle/node = SubResource("AnimationNodeAnimation_idle")
@@ -26,4 +26,3 @@ states/idle/position = Vector2(200, 160)
 states/punch/node = SubResource("AnimationNodeAnimation_punch")
 states/punch/position = Vector2(460, 160)
 transitions = ["Start", "idle", SubResource("Transition_Start_idle"), "idle", "punch", SubResource("Transition_idle_punch"), "punch", "idle", SubResource("Transition_punch_idle")]
-graph_offset = Vector2(0, 0)
