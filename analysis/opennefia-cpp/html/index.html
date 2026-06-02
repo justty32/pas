@@ -66,8 +66,8 @@
 <div class="completion-banner">
   <div class="cb-check">✅</div>
   <div class="cb-text">
-    <h3>核心 Phase 0–4 + 前端 F1–F3 全部完成（2026-06-02）</h3>
-    <p>核心：36 test cases / 139 assertions 全綠。前端：GDExtension 工具鏈（F1）、地圖 Image 渲染（F2）、鍵盤輸入 + Signal + UI Label（F3）三階段完成。<code>opennefia_gd.dll</code> 5.1 MB 已產出，完整輸入→核心→渲染迴路打通。</p>
+    <h3>核心 Phase 0–4 + 前端 F1–F4 + NPC AI + FOV 全部完成（2026-06-02）</h3>
+    <p>核心：36 test cases / 139 assertions 全綠。前端完整迴路：GDExtension 工具鏈（F1）、地圖 Image 渲染（F2）、鍵盤輸入 + Signal + UI（F3）、NPC wander+chase AI、Bresenham FOV 霧中戰爭、碰撞信號（hero_bumped_wall/npc）、F4 音效框架全部就緒。</p>
   </div>
 </div>
 
@@ -114,6 +114,12 @@
     <span class="pipe-step pipe-green">F2<br><small>地圖渲染</small></span>
     <span class="pipe-arrow">→</span>
     <span class="pipe-step pipe-orange">F3<br><small>輸入 + UI</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">NPC AI<br><small>wander+chase</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">FOV<br><small>霧中戰爭</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">F4<br><small>音效框架</small></span>
   </div>
 </div>
 
@@ -202,10 +208,15 @@
       <p><code>move(dx,dy)</code> / <code>wait_turn()</code> + <code>world_changed</code> signal；GDScript WASD/arrow/numpad 8向 + 等待；<code>InfoLabel</code> 顯示座標 + 回合數。</p>
       <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
     </div>
-    <div class="card card-accent-cyan">
-      <h3>F4 音效</h3>
-      <p><code>AudioStreamPlayer</code> 接核心事件（移動音效 / 撞牆音效）。未來工作。</p>
-      <div style="margin-top:8px"><span class="badge badge-gray">⏳ 待辦</span></div>
+    <div class="card card-accent-green">
+      <h3>NPC AI + FOV ✅</h3>
+      <p><code>npc_ai_system</code>（wander + Chebyshev 距離追蹤）；<code>fov_system</code>（Bresenham LOS，radius=8）；三層霧中戰爭渲染（未探索/暗/原色）。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>碰撞信號 + F4 音效 ✅</h3>
+      <p><code>hero_bumped_wall</code> / <code>hero_bumped_npc(npc_id)</code> 信號；GDScript <code>AudioStreamPlayer</code> 三路框架，plug-in <code>.ogg</code> 即啟用。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
     </div>
   </div>
 </div>

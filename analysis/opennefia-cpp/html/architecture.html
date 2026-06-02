@@ -318,16 +318,74 @@
     </div>
     <div class="card card-accent-green">
       <h3>Signal Bus 模式</h3>
-      <p>核心完成動作後 emit <code>world_changed</code>；GDScript <code>.connect()</code> 訂閱並刷新渲染。C++ 不知道 GDScript 如何渲染，保持單向依賴。對應 <code>godot-open-rpg/answers/gdextension_backend_architecture.md</code> 的 Signal Push 模式。</p>
+      <p>核心完成動作後 emit <code>world_changed</code>；GDScript <code>.connect()</code> 訂閱並刷新渲染。C++ 不知道 GDScript 如何渲染，保持單向依賴。對應 Signal Push 模式。</p>
     </div>
   </div>
   <div class="pitfall" style="margin-top:12px">
-    <div class="pt-title">坑：MapData::get() 無 const 版本，在 const 方法中報 C2662</div>
-    <p>OpenNefiaWorld 的查詢方法（<code>is_walkable</code> 等）標記為 <code>const</code>，但 <code>MapData::get(x,y)</code> 沒有 const 過載，MSVC 報 C2662（cannot convert 'this' from const C to MapData&amp;）。</p>
+    <div class="pt-title">坑①：MapData::get() 無 const 版本，在 const 方法中報 C2662</div>
+    <p>OpenNefiaWorld 的查詢方法標記為 <code>const</code>，但 <code>MapData::get(x,y)</code> 沒有 const 過載，MSVC 報 C2662。</p>
   </div>
   <div class="solution">
     <div class="sol-title">修正：改用 in_bounds(x,y) + at(x,y)（at 有 const 過載）</div>
     <p><code>if (!map.in_bounds(x, y)) return false; return map.at(x, y).is_walkable();</code></p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">坑②：EnTT 空 struct emplace 回傳 void，EntityManager wrapper 宣告 C&amp; 觸發 C2440</div>
+    <p><code>NpcAiComponent</code> 是空 struct（無資料成員）。EnTT 對空型別使用特殊 storage，<code>registry::emplace&lt;T&gt;()</code> 回傳 <code>void</code> 而非 <code>T&amp;</code>。<code>EntityManager::emplace</code> 原宣告 <code>C&amp; emplace(...)</code>，MSVC 報 C2440 "cannot convert from void to C&amp;"。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：回傳型別改為 decltype(auto)，自動跟隨 EnTT 行為</div>
+    <p><code>template&lt;typename C, typename... Args&gt; decltype(auto) emplace(entt::entity e, Args&amp;&amp;... args) &#123; return reg_.emplace&lt;C&gt;(e, std::forward&lt;Args&gt;(args)...); &#125;</code></p>
+  </div>
+</div>
+
+<!-- ===== NPC AI + FOV + Chase + 碰撞 + F4 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num green">AI</div>
+    <div>
+      <div class="phase-title">NPC AI + FOV + 碰撞信號 + F4 音效 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">wander/chase 二段 AI、Bresenham LOS 霧中戰爭、碰撞事件信號、AudioStreamPlayer 框架</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>NpcAiComponent（空 struct tag）</h3>
+      <p>無資料成員。EnTT 空型別存放限制（emplace 回傳 void）透過 <code>decltype(auto)</code> wrapper 處理。已加入 <code>AllComponents</code>，load 後以空 <code>serialize()</code> round-trip 正確。</p>
+      <code>core/components/npc_ai_component.h</code>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>npc_ai_system（wander + chase）</h3>
+      <p>Chebyshev 距離 ≤ 8 → 追蹤模式（大 delta 軸優先，不踩英雄格）；超出範圍或被擋住 → 隨機 wander。英雄以 <code>view&lt;SpatialComponent&gt;(entt::exclude&lt;NpcAiComponent&gt;)</code> 識別。</p>
+      <code>core/systems/npc_ai_system.h+cpp</code>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>fov_system（Bresenham LOS）</h3>
+      <p>對 radius=8 圓內每格投射射線，擊中 <code>blocks_sight</code> 格即截止（終點牆面仍可見）。更新 <code>MapData::visible[]</code> 與 <code>explored[]</code>；在 <code>advance_turn()</code> 中、NPC tick 前呼叫。</p>
+      <code>core/systems/fov_system.h+cpp</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>FOV 渲染三層</h3>
+      <p>未探索=黑；探索未見=原色×0.4（暗）；可見=全亮。NPC 只在可見格顯示（紅）；Hero 永遠顯示（黃，最上層）。</p>
+      <code>src/gbind/opennefia_world_gd.cpp::generate_map_image</code>
+    </div>
+  </div>
+  <div class="section-title" style="margin-top:20px">碰撞信號路徑</div>
+  <div class="pipeline" style="margin-top:8px">
+    <span class="pipe-step pipe-blue">玩家按鍵<br><small>WASD</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">move(dx,dy)</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">碰牆？<br><small>hero_bumped_wall</small></span>
+    <span class="pipe-arrow">|</span>
+    <span class="pipe-step pipe-purple">碰 NPC？<br><small>hero_bumped_npc</small></span>
+    <span class="pipe-arrow">|</span>
+    <span class="pipe-step pipe-cyan">正常移動<br><small>advance_turn</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">world_changed<br><small>刷新 UI</small></span>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:12px">
+    F4 音效：GDScript 接收 <code>hero_bumped_wall</code> / <code>hero_bumped_npc</code> / <code>world_changed</code> 三個信號，各自驅動 <code>AudioStreamPlayer</code>；無音效檔時靜默（<code>if sfx.stream: sfx.play()</code>）。
   </div>
 </div>
 
