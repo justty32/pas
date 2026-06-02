@@ -1,5 +1,6 @@
 #include "opennefia_core_gd.h"
 #include "core/version.h"
+#include <string>  // GCC 16：<string_view> 只前向宣告 std::string，需顯式引入才能建構
 
 using namespace godot;
 

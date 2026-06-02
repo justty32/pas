@@ -148,9 +148,24 @@
 
 ---
 
+## F5 — Linux 前端實機驗證 ✅ 完成 2026-06-02
+
+**目標**：在本機（Linux / GCC 16）建出 `.so` 並用 Godot 實際載入跑過 GDExtension。
+
+- [x] godot-cpp 4.6 本機編譯（`GODOT_CPP_DIR` 預設改相對 repo `../../projects/godot-cpp`）。
+- [x] `cmake --build --target opennefia_gd` 產出 `libopennefia_gd.so`（32 MB debug，匯出 `opennefia_library_init`）；坑：`opennefia_core_gd.cpp` 用 `std::string` 但僅間接帶到 `<string_view>`（GCC 16 只前向宣告）→ 顯式 `#include <string>`。
+- [x] `godot-mono --headless --import` 生成 `.godot/extension_list.cfg`（GDExtension 註冊）。
+- [x] `godot_test/verify.gd`（headless `SceneTree` 驗證；_ready 於第一幀派發故檢查放 `_process`）：version、60×40 BSP 地圖、英雄 HP、`generate_map_image` 尺寸、回合推進、移動、存讀檔 round-trip。
+
+**判準**：✅ Godot 4.6.3 mono `--headless -s res://verify.gd` 印出 `VERIFY PASSED`（version 0.0.1-alpha、map 60×40、image 480×320、save/load OK）。
+
+> 執行：`cd godot_test && godot-mono --headless --path . -s res://verify.gd`（首次需先 `--import`）。二進位（`bin/*.so`）與 `.godot/` 為建置產物，未納版控。
+
+---
+
 ## 未來（真正剩餘）
 
-- **Linux 前端實機驗證**：先前 GDExtension 只在 Windows 產出 `.dll`；本機（GCC 16）尚未建 `.so` 並用 Godot 4.4+ 開 `godot_test/` 跑過。`GODOT_CPP_DIR` 預設已改為相對 repo（`../../projects/godot-cpp`），但 godot-cpp 尚未在本機編譯。
+- **GUI 實機觀察**：headless 已綠；尚未開圖形視窗實際操作 `map_view.gd`（WASD 移動 / FOV / 戰鬥 / 存讀檔的視覺確認）。
 - **內容深化**：法術 / 能力系統、物品欄 UI、近戰 / 遠程武器、更多敵人類型與 AI 行為。
 - **核心回歸題**：原型 YAML 擴充（角色 / 物品定義資料化，取代硬編生成）、在地化資料、CVar 設定系統（PROJECT.md §3 列為範圍內但尚未實作）。
 
