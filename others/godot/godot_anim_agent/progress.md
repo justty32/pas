@@ -40,9 +40,14 @@
 - `fighter_controller.gd` — 互動控制腳本：Space 觸發 AnimationTree 狀態機出拳、1/2/3/4 直播 AnimationPlayer、T 切純播放模式；含 `spawn_hit_spark()` stub
 - `state_machine_sample.tres` — Phase 3 ② 合成範本（idle/punch+Start/End、3 轉場其中 2 條調離預設）；**待真機驗證**
 - `combo.tres` — `anim_tree.py derive` 產物示範（吃 fighter.tres+meta 烘出 4 狀態+6 推導轉場+Start→idle）
-- `fighter_tree.tscn` — **肉眼可視 demo 場景**：完整人形骨架（頭/軀幹/上臂/前臂/左右腿，各有顏色區分的 Polygon2D）+ AnimationPlayer + AnimationTree（接 state_machine_sample）+ Camera2D 掛在 Fighter 根節點下跟隨動畫位移。**雙擊開啟即可肉眼觀察動畫效果。**
+- `fighter_tree.tscn` — **2D 肉眼 demo**：完整人形骨架（頭/軀幹/上臂/前臂/左右腿，各有顏色區分的 Polygon2D）+ AnimationPlayer + AnimationTree（接 state_machine_sample）+ Camera2D 掛在 Fighter 根節點下跟隨動畫位移。
 - `project.godot` — Godot 4.6 專案設定（主場景 fighter_tree.tscn，viewport 800×450）
 - `icon.svg` — 佔位圖示（藍底白 A）
+- `fighter3d.tres` — **3D 版 AnimationLibrary**：同 4 段動畫，rotation 用 `Vector3(0,0,z)` value 軌道、position 用 `Vector3`；示範 anim_inspector.py 對 3D Node3D 動畫同樣適用
+- `fighter3d.anim.meta.json` — 3D 版 metadata
+- `state_machine_3d.tres` — `anim_tree.py derive` 生成（4 狀態），idle→punch 補 do_punch 條件
+- `fighter3d_controller.gd` — 3D 版控制腳本：extends Node3D，orbit 鏡頭（左鍵拖曳旋轉、滾輪縮放）+ Space/1-4/T 動畫控制
+- `fighter3d.tscn` — **3D 肉眼 demo**：BoxMesh 積木人形（unshaded 彩色材質）+ Camera3D 掛根節點下；orbit 控制讓使用者從任意角度觀察動畫
 
 ## ✅ A. Phase 3 ② AnimationTree（已自行解鎖，待真機驗證）
 
@@ -87,7 +92,8 @@
 - **文檔**：端到端教學 `tutorial/anim_agent_workflow.md`。
 - **自動化測試（2026-06-02）**：`tests/` 目錄，6 個測試模組，102 test cases 全綠（unittest discover）。
   覆蓋：inspector（parse/summary/tracks/set-key/scale-time/offset/scale-value）、metadata（init/tag/compat）、compose（concat/blend/root-motion/check-seams/fix-seam）、events（list/add/rm/scaffold）、pose（IK 數學 + cmd_aim）、tree（load/dump/add-rm-state/transition/derive）。
-- **肉眼 demo 場景（2026-06-02）**：`examples/fighter_tree.tscn` 完整人形骨架重建（頭/軀幹/上臂/前臂/雙腿，顏色各異）；`fighter_controller.gd` 互動腳本（Space/1-4/T）；Camera2D 掛在 Fighter 根節點下跟隨動畫位移（解決 `.:position` 軌道把角色推離螢幕的問題）；`combo.tres` 格式更新為 Godot 4.6 相容版；`icon.svg` 佔位圖示補建。
+- **2D 肉眼 demo（2026-06-02）**：`examples/fighter_tree.tscn` 完整人形骨架重建；`fighter_controller.gd` 互動腳本（Space/1-4/T）；Camera2D 掛根節點下跟隨動畫位移；`combo.tres` 格式更新；`icon.svg` 補建。
+- **3D 肉眼 demo（2026-06-02）**：`fighter3d.tres`（rotation→Vector3 value 軌道）+ `fighter3d.anim.meta.json` + `state_machine_3d.tres`（derive 生成）+ `fighter3d_controller.gd`（orbit 鏡頭：左鍵拖曳旋轉／滾輪縮放）+ `fighter3d.tscn`（BoxMesh 積木人形、unshaded 材質）；驗證 anim_inspector/anim_tree 工具鏈對 Node3D value 軌道完全適用。
 
 ## 接續點
 
