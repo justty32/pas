@@ -71,6 +71,19 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
     recompute_fov();  // 初始視野（英雄出生位置）
 }
 
+// ---- CVar 初始化（只跑一次）-----------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::init_cvars() {
+    if (svc_.cvars.has("game.map_width")) return;
+    auto& c = svc_.cvars;
+    c.reg<int>("game.map_width",          60,  "地圖寬度（格）");
+    c.reg<int>("game.map_height",         40,  "地圖高度（格）");
+    c.reg<int>("game.npc_cap_base",        4,  "NPC 上限基礎值（+ 樓層數）");
+    c.reg<int>("game.npc_cap_max",         8,  "NPC 上限最大值");
+    c.reg<int>("game.fov_radius",          8,  "FOV 半徑（格）");
+    c.reg<int>("game.item_spawn_pct",     60,  "房間物品生成機率 0-100");
+}
+
 // ---- 原型系統初始化（只跑一次）--------------------------------------------
 
 void opennefia_gd::OpenNefiaWorld::init_prototypes() {
@@ -121,6 +134,7 @@ void opennefia_gd::OpenNefiaWorld::init_prototypes() {
 //
 // 委派給 setup_map()；NPC AI 系統只注冊一次。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
+    init_cvars();
     init_prototypes();
     setup_map();
     if (!systems_ready_) {
@@ -131,11 +145,10 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
 
 // ---- 地圖生成（可重複呼叫） ------------------------------------------------
 //
-// 60×40 地圖，BSP 地城生成。
-// hero：第一次建立實體；之後只更新位置（保留 HP）。
-// NPC、樓梯：每次重新生成。
+// 地圖尺寸、NPC 上限、FOV 半徑、物品機率均由 CVar 控制。
 void opennefia_gd::OpenNefiaWorld::setup_map() {
-    constexpr int W = 60, H = 40;
+    const int W = svc_.cvars.get<int>("game.map_width");
+    const int H = svc_.cvars.get<int>("game.map_height");
 
     // 銷毀舊 NPC（view 迭代前先收集，避免邊改邊迭代）
     {
@@ -202,7 +215,8 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         return "Bat";
     };
 
-    int  npc_cap   = std::min(4 + current_floor_, 8);
+    int  npc_cap   = std::min(svc_.cvars.get<int>("game.npc_cap_base") + current_floor_,
+                              svc_.cvars.get<int>("game.npc_cap_max"));
     int  npc_count = 0;
     auto& reg = em_.registry();
     for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < npc_cap; ++r, ++npc_count) {
@@ -229,7 +243,7 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         std::uniform_int_distribution<int> chance(0, 99);
         int n_rooms = static_cast<int>(rooms.size());
         for (int r = 1; r < n_rooms - 1; ++r) {
-            if (chance(rng) >= 60) continue;
+            if (chance(rng) >= svc_.cvars.get<int>("game.item_spawn_pct")) continue;
             auto e = pm_.spawn(em_, "HealthPotion");
             reg.emplace<opennefia::SpatialComponent>(e, rooms[r].x + 1, rooms[r].y + 1);
             // 層數縮放：base_value + (floor-1)*value_per_floor
@@ -274,7 +288,9 @@ void opennefia_gd::OpenNefiaWorld::recompute_fov() {
     const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
     if (!sp) return;
     auto& map = em_.get<opennefia::MapData>(map_entity_);
-    opennefia::compute_fov(map, sp->x, sp->y, 8);
+    const int radius = svc_.cvars.has("game.fov_radius")
+                       ? svc_.cvars.get<int>("game.fov_radius") : 8;
+    opennefia::compute_fov(map, sp->x, sp->y, radius);
 }
 
 // ---- 地圖查詢 ---------------------------------------------------------------
