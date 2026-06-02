@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cws-no-llm — 首頁</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--purple) 0%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.hero .sub{font-size:1rem;color:var(--muted);margin-top:10px;max-width:640px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--purple);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--purple);align-self:flex-end;}
+
+.stat-num{font-size:1.6rem;font-weight:700;margin:4px 0 2px;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">cws-no-llm</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="design.html">設計總覽</a>
+  <a href="tasks.html">任務規格</a>
+  <a href="ai_engines.html">AI 引擎</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>cws-no-llm</h1>
+  <p class="sub">將 Cultivation World Simulator 的 LLM 智能層完整替換為<br>
+  本地規則 AI + 詞庫組合系統，零網路、零 API Key、零 Ollama</p>
+  <p class="sub2">— derived/cws-no-llm · 衍生自 cultivation-world-simulator v3.4.0 —</p>
+  <div class="badge-row">
+    <span class="badge badge-purple">Utility AI</span>
+    <span class="badge badge-blue">Python 3.10+</span>
+    <span class="badge badge-green">零外部依賴</span>
+    <span class="badge badge-orange">詞庫組合</span>
+    <span class="badge badge-cyan">Shim Layer</span>
+    <span class="badge badge-gray">Phase 0→4 全部完成</span>
+  </div>
+</div>
+
+<!-- Shim Layer Pipeline -->
+<div class="section">
+  <div class="section-title">Shim Layer 替換策略（只改 4 行）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-orange">call_llm_with_task_name()</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">dispatcher.py</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">本地 AI 引擎</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">JSON（格式與 LLM 版本一致）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">上層 Phase 代碼（零改動）</span>
+  </div>
+  <p style="font-size:.78rem;color:var(--muted);margin-top:10px;">
+    dispatcher 返回 <code>None</code> 時自動 fallback 到原版 LLM，保留降級能力。
+    20 個模擬 Phase 代碼完全不動。
+  </p>
+</div>
+
+<!-- Phase 進度 -->
+<div class="section">
+  <div class="section-title">實作進度</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>內容</th>
+        <th>模組</th>
+        <th>驗證結果</th>
+        <th>狀態</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-gray">0</span> Stub 基礎</td>
+        <td>全 16 任務 stub + shim 部署 + sect_random_event patch</td>
+        <td><code>dispatcher.py</code></td>
+        <td>102→107 年，9 角色，零崩潰</td>
+        <td><span class="badge badge-green">完成</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-blue">1</span> 核心 AI</td>
+        <td>Utility AI 動作決策、關係公式、目標模板生成器</td>
+        <td><code>decision.py goals.py relations.py</code></td>
+        <td>103→108 年 17 月，10 角色，動作多樣化</td>
+        <td><span class="badge badge-green">完成</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">2</span> 敘事系統</td>
+        <td>story_teller / interaction_feedback / nickname / backstory 詞庫組合</td>
+        <td><code>narrative.py epithets.py</code></td>
+        <td>story/backstory 結構正確，nickname 10 次全唯一</td>
+        <td><span class="badge badge-green">完成</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-purple">3</span> 宗門 AI</td>
+        <td>sect_decider 五維度決策樹、sect_thinker 年度思考模板</td>
+        <td><code>sect_ai.py</code></td>
+        <td>7 項斷言全通過（招募 / 驅逐 / 求和邏輯正確）</td>
+        <td><span class="badge badge-green">完成</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">4</span> 完整等價</td>
+        <td>random_minor_event 12 事件詞庫、goals.py bug 修復、100 月基準測試</td>
+        <td><code>minor_events.py</code></td>
+        <td>100 月零崩潰零 ERROR，Year 100→108，18 角色存活</td>
+        <td><span class="badge badge-green">完成</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Benchmark -->
+<div class="section">
+  <div class="section-title">Phase 4 基準測試快照</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>模擬月數</h3>
+      <p class="stat-num" style="color:var(--green);">100 月</p>
+      <p>Year 100 → Year 108（8 遊戲年）</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>崩潰次數</h3>
+      <p class="stat-num" style="color:var(--green);">0</p>
+      <p>每個 <code>sim.step()</code> 均正常完成</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>ERROR / WARNING</h3>
+      <p class="stat-num" style="color:var(--green);">0 / 0</p>
+      <p>全程零錯誤日誌（logging 級別攔截）</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>NPC 最終存活</h3>
+      <p class="stat-num" style="color:var(--cyan);">18</p>
+      <p>從初始 10 個自然增長，宗門招募新成員</p>
+    </div>
+  </div>
+</div>
+
+<!-- Nav cards -->
+<div class="section">
+  <div class="section-title">文件導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="design.html">
+      <div class="nc-icon">🏗</div>
+      <h3>設計總覽</h3>
+      <p>Shim Layer 策略、16 個任務替換方案一覽表、local_ai 模組結構、
+      關鍵設計決策（D01 Shim vs 直接重寫、D02 Utility AI vs 行為樹）。</p>
+      <span class="nc-arrow">→ design.html</span>
+    </a>
+
+    <a class="nav-card" href="tasks.html">
+      <div class="nc-icon">📋</div>
+      <h3>任務介面規格</h3>
+      <p>16 個 LLM task 的完整 I/O 規格（原始碼核對於 2026-06-02）：
+      呼叫位置、頻率、infos 輸入結構、返回 JSON 格式。含特殊 patch 案例。</p>
+      <span class="nc-arrow">→ tasks.html</span>
+    </a>
+
+    <a class="nav-card" href="ai_engines.html">
+      <div class="nc-icon">🤖</div>
+      <h3>本地 AI 引擎</h3>
+      <p>7 個引擎模組的設計與實作：Utility AI softmax 評分、關係公式矩陣、
+      目標優先級模板、敘事詞庫、外號生成、宗門決策樹、隨機事件詞庫。</p>
+      <span class="nc-arrow">→ ai_engines.html</span>
+    </a>
+
+    <a class="nav-card" href="../PROJECT.md">
+      <div class="nc-icon">📄</div>
+      <h3>PROJECT.md（原始）</h3>
+      <p>衍生目標定義、技術棧選擇、完成定義（5 Phase 清單）、
+      16 任務替換難度評估、完整進度追蹤。</p>
+      <span class="nc-arrow">→ ../PROJECT.md</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- 快速數字 -->
+<div class="section">
+  <div class="section-title">專案快照（2026-06-02 完成）</div>
+  <div class="g4">
+    <div class="card card-accent-purple">
+      <h3>替換的 LLM 任務</h3>
+      <p class="stat-num" style="color:var(--purple);">16</p>
+      <p>14 個真正實作 + 2 個保守 stub<br>（single_choice / relation_resolver）</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>新增 AI 模組</h3>
+      <p class="stat-num" style="color:var(--blue);">7</p>
+      <p>decision / relations / goals /<br>narrative / epithets / sect_ai / minor_events</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>原始碼改動（行）</h3>
+      <p class="stat-num" style="color:var(--orange);">4</p>
+      <p>僅 <code>client.py</code> 的 Shim 鉤子<br>上層 20 個 Phase 零修改</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>設計決策文件</h3>
+      <p class="stat-num" style="color:var(--green);">2</p>
+      <p>D01 Shim Layer 策略<br>D02 Utility AI vs 行為樹</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

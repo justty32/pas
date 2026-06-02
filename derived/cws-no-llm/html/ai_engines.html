@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cws-no-llm — 本地 AI 引擎</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.engine-block{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:20px;margin-bottom:20px;}
+.engine-block h2{font-size:1rem;font-weight:700;margin-bottom:4px;}
+.engine-block .file-path{font-size:.75rem;color:var(--muted);margin-bottom:12px;}
+.engine-block .desc{font-size:.82rem;color:var(--text);margin-bottom:12px;line-height:1.7;}
+.engine-block pre{margin-top:8px;}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">cws-no-llm</span>
+  <a href="index.html">首頁</a>
+  <a href="design.html">設計總覽</a>
+  <a href="tasks.html">任務規格</a>
+  <a href="ai_engines.html" class="active">AI 引擎</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>本地 AI 引擎</h1>
+  <p>7 個引擎模組的設計原理、關鍵邏輯與實作細節</p>
+</div>
+
+<!-- dispatcher -->
+<div class="section">
+  <div class="section-title">路由入口</div>
+  <div class="engine-block" style="border-left:3px solid var(--purple);">
+    <h2>dispatcher.py — 統一路由入口</h2>
+    <div class="file-path"><code>src/local_ai/dispatcher.py</code></div>
+    <div class="desc">
+      <code>dispatch(task_name, infos)</code> 查詢 handler 字典，
+      命中則呼叫對應引擎函數並返回 JSON dict；
+      未命中或引擎返回 <code>None</code> 則返回 <code>None</code>，由呼叫端 fallback 到 LLM。
+      所有引擎模組都在此集中 import，上層代碼只需知道 dispatcher。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">路由表（Phase 0→4 累積）：</p>
+        <pre>HANDLERS = {
+  "action_decision":      gen_action_decision,
+  "long_term_objective":  gen_long_term_objective,
+  "relation_delta":       gen_relation_delta,
+  "relation_resolver":    _stub_relation_resolver,
+  "story_teller":         gen_story,
+  "interaction_feedback": gen_interaction_feedback,
+  "backstory":            gen_backstory,
+  "nickname":             gen_nickname,
+  "sect_decider":         gen_sect_decision,
+  "sect_thinker":         gen_sect_thinking,
+  "random_minor_event":   gen_minor_event,
+  # None = fallback to LLM:
+  "history_influence":    None,
+  "single_choice":        _stub_single_choice,
+  "custom_content_generation": None,
+}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">dispatch 邏輯：</p>
+        <pre>def dispatch(task_name, infos):
+    handler = HANDLERS.get(task_name)
+    if handler is None:
+        return None  # fallback
+    try:
+        return handler(infos)
+    except Exception:
+        return None  # 防守性 fallback</pre>
+        <div class="highlight-box hl-purple" style="margin-top:10px;">
+          Phase 0 時所有 handler 都是 stub lambda。
+          Phase 1→4 逐步用真正引擎替換 stub。
+          dispatcher 本身不改，只換 HANDLERS 表中的函數。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- decision.py -->
+<div class="section">
+  <div class="section-title">Phase 1 — Utility AI</div>
+  <div class="engine-block" style="border-left:3px solid var(--blue);">
+    <h2>decision.py — Softmax 效用 AI（action_decision）</h2>
+    <div class="file-path"><code>src/local_ai/decision.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-blue">效用評分</span>
+      <span class="badge badge-blue">Softmax 採樣</span>
+      <span class="badge badge-blue">43+ 動作</span>
+    </div>
+    <div class="desc">
+      對每個可用動作（來自 <code>general_action_infos</code>）計算效用分數，
+      以 Softmax + temperature 採樣選出動作，而非直接 argmax。
+      這還原了 LLM 的「合理但不確定」特性，避免所有 NPC 做完全相同決策。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">效用函數結構：</p>
+        <pre>utility(action) =
+    base_weight(action_type)
+  × persona_modifier(avatar.persona)
+  × goal_modifier(avatar.long_term_goal)
+  × realm_modifier(avatar.realm)
+  × resource_modifier(avatar.stats)
+
+# 硬性覆蓋：
+# HP < 30%  → self_heal/rest 強制最高
+# 仇敵在同區域 → flee/attack 上升
+# 宗門任務中  → sect_mission × 2.0</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">輸出格式：</p>
+        <pre>{avatar_name: {
+    "action_name_params_pairs": [
+        ["Respire", {}],
+        # 或 ["Retreat", {"days": 30}]
+        # 或 ["Plant", {"location_id": ...}]
+    ],
+    "avatar_thinking": "境界壓力高，選擇修煉",
+    "short_term_objective": "提升靈力",
+    "current_emotion": "專注",
+}}</pre>
+        <div class="highlight-box hl-blue" style="margin-top:10px;">
+          動作名稱必須 PascalCase，且必須從
+          <code>general_action_infos</code> 的可用動作中選取（Respire &gt; Meditate &gt; Retreat &gt; Rest 降級順序）。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- relations.py -->
+<div class="section">
+  <div class="section-title">Phase 1 — 關係公式引擎</div>
+  <div class="engine-block" style="border-left:3px solid var(--blue);">
+    <h2>relations.py — 互動公式 + 性格矩陣（relation_delta）</h2>
+    <div class="file-path"><code>src/local_ai/relations.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-blue">公式引擎</span>
+      <span class="badge badge-blue">性格相容矩陣</span>
+      <span class="badge badge-blue">境界差修正</span>
+    </div>
+    <div class="desc">
+      依互動類型決定 friendliness 變化的 base 範圍（-6 ~ +6），
+      再疊加性格相容度、境界差、近期事件三個修正項。
+      最終裁剪到 config.yml 的 <code>social.relation.llm_delta.min/max</code>。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">互動類型基礎範圍：</p>
+        <pre>BASE_INTERACTION_DELTA = {
+  "conversation":        (-2, +4),
+  "gift":                (+2, +5),
+  "spar":                (-3, +2),
+  "gathering":           (-2, +4),
+  "random_minor_event":  (-1, +2),
+  ...
+}
+
+# 計算流程：
+# 1. 從 base 範圍隨機一個值
+# 2. +性格相容度 modifier
+# 3. +境界差 modifier
+# 4. +近期事件 modifier
+# 5. 裁剪到 config 允許範圍</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">性格相容矩陣（部分）：</p>
+        <pre>PERSONA_COMPATIBILITY = {
+  ("正義", "邪惡"):   -2,
+  ("謙遜", "傲慢"):   -1,
+  ("俠義", "怯懦"):   +1,
+  ("好學", "好學"):   +2,
+  ("貪財", "俠義"):   -1,
+  ...
+}
+
+# 返回格式：
+{"delta_a_to_b": int,
+ "delta_b_to_a": int}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- goals.py -->
+<div class="section">
+  <div class="section-title">Phase 1 — 目標模板生成器</div>
+  <div class="engine-block" style="border-left:3px solid var(--blue);">
+    <h2>goals.py — 情境感知模板池（long_term_objective）</h2>
+    <div class="file-path"><code>src/local_ai/goals.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-blue">情境分支</span>
+      <span class="badge badge-blue">7 個模板池</span>
+      <span class="badge badge-orange">Phase 4 Bug 修復</span>
+    </div>
+    <div class="desc">
+      從 avatar_info 提取線索（has_sect / has_enemy / at_war / magic_stone_low），
+      依優先級疊加模板池，最終隨機選一句。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">7 個模板池：</p>
+        <pre>_WAR_GOALS       → at_war == True
+_REVENGE_GOALS   → has_enemy == True
+_SECT_GOALS      → has_sect == True
+_CULTIVATION_GOALS → has_sect == True（疊加）
+_WEALTH_GOALS    → magic_stone_low == True
+_WANDERER_GOALS  → not has_sect
+_CULTIVATION_GOALS → 永遠疊加（最後補底）
+_GENERIC_GOALS   → 所有條件都不中時</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">Phase 4 Bug 修復：magic_stone 解析</p>
+        <pre># 原版（崩潰）：
+magic_stone = int(flat.get("magic stone", 0))
+# 原因：欄位值為 "50靈石" 格式，無法 int()
+
+# 修復後：
+_ms_raw = str(flat.get("magic stone", 0) or 0)
+_ms_match = re.match(r"\d+", _ms_raw)
+magic_stone = int(_ms_match.group()) if _ms_match else 0</pre>
+        <div class="highlight-box hl-orange" style="margin-top:10px;">
+          此 bug 自 Phase 1 起潛伏，直到 Phase 4 的 100 月基準測試才觸發，
+          因為 make_avatars() 初始化的角色此欄位格式不同。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- narrative.py + epithets.py -->
+<div class="section">
+  <div class="section-title">Phase 2 — 敘事詞庫</div>
+  <div class="engine-block" style="border-left:3px solid var(--orange);">
+    <h2>narrative.py — 詞庫組合文字（story_teller / interaction_feedback / backstory）</h2>
+    <div class="file-path"><code>src/local_ai/narrative.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-orange">Caves of Qud 風格</span>
+      <span class="badge badge-orange">動作分類回應</span>
+      <span class="badge badge-orange">五段身世模板</span>
+    </div>
+    <div class="desc">
+      類 Caves of Qud / Dwarf Fortress 的詞庫組合：不是隨機排列詞語，
+      而是有語意結構的模板（固定語境 + 可變槽位）。
+      按動作類型（cultivation / combat / social / economy）分類選模板，
+      再填入角色名、境界、地點等槽位。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">story_teller 動作類型映射：</p>
+        <pre>STORY_TEMPLATES = {
+  "cultivation": [
+      "{name}閉關修煉，靈力日益深厚。",
+      "{name}於{place}參悟天地，修為精進。",
+      ...
+  ],
+  "combat": [
+      "{name}與人交手，不落下風。",
+      ...
+  ],
+  "social": [...],
+  "economy": [...],
+}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">backstory 五段模板結構：</p>
+        <pre># 五段：起源 / 天賦 / 早期 / 現狀 / 抱負
+BACKSTORY_SEGS = {
+  "origin": [
+      "出身{place_type}，自幼與修仙之道結緣。",
+      ...
+  ],
+  "talent": [...],
+  "early":  [...],
+  "now":    [...],
+  "ambition": [...],
+}
+
+# 返回 2-5 句，隨機組合各段一句</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="engine-block" style="border-left:3px solid var(--orange);">
+    <h2>epithets.py — 外號生成（nickname）</h2>
+    <div class="file-path"><code>src/local_ai/epithets.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-orange">前綴+主題+後綴</span>
+      <span class="badge badge-orange">境界感知</span>
+      <span class="badge badge-orange">5% 稀有</span>
+    </div>
+    <div class="desc">
+      外號由三部分拼接：境界感知前綴池 + 主題詞庫 + 後綴池。
+      5% 機率從稀有特殊外號池中選取（如「天妒英才」「劍癡」），不遵循拼接規則。
+      10 次連續生成驗證皆唯一（seed=42 測試）。
+    </div>
+    <pre># 一般外號：前綴 + 主題 + 後綴
+# 例：「煉氣」（境界前綴）+「劍」（主題）+「客」（後綴）= 「煉氣劍客」
+
+# 5% 稀有：直接從特殊外號池選取
+# 例：「天劍尊者」「修羅魔頭」「半步仙人」
+
+# 返回格式：
+{"nickname": "煉氣劍客",
+ "reason": "境界精進，以劍稱名",
+ "thinking": ""}</pre>
+  </div>
+</div>
+
+<!-- sect_ai.py -->
+<div class="section">
+  <div class="section-title">Phase 3 — 宗門 AI</div>
+  <div class="engine-block" style="border-left:3px solid var(--purple);">
+    <h2>sect_ai.py — 五維度決策樹 + 年度思考模板</h2>
+    <div class="file-path"><code>src/local_ai/sect_ai.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-purple">決策樹</span>
+      <span class="badge badge-purple">五個決策維度</span>
+      <span class="badge badge-purple">狀態感知模板</span>
+    </div>
+    <div class="desc">
+      <strong>sect_decider</strong>：依宗門狀態（成員數、資源、戰況、外交關係）
+      分別評估五個維度（外交 / 招募 / 驅逐 / 獎勵 / 扶持），
+      各維度獨立輸出 ID 列表。這與原版 LLM 返回格式一致（六個 ID 列表 + thinking）。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">決策樹（sect_decider）邏輯：</p>
+        <pre># 外交維度
+if 有宗門 AND 戰力佔優 AND 關係極差:
+    declare_war_target_ids = [最弱敵宗門]
+if 正在戰爭 AND 實力劣勢:
+    seek_peace_target_ids = [攻擊我的宗門]
+
+# 招募維度
+if 成員數 < 閾值:
+    recruit_avatar_ids = [散修列表前 N]
+
+# 驅逐維度
+if 有叛徒/負關係成員:
+    expel_avatar_ids = [...]
+
+# 獎勵/扶持維度（依貢獻排序）</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">sect_thinker 模板（境界/財力/戰況感知）：</p>
+        <pre># 戰況感知：
+"宗門正值戰時，上下戮力同心，
+以實力奠定局面。"
+
+# 人才匱乏：
+"門內可造之材寥寥，廣納賢才
+乃當務之急。"
+
+# 資源充足：
+"靈石充盈，正是擴張版圖的良機。"
+
+# 返回：{"sect_thinking": str}  # 30-100 字
+</pre>
+        <div class="highlight-box hl-purple" style="margin-top:10px;">
+          7 項單元測試全通過：招募/驅逐/求和邏輯正確，
+          thinker 字數在 30–100 字範圍內。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- minor_events.py -->
+<div class="section">
+  <div class="section-title">Phase 4 — 隨機小事件詞庫</div>
+  <div class="engine-block" style="border-left:3px solid var(--cyan);">
+    <h2>minor_events.py — 12 event_key 模板（random_minor_event）</h2>
+    <div class="file-path"><code>src/local_ai/minor_events.py</code></div>
+    <div class="tag-row">
+      <span class="badge badge-cyan">12 個 event_key</span>
+      <span class="badge badge-cyan">SOLO / PAIR 偵測</span>
+      <span class="badge badge-cyan">槽位填充</span>
+    </div>
+    <div class="desc">
+      12 個 event_key 各有 3–4 句不同措辭的模板。
+      自動偵測 SOLO（<code>avatar_info</code>）vs PAIR（<code>avatar_a_name</code>）類型，
+      填入 <code>{name}</code> / <code>{a}</code> / <code>{b}</code> / <code>{location}</code> 槽位。
+      13 項單元斷言（6 SOLO + 6 PAIR + 1 fallback）全通過（seed=42）。
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">SOLO 事件（6 種）：</p>
+        <pre>inner_mood_shift:
+  "{name}打坐間忽然思緒萬千，沉寂
+   片刻後重回定境。"
+
+inner_obsession / daily_practice /
+environment_response / sect_errand /
+comic_incident</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin:8px 0 6px;">PAIR 事件（6 種）：</p>
+        <pre>passing_interaction:
+  "{a}與{b}在{location}擦肩而過，
+   彼此頷首示意，未多言語。"
+
+asymmetric_attention / subtle_goodwill /
+social_friction / resource_competition /
+small_mutual_help</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">SOLO/PAIR 偵測與 name 提取：</p>
+        <pre>def gen_minor_event(infos):
+    is_pair = "avatar_a_name" in infos
+
+    if is_pair:
+        a = infos.get("avatar_a_name", "甲")
+        b = infos.get("avatar_b_name", "乙")
+        # 從對應 pool 選模板，填 {a} {b} {location}
+    else:
+        # avatar_info 可能是 JSON 字串或 dict
+        name = _extract_name(infos["avatar_info"])
+        # 從對應 pool 選模板，填 {name} {location}
+
+    return {"event_text": text}</pre>
+        <div class="highlight-box hl-cyan" style="margin-top:10px;">
+          <code>_extract_name()</code> 支援三種格式：
+          dict、JSON 字串、正則提取，
+          全部 fallback 到「修士」。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 原始碼連結 -->
+<div class="section">
+  <div class="section-title">原始碼位置</div>
+  <div class="g4">
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/dispatcher.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">dispatcher.py</h3><p>路由入口</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/decision.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">decision.py</h3><p>Utility AI</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/relations.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">relations.py</h3><p>關係公式</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/goals.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">goals.py</h3><p>目標模板</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/narrative.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">narrative.py</h3><p>敘事詞庫</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/epithets.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">epithets.py</h3><p>外號生成</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/sect_ai.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">sect_ai.py</h3><p>宗門 AI</p>
+    </a>
+    <a class="card card-accent-gray" href="../../../projects/cultivation-world-simulator/src/local_ai/minor_events.py" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">minor_events.py</h3><p>隨機事件</p>
+    </a>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

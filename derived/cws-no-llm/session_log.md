@@ -29,3 +29,6 @@
 - 2026-06-02：Phase 4 — 建立 minor_events.py（random_minor_event 12 event_key 詞庫模板，solo/pair 各 6 種）
 - 2026-06-02：Phase 4 — 修復 goals.py magic_stone 解析 bug（"50靈石" 格式無法 int() 轉換）
 - 2026-06-02：Phase 4 基準測試：100 月模擬通過，零崩潰、零 ERROR（Year 100→108，18 角色存活）
+- 2026-06-02：生成 HTML 導覽層（derived/cws-no-llm/html/）：index / design / tasks / ai_engines 四頁 + _shared.css
+- 2026-06-02：patch init_runtime.py::check_llm_connectivity() — local_ai 存在時直接返回 (True, "")，繞過啟動時的 LLM 連線測試
+- 2026-06-02：撰寫 docs/startup_guide.md — 完整啟動步驟、patch 清單、常見問題

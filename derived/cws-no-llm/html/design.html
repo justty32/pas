@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cws-no-llm — 設計總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<nav>
+  <span class="nav-brand">cws-no-llm</span>
+  <a href="index.html">首頁</a>
+  <a href="design.html" class="active">設計總覽</a>
+  <a href="tasks.html">任務規格</a>
+  <a href="ai_engines.html">AI 引擎</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>設計總覽</h1>
+  <p>Shim Layer 核心策略 · 16 個任務替換方案 · 模組架構 · 特殊 Patch · 關鍵決策</p>
+</div>
+
+<!-- Shim Layer 策略 -->
+<div class="section">
+  <div class="section-title">一、核心策略：Shim Layer（共 4 行改動）</div>
+  <div class="g2">
+    <div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px;">
+        在 <code>src/utils/llm/client.py::call_llm_with_task_name()</code> 加入本地 AI 前置查詢。
+        上層 20 個模擬 Phase 代碼完全不動。dispatcher 返回 <code>None</code> 時自動降級到 LLM。
+      </p>
+      <pre>async def call_llm_with_task_name(task_name, template_path, infos, ...):
+    from src.local_ai.dispatcher import dispatch   # +1
+    local_result = dispatch(task_name, infos)       # +2
+    if local_result is not None:                    # +3
+        return local_result                         # +4
+
+    # 原版 LLM 邏輯（降級）
+    mode = get_task_mode(task_name)
+    return await call_llm_with_template(...)</pre>
+    </div>
+    <div class="card card-accent-purple" style="align-self:start;">
+      <h3>為什麼選 Shim Layer？</h3>
+      <p style="margin-bottom:8px;">替代方案對比：</p>
+      <table style="font-size:.78rem;">
+        <thead><tr><th>方案</th><th>改動面</th><th>結論</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A. Shim（採用）</strong></td><td>1 個函數 4 行</td><td><span class="badge badge-green">最小侵入</span></td></tr>
+          <tr><td>B. 替換各 Phase</td><td>~10 個 Phase 檔案</td><td><span class="badge badge-red">改動面廣</span></td></tr>
+          <tr><td>C. Mock HTTP 服務</td><td>外部進程</td><td><span class="badge badge-red">啟動複雜</span></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:8px;font-size:.78rem;">
+        詳見 <a href="../docs/decisions/D01_shim_layer.md">D01_shim_layer.md</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- 模組架構 -->
+<div class="section">
+  <div class="section-title">二、local_ai 模組架構</div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>dispatcher.py</h3>
+      <p>唯一路由入口。<code>dispatch(task_name, infos)</code> 查詢 handler 表，返回 JSON dict 或 <code>None</code>（fallback）。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>decision.py</h3>
+      <p><code>action_decision</code> — Softmax 效用 AI。對每個可用動作評分，按溫度採樣，輸出 <code>action_name_params_pairs</code>。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>relations.py</h3>
+      <p><code>relation_delta</code> — 互動類型 base 範圍 + 性格相容矩陣 + 境界差修正。輸出 <code>delta_a_to_b / delta_b_to_a</code>。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>goals.py</h3>
+      <p><code>long_term_objective</code> — 7 個模板池（宗門/戰爭/靈石/散修/修煉）。依 avatar_info 線索選池，隨機抽句。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>narrative.py</h3>
+      <p><code>story_teller / interaction_feedback / backstory</code> — 動作分類回應詞庫、五段身世模板，Caves of Qud 風格槽位填充。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>epithets.py</h3>
+      <p><code>nickname</code> — 前綴 + 主題 + 後綴詞庫，境界感知前綴池，5% 稀有特殊外號，10 次生成皆唯一。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>sect_ai.py</h3>
+      <p><code>sect_decider / sect_thinker</code> — 五維度決策樹（外交/招募/驅逐/獎勵/扶持），30–100 字思考模板。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>minor_events.py</h3>
+      <p><code>random_minor_event</code> — 12 個 event_key（solo 6 + pair 6），各 3–4 句模板，SOLO/PAIR 自動偵測，location / name 槽位填充。</p>
+    </div>
+    <div class="card card-accent-gray" style="border-left:3px solid var(--border);">
+      <h3>__init__.py</h3>
+      <p>空白入口。所有引用透過 <code>dispatcher.dispatch()</code> 統一進入，不直接 import 各引擎。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 特殊 Patch -->
+<div class="section">
+  <div class="section-title">三、不走 dispatcher 的特殊 Patch</div>
+  <div class="g2">
+    <div class="card card-accent-orange">
+      <h3>sect_random_event.py — _generate_reason_fragment()</h3>
+      <p style="margin-bottom:8px;">此 task 直接呼叫 <code>call_llm_with_template()</code>，<strong>繞過</strong> <code>call_llm_with_task_name()</code>，dispatcher 無法攔截。</p>
+      <p>解法：直接 patch <code>_generate_reason_fragment()</code>，在函數開頭加本地 shim 判斷，返回固定 reason fragment 跳過 LLM 呼叫。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>autonomous_custom_content_service.py — should_trigger()</h3>
+      <p style="margin-bottom:8px;"><code>custom_content_generation</code> 由此 service 控制觸發。本地 AI 模式下無法生成高品質自訂內容。</p>
+      <p>解法：直接 patch <code>should_trigger()</code> 在本地模式下返回 <code>False</code>，完全停用此功能（不影響其他遊戲邏輯）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 16個任務表 -->
+<div class="section">
+  <div class="section-title">四、16 個 LLM 任務替換一覽</div>
+  <table>
+    <thead>
+      <tr>
+        <th>任務名稱</th>
+        <th>原本做什麼</th>
+        <th>替換方案</th>
+        <th>難度</th>
+        <th>實作狀態</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>action_decision</code></td>
+        <td>決定 NPC 本月做什麼</td>
+        <td>Softmax 效用 AI（decision.py）</td>
+        <td><span class="badge badge-red">★★★★</span></td>
+        <td><span class="badge badge-green">Phase 1 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>long_term_objective</code></td>
+        <td>規劃長期目標文字</td>
+        <td>情境感知模板生成器（goals.py）</td>
+        <td><span class="badge badge-orange">★★★</span></td>
+        <td><span class="badge badge-green">Phase 1 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>sect_decider</code></td>
+        <td>宗門年度策略決定</td>
+        <td>五維度決策樹（sect_ai.py）</td>
+        <td><span class="badge badge-orange">★★★</span></td>
+        <td><span class="badge badge-green">Phase 3 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>single_choice</code></td>
+        <td>角色扮演情境選擇</td>
+        <td>fallback_policy（空字串觸發 REJECT 預設值）</td>
+        <td><span class="badge badge-orange">★★★</span></td>
+        <td><span class="badge badge-gray">保守 stub（行為正確）</span></td>
+      </tr>
+      <tr>
+        <td><code>relation_resolver</code></td>
+        <td>互動後決定關係連結變化</td>
+        <td>changed=False stub（保守，避免高風險師徒/情侶形成）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-gray">保守 stub（行為正確）</span></td>
+      </tr>
+      <tr>
+        <td><code>relation_delta</code></td>
+        <td>互動後的 friendliness 變化量</td>
+        <td>互動類型公式 + 性格相容矩陣（relations.py）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-green">Phase 1 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>history_influence</code></td>
+        <td>歷史事件對當前的影響評分</td>
+        <td>返回 influence=0（可能已棄用，全域搜尋無呼叫點）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-gray">stub（功能已棄用）</span></td>
+      </tr>
+      <tr>
+        <td><code>sect_thinker</code></td>
+        <td>宗門年度思考文字</td>
+        <td>境界/財力/戰局感知模板（sect_ai.py）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-green">Phase 3 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>story_teller</code></td>
+        <td>事件敘事文字生成</td>
+        <td>動作分類詞庫組合模板（narrative.py）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-green">Phase 2 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>interaction_feedback</code></td>
+        <td>互動回饋描述文字</td>
+        <td>動作分類詞庫組合模板（narrative.py）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-green">Phase 2 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>nickname</code></td>
+        <td>生成江湖外號</td>
+        <td>前綴+主題+後綴詞庫拼接（epithets.py）</td>
+        <td><span class="badge badge-blue">★★</span></td>
+        <td><span class="badge badge-green">Phase 2 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>backstory</code></td>
+        <td>角色身世背景生成</td>
+        <td>起源/天賦/早期/現狀/抱負五段模板（narrative.py）</td>
+        <td><span class="badge badge-green">★</span></td>
+        <td><span class="badge badge-green">Phase 2 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>random_minor_event</code></td>
+        <td>月度隨機小事件文字</td>
+        <td>12 event_key 詞庫模板（minor_events.py）</td>
+        <td><span class="badge badge-green">★</span></td>
+        <td><span class="badge badge-green">Phase 4 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>sect_random_event</code></td>
+        <td>宗門隨機事件描述</td>
+        <td>直接 patch _generate_reason_fragment()（stub）</td>
+        <td><span class="badge badge-green">★</span></td>
+        <td><span class="badge badge-green">Phase 0 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>sect_random_event_reason</code></td>
+        <td>事件原因描述</td>
+        <td>同上（同一 patch 涵蓋）</td>
+        <td><span class="badge badge-green">★</span></td>
+        <td><span class="badge badge-green">Phase 0 完成</span></td>
+      </tr>
+      <tr>
+        <td><code>custom_content_generation</code></td>
+        <td>自訂內容生成</td>
+        <td>patch should_trigger() → False（停用觸發）</td>
+        <td><span class="badge badge-green">★</span></td>
+        <td><span class="badge badge-green">Phase 0 完成</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 設計決策 -->
+<div class="section">
+  <div class="section-title">五、關鍵設計決策</div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>D01 — Shim Layer vs 替換各 Phase</h3>
+      <p style="margin-bottom:8px;">
+        <strong>結論：Shim Layer（採用）</strong><br>
+        只改 <code>client.py</code> 一個函數，影響面最小；保留 LLM fallback；
+        dispatcher 是純函數，可獨立單元測試不需啟動伺服器。
+      </p>
+      <p><strong>風險</strong>：返回格式必須與消費端完全一致，任何 key 不符導致靜默錯誤。
+      緩解：Phase 0 用 debug log 記錄每個 task 的實際消費端格式，再逐一核對。</p>
+      <p style="margin-top:8px;"><a href="../docs/decisions/D01_shim_layer.md">閱讀完整決策文件 →</a></p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>D02 — Utility AI vs 行為樹 vs GOAP</h3>
+      <p style="margin-bottom:8px;">
+        <strong>結論：效用 AI + Softmax 採樣（採用）</strong><br>
+        問題形狀天然適合：從 N 個選項中選最合理的一個。
+        行為樹適合固定優先序行為（格鬥），GOAP 的 state space 建模工作量太大。
+      </p>
+      <p><strong>Softmax 的作用</strong>：避免所有 NPC 做完全相同決策（argmax 問題），
+      temperature 控制隨機性，還原 LLM 的「合理但不確定」特性。</p>
+      <p style="margin-top:8px;"><a href="../docs/decisions/D02_utility_ai_vs_bt.md">閱讀完整決策文件 →</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- 原始文件連結 -->
+<div class="section">
+  <div class="section-title">原始文件</div>
+  <div class="g3">
+    <a class="card card-accent-gray" href="../docs/design_overview.md" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">design_overview.md</h3>
+      <p>完整設計計畫，含各子系統偽碼與五階段時程估計。</p>
+    </a>
+    <a class="card card-accent-gray" href="../docs/decisions/D01_shim_layer.md" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">D01_shim_layer.md</h3>
+      <p>Shim Layer 決策：三個替代方案的詳細對比、理由、風險與緩解措施。</p>
+    </a>
+    <a class="card card-accent-gray" href="../docs/decisions/D02_utility_ai_vs_bt.md" style="display:block;border-left:3px solid var(--border);">
+      <h3 style="color:var(--blue);">D02_utility_ai_vs_bt.md</h3>
+      <p>Utility AI vs 行為樹 vs GOAP vs 規則 if/else 四種方案詳細對比。</p>
+    </a>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>
