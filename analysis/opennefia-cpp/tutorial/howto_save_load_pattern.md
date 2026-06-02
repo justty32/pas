@@ -115,12 +115,10 @@ bool OpenNefiaWorld::load_game(const godot::String& path_gd) {
     auto& reg = em_.registry();
     for (auto e : reg.view<opennefia::MapData>()) { map_entity_ = e; break; }
 
-    // 4. 重建 hero_entity_（用 MetaDataComponent::proto_id == "hero" 語義查詢）
-    for (auto e : reg.view<opennefia::MetaDataComponent>()) {
-        if (reg.get<opennefia::MetaDataComponent>(e).proto_id == "hero") {
-            hero_entity_ = e;
-            break;
-        }
+    // 4. 重建 hero_entity_（用 HeroComponent 正向 tag 語義查詢；F6 起確立）
+    for (auto e : reg.view<opennefia::HeroComponent>()) {
+        hero_entity_ = e;
+        break;
     }
 
     // 5. 從 WorldStateComponent 還原 C++ 成員

@@ -39,8 +39,11 @@
 | 存讀檔 | WorldStateComponent + F5 存 / F9 讀 + game_over 後仍可操作 | ✅ 完成 |
 | F5 Linux .so | godot-cpp 4.6 本機編 `libopennefia_gd.so` + headless `verify.gd` VERIFY PASSED | ✅ 完成 |
 | F6 GUI + 修復 | 圖形視窗實玩；修「英雄不掉血」雙重缺陷；HeroComponent 正規化辨識 | ✅ 完成 |
+| F7 原型 YAML 資料化 | `game_prototypes.yaml`（6 原型 + 繼承）+ PrototypeManager 接入 `setup_map()`；樓層 HP 縮放 | ✅ 完成 |
+| CVar 設定系統 | `CvarRegistry`（reg/get/set/reset/save/load，yaml-cpp 持久化）；6 個遊戲設計參數可設定 | ✅ 完成 |
+| 在地化系統 | `LocaleRegistry`（YAML 語言表 + `{var}` 占位符替換）；`zh-TW.yaml`；Signal 名稱中文化 | ✅ 完成 |
 
-**測試結果**：40 test cases / 146 assertions 全綠（2026-06-02，含 `test_npc_combat.cpp` 戰鬥回歸 4 案例）
+**測試結果**：52 test cases / 179 assertions 全綠（2026-06-02，含 test_cvar.cpp 6 案例 + test_locale.cpp 6 案例）
 
 ### 技術棧
 
@@ -84,7 +87,10 @@ graph TD
             MD2[MapData]
         end
         subgraph svc ["core/services/"]
-            SVC[ServiceContext - spdlog]
+            SVC[ServiceContext]
+            SVC_LOG[spdlog::logger]
+            SVC_CV[CvarRegistry]
+            SVC_LOC[LocaleRegistry]
         end
     end
     DATA["data/*.yaml"] --> PM
@@ -358,28 +364,36 @@ derived/opennefia-cpp/
 ├── PROJECT.md
 ├── CLAUDE.md
 ├── data/
-│   └── test_prototypes.yaml
+│   ├── test_prototypes.yaml
+│   ├── game_prototypes.yaml   （F7：6 個遊戲原型，3 NPC + 1 道具 + 英雄）
+│   └── locale/
+│       └── zh-TW.yaml         （在地化：NPC/物品名稱 + 訊息模板）
 ├── src/core/
 │   ├── version.h / version.cpp
 │   ├── ecs/          entity_manager.h+cpp, event_bus.h, system_ctx.h
 │   ├── components/   meta_data_component.h, spatial_component.h, npc_ai_component.h,
 │   │                  health_component.h, item_component.h, combat_stats_component.h,
-│   │                  world_state_component.h
+│   │                  world_state_component.h, hero_component.h
 │   ├── prototypes/   prototype_id.h, prototype.h, prototype_manager.h+cpp
 │   ├── serialize/    all_components.h, entt_cereal_archive.h, save_load.h, save_store.h
-│   ├── maps/         tile.h, map_data.h（+ visible/explored FOV 陣列）
+│   ├── maps/         tile.h, map_data.h（+ visible/explored FOV 陣列）, map_gen.h+cpp
 │   ├── systems/      npc_ai_system.h+cpp, fov_system.h+cpp
-│   ├── services/     service_context.h+cpp
+│   ├── cvar/         cvar_registry.h+cpp （CVar 設定系統）
+│   ├── locale/       locale_registry.h+cpp （在地化字串查找）
+│   ├── services/     service_context.h+cpp（spdlog + CvarRegistry + LocaleRegistry）
 │   └── util/         vector2i.h, resource_path.h
 ├── tests/
 │   ├── CMakeLists.txt
 │   └── src/
 │       ├── main.cpp
-│       ├── smoke_test.cpp     (Phase 0)
-│       ├── test_ecs.cpp       (Phase 1: 8 cases)
-│       ├── test_prototypes.cpp(Phase 2: 12 cases)
-│       ├── test_serialize.cpp (Phase 3: 9 cases)
-│       └── test_phase4.cpp    (Phase 4: 7 cases)
+│       ├── smoke_test.cpp       (Phase 0)
+│       ├── test_ecs.cpp         (Phase 1: 8 cases)
+│       ├── test_prototypes.cpp  (Phase 2: 12 cases)
+│       ├── test_serialize.cpp   (Phase 3: 9 cases)
+│       ├── test_phase4.cpp      (Phase 4: 7 cases)
+│       ├── test_npc_combat.cpp  (F6: 4 cases)
+│       ├── test_cvar.cpp        (CVar: 6 cases)
+│       └── test_locale.cpp      (L10n: 6 cases)
 └── docs/
     ├── 01_core_architecture.md
     ├── 02_subsystem_mapping.md
@@ -802,6 +816,105 @@ for (auto e : reg.view<HeroComponent, SpatialComponent>()) { hero_ent = e; break
 4. HeroComponent 空 tag 序列化 round-trip 後仍可辨識英雄（`hero_count == 1`、座標保持）。
 
 > 對應 `derived/` 的 `docs/03_roadmap.md` F6 段、`docs/decisions/01_entity_identification.md`、`PROJECT.md §9`。
+
+---
+
+---
+
+## 15. 核心回歸：原型 YAML 資料化、CVar 設定系統、在地化（2026-06-02）
+
+F6 完成後補齊三項「核心回歸」——把先前硬編在 C++ 的遊戲設計數據遷移到資料層，並為 Signal 加入中文名稱顯示。
+
+### 15.1 F7 — 原型 YAML 資料化（`data/game_prototypes.yaml`）
+
+Phase 2 建立的 `PrototypeManager` 原先只在測試中用到，`setup_map()` 仍是全硬編。F7 把 6 個遊戲原型遷移到 YAML：
+
+```yaml
+# 繼承關係：BaseNpc ← Putit / Warrior / Bat；HealthPotion / Hero 獨立
+- id: "BaseNpc"
+  components:
+    NpcAi: {}
+- id: "Putit"
+  parent: "BaseNpc"
+  components:
+    CombatStats:
+      base_hp: 6
+      hp_per_floor: 1
+      attack: 1
+      move_chance: 40
+      variant: 0
+- id: "Hero"
+  components:
+    Health: { hp: 20 }
+    Hero: {}
+```
+
+`CombatStatsComponent` 新增 `base_hp` / `hp_per_floor` 欄位（附有預設值，既有 3 欄位聚合初始化仍相容）。`ItemComponent` 新增 `value_per_floor`。`setup_map()` 改為 `pm_.spawn(em_, "Putit")` + 事後樓層縮放：
+
+```cpp
+if (const auto* stats = reg.try_get<CombatStatsComponent>(e)) {
+    int hp = stats->base_hp + (current_floor_ - 1) * stats->hp_per_floor;
+    reg.emplace_or_replace<HealthComponent>(e, hp, hp);
+}
+```
+
+NPC 實例 ID 正規化：大寫 proto_id（"Putit"）→ 小寫 + 序號（"putit_0"）；在地化查詢時用 `npc_base_type("putit_0")` 去掉尾綴還原 "putit"。
+
+### 15.2 CVar 設定系統（`src/core/cvar/cvar_registry.h+cpp`）
+
+`CvarRegistry`：有名的型付き設定系統，只支援 `int / float / bool / std::string`（`static_assert` 強制）。`std::any` + `type_tag` 字串儲存，yaml-cpp 持久化。
+
+```cpp
+cvars.reg<int>("game.map_width",      60, "地圖寬度（格）");
+cvars.reg<int>("game.fov_radius",      8, "FOV 半徑（格）");
+cvars.reg<int>("game.item_spawn_pct", 60, "房間物品生成機率 0–100");
+
+int w = cvars.get<int>("game.map_width");  // 60
+cvars.set<int>("game.map_width", 80);
+cvars.save("user_settings.yaml");
+cvars.load("user_settings.yaml");          // 未知 key 靜默略過
+```
+
+`ServiceContext` 由單一 `spdlog::logger` 擴充為三服務：
+
+```cpp
+struct ServiceContext {
+    std::shared_ptr<spdlog::logger> log;
+    CvarRegistry   cvars;
+    LocaleRegistry locale;
+};
+```
+
+### 15.3 在地化系統（`src/core/locale/locale_registry.h+cpp`）
+
+`LocaleRegistry`：YAML 語言表查找 + `{var}` 占位符替換。找不到 key 回傳 key 本身（fallback），不丟例外。
+
+```cpp
+locale.load("data/locale/zh-TW.yaml");
+locale.get("npc.putit")                           // → "普提特"
+locale.get("msg.npc_died", {{"name", "普提特"}})  // → "普提特 倒下了！"
+locale.get("unknown.key")                          // → "unknown.key"（fallback）
+```
+
+三個 `get()` overload：key-only（fallback = key 本身）、key + fallback string、key + `vars_map`（占位符替換）。
+
+`zh-TW.yaml` 提供 NPC 名稱、物品名稱、訊息模板（`{name}` / `{floor}` / `{heal}`）；Signal 的 String 參數改走 `locale.get()`，玩家在 GDScript 端直接看到中文名稱。
+
+### 15.4 修正 `heal_done` 回報實際回血量
+
+`item_picked_up(name, heal)` signal 的 `heal` 原本永遠是 `item.value`（藥水面值），實際得到 HP 受 `max_hp` 上限截斷時數字不符。修正：
+
+```cpp
+int heal_done = 0;
+if (item.type == ItemType::health_potion) {
+    auto* hp = reg.try_get<HealthComponent>(hero_entity_);
+    if (hp) {
+        int before = hp->hp;
+        hp->hp = std::min(hp->hp + item.value, hp->max_hp);
+        heal_done = hp->hp - before;  // 實際得到的 HP
+    }
+}
+```
 
 ---
 

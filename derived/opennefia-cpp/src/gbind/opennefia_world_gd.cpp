@@ -473,11 +473,15 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
         if (pickup_ent != entt::null && reg.valid(pickup_ent)) {
             const auto& item = reg.get<opennefia::ItemComponent>(pickup_ent);
             const auto& meta = reg.get<opennefia::MetaDataComponent>(pickup_ent);
+            int heal_done = 0;
             if (item.type == opennefia::ItemType::health_potion) {
                 auto* hp = reg.try_get<opennefia::HealthComponent>(hero_entity_);
-                if (hp) hp->hp = std::min(hp->hp + item.value, hp->max_hp);
+                if (hp) {
+                    int before = hp->hp;
+                    hp->hp = std::min(hp->hp + item.value, hp->max_hp);
+                    heal_done = hp->hp - before;
+                }
             }
-            int heal_done = item.value;
             // 在地化道具名稱
             String iname(svc_.locale.get("item." + meta.proto_id, meta.proto_id).c_str());
             reg.destroy(pickup_ent);

@@ -51,7 +51,7 @@
   <h1>opennefia-cpp</h1>
   <p class="sub">以 godot-free 純 C++20 重寫 OpenNefia 引擎核心<br>
   架構藍本：medps（EnTT + cereal + 自由函式系統）</p>
-  <p class="sub2">— analysis/opennefia-cpp · 事後架構分析 · Phase 0–4 核心完成 —</p>
+  <p class="sub2">— analysis/opennefia-cpp · 事後架構分析 · Phase 0–4 + 前端 F1–F7 + CVar + 在地化 完成 —</p>
   <div class="badge-row">
     <span class="badge badge-blue">C++20</span>
     <span class="badge badge-green">EnTT v3.16.0</span>
@@ -66,8 +66,8 @@
 <div class="completion-banner">
   <div class="cb-check">✅</div>
   <div class="cb-text">
-    <h3>核心 Phase 0–4 + 前端 F1–F6 + 完整 roguelike 玩法迴路 全部完成（2026-06-02）</h3>
-    <p>核心：40 test cases / 146 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。<strong>F6：Linux/godot-mono 圖形視窗實玩通過，修復「英雄不掉血」雙重缺陷並以 HeroComponent 正向標記正規化實體辨識。</strong></p>
+    <h3>核心 Phase 0–4 + 前端 F1–F7 + CVar 設定系統 + 在地化 全部完成（2026-06-02）</h3>
+    <p>核心：52 test cases / 179 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。<strong>F7/CVar/L10n：原型 YAML 資料化（game_prototypes.yaml）、CvarRegistry 遊戲設計參數可設定化、LocaleRegistry 中文化 Signal 名稱。</strong></p>
   </div>
 </div>
 
@@ -132,6 +132,12 @@
     <span class="pipe-step pipe-green">F5 .so<br><small>Linux 實機</small></span>
     <span class="pipe-arrow">→</span>
     <span class="pipe-step pipe-orange">F6 GUI + 修復<br><small>HeroComponent</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">F7 YAML 資料化<br><small>game_prototypes</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">CVar 系統<br><small>設計參數可設定</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">在地化<br><small>zh-TW + {var}</small></span>
   </div>
 </div>
 
@@ -177,10 +183,10 @@
   <div class="g4">
     <div class="card card-accent-green">
       <h3>測試通過</h3>
-      <p>smoke + ECS + 原型 + 序列化 + 地圖整合。</p>
+      <p>smoke + ECS + 原型 + 序列化 + 地圖整合 + 戰鬥回歸 + CVar + L10n。</p>
       <div style="margin-top:8px">
-        <span class="badge badge-green">40 cases</span>
-        <span class="badge badge-green" style="margin-left:4px">146 assertions</span>
+        <span class="badge badge-green">52 cases</span>
+        <span class="badge badge-green" style="margin-left:4px">179 assertions</span>
       </div>
     </div>
     <div class="card card-accent-blue">
@@ -244,6 +250,21 @@
       <h3>F6 GUI 實玩 + 戰鬥修復 ✅</h3>
       <p>Linux/godot-mono 圖形視窗實玩通過。修「英雄不掉血」<strong>雙重缺陷</strong>：主因＝<code>exclude</code> 排除法誤把物品當英雄（EnTT view 反向迭代）、次因＝行動機率閘門擋掉攻擊。以空 tag <code>HeroComponent</code> 正規化辨識，立準則「正向 tag 不用排除法」。新增 <code>test_npc_combat.cpp</code> 4 案例回歸。</p>
       <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span><span class="badge badge-red" style="margin-left:4px">決策 01</span></div>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>F7 原型 YAML 資料化 ✅</h3>
+      <p><code>data/game_prototypes.yaml</code>（6 原型：BaseNpc←Putit/Warrior/Bat、HealthPotion、Hero）接入 <code>setup_map()</code>。<code>CombatStatsComponent</code> 加 <code>base_hp</code>/<code>hp_per_floor</code>；<code>ItemComponent</code> 加 <code>value_per_floor</code>；樓層縮放在 spawn 後套用。NPC 實例 ID 正規化（"putit_0" ↔ 在地化 key "npc.putit"）。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>CVar 設定系統 ✅</h3>
+      <p><code>CvarRegistry</code>（<code>reg/get/set/reset/save/load</code>，yaml-cpp 持久化，只支援 int/float/bool/string）；6 個遊戲設計參數（地圖尺寸/NPC 上限/FOV 半徑/物品機率）可在執行期設定或從檔案載入。<code>ServiceContext</code> 擴充為三服務（log + cvars + locale）。新增 <code>test_cvar.cpp</code> 6 案例。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>在地化系統 ✅</h3>
+      <p><code>LocaleRegistry</code>（YAML 語言表查找 + <code>{var}</code> 占位符替換；找不到 key 回傳 key 本身）；<code>data/locale/zh-TW.yaml</code>（NPC/物品名稱 + 訊息模板）；Signal 名稱中文化（<code>locale.get("npc.putit")</code> → "普提特"）。新增 <code>test_locale.cpp</code> 6 案例。修正 <code>item_picked_up</code> signal 回報實際回血量（非藥水面值）。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
     </div>
   </div>
 </div>

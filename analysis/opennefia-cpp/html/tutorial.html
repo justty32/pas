@@ -220,35 +220,52 @@ var visible := fov.compute_fov(
   </div>
 </div>
 
-<!-- 6. 新增 NPC 種類 -->
+<!-- 6. 新增 NPC 種類（F7 後：YAML 原型流程） -->
 <div class="section">
-  <div class="section-title">6. 新增 NPC 種類</div>
-  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「Golem」（高 HP 低移速）為例，橫跨 4 個檔案。詳細見 <a href="../tutorial/howto_add_npc_type.md">howto_add_npc_type.md</a>。</p>
-  <div class="g2">
+  <div class="section-title">6. 新增 NPC 種類（YAML 原型，F7 流程）</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「Golem」（高 HP 低移速）為例，橫跨 5 個位置。詳細見 <a href="../tutorial/howto_add_npc_type.md">howto_add_npc_type.md</a>。</p>
+  <div class="g3">
     <div class="card card-accent-red">
-      <h3>① 宣告 + ③ 數值（C++ 核心）</h3>
+      <h3>① enum + ⑤ 渲染顏色（C++）</h3>
       <pre>// combat_stats_component.h
 enum class NpcVariant : uint8_t {
     putit=0, warrior=1, bat=2,
     golem=3  // ← 新增
 };
 
-// setup_map() switch 加 case：
-case opennefia::NpcVariant::golem:
-    npc_hp = 25 + (floor-1)*5;
-    atk = 4; mv = 25;
-    vname = "golem"; break;</pre>
-    </div>
-    <div class="card card-accent-red">
-      <h3>② 機率分支 + ④ 渲染顏色（gbind）</h3>
-      <pre>// pick_variant lambda — 加機率分支
-if (r >= 8) return NpcVariant::golem;
-
 // generate_map_image() 顏色 switch
 case NpcVariant::golem:
-    nc = Color(0.65f, 0.65f, 0.65f); // 灰
+    nc = Color(0.65f,0.65f,0.65f);
     break;</pre>
-      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">新 enum 值大於現有最大值即可；舊存檔中未知值走 <code>default</code> 分支安全降級。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>② YAML 原型 + ③ 在地化名稱</h3>
+      <pre>## data/game_prototypes.yaml
+- id: "Golem"
+  parent: "BaseNpc"
+  components:
+    CombatStats:
+      base_hp: 25
+      hp_per_floor: 5
+      attack: 4
+      move_chance: 25
+      variant: 3
+
+## data/locale/zh-TW.yaml
+npc.golem: "石像鬼"</pre>
+    </div>
+    <div class="card card-accent-red">
+      <h3>④ 生成機率（pick_proto）</h3>
+      <pre>// setup_map() 裡的 pick_proto lambda
+auto pick_proto = [&](int) {
+  int r = d(rng);
+  if (current_floor_ <= 2)
+    return r < 8 ? "Putit" : "Golem";
+  // 深層 golem 比例提高
+  if (r >= 7) return "Golem";
+  // ...其他分支
+};</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">回傳**原型 id 字串**（"Golem"），<code>pm_.spawn()</code> 從 YAML 建實體，無需改其他 C++ 代碼。新 enum 值大於現有最大值；舊存檔未知值走 <code>default</code> 安全降級。</p>
     </div>
   </div>
 </div>
@@ -369,11 +386,12 @@ serialize::save(reg, path);
 // 用「語義查詢」重建指標：
 for (auto e : reg.view&lt;MapData&gt;())
     map_entity_ = e;
-for (auto e : reg.view&lt;MetaData&gt;())
-    if (meta.proto_id == "hero")
-        hero_entity_ = e;
+// 用 HeroComponent 正向 tag（F6+）
+for (auto e : reg.view&lt;HeroComponent&gt;())
+    hero_entity_ = e;
 // 還原 members
 turn_count_ = ws->turn_count;</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">舊作法（<code>MetaDataComponent::proto_id == "hero"</code> 比對）在 F6 後已廢棄；改用空 tag <code>HeroComponent</code> 正向辨識，抗迭代順序、可序列化。</p>
     </div>
   </div>
   <div class="highlight-box hl-cyan" style="margin-top:8px">

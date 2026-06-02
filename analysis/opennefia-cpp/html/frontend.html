@@ -60,7 +60,7 @@
     </div>
     <div class="card card-accent-green">
       <h3>opennefia_world_gd.h/.cpp</h3>
-      <p><code>OpenNefiaWorld : Node</code>。持有 <code>EntityManager</code> + <code>ServiceContext</code>。<code>_ready()</code> 建 20×15 測試世界（邊界牆 + 中央 hero）。F2/F3 的核心。</p>
+      <p><code>OpenNefiaWorld : Node</code>。持有 <code>EntityManager</code> + <code>ServiceContext</code>（spdlog + <code>CvarRegistry</code> + <code>LocaleRegistry</code>）+ <code>PrototypeManager</code>。<code>_ready()</code> → <code>init_locale()</code> → <code>init_cvars()</code> → <code>init_prototypes()</code> → <code>setup_map()</code>。F2/F3/F7 的核心。</p>
     </div>
     <div class="card card-accent-orange">
       <h3>godot_test/</h3>
