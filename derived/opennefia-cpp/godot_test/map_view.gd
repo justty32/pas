@@ -37,6 +37,7 @@ func _ready() -> void:
 	world.npc_died.connect(_on_npc_died)
 	world.game_over.connect(_on_game_over)
 	world.floor_changed.connect(_on_floor_changed)
+	world.item_picked_up.connect(_on_item_picked_up)
 
 	_setup_audio()
 	_refresh_display()
@@ -101,6 +102,9 @@ func _on_game_over() -> void:
 
 func _on_floor_changed(floor_num: int) -> void:
 	print("★ 下降至第 %d 層 ★" % floor_num)
+
+func _on_item_picked_up(item_name: String, heal_amount: int) -> void:
+	print("★ 拾取 %s（回復 %d HP）" % [item_name, heal_amount])
 
 func _do_restart() -> void:
 	_dead = false

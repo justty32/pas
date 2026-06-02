@@ -4,6 +4,7 @@
 #include "core/components/spatial_component.h"
 #include "core/components/npc_ai_component.h"
 #include "core/components/health_component.h"
+#include "core/components/item_component.h"
 #include "core/maps/map_data.h"
 #include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
@@ -43,6 +44,9 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
         PropertyInfo(Variant::STRING, "npc_id")));
     ADD_SIGNAL(MethodInfo("npc_died",
         PropertyInfo(Variant::STRING, "npc_id")));
+    ADD_SIGNAL(MethodInfo("item_picked_up",
+        PropertyInfo(Variant::STRING, "item_name"),
+        PropertyInfo(Variant::INT,    "heal_amount")));
     ADD_SIGNAL(MethodInfo("game_over"));
 }
 
@@ -80,6 +84,14 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         std::vector<entt::entity> npcs;
         for (auto e : reg.view<opennefia::NpcAiComponent>()) npcs.push_back(e);
         for (auto e : npcs) reg.destroy(e);
+    }
+
+    // 銷毀舊物品
+    {
+        auto& reg = em_.registry();
+        std::vector<entt::entity> items;
+        for (auto e : reg.view<opennefia::ItemComponent>()) items.push_back(e);
+        for (auto e : items) reg.destroy(e);
     }
 
     // 銷毀舊地圖
@@ -125,6 +137,21 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         em_.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
         em_.emplace<opennefia::NpcAiComponent>(e);
         em_.emplace<opennefia::HealthComponent>(e, npc_hp, npc_hp);
+    }
+
+    // 物品：中間房間（跳過英雄房 0 與樓梯房 back）各有 60% 機率出現回血藥
+    {
+        std::uniform_int_distribution<int> chance(0, 99);
+        int heal_val = 8 + (current_floor_ - 1) * 2;  // 深層回更多血
+        int n_rooms = static_cast<int>(rooms.size());
+        for (int r = 1; r < n_rooms - 1; ++r) {
+            if (chance(rng) >= 60) continue;  // 40% 不生成
+            auto e = em_.create();
+            em_.emplace<opennefia::MetaDataComponent>(e, "health_potion", true);
+            em_.emplace<opennefia::SpatialComponent>(e, rooms[r].x + 1, rooms[r].y + 1);
+            em_.emplace<opennefia::ItemComponent>(e);
+            em_.get<opennefia::ItemComponent>(e).value = heal_val;
+        }
     }
 }
 
@@ -223,6 +250,16 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
         }
     }
 
+    // 物品（綠點，只在可見格顯示，層級低於 NPC）
+    const Color item_color(0.20f, 0.85f, 0.40f);
+    auto item_view = em_.registry().view<opennefia::ItemComponent,
+                                         opennefia::SpatialComponent>();
+    for (auto e : item_view) {
+        const auto& sp = item_view.get<opennefia::SpatialComponent>(e);
+        if (map.is_visible(sp.x, sp.y))
+            img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), item_color);
+    }
+
     // NPC（紅點，只在可見格顯示）
     auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
                                         opennefia::SpatialComponent>();
@@ -292,6 +329,31 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
     // 正常移動
     sp->x = nx;
     sp->y = ny;
+
+    // 物品拾取（自動）
+    {
+        auto& reg = em_.registry();
+        entt::entity pickup_ent = entt::null;
+        auto iview = reg.view<opennefia::ItemComponent,
+                              opennefia::SpatialComponent,
+                              opennefia::MetaDataComponent>();
+        for (auto e : iview) {
+            const auto& isp = iview.get<opennefia::SpatialComponent>(e);
+            if (isp.x == sp->x && isp.y == sp->y) { pickup_ent = e; break; }
+        }
+        if (pickup_ent != entt::null && reg.valid(pickup_ent)) {
+            const auto& item = reg.get<opennefia::ItemComponent>(pickup_ent);
+            const auto& meta = reg.get<opennefia::MetaDataComponent>(pickup_ent);
+            if (item.type == opennefia::ItemType::health_potion) {
+                auto* hp = reg.try_get<opennefia::HealthComponent>(hero_entity_);
+                if (hp) hp->hp = std::min(hp->hp + item.value, hp->max_hp);
+            }
+            int heal_done = item.value;
+            String iname(meta.proto_id.c_str());
+            reg.destroy(pickup_ent);
+            emit_signal("item_picked_up", iname, heal_done);
+        }
+    }
 
     // 踩到下樓梯
     if (map.at(sp->x, sp->y).is_stair_down()) {
