@@ -5,6 +5,7 @@
 #include "core/components/health_component.h"
 #include "core/components/combat_stats_component.h"
 #include "core/maps/map_data.h"
+#include "core/systems/fov_system.h"
 
 #include <random>
 #include <algorithm>  // std::abs, std::max
@@ -43,56 +44,71 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
         if (pct_dist(s_rng) >= move_chance) continue;
 
         auto& sp = view.get<SpatialComponent>(e);
+        auto& ai = view.get<NpcAiComponent>(e);
 
-        // ---- 追蹤模式：英雄在 8 格 Chebyshev 距離內 ----
-        bool chasing = false;
+        // ---- 視野 + 警覺狀態更新 ----
         if (hero_ent != entt::null) {
             const auto& hero_sp = reg.get<SpatialComponent>(hero_ent);
             int chebyshev = std::max(std::abs(hero_sp.x - sp.x),
                                      std::abs(hero_sp.y - sp.y));
-            if (chebyshev <= 8) {
-                chasing = true;
-
-                // 鄰接時直接攻擊英雄（不移動）
-                if (chebyshev == 1) {
-                    if (auto* hero_hp = reg.try_get<HealthComponent>(hero_ent)) {
-                        int dmg = 2;
-                        if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
-                            dmg = stats->attack;
-                        hero_hp->hp -= dmg;
-                        if (hero_hp->hp < 0) hero_hp->hp = 0;
-                    }
-                } else {
-                    int hdx = hero_sp.x - sp.x;
-                    int hdy = hero_sp.y - sp.y;
-                    int cx = (hdx > 0) - (hdx < 0);  // sign(hdx)
-                    int cy = (hdy > 0) - (hdy < 0);  // sign(hdy)
-
-                    // 優先沿 delta 較大的軸移動（4 方向）
-                    int try_x[2], try_y[2];
-                    if (std::abs(hdx) >= std::abs(hdy)) {
-                        try_x[0] = cx; try_y[0] = 0;
-                        try_x[1] = 0;  try_y[1] = cy;
-                    } else {
-                        try_x[0] = 0;  try_y[0] = cy;
-                        try_x[1] = cx; try_y[1] = 0;
-                    }
-
-                    bool moved = false;
-                    for (int i = 0; i < 2; ++i) {
-                        int nx = sp.x + try_x[i];
-                        int ny = sp.y + try_y[i];
-                        if (nx == hero_sp.x && ny == hero_sp.y) continue;  // 不踩英雄
-                        if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
-                            sp.x = nx; sp.y = ny; moved = true; break;
-                        }
-                    }
-                    if (!moved) chasing = false;  // 被擋住，退回 wander
-                }
+            bool can_see = (chebyshev <= 10) &&
+                           opennefia::los(map, sp.x, sp.y, hero_sp.x, hero_sp.y);
+            if (can_see) {
+                ai.alerted     = true;
+                ai.alert_turns = 6;   // 見到英雄：記住 6 回合
+            } else if (ai.alerted) {
+                --ai.alert_turns;
+                if (ai.alert_turns <= 0) ai.alerted = false;
             }
         }
 
-        // ---- Wander 模式 ----
+        // ---- 追蹤模式（已警覺）----
+        bool chasing = false;
+        if (ai.alerted && hero_ent != entt::null) {
+            const auto& hero_sp = reg.get<SpatialComponent>(hero_ent);
+            int chebyshev = std::max(std::abs(hero_sp.x - sp.x),
+                                     std::abs(hero_sp.y - sp.y));
+            chasing = true;
+
+            if (chebyshev == 1) {
+                // 鄰接：攻擊英雄
+                if (auto* hero_hp = reg.try_get<HealthComponent>(hero_ent)) {
+                    int dmg = 2;
+                    if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
+                        dmg = stats->attack;
+                    hero_hp->hp -= dmg;
+                    if (hero_hp->hp < 0) hero_hp->hp = 0;
+                }
+            } else {
+                // 移動朝英雄（大 delta 軸優先）
+                int hdx = hero_sp.x - sp.x;
+                int hdy = hero_sp.y - sp.y;
+                int cx = (hdx > 0) - (hdx < 0);
+                int cy = (hdy > 0) - (hdy < 0);
+
+                int try_x[2], try_y[2];
+                if (std::abs(hdx) >= std::abs(hdy)) {
+                    try_x[0] = cx; try_y[0] = 0;
+                    try_x[1] = 0;  try_y[1] = cy;
+                } else {
+                    try_x[0] = 0;  try_y[0] = cy;
+                    try_x[1] = cx; try_y[1] = 0;
+                }
+
+                bool moved = false;
+                for (int i = 0; i < 2; ++i) {
+                    int nx = sp.x + try_x[i];
+                    int ny = sp.y + try_y[i];
+                    if (nx == hero_sp.x && ny == hero_sp.y) continue;
+                    if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
+                        sp.x = nx; sp.y = ny; moved = true; break;
+                    }
+                }
+                if (!moved) chasing = false;
+            }
+        }
+
+        // ---- Wander 模式（未警覺或追蹤受阻）----
         if (!chasing) {
             int start = dir_dist(s_rng);
             for (int i = 0; i < 4; ++i) {

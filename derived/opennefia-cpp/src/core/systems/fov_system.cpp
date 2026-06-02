@@ -38,4 +38,8 @@ void compute_fov(MapData& map, int ox, int oy, int radius) {
     }
 }
 
+bool opennefia::los(const MapData& map, int x0, int y0, int x1, int y1) {
+    return has_los(map, x0, y0, x1, y1);
+}
+
 } // namespace opennefia

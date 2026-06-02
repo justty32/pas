@@ -2,12 +2,15 @@
 
 namespace opennefia {
 
-// NPC 簡易 AI 狀態元件。
-// 目前只做「wander」——每 tick 以 50% 機率隨機移動一格可走方向。
-// 未來可加 patrol_target、aggro_range 等欄位。
+// NPC AI 狀態元件。
+// alerted:     NPC 曾看見英雄，正在追蹤中。
+// alert_turns: 失去視線後還能繼續追蹤的剩餘回合數。
 struct NpcAiComponent {
+    bool alerted{ false };
+    int  alert_turns{ 0 };
+
     template<class Archive>
-    void serialize(Archive& ar) { /* 目前無需持久欄位 */ }
+    void serialize(Archive& ar) { ar(alerted, alert_turns); }
 };
 
 } // namespace opennefia

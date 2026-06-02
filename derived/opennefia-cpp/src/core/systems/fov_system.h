@@ -10,4 +10,8 @@ namespace opennefia {
 // 複雜度 O(R² · R) = O(R³)；radius ≤ 10 時效能可接受（地圖小）。
 void compute_fov(MapData& map, int origin_x, int origin_y, int radius);
 
+// los — 兩點間視線檢查（給 NPC AI 用）。
+// 與 compute_fov 的射線演算法相同；不修改 map 狀態。
+bool los(const MapData& map, int x0, int y0, int x1, int y1);
+
 } // namespace opennefia
