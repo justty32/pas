@@ -1,177 +1,141 @@
 # 任務介面規格 — 各 LLM Task 的輸入輸出
 
-> 這是去 LLM 工程中最關鍵的文件。
+> 核對日期：2026-06-02（直接讀 `projects/cultivation-world-simulator/src` 原始碼確認）
+>
 > Shim Layer 必須對每個 task 返回與 LLM 版本**格式完全一致**的 JSON dict，
 > 否則上層 Phase 代碼解析失敗。
->
-> **TODO 標記**：尚未通過讀源碼確認的格式，需進入 Phase 0 開發時對照
-> `projects/cultivation-world-simulator/src/sim/simulator_engine/phases/` 確認。
 
 ---
 
-## 如何確認格式
+## 不走 dispatcher 的 task
 
-最可靠方法：在 Phase 0 stub 裡先記錄 `infos`，再看消費端如何使用返回值：
-
-```python
-# stub 調試版（Phase 0 前期使用）
-def dispatch(task_name: str, infos: dict):
-    import json, logging
-    logging.debug(f"[local_ai] task={task_name} infos_keys={list(infos.keys())}")
-    # ... 返回 stub
-```
-
-然後啟動遊戲運行 1-2 月，從 log 裡確認每個 task 收到什麼 infos。
+`sect_random_event` 和 `sect_random_event_reason` 的呼叫點使用 `call_llm_with_template()` 直呼，
+**不經過 `call_llm_with_task_name()`**，因此 dispatcher 無法攔截。
+如需替換，需直接 patch `src/systems/sect_random_event.py`。
 
 ---
 
 ## action_decision
 
-**呼叫位置**: `src/sim/simulator_engine/phases/actions.py::phase_decide_actions()`  
+**呼叫位置**: `src/classes/ai.py` 行 76  
 **呼叫頻率**: 每月，每個無計畫的存活角色各呼叫一次
 
-**輸入 `infos` (推測，待確認)**:
+**輸入 `infos`**:
 ```python
 {
-    "avatar_name": str,          # 角色名
-    "realm": str,                # 境界英文 key（如 "QI_REFINEMENT"）
-    "persona": list[str],        # 性格特質列表
-    "location": str,             # 當前所在區域名
-    "hp": float,                 # 生命值（0~1 比率）
-    "long_term_goal": str,       # 當前長期目標描述
-    "available_actions": list,   # 可執行動作列表（已過 can_possibly_start 篩選）
-    "world_info": dict,          # 世界背景資訊
-    "nearby_avatars": list,      # 附近角色資訊
-    "relations": dict,           # 主要關係（與誰的 friendliness 值）
-    # ... 其他上下文
+    "avatar_name": str,          # 角色名（必有）
+    "avatar_info": dict,
+    "avatar_ai_context": dict,
+    "world_info": dict,
+    "world_lore": str,
+    "general_action_infos": list,
+    "player_command": str,
 }
 ```
 
-**返回格式 (推測，待確認)**:
+**返回格式（已確認）**:
 ```python
 {
-    "action_name": str,       # 動作 ID（如 "meditate"、"attack"）
-    "params": dict,           # 動作參數（如 {"target_avatar_id": 123}）
-    "reason": str,            # 決策原因（可能用於 log 或 story）
+    infos["avatar_name"]: {
+        "action_name_params_pairs": [
+            ["action_id", {"param_key": val}],  # list of [name, params]
+            # 多個動作組成一個月份行動鏈
+        ],
+        "avatar_thinking": str,        # 角色思考描述
+        "short_term_objective": str,   # 短期目標描述
+        "current_emotion": str,        # 當前情緒
+    }
 }
 ```
 
-**或可能是返回整個行動鏈**:
+**消費端**（`ai.py:84-120`）：
 ```python
-{
-    "actions": [
-        {"action_name": "move_to_region", "params": {"region_id": 5}},
-        {"action_name": "meditate", "params": {}},
-    ]
-}
+r = res[avatar.name]
+raw_pairs = r.get("action_name_params_pairs", [])
+for p in raw_pairs:
+    if isinstance(p, list) and len(p) == 2:
+        pairs.append((p[0], p[1] or {}))
 ```
-
-**⚠️ 需重點確認**：`available_actions` 的結構（是 id 列表還是含 params 的 dict？），以及是返回單動作還是動作鏈。
 
 ---
 
 ## long_term_objective
 
-**呼叫位置**: `src/sim/simulator_engine/phases/lifecycle.py::phase_long_term_objective_thinking()`  
+**呼叫位置**: `src/classes/long_term_objective.py` 行 98  
 **呼叫頻率**: 每月，需要重新規劃目標的角色
 
-**輸入 `infos` (推測)**:
+**返回格式（已確認）**:
 ```python
 {
-    "avatar_name": str,
-    "realm": str,
-    "age": int,
-    "persona": list[str],
-    "current_goal": str,        # 現有目標描述
-    "recent_events": list[str], # 近期重大事件
-    "relations": dict,          # 重要關係
-    "sect": str | None,         # 所屬宗門
+    "long_term_objective": str,   # 目標文字描述（直接賦給 avatar.long_term_objective）
 }
 ```
 
-**返回格式 (推測)**:
-```python
-{
-    "goal_type": str,           # 目標類型（如 "BREAKTHROUGH_REALM"）
-    "goal_desc": str,           # 自然語言描述（用於顯示）
-    "priority": float,          # 優先級（0~1）
-    "sub_goals": list[str],     # 中期子目標（可為空）
-}
-```
+注意：原設計假設有 `goal_type`/`goal_desc`/`priority`，但實際只用 `"long_term_objective"` 一個字串 key。
 
 ---
 
 ## relation_resolver
 
-**呼叫位置**: `src/classes/relation/relation_resolver.py`  
-**呼叫頻率**: 每次互動後（conversation、spar、gift 等）
+**呼叫位置**: `src/classes/relation/relation_resolver.py` 行 68  
+**呼叫頻率**: 每次互動後（conversation、spar 等）
 
-**輸入 `infos` (推測)**:
+**返回格式（已確認）**:
 ```python
 {
-    "avatar_a": {"name": str, "persona": list, "realm": str},
-    "avatar_b": {"name": str, "persona": list, "realm": str},
-    "interaction_type": str,     # 互動類型（如 "conversation"）
-    "interaction_desc": str,     # 互動描述（事件文字）
-    "current_friendliness": float,
-    "history_summary": str,      # 過往關係摘要
+    "changed": bool,          # True = 有關係連結變化（師徒/仇敵等）
+    "change_type": str,       # "ADD" 或 "REMOVE"（changed=False 時為 None）
+    "relation": str,          # 關係枚舉名稱，如 "IS_MASTER_OF"（changed=False 時為 None）
+    "reason": str,            # 原因說明
 }
 ```
 
-**返回格式 (推測)**:
-```python
-{
-    "delta_a_to_b": float,      # A 對 B 的 friendliness 變化（-6 ~ +6）
-    "delta_b_to_a": float,      # B 對 A 的 friendliness 變化
-    "reason": str,              # 原因描述
-}
-```
+注意：原設計假設返回 friendliness delta，但實際是「是否新增/移除關係連結」。
+friendliness delta 由 `relation_delta` 任務負責。
 
 ---
 
 ## relation_delta
 
-與 `relation_resolver` 類似，可能是更簡單的版本：
+**呼叫位置**: `src/classes/relation/relation_delta_service.py` 行 78  
+**呼叫頻率**: 每次互動後
 
-**返回格式**:
+**返回格式（已確認）**:
 ```python
-{"delta": float}
+{
+    "delta_a_to_b": int,   # A 對 B 的 friendliness 變化（-6 ~ +6）
+    "delta_b_to_a": int,   # B 對 A 的 friendliness 變化
+}
 ```
 
 ---
 
 ## story_teller
 
-**呼叫位置**: `src/classes/story_event_service.py::StoryEventService`  
-**呼叫頻率**: 視 `config.yml` 中 `story.probabilities` 的概率觸發
+**呼叫位置**: `src/classes/story_teller.py` 行 121, 166  
+**呼叫頻率**: 視 config.yml 概率觸發
 
-**輸入 `infos` (推測)**:
+**返回格式（已確認）**:
 ```python
 {
-    "event_type": str,           # 事件類型（如 "combat"、"cultivation_major"）
-    "avatars": list[dict],       # 涉及角色資訊
-    "base_event": dict,          # 基礎事件（已有的結構化事件）
-    "world_info": dict,
+    "story": str,   # 敘事文字（多句）
 }
 ```
 
-**返回格式 (推測)**:
-```python
-{
-    "story_text": str,           # 敘事文字（多句）
-    "tone": str,                 # 敘事語氣（如 "悲壯"、"詼諧"）
-}
-```
+注意：原設計假設有 `"story_text"` 和 `"tone"`，但實際只用 `"story"` key。
 
 ---
 
 ## interaction_feedback
 
-**呼叫位置**: 互動結算後  
-**返回格式**:
+**呼叫位置**: `src/classes/mutual_action/mutual_action.py` 行 164  
+**返回格式（已確認）**:
 ```python
 {
-    "feedback": str,             # 一句話描述互動結果
+    "response": str,    # 互動回應描述（主 key）
+    "thinking": str,    # 思考過程（賦給 target_avatar.thinking）
+    # 注：消費端有 result.get("response", result.get("feedback", "")) 的 fallback，
+    #     用 "feedback" key 也可被消費，但推薦用 "response"
 }
 ```
 
@@ -179,24 +143,18 @@ def dispatch(task_name: str, infos: dict):
 
 ## history_influence
 
-**呼叫位置**: `src/classes/action/`（歷史影響計算）  
-**返回格式 (推測)**:
-```python
-{
-    "influence_score": float,    # 影響係數
-    "desc": str,                 # 描述
-}
-```
+**注意**：在 `projects/cultivation-world-simulator/src` 全域搜尋未找到任何呼叫。
+此 task 可能已棄用。dispatcher 保留映射但返回 `None`（fallback to LLM）。
 
 ---
 
 ## backstory
 
-**呼叫位置**: `src/sim/simulator_engine/phases/lifecycle.py::phase_backstory_generation()`  
-**返回格式 (推測)**:
+**呼叫位置**: `src/classes/backstory.py` 行 47  
+**返回格式（已確認）**:
 ```python
 {
-    "backstory": str,            # 2-5 句的身世描述
+    "backstory": str,   # 2-5 句的身世描述
 }
 ```
 
@@ -204,70 +162,56 @@ def dispatch(task_name: str, infos: dict):
 
 ## random_minor_event
 
-**呼叫位置**: `src/systems/random_minor_event_service.py`  
-**返回格式 (推測)**:
+**呼叫位置**: `src/systems/random_minor_event_service.py` 行 120  
+**返回格式（已確認）**:
 ```python
 {
-    "event_desc": str,           # 事件描述
-    "effects": list[dict],       # 對角色的影響（可為空）
+    "event_text": str,   # 事件描述文字
 }
 ```
-或返回 `None` 表示不觸發。
+
+注意：原設計假設有 `"event_desc"`，但實際 key 為 `"event_text"`。
+返回空字串 `""` 可安全跳過事件生成（消費端有 `if not event_text: return []` 保護）。
 
 ---
 
 ## sect_random_event / sect_random_event_reason
 
-**呼叫位置**: `src/systems/sect_random_event.py`  
-**返回格式**:
-```python
-# sect_random_event
-{
-    "event_desc": str,
-    "effects": list[dict],
-}
-
-# sect_random_event_reason
-{
-    "reason": str,               # 一句話原因
-}
-```
+**不走 `call_llm_with_task_name`**，直接呼叫 `call_llm_with_template()`。
+dispatcher 無法攔截，如需替換需 patch `src/systems/sect_random_event.py`。
+返回 key 為 `"reason_fragment"`（若未來 patch 時使用）。
 
 ---
 
 ## sect_decider
 
-**呼叫位置**: `src/classes/sect_decider.py`（每 3 年執行一次）  
-**輸入 `infos` 重點欄位**:
+**呼叫位置**: `src/classes/sect_decider.py` 行 133  
+**呼叫頻率**: 每 3 年執行一次
+
+**返回格式（已確認，`_parse_plan()` 行 210-245）**:
 ```python
 {
-    "sect_name": str,
-    "sect_realm_avg": float,
-    "member_count": int,
-    "territory_count": int,
-    "resources": int,
-    "relations": dict,           # 與其他宗門的關係
-    "world_events": list,        # 近期世界事件
+    "declare_war_target_ids":  list,  # 宣戰目標宗門 ID 列表
+    "seek_peace_target_ids":   list,  # 求和目標宗門 ID 列表
+    "recruit_avatar_ids":      list,  # 招募角色 ID 列表
+    "expel_avatar_ids":        list,  # 驅逐角色 ID 列表
+    "reward_avatar_ids":       list,  # 獎勵角色 ID 列表
+    "support_avatar_ids":      list,  # 扶持角色 ID 列表
+    "thinking":                str,   # 年度思考文字
 }
 ```
 
-**返回格式 (推測)**:
-```python
-{
-    "strategy": str,             # 策略（EXPAND/CONSOLIDATE/RECRUIT/WAR/TRAIN）
-    "actions": list[dict],       # 具體行動計畫
-    "yearly_thinking": str,      # 年度反思文字（顯示在前端宗門詳情頁）
-}
-```
+注意：原設計假設有 `"strategy"` 和 `"actions"` key，但實際格式完全不同。
 
 ---
 
 ## sect_thinker
 
-**返回格式**:
+**呼叫位置**: `src/classes/sect_thinker.py` 行 57  
+**返回格式（已確認）**:
 ```python
 {
-    "thinking": str,             # 宗門年度思考/反思文字（1-3 句）
+    "sect_thinking": str,   # 宗門年度思考文字（注意 key 名是 sect_thinking 不是 thinking）
 }
 ```
 
@@ -275,24 +219,13 @@ def dispatch(task_name: str, infos: dict):
 
 ## nickname
 
-**呼叫位置**: `src/sim/simulator_engine/phases/lifecycle.py::phase_nickname_generation()`  
-**輸入 `infos` 重點欄位**:
+**呼叫位置**: `src/classes/nickname.py` 行 84  
+**返回格式（已確認）**:
 ```python
 {
-    "avatar_name": str,
-    "realm": str,
-    "persona": list[str],
-    "notable_deeds": list[str],  # 重大事蹟列表
-    "kill_count": int,
-    "age": int,
-}
-```
-
-**返回格式**:
-```python
-{
-    "nickname": str,             # 外號（2-5 字）
-    "reason": str,               # 外號由來
+    "nickname": str,    # 外號（空字串 = 安全跳過，消費端有 if not nickname: return None 保護）
+    "reason":   str,    # 外號由來
+    "thinking": str,    # 思考過程（可為空）
 }
 ```
 
@@ -300,14 +233,12 @@ def dispatch(task_name: str, infos: dict):
 
 ## single_choice
 
-**呼叫位置**: `src/systems/single_choice/`（roleplay 決策邊界）  
-**返回格式 (推測)**:
+**呼叫位置**: `src/systems/single_choice/engine.py` 行 53  
+**返回格式（已確認，`extract_choice_payload()` 行 11）**:
 ```python
 {
-    "choices": [
-        {"id": "1", "text": str, "effect_desc": str},
-        {"id": "2", "text": str, "effect_desc": str},
-    ]
+    "choice":   str,   # 選擇的 key（空字串 = 觸發 fallback_policy，預設選第一個選項）
+    "thinking": str,
 }
 ```
 
@@ -315,7 +246,6 @@ def dispatch(task_name: str, infos: dict):
 
 ## custom_content_generation
 
-**呼叫位置**: `src/server/services/custom_content_service.py`  
-**用途**: 玩家要求生成自訂宗門/功法/裝備時使用  
-**替換策略**: 返回 `None` 讓其 fallback LLM，或提供有限的預設模板  
-**優先級最低**，Phase 4 再處理。
+**注意**：`src/server/services/custom_content_service.py` 導入了 `call_llm_with_task_name`
+但未找到以 `"custom_content_generation"` 為 task_name 的直接呼叫。
+dispatcher 保留映射但返回 `None`（fallback to LLM）。

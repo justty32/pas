@@ -74,9 +74,10 @@
 ## 完成定義
 
 ### Phase 0（最低可用）
-- [ ] 遊戲可在無網路環境啟動並運行完整月份模擬
-- [ ] 所有 LLM 任務有 stub 實作（返回合法最小值）
-- [ ] 不崩潰，事件入庫正常
+- [x] 所有 LLM 任務有 stub 實作（返回合法最小值）— `src/local_ai/dispatcher.py`
+- [x] Shim 打入 `src/utils/llm/client.py::call_llm_with_task_name()`
+- [ ] 遊戲可在無網路環境啟動並運行完整月份模擬（待實機測試）
+- [ ] 不崩潰，事件入庫正常（待實機測試）
 
 ### Phase 1（可玩性）
 - [ ] `action_decision`：效用 AI 讓 NPC 做出合理決策（不亂動）
@@ -103,7 +104,7 @@
 
 - [x] 衍生目標定義
 - [x] 設計文件 (`docs/design_overview.md`)
-- [ ] Phase 0：全任務 stub
+- [x] Phase 0：全任務 stub + shim 部署（待實機驗證）
 - [ ] Phase 1：核心 AI（action_decision、relation、objectives）
 - [ ] Phase 2：敘事系統（詞庫、模板）
 - [ ] Phase 3：宗門 AI
