@@ -36,6 +36,8 @@
   <span class="nav-brand">opennefia-cpp</span>
   <a href="index.html">首頁</a>
   <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">擴充教學</a>
+  <a href="frontend.html">前端綁定</a>
   <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
 </nav>
 
@@ -280,6 +282,53 @@
       </tr>
     </tbody>
   </table>
+</div>
+
+<!-- ===== F1–F3 GDExtension ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num blue">F</div>
+    <div>
+      <div class="phase-title">GDExtension 橋接層 F1–F3 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">godot-free 核心 → Godot 4 薄殼 facade；工具鏈打通 + 渲染 + 輸入 + Signal</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>F1：OpenNefiaCore（RefCounted）</h3>
+      <p>最小 facade，只暴露 <code>version()</code>。驗證：<code>-DOPENNEFIA_BUILD_GDEXTENSION=ON</code> 編譯 + godot-cpp 4.4 bindings + .dll 載入。</p>
+      <code>src/gbind/opennefia_core_gd.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F2：OpenNefiaWorld（Node）</h3>
+      <p>持有 <code>EntityManager</code>；<code>_ready()</code> 建 20×15 測試世界；<code>generate_map_image(cell_px) → Image</code> 三色渲染（floor/wall/hero）。</p>
+      <code>src/gbind/opennefia_world_gd.h</code>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>F3：動作 + Signal + UI</h3>
+      <p><code>move(dx,dy)</code> walkable 檢查；<code>world_changed</code> signal；GDScript WASD/arrow 8向輸入；<code>InfoLabel</code> 顯示 hero 座標 + 回合數。</p>
+      <code>godot_test/map_view.gd</code>
+    </div>
+  </div>
+  <div class="section-title" style="margin-top:20px">設計依據（core_data_layer_design.md §4）</div>
+  <div class="g2" style="margin-top:8px">
+    <div class="card card-accent-blue">
+      <h3>繼承 Node vs RefCounted</h3>
+      <p>持有模擬狀態、需要 <code>_ready</code> 生命週期 → <code>Node</code>（<code>OpenNefiaWorld</code>）。無狀態工具 → <code>RefCounted</code>（<code>OpenNefiaCore</code>）。與 <code>core_data_layer_design.md</code> 慣例二/四一致。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>Signal Bus 模式</h3>
+      <p>核心完成動作後 emit <code>world_changed</code>；GDScript <code>.connect()</code> 訂閱並刷新渲染。C++ 不知道 GDScript 如何渲染，保持單向依賴。對應 <code>godot-open-rpg/answers/gdextension_backend_architecture.md</code> 的 Signal Push 模式。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑：MapData::get() 無 const 版本，在 const 方法中報 C2662</div>
+    <p>OpenNefiaWorld 的查詢方法（<code>is_walkable</code> 等）標記為 <code>const</code>，但 <code>MapData::get(x,y)</code> 沒有 const 過載，MSVC 報 C2662（cannot convert 'this' from const C to MapData&amp;）。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：改用 in_bounds(x,y) + at(x,y)（at 有 const 過載）</div>
+    <p><code>if (!map.in_bounds(x, y)) return false; return map.at(x, y).is_walkable();</code></p>
+  </div>
 </div>
 
 <p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">

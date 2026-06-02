@@ -372,4 +372,100 @@ derived/opennefia-cpp/
 
 ---
 
+---
+
+## 11. GDExtension 橋接層（F1–F3，2026-06-02）
+
+godot-free 核心完成後，以 `src/gbind/` 建立薄殼 GDExtension facade，把核心狀態橋接給 Godot 4。
+
+### 技術棧補充
+
+| 新增項目 | 說明 |
+|---|---|
+| godot-cpp | v4.4（本地 checkout：`projects/godot-cpp`） |
+| 構建開關 | `-DOPENNEFIA_BUILD_GDEXTENSION=ON` |
+| 輸出 | `opennefia_gd.dll`（約 5 MB，含 godot-cpp bindings） |
+| 測試專案 | `godot_test/`（`.gdextension` + `project.godot` + GDScript） |
+
+### F1 — 工具鏈 smoke test（`src/gbind/opennefia_core_gd.h/.cpp`）
+
+```cpp
+// OpenNefiaCore : RefCounted — 最小 facade，驗證工具鏈端到端
+class OpenNefiaCore : public godot::RefCounted {
+    GDCLASS(OpenNefiaCore, godot::RefCounted)
+public:
+    godot::String version() const;  // 呼叫 opennefia::version()，回傳核心版本字串
+};
+```
+
+GDScript 呼叫：`OpenNefiaCore.new().version()` → `"0.0.1-alpha"`。
+
+### F2 — 地圖資料橋接 + Image 渲染（`src/gbind/opennefia_world_gd.h/.cpp`）
+
+```cpp
+// OpenNefiaWorld : Node — 持有模擬狀態，_ready() 建 20×15 測試世界
+class OpenNefiaWorld : public godot::Node {
+    GDCLASS(OpenNefiaWorld, godot::Node)
+    opennefia::EntityManager em_;
+    opennefia::ServiceContext svc_;
+    entt::entity map_entity_{ entt::null };
+    entt::entity hero_entity_{ entt::null };
+public:
+    int  get_map_width() const;
+    int  get_map_height() const;
+    bool is_walkable(int x, int y) const;
+    godot::Ref<godot::Image> generate_map_image(int cell_px) const;
+};
+```
+
+`generate_map_image()` 回傳 `FORMAT_RGB8 Image`（floor=棕 / wall=暗 / hero=黃），GDScript 一行轉 `ImageTexture` 掛 `Sprite2D`。
+
+**設計依據**（`core_data_layer_design.md` §4 四大橋接慣例）：
+- 持有狀態的模擬引擎 → 繼承 `Node`（有場景樹生命週期）
+- 資料本體跨幀存活 → 持有 `EntityManager` 成員（不是每幀重建）
+- 無狀態工具 → 用 `RefCounted`（F1 的 `OpenNefiaCore`）
+
+### F3 — 輸入 → 移動 → Signal → UI（新增方法）
+
+```cpp
+bool move(int dx, int dy);   // walkable 檢查 + hero 移動 + emit world_changed
+void wait_turn();             // 推進回合 + emit world_changed
+int  get_hero_x() const;
+int  get_hero_y() const;
+int  get_turn_count() const;
+// ADD_SIGNAL(MethodInfo("world_changed"));
+```
+
+GDScript 端：
+```gdscript
+world.world_changed.connect(_on_world_changed)  # 連接 signal
+# _unhandled_input 中：
+world.move(0, -1)   # 向上移動（walkable 才成功）
+world.wait_turn()   # 等待
+# _on_world_changed 中：
+sprite.texture = ImageTexture.create_from_image(world.generate_map_image(16))
+info_label.text = "Hero: (%d,%d)  Turn: %d" % [world.get_hero_x(), world.get_hero_y(), world.get_turn_count()]
+```
+
+**完整輸入 → 核心 → 渲染迴路**：玩家按鍵 → GDScript 呼叫 `move()` → 核心檢查 walkable → 移動成功 → emit `world_changed` → GDScript 重新生成 Image → 刷新 Sprite2D + Label。
+
+### gbind/ 目錄結構（F1–F3 完成後）
+
+```
+src/gbind/
+├── register_types.h/.cpp      — GDExtension 進入點（opennefia_library_init）
+├── opennefia_core_gd.h/.cpp   — OpenNefiaCore : RefCounted（version）
+└── opennefia_world_gd.h/.cpp  — OpenNefiaWorld : Node（地圖 + 移動 + signal）
+
+godot_test/
+├── opennefia.gdextension      — entry_symbol + compatibility_minimum 4.4
+├── project.godot
+├── smoke_test.gd              — F1 驗證腳本
+├── map_view.gd                — F2/F3 地圖渲染 + 鍵盤輸入腳本
+└── bin/
+    └── opennefia_gd.dll       — 5.1 MB
+```
+
+---
+
 *真實來源（source of truth）為 `derived/opennefia-cpp/` 目錄下的源碼與 `docs/*.md`。本文件為分析摘要層，便於跨專案引用。*

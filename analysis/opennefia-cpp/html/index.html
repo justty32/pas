@@ -40,6 +40,7 @@
   <span class="nav-brand">opennefia-cpp</span>
   <a href="index.html" class="active">首頁</a>
   <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">擴充教學</a>
   <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
 </nav>
 
@@ -65,8 +66,8 @@
 <div class="completion-banner">
   <div class="cb-check">✅</div>
   <div class="cb-text">
-    <h3>核心階段 Phase 0–4 全部完成（2026-06-01）</h3>
-    <p>36 test cases / 139 assertions 全綠。PROJECT.md §5「完成定義」五點達成。godot-free 靜態庫可獨立編譯、YAML 原型 spawn、ECS 事件、地圖 round-trip 存讀全數驗證。</p>
+    <h3>核心 Phase 0–4 + 前端 F1–F3 全部完成（2026-06-02）</h3>
+    <p>核心：36 test cases / 139 assertions 全綠。前端：GDExtension 工具鏈（F1）、地圖 Image 渲染（F2）、鍵盤輸入 + Signal + UI Label（F3）三階段完成。<code>opennefia_gd.dll</code> 5.1 MB 已產出，完整輸入→核心→渲染迴路打通。</p>
   </div>
 </div>
 
@@ -107,6 +108,12 @@
     <span class="pipe-step pipe-purple">Phase 3<br><small>序列化</small></span>
     <span class="pipe-arrow">→</span>
     <span class="pipe-step pipe-cyan">Phase 4<br><small>地圖 + 整合</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">F1<br><small>GDExtension</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">F2<br><small>地圖渲染</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">F3<br><small>輸入 + UI</small></span>
   </div>
 </div>
 
@@ -127,6 +134,20 @@
       <h3>架構總結（.md）</h3>
       <p>完整 Markdown 版本，10 節涵蓋所有 Phase 的設計決策與程式碼片段（source of truth）。</p>
       <span class="nc-arrow">→ architecture/summary.md</span>
+    </a>
+
+    <a class="nav-card" href="tutorial.html">
+      <div class="nc-icon">📖</div>
+      <h3>擴充教學</h3>
+      <p>如何新增 Component、系統、地形，以及如何把新資料橋接到 Godot GDExtension。五個實戰步驟，含完整程式碼片段。</p>
+      <span class="nc-arrow">→ tutorial.html</span>
+    </a>
+
+    <a class="nav-card" href="frontend.html">
+      <div class="nc-icon">🎮</div>
+      <h3>前端綁定（F1–F3）</h3>
+      <p>GDExtension 工具鏈打通、OpenNefiaWorld Node 設計、Image 渲染、鍵盤輸入 + Signal + UI 全迴路說明。</p>
+      <span class="nc-arrow">→ frontend.html</span>
     </a>
 
   </div>
@@ -164,17 +185,27 @@
 
 <!-- 後續 -->
 <div class="section">
-  <div class="section-title">後續計畫（F1–F4，暫緩）</div>
+  <div class="section-title">前端進度（F1–F4）</div>
   <div class="g2">
-    <div class="card card-accent-cyan">
-      <h3>F1 前端綁定</h3>
-      <p>建 <code>gbind/</code>（仿 medps），<code>opennefia_gd</code> GDExtension 目標，把核心狀態 / 事件以 POD 橋接給 Godot。</p>
-      <div style="margin-top:8px"><span class="status-pending">⏸ 暫緩</span></div>
+    <div class="card card-accent-green">
+      <h3>F1 工具鏈 ✅</h3>
+      <p><code>src/gbind/</code>（<code>OpenNefiaCore : RefCounted</code> + <code>register_types</code>）；<code>-DOPENNEFIA_BUILD_GDEXTENSION=ON</code> 建置成功；<code>opennefia_gd.dll</code> 5.1 MB 產出。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F2 地圖渲染 ✅</h3>
+      <p><code>OpenNefiaWorld : Node</code>，<code>_ready()</code> 建 20×15 測試世界；<code>generate_map_image(cell_px)</code> 三色 Image；GDScript 一行轉 Sprite2D。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F3 輸入 + UI ✅</h3>
+      <p><code>move(dx,dy)</code> / <code>wait_turn()</code> + <code>world_changed</code> signal；GDScript WASD/arrow/numpad 8向 + 等待；<code>InfoLabel</code> 顯示座標 + 回合數。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
     </div>
     <div class="card card-accent-cyan">
-      <h3>F2–F4 渲染 / UI / 輸入音效</h3>
-      <p>Godot TileMapLayer + Sprite2D 渲染、Godot Control 取代 Wisp、InputMap 動作綁定、AudioStreamPlayer 接音效事件。</p>
-      <div style="margin-top:8px"><span class="status-pending">⏸ 暫緩</span></div>
+      <h3>F4 音效</h3>
+      <p><code>AudioStreamPlayer</code> 接核心事件（移動音效 / 撞牆音效）。未來工作。</p>
+      <div style="margin-top:8px"><span class="badge badge-gray">⏳ 待辦</span></div>
     </div>
   </div>
 </div>
