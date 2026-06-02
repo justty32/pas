@@ -86,10 +86,10 @@
 - [x] `long_term_objective`：情境感知模板生成器（宗門/戰爭/靈石條件分支）— `src/local_ai/goals.py`
 - [x] 實機驗證：103→108 年 17 月模擬無崩潰，10 個角色存活，動作多樣化
 
-### Phase 2（有趣性）
-- [ ] `story_teller / interaction_feedback`：詞庫組合文字有變化性
-- [ ] `nickname`：外號有成就感
-- [ ] `backstory`：背景故事多樣
+### Phase 2（有趣性）✅ 完成
+- [x] `story_teller / interaction_feedback`：詞庫組合文字有變化性 — `src/local_ai/narrative.py`
+- [x] `nickname`：外號有成就感（前綴+主題+後綴池，10 runs 皆唯一）— `src/local_ai/epithets.py`
+- [x] `backstory`：背景故事多樣（起源/天賦/早期/現狀/抱負五段模板）— `src/local_ai/narrative.py`
 
 ### Phase 3（組織智能）
 - [ ] `sect_decider`：宗門會做出合理策略決策
@@ -108,6 +108,6 @@
 - [x] 設計文件 (`docs/design_overview.md`)
 - [x] Phase 0：全任務 stub + shim 部署（待實機驗證）
 - [x] Phase 1：核心 AI（action_decision Utility AI、relation_delta 公式、long_term_objective 模板）
-- [ ] Phase 2：敘事系統（詞庫、模板）
+- [x] Phase 2：敘事系統（詞庫、模板）
 - [ ] Phase 3：宗門 AI
 - [ ] Phase 4：完整等價測試

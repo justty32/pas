@@ -21,3 +21,6 @@
 - 2026-06-02：實機驗證 Phase 0：102→107 年模擬無崩潰、零 ERROR、零非法動作警告（9 個角色存活）
 - 2026-06-02：Phase 1 — 建立 decision.py（softmax 效用 AI）、goals.py（目標模板生成）、relations.py（relation_delta 公式引擎）
 - 2026-06-02：Phase 1 實機驗證：103→108 年 17 月模擬無崩潰，10 個角色存活，動作多樣化（Respire/Retreat/Plant）
+- 2026-06-02：Phase 2 — 建立 narrative.py（story_teller 詞庫組合、interaction_feedback 動作分類回應、backstory 五段模板）
+- 2026-06-02：Phase 2 — 建立 epithets.py（nickname 前綴+主題+後綴詞庫，5% 稀有特殊外號，境界感知前綴池）
+- 2026-06-02：Phase 2 單元驗證：story/backstory 結構正確，nickname 10 次全唯一，部署至 projects/cultivation-world-simulator/src/local_ai/

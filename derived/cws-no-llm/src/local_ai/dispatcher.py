@@ -3,6 +3,8 @@ Phase 0: 全任務 stub。返回最小合法值讓遊戲可以跑。
 Phase 1: action_decision → decision.py 效用 AI
          long_term_objective → goals.py 模板生成器
          relation_delta → relations.py 公式引擎
+Phase 2: story_teller / interaction_feedback / backstory → narrative.py
+         nickname → epithets.py
 
 返回格式全部以 projects/cultivation-world-simulator/src 原始碼核對（2026-06-02）：
   - action_decision   : ai.py:84 — {avatar_name: {"action_name_params_pairs": [...]}}
@@ -25,6 +27,8 @@ import logging
 from src.local_ai.decision import decide_action
 from src.local_ai.goals import gen_long_term_objective
 from src.local_ai.relations import calc_relation_delta
+from src.local_ai.narrative import gen_story, gen_interaction_feedback, gen_backstory
+from src.local_ai.epithets import gen_nickname
 
 logger = logging.getLogger("local_ai")
 
@@ -183,18 +187,20 @@ def _stub_single_choice(infos: dict) -> dict:
 # ── Handler 映射表 ─────────────────────────────────────────────────────────────
 
 _HANDLERS = {
-    # Phase 1 實作（取代 Phase 0 stub）
+    # Phase 1 實作
     "action_decision":          decide_action,
     "long_term_objective":      gen_long_term_objective,
     "relation_resolver":        _stub_relation_resolver,   # Phase 1 維持 stub（changed=False）
     "relation_delta":           calc_relation_delta,
-    "story_teller":             _stub_story_teller,
-    "interaction_feedback":     _stub_interaction_feedback,
-    "backstory":                _stub_backstory,
+    # Phase 2 實作
+    "story_teller":             gen_story,
+    "interaction_feedback":     gen_interaction_feedback,
+    "backstory":                gen_backstory,
+    "nickname":                 gen_nickname,
+    # Phase 0 stubs（Phase 3 預定實作）
     "random_minor_event":       _stub_random_minor_event,
     "sect_decider":             _stub_sect_decider,
     "sect_thinker":             _stub_sect_thinker,
-    "nickname":                 _stub_nickname,
     "single_choice":            _stub_single_choice,
     # 以下在原始碼未見 call_llm_with_task_name 呼叫，保留為 None fallback
     "history_influence":        lambda _: None,
