@@ -36,6 +36,7 @@ func _ready() -> void:
 	world.hero_bumped_npc.connect(_on_hero_bumped_npc)
 	world.npc_died.connect(_on_npc_died)
 	world.game_over.connect(_on_game_over)
+	world.floor_changed.connect(_on_floor_changed)
 
 	_setup_audio()
 	_refresh_display()
@@ -70,6 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_KP_1:                   world.move(-1,  1)
 		KEY_KP_3:                   world.move( 1,  1)
 		KEY_PERIOD, KEY_KP_5:       world.wait_turn()
+		KEY_R: _do_restart()
 
 func _on_world_changed() -> void:
 	_refresh_display()
@@ -97,6 +99,14 @@ func _on_game_over() -> void:
 	print("★ GAME OVER ★  你被 NPC 擊倒了。")
 	info_label.text += "\n[GAME OVER]"
 
+func _on_floor_changed(floor_num: int) -> void:
+	print("★ 下降至第 %d 層 ★" % floor_num)
+
+func _do_restart() -> void:
+	_dead = false
+	world.restart()
+	print("— 重新開始 —")
+
 func _refresh_display() -> void:
 	var img := world.generate_map_image(CELL_PX)
 	sprite.centered = false
@@ -105,7 +115,8 @@ func _refresh_display() -> void:
 	camera.position = Vector2(world.get_hero_x() + 0.5, world.get_hero_y() + 0.5) * CELL_PX
 
 func _refresh_ui() -> void:
-	info_label.text = "Hero: (%d, %d)  Turn: %d  HP: %d/%d  Enemies: %d" % [
+	info_label.text = "F%d  Hero: (%d, %d)  Turn: %d  HP: %d/%d  Enemies: %d" % [
+		world.get_current_floor(),
 		world.get_hero_x(),
 		world.get_hero_y(),
 		world.get_turn_count(),

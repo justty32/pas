@@ -51,8 +51,13 @@ public:
     int get_hero_max_hp() const;
     int get_npc_count()   const;
 
+    int  get_current_floor() const;
+    void restart();        // 完整重置（英雄重建，回到 1 層）
+
 private:
     void setup_test_world();
+    void setup_map();      // 生成新地圖 + 放置英雄/NPC/樓梯（可重複呼叫）
+    void next_floor();     // 下一層：銷毀舊地圖+NPC，重新生成，英雄保留 HP
     void advance_turn();    // tick EntityManager（NPC AI 等系統）並 emit world_changed
     void recompute_fov();   // 從英雄位置重算視野
 
@@ -64,6 +69,8 @@ private:
     entt::entity hero_entity_{ entt::null };
     int turn_count_{ 0 };
     bool game_over_{ false };
+    int  current_floor_{ 1 };
+    bool systems_ready_{ false };  // 防止 add_system 重複呼叫
 };
 
 } // namespace opennefia_gd

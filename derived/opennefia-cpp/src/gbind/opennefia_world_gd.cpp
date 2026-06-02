@@ -32,8 +32,12 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_hero_hp"),     &OpenNefiaWorld::get_hero_hp);
     ClassDB::bind_method(D_METHOD("get_hero_max_hp"), &OpenNefiaWorld::get_hero_max_hp);
     ClassDB::bind_method(D_METHOD("get_npc_count"),   &OpenNefiaWorld::get_npc_count);
+    ClassDB::bind_method(D_METHOD("get_current_floor"), &OpenNefiaWorld::get_current_floor);
+    ClassDB::bind_method(D_METHOD("restart"),           &OpenNefiaWorld::restart);
 
     ADD_SIGNAL(MethodInfo("world_changed"));
+    ADD_SIGNAL(MethodInfo("floor_changed",
+        PropertyInfo(Variant::INT, "floor_num")));
     ADD_SIGNAL(MethodInfo("hero_bumped_wall"));
     ADD_SIGNAL(MethodInfo("hero_bumped_npc",
         PropertyInfo(Variant::STRING, "npc_id")));
@@ -53,40 +57,103 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
 
 // ---- 測試世界建構 -----------------------------------------------------------
 //
-// 60×40 地圖，BSP 地城生成。
-// hero 放在第一個房間中心；後續房間各放一隻 NPC（最多 5 隻）。
+// 委派給 setup_map()；NPC AI 系統只注冊一次。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
+    setup_map();
+    if (!systems_ready_) {
+        em_.add_system(opennefia::npc_ai_system);
+        systems_ready_ = true;
+    }
+}
+
+// ---- 地圖生成（可重複呼叫） ------------------------------------------------
+//
+// 60×40 地圖，BSP 地城生成。
+// hero：第一次建立實體；之後只更新位置（保留 HP）。
+// NPC、樓梯：每次重新生成。
+void opennefia_gd::OpenNefiaWorld::setup_map() {
     constexpr int W = 60, H = 40;
 
-    // 地圖
+    // 銷毀舊 NPC（view 迭代前先收集，避免邊改邊迭代）
+    {
+        auto& reg = em_.registry();
+        std::vector<entt::entity> npcs;
+        for (auto e : reg.view<opennefia::NpcAiComponent>()) npcs.push_back(e);
+        for (auto e : npcs) reg.destroy(e);
+    }
+
+    // 銷毀舊地圖
+    if (map_entity_ != entt::null) {
+        em_.registry().destroy(map_entity_);
+        map_entity_ = entt::null;
+    }
+
+    // 建立新地圖
     map_entity_ = em_.create();
     auto& map = em_.emplace<opennefia::MapData>(map_entity_, W, H);
 
-    // BSP 地城生成（房間＋走廊由 generate_bsp_dungeon 負責寫入 map）
     std::mt19937 rng(std::random_device{}());
     auto rooms = opennefia::generate_bsp_dungeon(map, rng);
 
-    // Hero（HP 20/20）：第一個房間中心，或地圖中央（後備）
-    int hero_x = rooms.empty() ? W / 2 : rooms[0].cx();
-    int hero_y = rooms.empty() ? H / 2 : rooms[0].cy();
-    hero_entity_ = em_.create();
-    em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
-    em_.emplace<opennefia::SpatialComponent>(hero_entity_, hero_x, hero_y);
-    em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
+    // 英雄：若無實體則新建（第一次）；否則只更新位置
+    int hx = rooms.empty() ? W / 2 : rooms[0].cx();
+    int hy = rooms.empty() ? H / 2 : rooms[0].cy();
+    if (hero_entity_ == entt::null) {
+        hero_entity_ = em_.create();
+        em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
+        em_.emplace<opennefia::SpatialComponent>(hero_entity_, hx, hy);
+        em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
+    } else {
+        auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
+        if (sp) { sp->x = hx; sp->y = hy; }
+    }
 
-    // NPC：從第二個房間起，每間放一隻，最多 5 隻
+    // 樓梯：放在最後一個房間中心（需至少 2 個房間）
+    if (rooms.size() >= 2) {
+        auto& stair_tile = map.at(rooms.back().cx(), rooms.back().cy());
+        stair_tile.flags |= opennefia::TILE_STAIR_DOWN;
+    }
+
+    // NPC：從第二個房間起，每間放一隻，最多 (4 + current_floor_) 隻，上限 8
+    int npc_cap = std::min(4 + current_floor_, 8);
     int npc_count = 0;
-    for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < 5; ++r, ++npc_count) {
+    for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < npc_cap; ++r, ++npc_count) {
         std::string npc_id = "npc_" + std::to_string(npc_count);
+        int npc_hp = 10 + (current_floor_ - 1) * 2;  // 隨樓層加血
         auto e = em_.create();
         em_.emplace<opennefia::MetaDataComponent>(e, npc_id, true);
         em_.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
         em_.emplace<opennefia::NpcAiComponent>(e);
-        em_.emplace<opennefia::HealthComponent>(e, 10, 10);
+        em_.emplace<opennefia::HealthComponent>(e, npc_hp, npc_hp);
     }
+}
 
-    // 註冊 NPC AI 系統
-    em_.add_system(opennefia::npc_ai_system);
+// ---- 樓層切換 ---------------------------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::next_floor() {
+    ++current_floor_;
+    setup_map();
+    recompute_fov();
+    emit_signal("floor_changed", current_floor_);
+    emit_signal("world_changed");
+}
+
+// ---- 完整重置 ---------------------------------------------------------------
+
+void opennefia_gd::OpenNefiaWorld::restart() {
+    // 銷毀英雄
+    if (hero_entity_ != entt::null) {
+        em_.registry().destroy(hero_entity_);
+        hero_entity_ = entt::null;
+    }
+    // 重置狀態
+    game_over_     = false;
+    turn_count_    = 0;
+    current_floor_ = 1;
+    // 重新建立地圖（setup_map 裡會重建英雄，因為 hero_entity_ == entt::null）
+    setup_map();
+    recompute_fov();
+    emit_signal("world_changed");
 }
 
 // ---- 視野計算 ---------------------------------------------------------------
@@ -141,7 +208,11 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
         for (int y = 0; y < map.height; ++y) {
             Color c;
             if (map.is_visible(x, y)) {
-                c = map.at(x, y).is_walkable() ? floor_color : wall_color;
+                if (map.at(x, y).is_stair_down()) {
+                    c = Color(0.80f, 0.65f, 0.10f);  // 金黃色樓梯
+                } else {
+                    c = map.at(x, y).is_walkable() ? floor_color : wall_color;
+                }
             } else if (map.is_explored(x, y)) {
                 Color base = map.at(x, y).is_walkable() ? floor_color : wall_color;
                 c = Color(base.r * 0.4f, base.g * 0.4f, base.b * 0.4f);
@@ -221,6 +292,13 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
     // 正常移動
     sp->x = nx;
     sp->y = ny;
+
+    // 踩到下樓梯
+    if (map.at(sp->x, sp->y).is_stair_down()) {
+        next_floor();
+        return true;
+    }
+
     advance_turn();
     return true;
 }
@@ -250,6 +328,10 @@ void opennefia_gd::OpenNefiaWorld::advance_turn() {
 }
 
 // ---- 狀態查詢 ---------------------------------------------------------------
+
+int opennefia_gd::OpenNefiaWorld::get_current_floor() const {
+    return current_floor_;
+}
 
 int opennefia_gd::OpenNefiaWorld::get_hero_x() const {
     const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);

@@ -8,6 +8,7 @@ namespace opennefia {
 // flags：從 terrain def 快取出來的模擬相關旗標，FOV / 尋路不必查 def table。
 inline constexpr uint8_t TILE_WALKABLE     = 1 << 0;  // 可走入
 inline constexpr uint8_t TILE_BLOCKS_SIGHT = 1 << 1;  // 擋視線
+inline constexpr uint8_t TILE_STAIR_DOWN   = 1 << 2;  // 下樓梯
 
 struct Tile {
     uint16_t terrain{0};
@@ -15,6 +16,7 @@ struct Tile {
 
     bool is_walkable()     const { return (flags & TILE_WALKABLE)     != 0; }
     bool blocks_sight()    const { return (flags & TILE_BLOCKS_SIGHT) != 0; }
+    bool is_stair_down()   const { return (flags & TILE_STAIR_DOWN)   != 0; }
 
     template<class Archive>
     void serialize(Archive& ar) { ar(terrain, flags); }

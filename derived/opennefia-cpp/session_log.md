@@ -25,3 +25,5 @@
 - 2026-06-02: 戰鬥系統完成。新增 health_component.h（hp/max_hp，cereal serialize）；AllComponents 加入 HealthComponent；Hero 20/20 HP、NPC 10/10 HP；hero 撞 NPC → 扣 3 HP（致死則 destroy 實體 + emit npc_died，否則 emit hero_bumped_npc）；npc_ai_system 在 Chebyshev==1 時改為攻擊 hero（扣 2 HP）而非移動；advance_turn 後偵測 hero HP ≤ 0 → emit game_over + 鎖定輸入；InfoLabel 顯示 HP；map_view.gd 接 npc_died / game_over 信號。Build 成功，DLL 更新。
 
 - 2026-06-02: BSP 地城生成完成。新增 core/maps/map_gen.h+cpp（BSP 地下城：遞迴分割、葉節點挖房間、L 形走廊連接、回傳 Room 列表）；地圖升級 60×40；hero 放第一房間中心、NPC 依序放後續房間（最多 5 隻）；GDScript 鏡頭跟隨英雄；InfoLabel 加 Enemies 計數；get_npc_count() 暴露給 GDScript。3 個 subagent 並行開發，build 成功。
+
+- 2026-06-02: 多樓層完成。tile.h 加 TILE_STAIR_DOWN + is_stair_down()；setup_map() 抽出（可重複呼叫）；setup_test_world 改用 systems_ready_ 防止重複 add_system；末尾房間放樓梯（金黃渲染）；next_floor() 銷毀舊 NPC+地圖重生成英雄保留 HP；restart() 完整重置；move() 踩樓梯觸發 next_floor；floor_changed 信號；NPC 隨層數加血（10 + (floor-1)*2），數量上限 min(4+floor, 8)；GDScript 接 floor_changed + R 重置 + InfoLabel 顯示層數。Build 成功。
