@@ -167,3 +167,180 @@ COLOR = mix(color_bottom, color_top, UV2.y);
 ```
 
 實際顏色在 grass_material.tres 中設定（非 Shader 預設值），允許場景設計師調整草地外觀。
+
+---
+
+## 深化補充
+
+### 1. TIME 溢出問題分析
+
+`grass.gdshader:62`：
+```glsl
+float time = TIME * wind_speed;
+```
+
+**TIME 的型別與精度**：Godot Shader 中 `TIME` 是 `float`（32 位元單精度浮點數），在所有平台一致（Godot 4 Shading Language 規格）。
+
+IEEE 754 float32 可精確表示到的整數上限為 **2²⁴ = 16,777,216**（約 1677 萬），超過後相鄰浮點數間距 > 1.0，TIME 每秒遞增量無法被精確表示。
+
+計算跳躍點：
+- `wind_speed = 1.0`（預設值）時，TIME 本身即為秒數
+- 精度喪失點：約 **16,777,216 秒 ≈ 194 天**
+- `wind_speed = 4.0`（最大合理值）時，`time = TIME * 4`，但 TIME 本身在 194 天後已失精，乘 4 不改善精度
+- 實際遊戲場景下，單次遊戲執行幾乎不會超過數小時，**194 天的精度邊界不構成實際問題**
+
+但需注意：`uv += wind_direction_normalized.xz * time` 中，若 TIME 非常大，`uv` 的值也很大，`floor(p)` 與 `fract(p)` 仍能正常分離整數與小數部分（GLSL `fract` 的行為），**Worley 噪聲本身不受 TIME 溢出影響**，因為它依賴 `fract(p)` 而非 `p` 的絕對值。真正的視覺跳躍風險極低。
+
+**sway_yaw 的正弦問題**（`grass.gdshader:72`）：
+```glsl
+float sway_yaw = (deg_sway_yaw * DEG2RAD * sin(time) * wind) + INSTANCE_CUSTOM.w;
+```
+`sin(time)` 在 time 極大時精度問題更嚴重：float 的三角函數對大數值的精度約在 `time > 2^13`（約 8192 秒 ≈ 2.3 小時）後開始衰退，這才是真正可能的問題點。
+
+---
+
+### 2. Worley 噪聲計算成本分析
+
+每株草的 `vertex()` 呼叫路徑（`grass.gdshader:44-56, 65`）：
+
+```glsl
+// worley2() 內部：9 次 random2() 調用
+for (int y = -1; y <= 1; y++) {      // 3 次
+    for (int x = -1; x <= 1; x++) {  // × 3 = 9 次
+        vec2 diff = n + random2(i_p + n) - f_p;
+    }
+}
+wind = pow(worley2(uv), 2.0) * UV2.y;
+```
+
+每次 `random2()` 包含 2 個 `dot()` + 2 個 `sin()` + `fract()`（`grass.gdshader:38-42`）：
+```glsl
+vec2 random2(vec2 p) {
+    return fract(sin(vec2(
+        dot(p, vec2(127.32, 231.4)),
+        dot(p, vec2(12.3, 146.3))
+    )) * 231.23);
+}
+```
+
+**計算量估算（count=1000, 每頂點 3 個）**：
+
+| 層次 | 數量 |
+|------|------|
+| 草株數 | 1000 |
+| 每草頂點數 | 3（三角形） |
+| 每頂點 worley2() 呼叫 | 1 |
+| 每 worley2() 的 random2() | 9 |
+| 每 random2() 的 sin() 呼叫 | 2 |
+| **總 sin() 呼叫 / 幀** | **1000 × 3 × 9 × 2 = 54,000** |
+
+GPU 的 `sin()` 是硬體指令，54,000 次在現代 GPU 上通常在單一 batch 內完成，實際瓶頸不在此。然而 MultiMesh 本身的 vertex shader 吞吐量限制更可能成為瓶頸（1000 × 3 = 3000 個 VS invocation）。
+
+**優化方向**：
+
+- **BlueNoise texture**：預計算 128×128 的 Worley 噪聲貼圖，vertex shader 改為 `texture(noise_tex, uv)` 一次採樣，消除全部 sin() 呼叫
+- **限制 instance 數**：`worley2()` 的代價主要在 sin()，若效能不足可降低 `count`（planter.gd:10）
+- **降低頂點數**：目前每草 3 頂點（三角形），若改為 2 頂點（四邊形裁切）反而頂點更多，三角形已是最低幾何
+
+---
+
+### 3. wind_direction 歸一化缺失分析
+
+`grass.gdshader:61`：
+```glsl
+vec3 wind_direction_normalized = normalize(wind_direction);
+```
+
+**傳入 (0,0,0) 的行為**：`normalize(vec3(0,0,0))` 在 GLSL 的結果是**未定義行為**（undefined behavior），實際上多數 GPU 驅動回傳 `(0,0,NaN)` 或 `(NaN,NaN,NaN)`。
+
+後續影響：
+- `uv += wind_direction_normalized.xz * time` → NaN 傳入 `worley2()`
+- `wind = pow(worley2(uv), 2.0) * UV2.y` → NaN
+- `sway_pitch = (...) + INSTANCE_CUSTOM.z` → NaN
+- `VERTEX = rot_right * rot_forward * vertex` → 頂點變成 NaN → 草葉消失或產生黑色 artifact
+
+**目前 GDScript 側的保護**：`planter.gd` 完全不處理 `wind_direction`（planter.gd:1-74 均未見相關代碼），`wind_direction` 只透過 Material uniform 設定，**沒有任何 GDScript 側的零向量保護**。
+
+預設值 `vec3(0,0,-1)`（`grass.gdshader:20`）在預設狀態下不會觸發此問題，但若編輯器中 uniform 被手動設為 (0,0,0) 則會出現視覺 bug。
+
+**建議修正方式**：
+```glsl
+// 在 vertex() 開頭加入保護
+vec3 wd = wind_direction;
+if (dot(wd, wd) < 0.0001) wd = vec3(0, 0, -1);
+vec3 wind_direction_normalized = normalize(wd);
+```
+
+---
+
+### 4. UV2.y 高度加權的設定方式（GrassFactory 原始碼核對）
+
+`grass_factory.gd:9-31` 建立三角形網格：
+
+```gdscript
+# grass_factory.gd:13-25
+verts.push_back(Vector3(-0.5, 0.0, 0.0))   # 左底
+uvs.push_back(Vector2(0.0, 0.0))            # UV2 = (0, 0) → y=0 根部
+
+verts.push_back(Vector3(0.5, 0.0, 0.0))    # 右底
+uvs.push_back(Vector2(0.0, 0.0))            # UV2 = (0, 0) → y=0 根部
+
+verts.push_back(Vector3(0.0, 1.0, 0.0))    # 頂點
+uvs.push_back(Vector2(1.0, 1.0))            # UV2 = (1, 1) → y=1 頂部
+```
+
+`grass_factory.gd:22-25`：
+```gdscript
+arrays[Mesh.ARRAY_VERTEX] = verts
+arrays[Mesh.ARRAY_TEX_UV2] = uvs    # 直接寫入 UV2 通道
+```
+
+**UV2.y 的對應確認**：
+- 底部兩個頂點：`UV2 = (0.0, 0.0)` → `UV2.y = 0` → `wind = pow(...) * 0 = 0`，根部完全不搖
+- 頂點：`UV2 = (1.0, 1.0)` → `UV2.y = 1` → `wind = pow(worley2(uv), 2.0) * 1`，頂端最大搖擺
+- 顏色漸層：`COLOR = mix(color_bottom, color_top, UV2.y)` → 底部為 color_bottom、頂部為 color_top
+
+**UV2.x 的使用**：shader 中只讀 `UV2.y`（`grass.gdshader:65,82`），`UV2.x` 雖然頂點設為 0 或 1，但完全未被 shader 使用。
+
+注意 `custom_aabb = AABB(Vector3(-0.5, 0.0, -0.5), Vector3(1.0, 1.0, 1.0))`（`grass_factory.gd:29`）：這個 AABB 是**未縮放前的原始大小**，實際每株草透過 INSTANCE_CUSTOM 的 x/y 縮放後，AABB 可能不準確（草可能被過早剔除），但對極小三角形影響不大。
+
+---
+
+### 5. MultiMesh INSTANCE_CUSTOM 資料格式（完整對照）
+
+**GDScript 寫入**（`planter.gd:39-44`）：
+
+```gdscript
+multimesh.set_instance_custom_data(index, Color(
+    randf_range(width.x, width.y),              # R通道 → 寬度縮放因子
+    randf_range(height.x, height.y),            # G通道 → 高度縮放因子
+    deg_to_rad(randf_range(sway_pitch.x, sway_pitch.y)),  # B通道 → pitch 靜止偏移（弧度）
+    deg_to_rad(randf_range(sway_yaw.x, sway_yaw.y))       # A通道 → yaw 靜止偏移（弧度）
+))
+```
+
+`multimesh.set_custom_data_format(MultiMesh.CUSTOM_DATA_FLOAT)`（`planter.gd:31`）設定為浮點格式，確保 rgba 各通道為 float32 而非 uint8。
+
+**Shader 讀取**（`grass.gdshader:71-80`）：
+
+| INSTANCE_CUSTOM 通道 | Shader 讀取 | 用途 |
+|---------------------|------------|------|
+| `.x`（原 Color.r） | `INSTANCE_CUSTOM.x` | `vertex.xy *= INSTANCE_CUSTOM.x`：寬度縮放（x 和 y） |
+| `.y`（原 Color.g） | `INSTANCE_CUSTOM.y` | `vertex.y *= INSTANCE_CUSTOM.y`：高度縮放（僅 y） |
+| `.z`（原 Color.b） | `INSTANCE_CUSTOM.z` | `sway_pitch = ... + INSTANCE_CUSTOM.z`：靜止 pitch 偏移 |
+| `.w`（原 Color.a） | `INSTANCE_CUSTOM.w` | `sway_yaw = ... + INSTANCE_CUSTOM.w`：靜止 yaw 偏移 |
+
+**預設數值範圍**（`planter.gd:9-14`）：
+
+| 參數 | 範圍 | 說明 |
+|------|------|------|
+| `width` | 0.01 ~ 0.02 | 每株草寬度縮放為原始網格寬（1.0 單位）的 1~2% |
+| `height` | 0.04 ~ 0.08 | 高度縮放為 4~8%（極小三角形，視覺上草高約 0.04~0.08 單位） |
+| `sway_pitch` | 0° ~ 10° → 0~0.175 rad | 草的靜止前傾角度 |
+| `sway_yaw` | 0° ~ 10° → 0~0.175 rad | 草的靜止側傾角度 |
+
+**縮放邏輯的微妙點**：`vertex.xy *= INSTANCE_CUSTOM.x` 同時縮放 x 和 y（但之後 `vertex.y *= INSTANCE_CUSTOM.y` 再次縮放 y），所以最終：
+- `vertex.x` 縮放因子 = `INSTANCE_CUSTOM.x`
+- `vertex.y` 縮放因子 = `INSTANCE_CUSTOM.x * INSTANCE_CUSTOM.y`（兩次相乘）
+
+height 參數（y 方向）的真實縮放是 width × height 的乘積，而非單獨 height 值。以預設值計算：寬度 0.01~0.02，高度 0.04~0.08，頂點最終 y 值範圍 = 0.01×0.04 ~ 0.02×0.08 = **0.0004 ~ 0.0016 單位**（非常迷你的草）。

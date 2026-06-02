@@ -1,5 +1,8 @@
 # Hy (Hylang) 專案總覽 (00_overview.md)
 
+> 對齊版本：**Hy 1.3.0**（2026-05-24 釋出，源碼克隆於 `projects/hy/`，2026-05-26 核對）。
+> 本系列教學的所有範例皆已用 Hy 1.3 實測。若你曾接觸過 Hy 0.x，請特別留意 `import`/`require` 不再有內層中括號、`if` 必須三引數、`&rest`→`#*`、`->`/`unless`/`inc` 等已移至 `hyrule` 套件等變更——綜覽見 [`11_macros_advanced.md`](11_macros_advanced.md) §9 速查表。
+
 本文件提供 Hy 的高層次介紹，幫助你理解為什麼要使用 Hy 以及它在 Python 生態系中的地位。
 
 ## 1. 核心哲學：當 Lisp 遇上 Python
@@ -27,8 +30,8 @@ pip install hy
   "這是一個簡單的問候函數"
   (print f"哈囉，{name}！歡迎來到 Hy 的世界。"))
 
-(if (= __name__ "__main__")
-  (greet "開發者"))
+(when (= __name__ "__main__")
+  (greet "開發者"))   ; ⚠️ Hy 1.x 的 if 必須三引數；只想「成立才做」用 when
 ```
 
 ### 執行方式
@@ -46,9 +49,15 @@ pip install hy
 ---
 
 ## 4. 學習路徑建議
-1.  **01_basic**: 掌握前綴表達式與基礎類型。
-2.  **02_advance**: 學習函數定義與流程控制。
-3.  **03_containers**: 熟悉 Python 資料結構在 Hy 中的展現。
-4.  **04_modules**: 理解 Python 模組導入與 Hy 宏的特殊處理。
-5.  **05_meta_programming**: 探索 Lisp 最強大的宏系統。
-6.  **06_details**: 深入了解名稱重整與底層互操作細節。
+1.  **prepare**: 環境建置與第一個多檔案專案（直接動手做）。
+2.  **01_basic**: 掌握前綴表達式與基礎類型。
+3.  **02_advance**: 學習函數定義與流程控制。
+4.  **03_containers**: 熟悉 Python 資料結構在 Hy 中的展現。
+5.  **04_modules**: 理解 Python 模組導入與 Hy 宏的特殊處理。
+6.  **05_meta_programming**: 宏的基礎（quoting、`defmacro`、gensym、macroexpand）。
+7.  **06_details**: 名稱重整、`defclass`、語意差異。
+8.  **07_functional_threading**: 線程宏與函數式工具（含 hyrule 用法）。
+9.  **08_async_decorators**: 非同步、生成器、裝飾器。
+10. **09_testing_interop**: 型別註解、pytest、Hy↔Python 互操作。
+11. **10_hy_core_ref**: Hy 核心 vs hyrule 參考。
+12. **11_macros_advanced**: 宏的進階與實戰（編譯期模型、reader macro、`hy.R`/`hy.I`）。

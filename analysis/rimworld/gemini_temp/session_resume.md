@@ -1,27 +1,55 @@
-# Session Resume: RimWorld Empire & Life Simulation System
+# Session Resume: RimWorld Analysis — 核對完成，準備實作
 
-## 最終進度摘要 (Final Progress Summary)
-本次會話產出了一份極其詳盡的 RimWorld 超大型 Mod 藍圖。該藍圖完美融合了「高效能管理」、「宏觀地緣政治」與「微觀角色扮演生活」。
-
-### 核心設計全貌:
-1.  **底層效能與產能**: 哨站採樣、地圖封存與 Delta 快照計算。
-2.  **全球軍事與地緣**: 襲擊攔截、邊境長城、全球空降與「嘲諷值」重定向。
-3.  **動態世界演化**: 聚落分級 (AoW 模式)、實體行動隊 (Squads) 與派系動態擴張。
-4.  **RPG 任務與生活**: 冒險者公會、佈告欄任務系統、以及讓盟友自主運作的「模擬市民模式」。
-5.  **領導力與權威**: 基於階級、聲望與職位的動態指揮權系統。
-
-## 設計文件索引 (All Artifacts)
-*   **效能核心**: `advanced_outpost_system.md`, `productivity_profiling_logic.md`, `simplified_outpost_logic.md`
-*   **軍事與地緣**: `military_outpost_extension.md`, `geopolitical_barrier_extension.md`
-*   **世界動態**: `dynamic_world_factions.md`, `dynamic_world_activity.md`
-*   **沉浸式生活**: `rpg_quest_system.md`, `sims_mode_community.md`, `authority_leadership_system.md`
-*   **外交與物流**: `global_influence_extension.md`, `event_routing_extension.md`
-
-## 核心設計理念 (Core Philosophy)
-*   **效能優先**: 透過「封存」而非「並行」來支援數百人的帝國。
-*   **沉浸為王**: 讓世界在玩家不操作時也能運轉，玩家是參與者而非純粹的管理者。
-*   **權力成長**: 指揮權是贏來的，不是天生的。
+*更新日期：2026-06-01（原稿：2026-05-08）*
+*狀態：全部文件核對完畢，分析資料夾已整備完成。*
 
 ---
-*存檔日期: 2026-05-08*
-*狀態: 設計藍圖已封存，具備完整的技術指導意義。*
+
+## 當前理解
+
+五個子系統 Mod 藍圖設計完成（2026-05-08），隨後對全部 67 份 .md 文件進行了三輪 1.6/Odyssey 源碼核對，發現並修正 20+ 個 API 錯誤與杜撰方法，現已可進入實作階段。
+
+---
+
+## 已完成項目
+
+### 設計階段（2026-05-08）
+- 五個子系統設計藍圖：魔紋、ARPG、哨站、地緣/世界、生活/政治
+- others/ 14 份構想、details/ 15 份 C# 實作、tutorial/ 29 份、architecture/ 8 份
+
+### 核對階段（2026-05-23 ~ 2026-06-01）
+- details/ × 15：找出 13 個問題，全部回寫修正
+- architecture/ × 8（+2 新增）：找出 3 個問題，全部回寫修正
+- tutorial/ × 29：找出 4 個問題，全部回寫修正
+- others/ × 14：找出 2 個問題，全部回寫修正
+- answers/ × 2：核對完成
+
+### 補充產出（2026-06-01）
+- `answers/api_changes_1_6.md`：20+ 條 API 速查表，10 分類
+- `architecture/def_system.md`：Def 載入管線完整分析（~450 行，全部源碼核對）
+- `html/`：暗色系導覽層（index.html + 5 分類頁 + _shared.css，涵蓋 67 份 .md）
+- `README.md`：資料夾入口說明文件
+
+---
+
+## 剩餘待辦
+
+- `others/` 分組重組（14 份平鋪，可按子系統建子資料夾或僅在 HTML 層分組）
+- 開始五個子系統的實際 Mod 實作（尚未決定從哪個子系統開始）
+
+---
+
+## 核心上下文摘要
+
+**關鍵 API 陷阱**（實作前必看 `answers/api_changes_1_6.md`）：
+- `PlanetTile` 取代裸 `int`（世界格 ID）
+- `BiomeWorker.GetScore` 多了第一個 `BiomeDef` 參數
+- `AddHumanlikeOrders` 已移除 → 改用 `FloatMenuOptionProvider`
+- `GenRadial.RadialPawnsAround` 不存在 → LINQ 手動篩
+- `Scribe_Values` 不支援陣列 → `Scribe_Collections`
+- Pawn 集合存檔用 `LookMode.Reference`（非 Deep）
+- `Find.CurrentMap.resourceCounter`（Map 非靜態類別）
+
+**哨站封存**：推薦路線 C（銷毀+重生成新圖），臨時展開用 PocketMap（見 `architecture/outpost_archiving_strategy.md`）。
+
+**ResourceCounter.AllCountedAmounts**：只統計儲存區，非全圖快照。

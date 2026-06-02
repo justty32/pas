@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>修仙世界模擬器 — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">⚡ CWS Analysis</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="architecture.html">架構</a>
+  <a href="simulation_loop.html">模擬迴圈</a>
+  <a href="llm_integration.html">LLM 整合</a>
+  <a href="../architecture/01_level1_overview.md">L1 概覽 (MD)</a>
+  <a href="../architecture/02_level2_modules.md">L2 模組 (MD)</a>
+</nav>
+
+<div class="page-header">
+  <h1>修仙世界模擬器 (Cultivation World Simulator)</h1>
+  <p>AI 驅動的修仙世界自演化模擬器 — v3.4.0 ｜ Python 3.10+ / FastAPI / Vue3 / PixiJS ｜ 核對 2026-06-01</p>
+</div>
+
+<!-- 快速定位 -->
+<div class="section">
+  <div class="section-title">專案定位</div>
+  <div class="highlight-box hl-orange">
+    玩家扮演「天道」，觀察由規則系統與 LLM 共同驅動的修仙世界自行演化。每個 NPC 都是獨立的 LLM Agent，無預設劇本，所有事件由世界邏輯自主推演。
+  </div>
+</div>
+
+<!-- 技術棧 -->
+<div class="section">
+  <div class="section-title">技術棧</div>
+  <div class="g4">
+    <div class="card card-accent-blue">
+      <h3>後端</h3>
+      <ul>
+        <li>Python 3.10+</li>
+        <li>FastAPI + Uvicorn</li>
+        <li>WebSocket</li>
+        <li>SQLite（事件持久化）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-green">
+      <h3>前端</h3>
+      <ul>
+        <li>Vue.js 3.x + TypeScript</li>
+        <li>Vite</li>
+        <li>PixiJS（2D 地圖動畫）</li>
+        <li>Vue-i18n</li>
+      </ul>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>LLM 接入</h3>
+      <ul>
+        <li>urllib 直呼（無 SDK）</li>
+        <li>OpenAI 相容接口</li>
+        <li>Anthropic 原生接口</li>
+        <li>Semaphore 並發控制</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>部署</h3>
+      <ul>
+        <li>Docker + Nginx</li>
+        <li>PyInstaller frozen exe</li>
+        <li>Electron 桌面版</li>
+        <li>Epic Games Store</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 架構分層 -->
+<div class="section">
+  <div class="section-title">架構分層（從上到下）</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>🖥️ 呈現層</h3>
+      <p><code>web/</code>（Vue3 + PixiJS）</p>
+      <ul>
+        <li>後端驅動架構（server-driven）</li>
+        <li>WebSocket 接收 tick 狀態推送</li>
+        <li>REST API 發送 query / command</li>
+      </ul>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>🔌 API 層</h3>
+      <p><code>server/api/public_v1/</code></p>
+      <ul>
+        <li><code>/api/v1/query/*</code> 只讀查詢</li>
+        <li><code>/api/v1/command/*</code> 寫入指令</li>
+        <li><code>/ws</code> WebSocket 即時推播</li>
+        <li><code>/api/settings*</code> 設定管理</li>
+      </ul>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>🔧 服務層</h3>
+      <p><code>server/services/</code></p>
+      <ul>
+        <li>game_lifecycle（新遊戲/重啟）</li>
+        <li>roleplay_service（角色扮演模式）</li>
+        <li>save_load_control（存讀檔）</li>
+        <li>avatar_control（動態角色管理）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>📦 領域層</h3>
+      <p><code>classes/</code>（~180 檔案）</p>
+      <ul>
+        <li>Avatar、Sect、World、Dynasty</li>
+        <li>action/（43 個動作）</li>
+        <li>mutual_action/（14 個互動）</li>
+        <li>items/、effect/、relation/</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>⚙️ 引擎層</h3>
+      <p><code>sim/simulator_engine/</code></p>
+      <ul>
+        <li>Simulator.step() = 1 個遊戲月</li>
+        <li>20 相位有序編排</li>
+        <li>SimulationStepContext 共享狀態</li>
+        <li>finalize_step() 統一收尾</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <h3>📐 規則層</h3>
+      <p><code>systems/</code></p>
+      <ul>
+        <li>修為境界（cultivation.py）</li>
+        <li>戰鬥勝率（battle.py）</li>
+        <li>時間系統（time.py）</li>
+        <li>宗門決策（sect_decision_context.py）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 核心設計亮點 -->
+<div class="section">
+  <div class="section-title">核心設計亮點</div>
+  <div class="g2">
+    <div class="card card-accent-orange">
+      <h3>🤖 全員 LLM 驅動</h3>
+      <p>每位 NPC 的決策、關係演化、外號生成、背景故事、隨機事件均透過 LLM 生成。16 個任務場景各自對應 NORMAL/FAST 模式，由 <code>static/config.yml</code> 集中配置。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>📅 月份制回合</h3>
+      <p>每個 <code>Simulator.step()</code> 推進 1 個遊戲月，20 個有序相位確保感知 → 決策 → 行動 → 社交 → 死亡 → 維護的正確因果順序。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>🔒 寫入序列化</h3>
+      <p>所有外部寫入必須透過 <code>command_handlers</code> 序列化，不得與 <code>Simulator.step()</code> 並發，防止世界狀態競爭。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>💾 三層設定</h3>
+      <p>只讀 <code>config.yml</code>（世界規則）＋ 用戶 <code>settings.json / secrets.json</code>（LLM 配置）＋ <code>RunConfig</code>（本局快照，隨存檔保存）。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>🌐 外接 API</h3>
+      <p>穩定的 <code>/api/v1/query/*</code> 和 <code>/api/v1/command/*</code> 接口，設計給外部 Agent/Claw 接入。支援觀察→決策→干預的閉環玩法。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>📦 無 SDK 依賴</h3>
+      <p>LLM 呼叫使用 Python 標準庫 <code>urllib</code> 直接實作，同時支援 OpenAI 相容與 Anthropic 原生兩種接口格式，零第三方 AI SDK 依賴。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 分析文件導覽 -->
+<div class="section">
+  <div class="section-title">分析文件導覽</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>📄 Level 1 — 初始探索</h3>
+      <p>技術棧、目錄結構、入口點、設定系統、API 設計、構建指令</p>
+      <p style="margin-top:8px;"><a href="../architecture/01_level1_overview.md">→ 查看 MD 原文</a></p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>📄 Level 2 — 核心模組</h3>
+      <p>各層模組職責、20 相位模擬迴圈、耦合點與資料流</p>
+      <p style="margin-top:8px;"><a href="../architecture/02_level2_modules.md">→ 查看 MD 原文</a></p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>🔄 模擬迴圈詳解</h3>
+      <p>20 個相位的執行細節、LLM 呼叫點分布、Phase 之間的資料依賴</p>
+      <p style="margin-top:8px;"><a href="simulation_loop.html">→ 查看詳細頁</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>🤖 LLM 整合分析</h3>
+      <p>LLM 客戶端架構、任務模式配置、錯誤分類、並發控制機制</p>
+      <p style="margin-top:8px;"><a href="llm_integration.html">→ 查看詳細頁</a></p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>🏛️ 架構深度分析</h3>
+      <p>分層架構圖、模組耦合點、資料流向、關鍵設計決策</p>
+      <p style="margin-top:8px;"><a href="architecture.html">→ 查看詳細頁</a></p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>📋 待深化方向</h3>
+      <ul>
+        <li>L3：NPC AI 決策鏈深度分析</li>
+        <li>L3：宗門系統與外交機制</li>
+        <li>L4：存檔格式與序列化設計</li>
+        <li>L5：外部控制 API 規格文件</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 快速問答 -->
+<div class="section">
+  <div class="section-title">快速問答</div>
+  <table>
+    <thead><tr><th>問題</th><th>答案</th></tr></thead>
+    <tbody>
+      <tr><td>一個「回合」是多少時間？</td><td>1 個遊戲月（<code>Simulator.step()</code> 一次推進）</td></tr>
+      <tr><td>NPC 如何做決策？</td><td>Phase 4：<code>actions.phase_decide_actions()</code> 呼叫 LLM，為每個無計畫角色生成行動鏈</td></tr>
+      <tr><td>事件存在哪裡？</td><td>SQLite <code>events.db</code>（<code>EventManager</code> 管理，in-memory 快取 + 持久化）</td></tr>
+      <tr><td>存檔格式？</td><td>JSON（跨物件引用只存 ID）+ SQLite 事件庫，儲存於 <code>$CWS_DATA_DIR/saves/</code></td></tr>
+      <tr><td>如何支援多語言？</td><td>Python 後端用 gettext .mo，前端用 Vue-i18n，語言清單真源為 <code>static/locales/registry.json</code></td></tr>
+      <tr><td>LLM 並發上限？</td><td>由 <code>settings.max_concurrent_requests</code> 控制 asyncio.Semaphore</td></tr>
+      <tr><td>如何外接 Agent？</td><td><code>GET /api/v1/query/runtime/status</code> 查狀態 → <code>POST /api/v1/command/game/start</code> 開局 → 查詢/指令循環</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

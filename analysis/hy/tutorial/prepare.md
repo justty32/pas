@@ -80,7 +80,7 @@ my_hy_project/
 ```hylang
 ;; core_macros.hy - 此檔案存放編譯期執行的「宏」
 
-(defmacro log-action [action-name &rest body]
+(defmacro log-action [action-name #* body]
   "此宏會在執行 body 代碼前後自動印出 Log 訊息"
   `(do
      (print f"[LOG] 開始執行：{~action-name}...")
@@ -88,6 +88,8 @@ my_hy_project/
      (print f"[LOG] 執行完成，結果為: {result}")
      result))
 ```
+
+> 注意：收集「剩餘參數」用 `#* body`（Hy 1.x）。舊版的 `&rest body` 已移除。
 
 ### 檔案二：logic.hy (定義函數)
 這裡存放一般的 Python 函數邏輯。
@@ -112,30 +114,31 @@ my_hy_project/
 ```hylang
 ;; main.hy - 核心入口
 
-;; 1. 導入其他檔案的函數 (使用 import)
-(import [logic [calculate-task-priority get-status-label]])
+;; 1. 導入其他檔案的「函數」用 import（注意 Hy 1.x 寫法：模組名在前，無內層多餘括號）
+(import logic [calculate-task-priority get-status-label])
 
-;; 2. 導入其他檔案的宏 (使用 require)
-(require [core_macros [log-action]])
+;; 2. 導入其他檔案的「宏」用 require（宏在編譯期就要到位，故與 import 分流）
+(require core_macros [log-action])
 
 (defn run-main []
   (print "=== 任務系統啟動 ===")
-  
+
   ;; 使用 log-action 宏包裹一段計算邏輯
   (setv my-priority (log-action "計算核心優先級"
                        (calculate-task-priority 15 4)))
-  
-  ;; 使用線程宏 (->) 簡化調用鏈
-  (-> my-priority
-      (get-status-label)
-      (print))
-  
+
+  ;; 把優先級轉成標籤再印出（巢狀呼叫；想用線程宏 -> 請見下方說明）
+  (print (get-status-label my-priority))
+
   (print "=== 系統關閉 ==="))
 
 ;; 確保直接執行此檔時才運行 run-main
-(if (= __name__ "__main__")
-    (run-main))
+;; ⚠️ Hy 1.x 的 if 必須三引數；「只在成立時做」請用 when
+(when (= __name__ "__main__")
+  (run-main))
 ```
+
+> **關於線程宏 `->`**：很多教學會把上面那行寫成 `(-> my-priority (get-status-label) (print))`。但 `->`／`->>` 在 **Hy 1.x 已不在核心**，改放在 `hyrule` 套件。要用得先 `pip install hyrule`，再於檔案頂端 `(require hyrule [-> ->>])`。細節見 [`07_functional_threading.md`](07_functional_threading.md) 與 [`11_macros_advanced.md`](11_macros_advanced.md)。
 
 ---
 

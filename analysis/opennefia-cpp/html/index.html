@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>opennefia-cpp — 分析首頁</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:2.8rem;font-weight:800;
+  background:linear-gradient(135deg,var(--green) 0%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.hero .sub{font-size:1rem;color:var(--muted);margin-top:10px;max-width:660px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--cyan);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--cyan);align-self:flex-end;}
+
+.oneliner{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;margin-bottom:32px;font-size:.95rem;font-style:italic;
+  color:var(--text);border-left:4px solid var(--green);line-height:1.8;}
+.oneliner strong{color:var(--green);}
+
+.completion-banner{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);
+  border-radius:10px;padding:20px 24px;margin-bottom:28px;display:flex;align-items:center;gap:16px;}
+.cb-check{font-size:2rem;flex-shrink:0;}
+.cb-text h3{font-size:.95rem;font-weight:700;color:var(--green);margin-bottom:4px;}
+.cb-text p{font-size:.82rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">opennefia-cpp</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">擴充教學</a>
+  <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>opennefia-cpp</h1>
+  <p class="sub">以 godot-free 純 C++20 重寫 OpenNefia 引擎核心<br>
+  架構藍本：medps（EnTT + cereal + 自由函式系統）</p>
+  <p class="sub2">— analysis/opennefia-cpp · 事後架構分析 · Phase 0–4 核心完成 —</p>
+  <div class="badge-row">
+    <span class="badge badge-blue">C++20</span>
+    <span class="badge badge-green">EnTT v3.16.0</span>
+    <span class="badge badge-orange">cereal v1.3.2</span>
+    <span class="badge badge-purple">yaml-cpp 0.8.0</span>
+    <span class="badge badge-cyan">doctest v2.4.11</span>
+    <span class="badge badge-gray">CMake 3.14+</span>
+  </div>
+</div>
+
+<!-- Completion Banner -->
+<div class="completion-banner">
+  <div class="cb-check">✅</div>
+  <div class="cb-text">
+    <h3>核心 Phase 0–4 + 前端 F1–F4 + NPC AI + FOV + 戰鬥 + 物品 + 多樓層 + 存讀檔 全部完成（2026-06-02）</h3>
+    <p>核心：36 test cases / 139 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。</p>
+  </div>
+</div>
+
+<!-- One-liner -->
+<div class="oneliner">
+  <strong>opennefia-cpp</strong> = 把 OpenNefia C# 引擎核心的「反射依賴注入 / 系統掃描自動發現 / DataField 序列化」三大 C# 專屬特性，以 C++20 的 <strong>entt::type_list + fold expression</strong>、<strong>自由函式明確 vector 登錄</strong>、<strong>SystemCtx 顯式傳遞</strong>取代，在 medps 已驗證架構上重現同樣意圖，不依賴任何前端。
+</div>
+
+<!-- 三大反射取代 -->
+<div class="section">
+  <div class="section-title">C++ 沒有反射，三大問題的實際解法</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>① 依賴注入</h3>
+      <p>C# <code>[Dependency]</code> → <code>SystemCtx</code> 顯式傳遞（系統為無狀態自由函式，根本不需要 DI）；全域服務用 <code>ServiceContext</code> 強型別單例。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>② 序列化</h3>
+      <p>C# <code>[DataField]</code> 反射 → <code>AllComponents type_list</code> + fold expression + cereal adapter。新增 component 型別只改一行清單，存讀自動覆蓋。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>③ 系統發現</h3>
+      <p>C# Assembly 掃描 → <code>add_system(lambda)</code> 顯式 vector 登錄。順序即執行序，無啟動期反射開銷，可斷點可預測。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Phase Pipeline -->
+<div class="section">
+  <div class="section-title">實作階段（全部完成）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">Phase 0<br><small>CMake 骨架</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">Phase 1<br><small>ECS 地基</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">Phase 2<br><small>原型系統</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">Phase 3<br><small>序列化</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">Phase 4<br><small>地圖 + 整合</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">F1<br><small>GDExtension</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">F2<br><small>地圖渲染</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">F3<br><small>輸入 + UI</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">NPC AI<br><small>wander+chase</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">FOV<br><small>霧中戰爭</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">F4<br><small>音效框架</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">NPC 警覺<br><small>LOS + alert</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">戰鬥系統<br><small>HP + 傷害</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">物品 + 樓層<br><small>藥水 + BSP</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">存讀檔<br><small>F5 / F9</small></span>
+  </div>
+</div>
+
+<!-- 頁面導覽 -->
+<div class="section">
+  <div class="section-title">文件導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="architecture.html">
+      <div class="nc-icon">🏗</div>
+      <h3>架構分析</h3>
+      <p>ECS 地基 / EventBus 設計、原型系統 YAML 繼承解析（YAML::Clone 坑）、序列化三件套移植、MapData 稠密網格設計、CMake / MSVC 相容坑點、三大反射取代對照表。</p>
+      <span class="nc-arrow">→ architecture.html</span>
+    </a>
+
+    <a class="nav-card" href="../architecture/summary.md">
+      <div class="nc-icon">📄</div>
+      <h3>架構總結（.md）</h3>
+      <p>完整 Markdown 版本，10 節涵蓋所有 Phase 的設計決策與程式碼片段（source of truth）。</p>
+      <span class="nc-arrow">→ architecture/summary.md</span>
+    </a>
+
+    <a class="nav-card" href="tutorial.html">
+      <div class="nc-icon">📖</div>
+      <h3>擴充教學</h3>
+      <p>如何新增 Component、系統、地形、NPC 種類、物品類型、GDExtension Signal，以及 C++ 成員變數納入存讀檔的設計模式。九個實戰步驟，含完整程式碼片段。</p>
+      <span class="nc-arrow">→ tutorial.html</span>
+    </a>
+
+    <a class="nav-card" href="frontend.html">
+      <div class="nc-icon">🎮</div>
+      <h3>前端綁定（F1–F5）</h3>
+      <p>GDExtension 工具鏈打通、OpenNefiaWorld Node 設計、完整 API 表（動作 / 查詢 / Signals / 存讀檔）、輸入迴路說明。</p>
+      <span class="nc-arrow">→ frontend.html</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- 數字快照 -->
+<div class="section">
+  <div class="section-title">實作成果快照（2026-06-01）</div>
+  <div class="g4">
+    <div class="card card-accent-green">
+      <h3>測試通過</h3>
+      <p>smoke + ECS + 原型 + 序列化 + 地圖整合。</p>
+      <div style="margin-top:8px">
+        <span class="badge badge-green">36 cases</span>
+        <span class="badge badge-green" style="margin-left:4px">139 assertions</span>
+      </div>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>核心 .h 檔</h3>
+      <p>不含 gbind/ 前端，純 godot-free 核心標頭。</p>
+      <div style="margin-top:8px"><span class="badge badge-blue">18 個</span></div>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>原型繼承層級</h3>
+      <p>BaseEntity → BaseChara → Putit / EliteWarrior（3 層）+ SimpleItem。</p>
+      <div style="margin-top:8px"><span class="badge badge-orange">5 原型</span></div>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>FetchContent 依賴</h3>
+      <p>EnTT / cereal / yaml-cpp / spdlog / doctest 全部 vendored。</p>
+      <div style="margin-top:8px"><span class="badge badge-purple">5 套件</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 後續 -->
+<div class="section">
+  <div class="section-title">前端進度（F1–F4）</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>F1 工具鏈 ✅</h3>
+      <p><code>src/gbind/</code>（<code>OpenNefiaCore : RefCounted</code> + <code>register_types</code>）；<code>-DOPENNEFIA_BUILD_GDEXTENSION=ON</code> 建置成功；<code>opennefia_gd.dll</code> 5.1 MB 產出。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F2 地圖渲染 ✅</h3>
+      <p><code>OpenNefiaWorld : Node</code>，<code>_ready()</code> 建 20×15 測試世界；<code>generate_map_image(cell_px)</code> 三色 Image；GDScript 一行轉 Sprite2D。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F3 輸入 + UI ✅</h3>
+      <p><code>move(dx,dy)</code> / <code>wait_turn()</code> + <code>world_changed</code> signal；GDScript WASD/arrow/numpad 8向 + 等待；<code>InfoLabel</code> 顯示座標 + 回合數。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>NPC AI + FOV ✅</h3>
+      <p><code>npc_ai_system</code>（wander + Chebyshev 距離追蹤）；<code>fov_system</code>（Bresenham LOS，radius=8）；三層霧中戰爭渲染（未探索/暗/原色）。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>碰撞信號 + F4 音效 ✅</h3>
+      <p><code>hero_bumped_wall</code> / <code>hero_bumped_npc(npc_id)</code> 信號；GDScript <code>AudioStreamPlayer</code> 三路框架，plug-in <code>.ogg</code> 即啟用。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>NPC 警覺 + 戰鬥 + 物品 + 多樓層 ✅</h3>
+      <p>NPC 視線偵測（LOS）+ alerted 狀態記憶；三種 NPC（putit/warrior/bat）各有 HP/攻/速；英雄攻擊 3 dmg；<code>game_over</code> signal；回血藥自動拾取；60×40 BSP 地城；<code>TILE_STAIR_DOWN</code> 多樓層切換。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>存讀檔 F5/F9 ✅</h3>
+      <p><code>WorldStateComponent</code>（turn_count + current_floor）掛在 map_entity_，隨 AllComponents 一併 cereal PortableBinary 序列化。<code>save_game()</code> / <code>load_game()</code> / <code>has_save_game()</code>；game_over 後仍可 F9 讀檔。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="highlight-box hl-blue" style="margin-top:8px">
+  源碼位置：<code>../../derived/opennefia-cpp/</code>（本工作區相對路徑）。分析參照：<a href="../../analysis/OpenNefia/html/cpp_plan.html">analysis/OpenNefia C++ 計畫</a> / <a href="../../analysis/OpenNefia/details/plan_cpp/05_lessons_from_medps.md">medps 印證文件</a>。
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽層；內容真實來源 (source of truth) 為 <code>architecture/summary.md</code> 與 <code>../../derived/opennefia-cpp/</code> 下的源碼。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

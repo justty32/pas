@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>多人系統 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.wrapper{max-width:1200px;margin:0 auto;}
+.highlight-box{padding:14px 18px;border-radius:7px;font-size:.85rem;margin-bottom:16px;}
+.hl-red{background:rgba(248,81,73,.09);color:var(--red);border:1px solid rgba(248,81,73,.25);}
+.hl-orange{background:rgba(210,153,34,.09);color:var(--orange);border:1px solid rgba(210,153,34,.25);}
+.bug-title{font-size:1.05rem;font-weight:800;letter-spacing:.5px;margin-bottom:8px;}
+.card ul{margin:8px 0 0 16px;font-size:.8rem;color:var(--muted);}
+.card ul li{margin-bottom:4px;}
+.card ul li strong{color:var(--text);}
+.section-gap{margin-top:28px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html" class="active">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div class="wrapper">
+
+<div class="page-header">
+  <h1>多人系統</h1>
+  <p>ENet 架構、RPC 同步、已知安全漏洞</p>
+</div>
+
+<!-- ENet 架構 -->
+<div class="section">
+  <div class="section-title">ENet 架構</div>
+  <div class="card card-accent-blue">
+    <h3>伺服器 / 客戶端架構</h3>
+    <ul>
+      <li>無 relay：所有封包直接在 peer 間傳遞，無中間轉發伺服器</li>
+      <li>底層實作：<code>ENetMultiplayerPeer</code></li>
+      <li><strong>Authority 模型</strong>：玩家 authority = 各自的 peer_id；怪物 authority = 1（伺服器端）</li>
+    </ul>
+  </div>
+</div>
+
+<!-- RPC 同步機制 -->
+<div class="section section-gap">
+  <div class="section-title">RPC 同步機制</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>機制</th>
+          <th>RPC 模式</th>
+          <th>說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>HP 同步</td>
+          <td><code>call_remote</code></td>
+          <td>authority 端在 <code>hp_changed</code> signal 觸發</td>
+        </tr>
+        <tr>
+          <td>耐力同步</td>
+          <td><code>call_remote</code></td>
+          <td>同上，authority 端驅動</td>
+        </tr>
+        <tr>
+          <td>死亡同步</td>
+          <td><code>any_peer + call_local</code></td>
+          <td>雙端執行確保狀態一致</td>
+        </tr>
+        <tr>
+          <td>復活同步</td>
+          <td><code>rpc</code></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>玩家加入</td>
+          <td><code>register_player any_peer</code></td>
+          <td>廣播給所有 peer</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Transform 同步缺失（重大 Bug） -->
+<div class="section section-gap">
+  <div class="section-title">重大 Bug</div>
+  <div class="highlight-box hl-red">
+    <div class="bug-title">Transform 同步完全缺失</div>
+    <ul style="margin:8px 0 0 16px;">
+      <li><code>entity.gd:218</code> 中 <code>#rpc("transform", tf)</code> 被注解掉</li>
+      <li>接收端函式從未定義 → 解除注解後也會直接報錯</li>
+      <li><strong>影響：</strong>遠端玩家位置永遠凍結在出生點，無法移動同步</li>
+      <li><strong>次生影響：</strong><code>player.gd:183-189</code> 的死亡方向推算永遠為零向量，擊退方向錯誤</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 安全漏洞清單 -->
+<div class="section section-gap">
+  <div class="section-title">安全漏洞</div>
+  <div class="card card-accent-red">
+    <h3>已知五項漏洞</h3>
+    <ul>
+      <li><strong>ID 偽造：</strong>客戶端可覆蓋 <code>players[1]</code>（伺服器 authority 槽位）</li>
+      <li><strong>Username 節點路徑注入：</strong><code>has_node</code> 支援路徑語法，惡意 username 可遍歷場景樹</li>
+      <li><strong>Transform 傳送攻擊：</strong>一旦 Transform 同步修復後，客戶端可傳送任意位置</li>
+      <li><strong>客戶端完全信任接收資料：</strong>伺服器端不驗證 RPC 資料合法性</li>
+      <li><strong>缺少 <code>get_remote_sender_id()</code> 比對：</strong>無法確認 RPC 是否由合法 peer 發出</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 大廳 HTTP 殘留 -->
+<div class="section section-gap">
+  <div class="section-title">大廳系統殘留問題</div>
+  <div class="highlight-box hl-orange">
+    <strong>Godot 3 語法殘留：</strong><code>networking.gd:34</code> 使用了已廢棄的 <code>yield</code> 語法（Godot 3 風格），
+    在 Godot 4 環境下無法執行。<br>
+    <strong>修正方向：</strong>改為 callback 串接或 <code>await</code> 語法。
+  </div>
+</div>
+
+<!-- 參照連結 -->
+<div class="section section-gap">
+  <div class="section-title">原始分析文件</div>
+  <div class="card">
+    <p><a href="../details/multiplayer_network_system.md">details/multiplayer_network_system.md</a></p>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

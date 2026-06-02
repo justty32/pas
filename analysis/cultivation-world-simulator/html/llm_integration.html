@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLM 整合分析 — CWS</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">⚡ CWS Analysis</span>
+  <a href="index.html">總覽</a>
+  <a href="architecture.html">架構</a>
+  <a href="simulation_loop.html">模擬迴圈</a>
+  <a href="llm_integration.html" class="active">LLM 整合</a>
+  <a href="../architecture/02_level2_modules.md">L2 原文 (MD)</a>
+</nav>
+
+<div class="page-header">
+  <h1>LLM 整合分析</h1>
+  <p>客戶端架構、任務模式配置、錯誤分類、並發控制、提示模板機制 — 核對 2026-06-01</p>
+</div>
+
+<!-- 概覽 -->
+<div class="section">
+  <div class="section-title">核心設計原則</div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <h3>無 SDK 依賴</h3>
+      <p>使用 Python 標準庫 <code>urllib</code> 直接呼叫 LLM API，零第三方 AI SDK 依賴。同時支援 OpenAI 相容格式與 Anthropic 原生格式。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>統一入口</h3>
+      <p>所有 LLM 呼叫均透過 <code>src/utils/llm/client.py</code>，禁止繞過直接呼叫 HTTP。上層代碼只需呼叫 <code>call_llm_with_task_name()</code>。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>任務驅動模式</h3>
+      <p>16 種任務場景各自對應 NORMAL 或 FAST 模式，由 <code>static/config.yml</code> 集中配置，可在不修改代碼的情況下調整品質/速度平衡。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 呼叫層次 -->
+<div class="section">
+  <div class="section-title">呼叫層次（從上到下）</div>
+  <div class="pipeline">
+    <div class="pipe-step pipe-orange">業務代碼<br/><small>（Phase / Action）</small></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-blue">call_llm_with_task_name(<br/>task_name, template, infos)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-green">get_task_mode(task_name)<br/>→ LLMMode</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-purple">call_llm_with_template(<br/>template, infos, mode)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-cyan">build_prompt(template, infos)<br/>→ call_llm_json(prompt, mode)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-pink">call_llm(prompt, mode)<br/>+ Semaphore 控制</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step pipe-orange">_call_with_requests()<br/>→ urllib POST</div>
+  </div>
+</div>
+
+<!-- 任務模式配置 -->
+<div class="section">
+  <div class="section-title">16 種任務場景 (static/config.yml)</div>
+  <div class="g2">
+    <table>
+      <thead><tr><th>任務名稱</th><th>模式</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>action_decision</td><td><span class="badge badge-blue">normal</span></td><td>NPC 動作決策（最重要）</td></tr>
+        <tr><td>long_term_objective</td><td><span class="badge badge-blue">normal</span></td><td>長期目標規劃</td></tr>
+        <tr><td>nickname</td><td><span class="badge badge-blue">normal</span></td><td>江湖外號生成</td></tr>
+        <tr><td>single_choice</td><td><span class="badge badge-blue">normal</span></td><td>有限選擇框架決策</td></tr>
+        <tr><td>history_influence</td><td><span class="badge badge-blue">normal</span></td><td>歷史影響計算</td></tr>
+        <tr><td>custom_content_generation</td><td><span class="badge badge-blue">normal</span></td><td>自訂內容生成</td></tr>
+        <tr><td>sect_decider</td><td><span class="badge badge-blue">normal</span></td><td>宗門年度決策</td></tr>
+        <tr><td>relation_resolver</td><td><span class="badge badge-orange">fast</span></td><td>關係變化解析</td></tr>
+        <tr><td>relation_delta</td><td><span class="badge badge-orange">fast</span></td><td>關係值 delta 計算</td></tr>
+        <tr><td>story_teller</td><td><span class="badge badge-orange">fast</span></td><td>小故事/小劇場生成</td></tr>
+        <tr><td>interaction_feedback</td><td><span class="badge badge-orange">fast</span></td><td>互動回饋描述</td></tr>
+        <tr><td>backstory</td><td><span class="badge badge-orange">fast</span></td><td>角色身世背景生成</td></tr>
+        <tr><td>random_minor_event</td><td><span class="badge badge-orange">fast</span></td><td>隨機小事件</td></tr>
+        <tr><td>sect_random_event</td><td><span class="badge badge-orange">fast</span></td><td>宗門隨機事件</td></tr>
+        <tr><td>sect_random_event_reason</td><td><span class="badge badge-orange">fast</span></td><td>宗門事件原因描述</td></tr>
+        <tr><td>sect_thinker</td><td><span class="badge badge-orange">fast</span></td><td>宗門年度思考</td></tr>
+      </tbody>
+    </table>
+    <div>
+      <div class="highlight-box hl-orange" style="margin-bottom:12px;">
+        <strong>NORMAL 模式</strong>：用戶設定中的「標準模型」，用於需要高品質決策的場景（NPC 決策、目標規劃、宗門決策）。
+      </div>
+      <div class="highlight-box hl-blue" style="margin-bottom:12px;">
+        <strong>FAST 模式</strong>：用戶設定中的「快速模型」（可以是較小/便宜的模型），用於大量低要求的生成任務（關係計算、背景故事、隨機事件）。
+      </div>
+      <div class="highlight-box hl-green">
+        可在設定頁為 NORMAL 和 FAST 分別配置不同模型（如 NORMAL=GPT-4o，FAST=GPT-4o-mini），在保持決策品質的同時大幅降低 API 成本。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 並發控制 -->
+<div class="section">
+  <div class="section-title">並發控制機制</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>asyncio.Semaphore</h3>
+      <p>模組級 Semaphore，限制同時進行的 LLM 呼叫數量。上限由 <code>settings.max_concurrent_requests</code> 動態決定。</p>
+      <p style="margin-top:8px;font-size:.78rem;color:var(--muted);">當 Semaphore 設定值改變時，會自動重建新 Semaphore（惰性更新）。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>asyncio.to_thread 包裝</h3>
+      <p>urllib 呼叫是同步阻塞的，用 <code>asyncio.to_thread()</code> 包裝成異步，避免阻塞事件迴圈。</p>
+      <p style="margin-top:8px;font-size:.78rem;color:var(--muted);">Phase 4 中透過 <code>asyncio.gather</code> 並行化所有角色決策。</p>
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <pre>async with semaphore:
+    result = await asyncio.to_thread(_call_with_requests, config, prompt)</pre>
+  </div>
+</div>
+
+<!-- 錯誤分類 -->
+<div class="section">
+  <div class="section-title">錯誤分類系統 (LLMFailureKind)</div>
+  <table>
+    <thead><tr><th>錯誤類型</th><th>觸發條件</th><th>用戶訊息</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-red">CONFIG_REQUIRED</span></td>
+        <td>HTTP 401（身份驗證失敗）、HTTP 403（訪問被拒）、HTTP 404（URL 錯誤）</td>
+        <td>暫停遊戲，前端顯示設定頁引導</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">RATE_LIMITED</span></td>
+        <td>HTTP 429、quota/billing 關鍵字、余額不足錯誤碼</td>
+        <td>暫停遊戲，顯示額度不足提示</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">TEMPORARY_NETWORK</span></td>
+        <td><code>NETWORK_ERROR::</code> 前綴（URLError/TimeoutError）</td>
+        <td>網路失敗，提示檢查 Base URL 或代理</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-purple">PROVIDER_UNAVAILABLE</span></td>
+        <td>HTTP 5xx 服務端錯誤</td>
+        <td>服務商異常，建議稍後重試</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-gray">PARSE_ERROR</span></td>
+        <td>LLM 返回非標準 JSON，重試 max_parse_retries 次後失敗</td>
+        <td>解析失敗，記錄日誌</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-gray">UNKNOWN</span></td>
+        <td>其他未分類錯誤</td>
+        <td>未知錯誤，顯示原始訊息</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight-box hl-orange" style="margin-top:12px;">
+    <code>is_config_required</code> 為 True 時（CONFIG_REQUIRED / RATE_LIMITED），系統會透過 <code>_notify_config_required()</code> 呼叫全局 failure handler，自動暫停遊戲並廣播 <code>llm_config_required</code> WebSocket 事件給所有連線的前端客戶端。
+  </div>
+</div>
+
+<!-- 接口格式 -->
+<div class="section">
+  <div class="section-title">支援的 LLM 接口格式</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>OpenAI 相容格式（預設）</h3>
+      <pre>POST {base_url}/chat/completions
+Authorization: Bearer {api_key}
+{
+  "model": "...",
+  "messages": [{"role":"user","content":"..."}]
+}</pre>
+      <p style="margin-top:8px;font-size:.78rem;color:var(--muted);">適用：DeepSeek、MiniMax、Ollama、OpenAI、各類相容 API</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>Anthropic 原生格式</h3>
+      <pre>POST {base_url}/v1/messages
+x-api-key: {api_key}
+anthropic-version: 2023-06-01
+{
+  "model": "...",
+  "max_tokens": 4096,
+  "messages": [{"role":"user","content":"..."}]
+}</pre>
+      <p style="margin-top:8px;font-size:.78rem;color:var(--muted);">當 <code>api_format == "anthropic"</code> 時啟用</p>
+    </div>
+  </div>
+</div>
+
+<!-- 提示模板 -->
+<div class="section">
+  <div class="section-title">提示模板機制</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>模板文件</h3>
+      <p>存放於 <code>static/</code> 或 <code>src/</code> 目錄下的文字模板文件，使用佔位符格式（具體格式由 <code>prompt.py::build_prompt</code> 決定）。</p>
+      <ul style="margin-top:8px;">
+        <li><code>load_template(path)</code>：載入模板</li>
+        <li><code>build_prompt(template, infos)</code>：填入參數生成最終 prompt</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>i18n 整合</h3>
+      <p>LLM 生成的內容（如 backstory、thinking）不會隨 UI 語言自動翻譯。新增 prompt 片段時應走 locale template 或翻譯 key，避免硬編碼中文最終文案。</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenNefia 分析 — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:720px){.doc-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">OpenNefia</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="cpp_plan.html">C++ 重寫計畫</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>架構分析（14 篇）</h1>
+  <p>涵蓋引擎核心三大支柱（IoC / ECS / 原型）到遊戲內容子系統、AI、存讀檔、本地化、音訊與新版 XAML / Wisp UI 框架。每張卡片連回對應的 <code>.md</code> 真實來源。</p>
+</div>
+
+<!-- 引擎基礎 -->
+<div class="section">
+  <div class="section-title">引擎基礎</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-cyan" href="../architecture/01_project_overview.md">
+      <span class="dc-no">01</span>
+      <h3>專案整體結構與設計哲學</h3>
+      <p>專案背景、技術棧（C# / .NET 8.0 + 完整依賴表）、Solution 組成、Core 35 / Content 57 子系統清單、目錄結構圖、重要設計決策。<span class="badge badge-cyan">核對 2026-06-01</span></p>
+      <span class="dc-link">→ 01_project_overview.md</span>
+    </a>
+    <a class="doc-card card-accent-purple" href="../architecture/02_ioc_dependency_injection.md">
+      <span class="dc-no">02</span>
+      <h3>IoC 容器與依賴注入</h3>
+      <p>thread-local 依賴容器、<code>[Dependency]</code> 屬性自動注入、介面解耦設計，以及測試時替換實作的機制。</p>
+      <span class="dc-link">→ 02_ioc_dependency_injection.md</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../architecture/03_ecs_system.md">
+      <span class="dc-no">03</span>
+      <h3>Entity-Component-System 核心</h3>
+      <p>EntityUid、Component 生命週期狀態機、EntitySystem、三種 EntityEventBus（廣播 / 定向 / 排序）、組件查詢與三層座標系統。</p>
+      <span class="dc-link">→ 03_ecs_system.md</span>
+    </a>
+    <a class="doc-card card-accent-blue" href="../architecture/04_game_loop_initialization.md">
+      <span class="dc-no">04</span>
+      <h3>遊戲啟動流程與主循環</h3>
+      <p>Main() 進入點、IoC 註冊順序、GameController 指揮的初始化階段與每幀 Update / FrameUpdate 循環。</p>
+      <span class="dc-link">→ 04_game_loop_initialization.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 世界與資料 -->
+<div class="section">
+  <div class="section-title">世界與資料</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-orange" href="../architecture/05_map_area_system.md">
+      <span class="dc-no">05</span>
+      <h3>地圖與區域管理系統</h3>
+      <p>MapManager、Tile 磁磚、Area（地城樓層）階層，以及地圖實體與座標的對應關係。</p>
+      <span class="dc-link">→ 05_map_area_system.md</span>
+    </a>
+    <a class="doc-card card-accent-orange" href="../architecture/06_prototype_serialization.md">
+      <span class="dc-no">06</span>
+      <h3>原型系統與資料序列化</h3>
+      <p>YAML 原型載入、<code>PrototypeId&lt;T&gt;</code> 型別安全參考、原型繼承、熱重載，與 100+ 檔案的序列化系統。</p>
+      <span class="dc-link">→ 06_prototype_serialization.md</span>
+    </a>
+    <a class="doc-card card-accent-red" href="../architecture/07_rendering_pipeline.md">
+      <span class="dc-no">07</span>
+      <h3>渲染管線與圖形系統</h3>
+      <p>LÖVE 2D（Love2dCS）後端抽象、地圖渲染、精靈圖集、字型管理，以及 Headless 圖形替身。</p>
+      <span class="dc-link">→ 07_rendering_pipeline.md</span>
+    </a>
+    <a class="doc-card card-accent-blue" href="../architecture/08_ui_system.md">
+      <span class="dc-no">08</span>
+      <h3>使用者介面系統（舊版 UiElement）</h3>
+      <p>UiElement / UiLayer 基底類別、手動定位繪製模式，以及遊戲主畫面 HUD / 背包 / 角色頁的 UI 層管理。</p>
+      <span class="dc-link">→ 08_ui_system.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 遊戲玩法 -->
+<div class="section">
+  <div class="section-title">遊戲玩法</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-green" href="../architecture/09_content_modules.md">
+      <span class="dc-no">09</span>
+      <h3>遊戲內容子系統</h3>
+      <p>角色（種族 / 職業）、技能與屬性、裝備、背包、狀態異常、陣營、神明、公會等 57 個 Content 子系統概覽。</p>
+      <span class="dc-link">→ 09_content_modules.md</span>
+    </a>
+    <a class="doc-card card-accent-purple" href="../architecture/10_ai_turn_order.md">
+      <span class="dc-no">10</span>
+      <h3>NPC AI 與回合順序</h3>
+      <p>回合制 TurnOrderSystem、<code>NPCTurnStartedEvent</code> 事件驅動 AI、<code>TurnResult</code> 回合結果，與 VanillaAI 原版邏輯重製。</p>
+      <span class="dc-link">→ 10_ai_turn_order.md</span>
+    </a>
+    <a class="doc-card card-accent-blue" href="../architecture/11_save_load_system.md">
+      <span class="dc-no">11</span>
+      <h3>存讀檔系統</h3>
+      <p>實體序列化、地圖與會話狀態保存、存檔格式，以及與原型系統的協作。</p>
+      <span class="dc-link">→ 11_save_load_system.md</span>
+    </a>
+    <a class="doc-card card-accent-orange" href="../architecture/12_mod_localization.md">
+      <span class="dc-no">12</span>
+      <h3>Mod 載入與本地化</h3>
+      <p>ContentPack / Mod 載入系統、NLua 驅動的本地化文字、多語言鍵值對應與 LocaleKey 機制。</p>
+      <span class="dc-link">→ 12_mod_localization.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 周邊與新系統 -->
+<div class="section">
+  <div class="section-title">周邊與新系統</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-cyan" href="../architecture/13_audio_input.md">
+      <span class="dc-no">13</span>
+      <h3>音訊與輸入系統</h3>
+      <p>AudioManager / MusicManager、按鍵綁定（BoundKeyFunction）、輸入事件處理與 MIDI 音樂播放。</p>
+      <span class="dc-link">→ 13_audio_input.md</span>
+    </a>
+    <a class="doc-card card-accent-yellow" href="../architecture/14_xaml_wisp_ui.md">
+      <span class="dc-no">14</span>
+      <h3>XAML 編譯期注入 + Wisp UI 框架</h3>
+      <p>XamlX 編譯期將 .xaml 轉 IL（同 Avalonia 技術）、WispControl 的 Measure / Arrange 自動版面、25 個 Wisp 控件，與「假裝是 Avalonia」騙過 Rider 的技巧。<span class="badge badge-yellow">新增 2026-06-01</span></p>
+      <span class="dc-link">→ 14_xaml_wisp_ui.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 架構總覽圖 -->
+<div class="section">
+  <div class="section-title">三大支柱協作關係</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>ECS 是骨架</h3>
+      <p>所有遊戲物件 = Entity + Components；所有行為 = EntitySystems 訂閱事件處理。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>IoC 是黏合劑</h3>
+      <p>EntityManager、MapManager、PrototypeManager 等皆以介面註冊，系統間靠 <code>[Dependency]</code> 取得彼此。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>原型是燃料</h3>
+      <p>YAML 原型在啟動時載入為記憶體資料，<code>SpawnEntity(protoId, coords)</code> 據此組裝出帶 Components 的實體。</p>
+    </div>
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  卡片連結指向 <code>../architecture/*.md</code>；如連結無法在瀏覽器直接開啟，請於檔案系統中開啟對應 Markdown。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

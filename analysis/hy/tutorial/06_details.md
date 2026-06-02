@@ -3,19 +3,27 @@
 本章節介紹 Hy 在底層如何處理名稱、類定義以及與 Python 的細微差異。
 
 ## 1. 名稱重整 (Mangling)
-為了讓 Lisp 風格的符號能在 Python 中運行，Hy 會進行「重整」。
+為了讓 Lisp 風格的符號能對應到合法的 Python 識別字，Hy 會進行「重整」。**Hy 1.x 採 Unicode 字元名 + `hyx_` 前綴的通用規則**，而非舊版的特例（`?`→`is_`、`->`→`to_` 等規則已**全部移除**，請忘掉）。
 
-| Hy 符號 | Python 變量名 | 說明 |
+| Hy 符號 | Python 識別字 | 規則 |
 | :--- | :--- | :--- |
-| `my-variable` | `my_variable` | 連字號轉底線 |
-| `valid?` | `is_valid` | 問號結尾轉 `is_` 前綴 |
-| `*star*` | `star` | 移除裝飾性星號 |
-| `->list` | `to_list` | `->` 轉 `to_` |
+| `my-variable` | `my_variable` | 連字號 → 底線（首字保留） |
+| `valid?` | `hyx_validXquestion_markX` | 非法字元換成 `X+Unicode 名+X` |
+| `*cache*` | `hyx_XasteriskXcacheXasteriskX` | 星號不被剝離，照規則重整 |
+| `str->int` | `hyx_str_XgreaterHthan_signXint` | `-` 轉 `_`，`>` 變 `XgreaterHthan_signX` |
+| `🦑` | `hyx_XsquidX` | emoji 也照 Unicode 名 |
+
+驗證方式（任何時候不確定都可實測）：
 
 ```hylang
-(defn even? [x] (= (% x 2) 0))
-;; 在 Python 中調用時： even_query (基本規則) 或根據最新規則重整
+(print (hy.mangle 'valid?))      ; ✅ → hyx_validXquestion_markX
+(print (hy.mangle 'my-var))      ; ✅ → my_var
+(print (hy.unmangle "hyx_validXquestion_markX"))  ; ✅ → valid?
 ```
+
+或 `hy2py file.hy` 看完整編譯結果。
+
+> 規則來源：`projects/hy/hy/reader/mangling.py:9`。要點：(1) 首字以外的 `-` 換 `_`；(2) 若仍非合法識別字，整體加 `hyx_` 前綴，每個非法字元用 `X{Unicode 名}X` 包裹；(3) NFKC 正規化。整個流程是冪等的：`(hy.mangle (hy.mangle x))` = `(hy.mangle x)`。
 
 ## 2. 萬物皆表達式 (Everything is an Expression)
 在 Hy 中，幾乎所有東西都會返回一個值。

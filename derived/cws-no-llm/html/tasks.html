@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cws-no-llm — 任務介面規格</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.task-card{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:18px;margin-bottom:16px;}
+.task-card h3{font-size:.95rem;font-weight:700;margin-bottom:4px;}
+.task-card .meta{font-size:.75rem;color:var(--muted);margin-bottom:10px;}
+.task-card .meta span{margin-right:16px;}
+.task-card pre{margin-top:8px;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">cws-no-llm</span>
+  <a href="index.html">首頁</a>
+  <a href="design.html">設計總覽</a>
+  <a href="tasks.html" class="active">任務規格</a>
+  <a href="ai_engines.html">AI 引擎</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>任務介面規格</h1>
+  <p>16 個 LLM task 的 I/O 規格 — 原始碼核對於 2026-06-02
+  （<a href="../docs/task_interface_spec.md">原始 task_interface_spec.md</a>）</p>
+</div>
+
+<!-- 特殊注意 -->
+<div class="section">
+  <div class="highlight-box hl-orange" style="margin-bottom:16px;">
+    <strong>不走 dispatcher 的 task：</strong>
+    <code>sect_random_event</code> 和 <code>sect_random_event_reason</code> 直接呼叫
+    <code>call_llm_with_template()</code>，繞過 <code>call_llm_with_task_name()</code>，
+    因此 dispatcher 無法攔截。如需替換需直接 patch
+    <code>src/systems/sect_random_event.py::_generate_reason_fragment()</code>。
+  </div>
+</div>
+
+<!-- action_decision -->
+<div class="section">
+  <div class="section-title">Phase 1 核心決策任務</div>
+
+  <div class="task-card" style="border-left:3px solid var(--blue);">
+    <h3><code>action_decision</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/ai.py:76</code></span>
+      <span>頻率：每月，每個無計畫存活角色各一次</span>
+      <span><span class="badge badge-green">Phase 1</span></span>
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">輸入 infos：</p>
+        <pre>{"avatar_name": str,
+ "avatar_info": dict,
+ "avatar_ai_context": dict,
+ "world_info": dict,
+ "world_lore": str,
+ "general_action_infos": list,  # 可用動作清單
+ "player_command": str}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">返回格式（key = avatar_name）：</p>
+        <pre>{avatar_name: {
+    "action_name_params_pairs": [
+        ["action_id", {"param": val}],
+        # 多動作組成月份行動鏈
+    ],
+    "avatar_thinking": str,
+    "short_term_objective": str,
+    "current_emotion": str,
+}}</pre>
+        <p style="font-size:.75rem;color:var(--muted);margin-top:4px;">
+          注意：<code>action_name</code> 需 PascalCase 且必須從 <code>general_action_infos</code> 選可用動作。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--blue);">
+    <h3><code>long_term_objective</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/long_term_objective.py:98</code></span>
+      <span>頻率：每月需重新規劃目標的角色</span>
+      <span><span class="badge badge-green">Phase 1</span></span>
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">輸入 infos：</p>
+        <pre>{"avatar_info": dict,   # 含 sect / major events
+                          #      / magic stone 等欄位
+ "world_info": dict,
+ ...}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">返回格式：</p>
+        <pre>{"long_term_objective": str}
+# 直接賦給 avatar.long_term_objective
+# 注意：設計文件假設有 goal_type/priority，
+#       但實際只用此一個 key</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--blue);">
+    <h3><code>relation_delta</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/relation/relation_delta_service.py:78</code></span>
+      <span>頻率：每次互動後</span>
+      <span><span class="badge badge-green">Phase 1</span></span>
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">輸入 infos：</p>
+        <pre>{"avatar_a_info": dict,
+ "avatar_b_info": dict,
+ "interaction_type": str,
+ ...}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">返回格式：</p>
+        <pre>{"delta_a_to_b": int,   # -6 ~ +6
+ "delta_b_to_a": int}  # -6 ~ +6</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 2 敘事任務 -->
+<div class="section">
+  <div class="section-title">Phase 2 敘事任務</div>
+
+  <div class="task-card" style="border-left:3px solid var(--orange);">
+    <h3><code>story_teller</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/story_teller.py:121, 166</code></span>
+      <span>頻率：config.yml 概率觸發</span>
+      <span><span class="badge badge-green">Phase 2</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"avatar_name": str,
+ "event_type": str,
+ "avatar_info": dict,
+ ...}</pre></div>
+      <div><pre>{"story": str}
+# 注意：設計文件假設 "story_text"，
+#       實際 key 為 "story"</pre></div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--orange);">
+    <h3><code>interaction_feedback</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/mutual_action/mutual_action.py:164</code></span>
+      <span><span class="badge badge-green">Phase 2</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"action_type": str,
+ "avatar_a_info": dict,
+ "avatar_b_info": dict,
+ ...}</pre></div>
+      <div><pre>{"response": str,     # 主 key（推薦）
+ "thinking": str}
+# 消費端有 result.get("response",
+#   result.get("feedback", "")) fallback</pre></div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--orange);">
+    <h3><code>nickname</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/nickname.py:84</code></span>
+      <span><span class="badge badge-green">Phase 2</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"avatar_info": dict,
+ "major_events": list,
+ ...}</pre></div>
+      <div><pre>{"nickname": str,   # 空字串 = 安全跳過
+ "reason": str,    # 外號由來
+ "thinking": str}  # 可為空</pre></div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--orange);">
+    <h3><code>backstory</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/backstory.py:47</code></span>
+      <span><span class="badge badge-green">Phase 2</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"avatar_info": dict,
+ ...}</pre></div>
+      <div><pre>{"backstory": str}   # 2-5 句身世描述</pre></div>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3 宗門任務 -->
+<div class="section">
+  <div class="section-title">Phase 3 宗門任務</div>
+
+  <div class="task-card" style="border-left:3px solid var(--purple);">
+    <h3><code>sect_decider</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/sect_decider.py:133</code></span>
+      <span>頻率：每 3 年一次</span>
+      <span><span class="badge badge-green">Phase 3</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"sect_info": dict,
+ "world_info": dict,
+ "avatar_infos": list,
+ ...}</pre></div>
+      <div><pre>{"declare_war_target_ids":  list,
+ "seek_peace_target_ids":   list,
+ "recruit_avatar_ids":      list,
+ "expel_avatar_ids":        list,
+ "reward_avatar_ids":       list,
+ "support_avatar_ids":      list,
+ "thinking":                str}
+# 注意：設計文件假設 "strategy"/"actions"，
+#       實際格式完全不同（_parse_plan():210）</pre></div>
+    </div>
+  </div>
+
+  <div class="task-card" style="border-left:3px solid var(--purple);">
+    <h3><code>sect_thinker</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/classes/sect_thinker.py:57</code></span>
+      <span><span class="badge badge-green">Phase 3</span></span>
+    </div>
+    <div class="g2">
+      <div><pre>{"sect_info": dict,
+ "world_info": dict,
+ ...}</pre></div>
+      <div><pre>{"sect_thinking": str}
+# 注意：key 是 "sect_thinking"，
+#       不是 "thinking"</pre></div>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 4 小事件 -->
+<div class="section">
+  <div class="section-title">Phase 4 隨機事件任務</div>
+
+  <div class="task-card" style="border-left:3px solid var(--cyan);">
+    <h3><code>random_minor_event</code></h3>
+    <div class="meta">
+      <span>呼叫位置：<code>src/systems/random_minor_event_service.py:120</code></span>
+      <span><span class="badge badge-green">Phase 4</span></span>
+    </div>
+    <div class="g2">
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">SOLO 事件 infos：</p>
+        <pre>{"avatar_info": str,   # JSON 字串或 dict
+ "location": str,
+ "world_info": dict,
+ "event_key": str,    # 12 個 key 之一
+ "event_desc": str,
+ "tone": str}</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin:6px 0;">PAIR 事件 infos（額外欄位）：</p>
+        <pre>{"avatar_a_name": str,   # ← PAIR 標誌
+ "avatar_a_info": str,
+ "avatar_b_name": str,
+ "avatar_b_info": str,
+ "relation_hint": str,
+ "current_relation_summary": str,
+ ...}</pre>
+      </div>
+      <div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">返回格式：</p>
+        <pre>{"event_text": str}
+# 空字串 = 跳過事件
+# 消費端有 if not event_text: return []
+# 注意：設計文件假設 "event_desc"，
+#       實際 key 為 "event_text"</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">SOLO/PAIR 偵測：</p>
+        <pre>is_pair = "avatar_a_name" in infos</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">12 個 event_key：</p>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+          <span class="chip">inner_mood_shift</span>
+          <span class="chip">inner_obsession</span>
+          <span class="chip">daily_practice</span>
+          <span class="chip">environment_response</span>
+          <span class="chip">sect_errand</span>
+          <span class="chip">comic_incident</span>
+          <span class="chip">passing_interaction</span>
+          <span class="chip">asymmetric_attention</span>
+          <span class="chip">subtle_goodwill</span>
+          <span class="chip">social_friction</span>
+          <span class="chip">resource_competition</span>
+          <span class="chip">small_mutual_help</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 保守 Stub 任務 -->
+<div class="section">
+  <div class="section-title">保守 Stub 任務（行為正確，高風險決策保守處理）</div>
+  <div class="g2">
+    <div class="task-card" style="border-left:3px solid var(--border);">
+      <h3><code>relation_resolver</code> <span class="badge badge-gray">stub</span></h3>
+      <div class="meta">
+        <span>呼叫位置：<code>src/classes/relation/relation_resolver.py:68</code></span>
+      </div>
+      <pre>{"changed": False,
+ "change_type": None,
+ "relation": None,
+ "reason": "平淡交流"}
+# changed=True 會觸發師徒/情侶等關係形成
+# 高風險，保守返回 False</pre>
+    </div>
+    <div class="task-card" style="border-left:3px solid var(--border);">
+      <h3><code>single_choice</code> <span class="badge badge-gray">stub</span></h3>
+      <div class="meta">
+        <span>呼叫位置：<code>src/systems/single_choice/engine.py:53</code></span>
+      </div>
+      <pre>{"choice": "",    # 空字串觸發 fallback_policy
+ "thinking": ""}
+# SectRecruitment: FallbackPolicy(PREFERRED_KEY=REJECT)
+# ItemExchange: FallbackPolicy(FIRST_OPTION=ACCEPT)
+# 消費端有 normalize_choice_key() 保護</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 棄用 / 不攔截 -->
+<div class="section">
+  <div class="section-title">棄用 / 不走 dispatcher 的任務</div>
+  <div class="g3">
+    <div class="card card-accent-gray" style="border-left:3px solid var(--border);">
+      <h3><code>history_influence</code></h3>
+      <p>全域搜尋無任何呼叫點，可能已棄用。dispatcher 映射到返回 <code>None</code>（fallback）。</p>
+    </div>
+    <div class="card card-accent-gray" style="border-left:3px solid var(--border);">
+      <h3><code>sect_random_event</code></h3>
+      <p>直接呼叫 <code>call_llm_with_template()</code>，dispatcher 無法攔截。已 patch <code>_generate_reason_fragment()</code>。</p>
+    </div>
+    <div class="card card-accent-gray" style="border-left:3px solid var(--border);">
+      <h3><code>custom_content_generation</code></h3>
+      <p>由 <code>should_trigger()</code> 控制觸發，已 patch 在本地模式返回 <code>False</code>，完全停用。</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

@@ -1,0 +1,13 @@
+SOLO inner_mood_shift: 青玄打坐間忽然思緒萬千，沉寂片刻後重回定境。
+SOLO inner_obsession: 青玄心底莫名浮起一縷執念，難以言喻，久久難散。
+SOLO daily_practice: 青玄在天穹峰演練招式，偶有靈感，隨手記錄下來。
+SOLO environment_response: 青玄漫步天穹峰，感受靈氣流轉，若有所思。
+SOLO sect_errand: 青玄奉命在天穹峰辦理宗門雜務，一切如常。
+SOLO comic_incident: 青玄今日出了個小差錯，被同門善意調侃了幾句，哭笑不得。
+PAIR passing_interaction: 玄霄和白鹿恰好走過同一條道，對視片刻，各自點頭示意。
+PAIR asymmetric_attention: 玄霄注意到白鹿今日似乎有些心事，卻沒開口詢問。
+PAIR subtle_goodwill: 玄霄與白鹿同路一段，閒聊間各有所得，分道時心情略好。
+PAIR social_friction: 玄霄對白鹿的某句話頗感不悅，雖未發作，卻也沒好臉色。
+PAIR resource_competition: 玄霄見白鹿搶先取走自己眼饞已久的材料，只得按捺心中不悅。
+PAIR small_mutual_help: 玄霄提點了白鹿一個修煉要訣，對方頗為受用，回以謝意。
+FALLBACK: 青玄在天穹峰度過了平靜普通的一天，波瀾不驚。

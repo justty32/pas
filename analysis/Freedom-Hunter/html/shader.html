@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>草地Shader — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.wrapper{max-width:1200px;margin:0 auto;}
+.highlight-box{padding:14px 18px;border-radius:7px;font-size:.85rem;margin-bottom:16px;}
+.hl-blue  {background:rgba(88,166,255,.09); color:var(--blue);  border:1px solid rgba(88,166,255,.25);}
+.hl-orange{background:rgba(210,153,34,.09); color:var(--orange);border:1px solid rgba(210,153,34,.25);}
+.hl-red   {background:rgba(248,81,73,.09);  color:var(--red);   border:1px solid rgba(248,81,73,.25);}
+.card ul{margin:8px 0 0 16px;font-size:.8rem;color:var(--muted);}
+.card ul li{margin-bottom:5px;}
+.card ul li strong{color:var(--text);}
+.card p{margin-top:6px;font-size:.8rem;color:var(--muted);}
+.section-gap{margin-top:28px;}
+.perf-num{font-size:1.4rem;font-weight:800;color:var(--orange);display:block;margin-bottom:2px;}
+.perf-label{font-size:.72rem;color:var(--muted);}
+.perf-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:10px;}
+.perf-item{text-align:center;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html" class="active">草地Shader</a>
+</nav>
+
+<div class="wrapper">
+
+<div class="page-header">
+  <h1>草地 Shader</h1>
+  <p>MultiMesh + Worley 噪聲風場 · 1000 株一次 Draw Call</p>
+</div>
+
+<!-- 三層分工架構 -->
+<div class="section">
+  <div class="section-title">三層分工架構</div>
+  <div class="g3">
+    <div class="card card-accent-orange">
+      <h3>Planter</h3>
+      <p><code>@tool</code> 標記，在 Godot 編輯器內即時預覽散布結果。負責決定每株草的世界位置。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>GrassFactory</h3>
+      <p>為每株草設定 UV2 高度加權與 INSTANCE_CUSTOM 四通道資料，傳遞給 shader 使用。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>grass.gdshader</h3>
+      <p>讀取 INSTANCE_CUSTOM，執行 Worley 噪聲風場計算與頂點旋轉，產生最終搖曳效果。</p>
+    </div>
+  </div>
+</div>
+
+<!-- INSTANCE_CUSTOM 格式 -->
+<div class="section section-gap">
+  <div class="section-title">INSTANCE_CUSTOM 四通道格式</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>通道</th>
+          <th>資料</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>R</code></td>
+          <td>寬度（width）</td>
+        </tr>
+        <tr>
+          <td><code>G</code></td>
+          <td>高度（height）</td>
+        </tr>
+        <tr>
+          <td><code>B</code></td>
+          <td>pitch 偏移</td>
+        </tr>
+        <tr>
+          <td><code>A</code></td>
+          <td>yaw 偏移</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(210,153,34,.08);border-radius:6px;border-left:3px solid var(--orange);font-size:.8rem;color:var(--orange);">
+      注意：<code>vertex.y</code> 同時被 R 和 G <strong>兩次相乘</strong>，實際草高 = width × height，比直覺預期更小
+    </div>
+  </div>
+</div>
+
+<!-- Worley 噪聲風場 -->
+<div class="section section-gap">
+  <div class="section-title">Worley 噪聲風場</div>
+  <div class="card card-accent-green">
+    <h3>worley2() 實作原理</h3>
+    <ul>
+      <li>計算最近細胞距離，模擬自然陣風的不均勻感</li>
+      <li>3×3 網格遍歷：每次調用執行 9 次 <code>random2()</code></li>
+      <li><strong>每株草</strong>在每個頂點都調用一次 <code>worley2()</code></li>
+    </ul>
+    <div class="perf-row">
+      <div class="perf-item">
+        <span class="perf-num">1,000</span>
+        <span class="perf-label">草株</span>
+      </div>
+      <div class="perf-item" style="font-size:1.4rem;color:var(--dim);padding-top:8px;">×</div>
+      <div class="perf-item">
+        <span class="perf-num">3</span>
+        <span class="perf-label">頂點/株</span>
+      </div>
+      <div class="perf-item" style="font-size:1.4rem;color:var(--dim);padding-top:8px;">×</div>
+      <div class="perf-item">
+        <span class="perf-num">9</span>
+        <span class="perf-label">random2()/頂點</span>
+      </div>
+      <div class="perf-item" style="font-size:1.4rem;color:var(--dim);padding-top:8px;">=</div>
+      <div class="perf-item">
+        <span class="perf-num" style="color:var(--red);">27,000</span>
+        <span class="perf-label">次/幀</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 時域效果 -->
+<div class="section section-gap">
+  <div class="section-title">時域效果</div>
+  <div class="card card-accent-blue">
+    <h3>TIME 驅動風場</h3>
+    <ul>
+      <li><code>TIME * wind_speed</code> 驅動 Worley 噪聲的時域位移</li>
+      <li>float32 整數精確上限：16,777,216 秒（約 194 天），不影響實際使用</li>
+      <li style="color:var(--orange);"><strong>sin 精度衰退：</strong>約 2.3 小時（8192 秒）後，yaw 搖擺計算的精度開始下降</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 已知缺陷 -->
+<div class="section section-gap">
+  <div class="section-title">已知缺陷與優化方向</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>wind_direction 零向量 NaN</h3>
+      <ul>
+        <li>當 <code>wind_direction = (0,0,0)</code> 時，normalize 運算產生 NaN</li>
+        <li>缺乏保護判斷，NaN 會傳播到所有頂點位移</li>
+        <li>修正：normalize 前加入零向量防護</li>
+      </ul>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>優化：BlueNoise 預計算</h3>
+      <ul>
+        <li>目前 <code>random2()</code> 為即時計算，每幀 27,000 次開銷明顯</li>
+        <li>優化方向：用 BlueNoise 預計算貼圖替換 <code>random2()</code></li>
+        <li>可大幅降低 GPU 計算量並改善分布品質</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- UV2.y 高度加權 -->
+<div class="section section-gap">
+  <div class="section-title">UV2.y 高度加權</div>
+  <div class="highlight-box hl-blue">
+    <strong>GrassFactory</strong> 直接在 <code>ARRAY_TEX_UV2</code> 寫入高度加權值：<br>
+    <code>UV2.y = 0</code> 對應根部（固定不動），<code>UV2.y = 1</code> 對應頂部（最大搖擺幅度）。<br><br>
+    <code>UV2.x</code> 有值但 shader 目前未使用，保留為未來擴充空間。
+  </div>
+</div>
+
+<!-- 參照連結 -->
+<div class="section section-gap">
+  <div class="section-title">原始分析文件</div>
+  <div class="card">
+    <p><a href="../details/grass_shader.md">details/grass_shader.md</a></p>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

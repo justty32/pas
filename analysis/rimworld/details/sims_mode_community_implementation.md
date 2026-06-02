@@ -35,25 +35,26 @@ public class JobGiver_AutonomousWork : ThinkNode_JobGiver
 
 為了實作「模擬市民模式」，我們需要阻止玩家直接命令非核心成員。
 
+> ❌ **核對 2026-06-01**：`FloatMenuMakerMap.AddHumanlikeOrders` 在 1.6 **已不存在**。
+> 1.6 已重構為 `FloatMenuOptionProvider` 架構（`FloatMenuMakerMap.GetOptions` 透過 provider 清單動態收集選項）。
+> 正確做法：繼承 `FloatMenuOptionProvider`，在 `GetOptions(Vector3 clickPos, List<FloatMenuOption> opts, Pawn forPawn)` 中攔截並清空針對非核心 Pawn 的選項；或 Patch `FloatMenuMakerMap.GetOptions` 本身事後過濾結果。
+
 ```csharp
-[HarmonyPatch(typeof(FloatMenuMakerMap), "AddHumanlikeOrders")]
-public static class Patch_RestrictDirectControl
+// ✅ 1.6 正確做法：繼承 FloatMenuOptionProvider
+public class FloatMenuOptionProvider_SimsMode : FloatMenuOptionProvider
 {
-    [HarmonyPrefix]
-    public static bool Prefix(Pawn pawn)
+    // 回傳 true 表示此 provider 要在 Pawn 右鍵時介入
+    public override bool CanProvideFor(Pawn forPawn) => true;
+
+    public override IEnumerable<FloatMenuOption> GetOptions(Vector3 clickPos, Pawn forPawn)
     {
-        // 如果該 Pawn 屬於「自主盟友」且不是玩家的核心小隊
-        if (pawn.Faction == Faction.OfPlayer && !IsCoreSquadMember(pawn))
-        {
-            // 屏蔽右鍵選單，不允許直接下令
-            return false;
-        }
-        return true;
+        // 在這裡可以提供「請求協助」之類的限定選項，
+        // 而不是直接屏蔽——直接清空選項在 RimWorld UX 上是 bad practice
+        if (!IsCoreSquadMember(forPawn)) yield break;
     }
 
     private static bool IsCoreSquadMember(Pawn p)
     {
-        // 檢查是否有特定的 Hediff 或 Comp 標記為玩家親自掌控
         return p.TryGetComp<CompCoreMember>() != null;
     }
 }
@@ -74,9 +75,11 @@ public class SocialInteractionWorker_Gossip : SocialInteractionWorker
         Pawn thirdPerson = initiator.Map.mapPawns.AllPawnsSpawned.RandomElement();
         if (thirdPerson != null && thirdPerson != initiator && thirdPerson != recipient)
         {
-            // 影響兩者對第三者的看法 (Opinion)
+            // ⚠️ 核對 2026-06-01：Pawn_RelationsTracker.ChangeOpinionBy() 不存在。
+            // Opinion 是 Thought_Memory 聚合計算的結果，不能直接設值。
+            // ✅ 替代：給 recipient 加入針對 thirdPerson 的 memory thought（需自訂 ThoughtDef）。
             float effect = Rand.Range(-5f, 5f);
-            recipient.relations.ChangeOpinionBy(thirdPerson, (int)effect);
+            // recipient.needs.mood.thoughts.memories.TryGainMemory(gossipThoughtDef, thirdPerson);
         }
     }
 }

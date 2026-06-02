@@ -212,3 +212,221 @@ NavigationAgent3D:
     simplify_epsilon = 0.2           ← 路徑簡化精度
     debug_enabled = true             ← 開發中可視化路徑（正式版應關閉）
 ```
+
+---
+
+## 深化補充
+
+### 1. NavigationAgent 5 單位邊界的震盪分析
+
+`dragon.tscn:710-715` 設定 `target_desired_distance = 5.0`，`monster.gd:166-173` 的 `hunt_target()` 移動判定如下：
+
+```gdscript
+# monster.gd:163-173
+if $AnimationTree["parameters/conditions/attacking"]:
+    direction = to_target.normalized()
+    check_fire_collision()
+elif distance_from_target > 10:
+    run()
+    follow_path()
+elif distance_from_target > 5:
+    walk()
+    follow_path()
+else:
+    attack("attack")
+    direction = to_target.normalized()
+```
+
+**邊界分析**：
+
+NavigationAgent 的 `target_desired_distance = 5.0` 決定 `nav.is_navigation_finished()` 何時回傳 `true`，但**攻擊觸發是由 GDScript 的距離判斷獨立控制**，不使用 `is_navigation_finished()`。
+
+震盪可能發生的情境：
+- 距離 = 5.01 → `walk()` + `follow_path()` → 怪物繼續走
+- 怪物走一步 → 距離 < 5 → `attack("attack")` 觸發
+- 攻擊中（`parameters/conditions/attacking = true`）→ 進入攻擊分支（第一個 if），`follow_path()` 停止更新路徑，`$fire/RayCast3D.enabled` 被設回 false（`monster.gd:92`）
+
+攻擊結束後（`entity.gd:231-234` 的 `_on_animation_tree_animation_finished`）：
+```gdscript
+# entity.gd:231-234
+if "attack" in anim_name:
+    $AnimationTree["parameters/conditions/attacking"] = false
+    stop()
+```
+
+`stop()` 後 `attacking` 條件清除，下一幀重新進入距離判斷。若玩家靜止，距離通常仍 < 5，**立即再次觸發 `attack()`**，因此會出現連續攻擊而非走→停→攻的震盪。真正的震盪只在玩家剛好在 4.8~5.2 單位徘徊時才可能出現，實際上此邊界寬鬆，Godot 的物理一幀移動量遠小於 0.2，概率較低。
+
+---
+
+### 2. 火焰攻擊的 RayCast 冷卻機制（實作層）
+
+```gdscript
+# monster.gd:126-134
+func check_fire_collision():
+    $fire/RayCast3D.enabled = true
+    var to_target := target_player.global_position - global_position
+    if $AnimationTree["parameters/conditions/attacking"] and to_target.length() < 5:
+        if $fire/RayCast3D.is_colliding() and $fire/RayCast3D.get_collider() == target_player:
+            if Time.get_ticks_msec() - last_damage > 1000:
+                print_debug("collided with", target_player.name)
+                target_player.damage(10, 0.3, "fire")
+                last_damage = Time.get_ticks_msec()
+```
+
+冷卻機制為 **`last_damage` 時間戳**（毫秒）：
+- `last_damage` 定義於 `monster.gd:30`，初始值 `0`
+- 每次造成傷害後更新為 `Time.get_ticks_msec()`
+- 下次傷害須間隔 > 1000ms（1 秒）
+
+**玩家快速進出視野期間的行為分析**：
+
+```mermaid
+sequenceDiagram
+    participant P as 玩家
+    participant M as 怪物（check_fire_collision）
+    P->>M: 進入 5 單位範圍
+    M->>P: RayCast 命中 → damage(10) → last_damage=T
+    P->>M: 離開 5 單位範圍（to_target.length() > 5）
+    Note over M: 距離判斷失敗，damage() 不呼叫
+    P->>M: 再次進入（T + 200ms）
+    Note over M: 1000ms 未滿 → 無傷害
+    P->>M: 持續在範圍內（T + 1000ms）
+    M->>P: 第二次 damage(10)
+```
+
+**關鍵限制**：`check_fire_collision()` 本身**不負責開啟 RayCast**，呼叫後 `enabled=true` 狀態會保持到下一次 `follow_path()` 呼叫（`monster.gd:92`：`$fire/RayCast3D.enabled = false`）。若在攻擊過程中玩家移出 5 單位但仍在追蹤中，RayCast 保持開啟但距離判斷使傷害不觸發。
+
+`damage()` 調用鏈（`entity.gd:318-338`）：參數 `10, 0.3, "fire"` 對應 `(damage_in=10, regenerable=0.3, element="fire")`，即玩家最多可回復 10 × 0.3 = 3 HP。
+
+---
+
+### 3. 感嘆號觸發與玩家逃脫行為（實作層）
+
+感嘆號動畫資料（`dragon.tscn:188-213`）：
+
+```
+Animation "exclamation" (length=5.0s)
+  Track 0: visible（discrete）
+    t=0.0 → true
+    t=5.0 → false
+  Track 1: scale（cubic interpolation）
+    t=0.0 → (0.1, 0.1, 0.1)  ← 彈出
+    t=0.5 → (1, 1, 1)        ← 放大完成
+    t=4.5 → (1, 1, 1)        ← 維持
+    t=5.0 → (0.1, 0.1, 0.1)  ← 縮小消失
+```
+
+觸發條件（`monster.gd:155-159`）：
+```gdscript
+func hunt_target():
+    if not combat:
+        prints(name, "exclamation")
+        combat = true
+        $exclamation/AnimationPlayer.play("exclamation")
+```
+
+**玩家在感嘆號期間逃脫的行為**：
+
+`combat = true` 在感嘆號觸發時立即設定，**不會因玩家逃脫而重置**。`combat` 沒有任何地方將其設回 `false`（除了 `scout()` 中：`monster.gd:197`）。
+
+逃脫路徑：
+- `_on_view_body_exited` → `players.erase(body)` → `monster.gd:238`
+- 下一幀 `check_target()`（`monster.gd:98-106`）：若 `target_player` 不在 `players[]` → `target_player = null`
+- 進入 `scout()` → `combat = false`（`monster.gd:197`）
+
+**結論**：玩家在感嘆號播放期間逃脫，如果 `target_player` 清除後進入 `scout()`，`combat` 會被設回 `false`。若玩家再次進入視野，**感嘆號會再次觸發**，感嘆號動畫本身不阻止怪物繼續追蹤（AnimationPlayer 獨立播放，不影響 `hunt_target()` 的執行）。
+
+---
+
+### 4. `died()` 之後的場景狀態與 `monster drop.gd` 接管流程
+
+**entity.gd 的 `died()`（基底層）**（`entity.gd:260-268`）：
+```gdscript
+@rpc("any_peer", "call_local") func died():
+    print("%s died" % [name])
+    $AnimationTree["parameters/conditions/dead"] = true
+    state_machine.travel("death")
+    hp = 0
+    hp_regenerable = 0
+    velocity = Vector3()
+    direction = Vector3()
+    set_process(false)
+```
+
+**monster.gd 的 `died()` override**（`monster.gd:69-76`）：
+```gdscript
+@rpc("any_peer", "call_local") func died():
+    super.died()              # 呼叫 entity.gd:died()
+    set_physics_process(false)
+    $fire.hide()              # 隱藏 GPUParticles3D（含 RayCast3D 子節點）
+    $interact.add_to_group("interact")   # 讓節點可互動（觸發掉落）
+    $view.disconnect("body_entered", _on_view_body_entered)
+    $view.disconnect("body_exited", _on_view_body_exited)
+    call_deferred("set_script", preload("res://src/interact/monster drop.gd"))
+```
+
+**各子節點狀態**：
+
+| 子節點 | died() 後狀態 |
+|--------|--------------|
+| AnimationTree | `dead=true`，state_machine 播放 death 動畫（2.5s） |
+| AnimationPlayer（骨骼）| 死亡骨骼動畫播放後停在最後一幀 |
+| AnimationPlayer（自建）| `death` 動畫：t=0 播放龍吼、t=0 fire.emitting=false |
+| GPUParticles3D (fire) | `hide()` 呼叫後整個節點隱藏（含 RayCast3D） |
+| CollisionShape3D | **未做任何處理**，仍保持 enabled，屍體仍有碰撞體 |
+| Area3D (view) | 訊號斷開，但 Area3D 本身仍在場景中 |
+
+**`monster drop.gd` 接管流程**（`set_script()` 為 deferred，death 動畫播放中才切換）：
+
+`monster drop.gd` 繼承自 `gathering.gd`（`interact/gathering.gd`），`set_script()` 後 Godot 會呼叫新腳本的 `_init()` 和 `_ready()`：
+
+```gdscript
+# monster drop.gd:13-15
+func _init():
+    super([barrel, firework, potion], randf_range(2,5))
+```
+
+```gdscript
+# gathering.gd:12-17
+func _init(items, quant):
+    obtainable = items
+    quantity = quant
+    for item in obtainable:
+        rarity += item.rarity
+```
+
+`gathering.gd` 沒有定義 `_ready()`，所以 `set_script()` 後無 `_ready()` 邏輯執行。接管後，CharacterBody3D 節點保留原有的所有子節點（動畫、碰撞體等），但腳本邏輯改為 `gathering.gd` 的 `interact()` 方法：玩家互動 → 隨機掉落道具（Barrel/Firework/Potion）→ `quantity` 歸零後 `queue_free()` 清除整個怪物節點。
+
+`monster drop.gd:18-19` 覆寫 `die()` 為空函數，防止多人連線時重複呼叫 `die()` 造成錯誤。
+
+---
+
+### 5. 火焰粒子開啟時機與 loop 行為（精確時間軸）
+
+攻擊動畫的 `fire:emitting` 軌道資料（`dragon.tscn:222-235`）：
+
+```
+Animation "attack" (length=5.0s, loop_wrap=true)
+  Track 0: fire:emitting（discrete update）
+    t=0.0 → true    ← 攻擊動畫開始，立即開啟粒子
+    t=3.5 → false   ← 距結束還有 1.5 秒時關閉
+```
+
+**粒子時序分析**：
+
+```mermaid
+sequenceDiagram
+    participant AP as AnimationPlayer (attack)
+    participant FP as GPUParticles3D (fire)
+    participant RC as RayCast3D
+
+    AP->>FP: t=0.0s emitting=true（粒子開始噴發）
+    AP->>FP: t=3.5s emitting=false（停止噴發，但現有粒子存活至 lifetime=5s）
+    Note over FP: 粒子 lifetime=5s，t=3.5s 後仍有舊粒子在場景中飛行
+    AP->>AP: t=5.0s 動畫結束
+    Note over RC: entity.gd:231 _on_animation_tree_animation_finished → attacking=false
+```
+
+**loop 行為**：`attack` AnimationPlayer 動畫的 `loop_wrap = true`（`dragon.tscn:229`），但 `entity.gd:231` 在攻擊動畫結束時呼叫 `stop()` 並設 `attacking=false`，使 AnimationTree 自動從 attack 狀態退回 idle-loop，因此攻擊動畫**實際上不會 loop**，`loop_wrap` 設定在此情境下無效果。
+
+**非攻擊狀態的 fire 保護**：所有非攻擊動畫（idle/walk/run/jump/dodge/rest）在 t=0 都設 `emitting=false`（`dragon.tscn:282-370`），確保無論 AnimationPlayer autoplay 切換到哪個動畫，火焰必定關閉。`AnimationPlayer` 的 `autoplay = "idle"` 設定（`dragon.tscn:688`）意味著場景載入後立刻播放 idle 動畫 → 確保初始狀態 fire 為關閉。

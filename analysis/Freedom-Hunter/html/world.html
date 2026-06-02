@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>相機 / UI / 世界系統 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .kv-row{display:flex;justify-content:space-between;align-items:baseline;
+    padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.82rem;}
+  .kv-row:last-child{border-bottom:none;}
+  .kv-key{color:var(--muted);}
+  .kv-val{color:var(--text);font-family:monospace;font-size:.78rem;}
+  .flow-step{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;}
+  .flow-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;
+    background:var(--cyan);color:#000;font-size:.7rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;}
+  .flow-text{font-size:.82rem;color:var(--text);padding-top:2px;}
+  .flow-text code{font-size:.78rem;}
+  .tree-box{background:rgba(0,0,0,.25);border-radius:7px;padding:14px 16px;
+    font-family:monospace;font-size:.8rem;line-height:1.9;color:var(--text);}
+  .tree-box .root{color:var(--blue);font-weight:700;}
+  .tree-box .sub{color:var(--cyan);}
+  .tree-box .note{color:var(--muted);font-style:italic;}
+  .indent1{padding-left:1.5em;}
+  .indent2{padding-left:3em;}
+  .src-tag{font-size:.68rem;color:var(--dim);font-style:normal;font-family:monospace;}
+  .input-table th{font-size:.68rem;}
+  .input-table td{font-size:.78rem;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html" class="active">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>相機 / UI / 世界系統</h1>
+  <p>第三人稱相機、HUD 組件、互動偵測</p>
+</div>
+
+<!-- ═══ 相機系統 ═══ -->
+<div class="section">
+  <div class="section-title">相機系統</div>
+  <div class="card card-accent-blue">
+    <h3>Yaw / Pitch 節點分離架構 <span class="src-tag">camera.gd:39-52</span></h3>
+    <div class="tree-box" style="margin-top:10px;">
+      <div class="root">game.tscn</div>
+      <div class="indent1"><span style="color:var(--muted);">└── </span><span class="sub">yaw (Node3D)</span> <span class="note">— 水平旋轉節點，camera.gd 透過引用控制</span></div>
+      <div class="indent2"><span style="color:var(--muted);">└── </span><span class="sub">pitch (Node3D)</span> <span class="note">— 垂直旋轉節點</span></div>
+      <div class="indent2" style="padding-left:5.5em;"><span style="color:var(--muted);">└── </span><span style="color:var(--blue);">Camera3D</span> <span class="note">— 實際相機（camera.gd 掛在此）</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>Lerp 平滑旋轉</strong></p>
+        <pre>yaw   = lerp(yaw,   target_yaw,   delta * 10)
+pitch = lerp(pitch, target_pitch, delta * 5)
+yaw_node.set_rotation_degrees(Vector3(0, yaw, 0))
+pitch_node.set_rotation_degrees(Vector3(pitch, 0, 0))</pre>
+        <div class="kv-row" style="margin-top:8px;"><span class="kv-key">Yaw 收斂速率</span><span class="kv-val">delta × 10（快速跟隨）</span></div>
+        <div class="kv-row"><span class="kv-key">Pitch 收斂速率</span><span class="kv-val">delta × 5（稍慢，俯仰更穩定）</span></div>
+        <div class="kv-row"><span class="kv-key">60fps 下 90° 收斂</span><span class="kv-val">約 0.1 秒內縮至 1° 以內</span></div>
+        <div class="kv-row"><span class="kv-key">縮放距離範圍</span><span class="kv-val">1.0（最近）~ 10.0（最遠），步長 0.5</span></div>
+      </div>
+
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>跨 360° 邊界同步重置</strong></p>
+        <pre>func rotate_view(relative: Vector2):
+    target_yaw -= relative.x
+    if target_yaw >= 360:
+        target_yaw -= 360   # 重置 target
+        yaw -= 360          # ← 同步重置 yaw（關鍵！）
+    if target_yaw &lt;= -360:
+        target_yaw += 360
+        yaw += 360</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:6px;">
+          若只重置 <code>target_yaw</code> 不重置 <code>yaw</code>，
+          lerp 會看到約 360° 差距，導致下一幀相機快轉一圈。
+          同步重置後兩者差距維持小範圍，平滑插值不繞遠路。
+        </p>
+      </div>
+    </div>
+
+    <p style="font-size:.82rem;margin-top:14px;"><strong>輸入來源整合</strong></p>
+    <table class="input-table" style="margin-top:8px;">
+      <thead>
+        <tr>
+          <th>來源</th>
+          <th>事件類型</th>
+          <th>處理方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>滑鼠</td><td><code>InputEventMouseMotion</code></td><td><code>rotate_view(event.relative * 0.1)</code></td></tr>
+        <tr><td>觸控拖曳</td><td><code>InputEventScreenDrag</code></td><td><code>rotate_view(event.relative * 0.25)</code></td></tr>
+        <tr><td>手把右搖桿</td><td>camera_right/left/up/down</td><td><code>rotate_view(joy * 2.5/1.5)</code> 於 _process</td></tr>
+        <tr><td>陀螺儀</td><td><code>Input.get_gyroscope()</code></td><td><code>rotate_view(gyro * Vector2(1,-1))</code> 於 _process</td></tr>
+      </tbody>
+    </table>
+
+    <div class="highlight-box hl-orange" style="margin-top:14px;">
+      <strong>缺陷：camera_zoom() 無穿牆保護</strong>
+      <span style="font-size:.8rem;display:block;margin-top:4px;">
+        <code>camera.gd:93-100</code> — 縮放邏輯完全不包含 raycast 或 <code>test_move()</code> 呼叫，
+        也無引用 <code>PhysicsDirectSpaceState3D</code>。
+        唯一限制是輸入層的距離上下限（1.0 ~ 10.0）。
+        玩家站在牆角拉遠視角時，相機會直接穿過牆壁。
+        屬於 Orbit Camera 不做碰撞的常見簡化。
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HUD 組件 ═══ -->
+<div class="section">
+  <div class="section-title">HUD 組件</div>
+  <div class="g3">
+
+    <div class="card card-accent-green">
+      <h3>status <span class="src-tag">status.gd</span></h3>
+      <p style="margin-top:6px;">HP / 耐力 / 銳利度條。</p>
+      <div style="margin-top:10px;">
+        <div class="kv-row"><span class="kv-key">綠色前景</span><span class="kv-val">當前 HP</span></div>
+        <div class="kv-row"><span class="kv-key">紅色背景</span><span class="kv-val">hp_regenerable（可回復上限）</span></div>
+        <div class="kv-row"><span class="kv-key">寬度公式</span><span class="kv-val">300 × hp_max / 50</span></div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">
+        雙色血條設計類似魂系遊戲韌性——紅色區域為「受傷但可回復」。
+      </p>
+    </div>
+
+    <div class="card card-accent-cyan">
+      <h3>interact <span class="src-tag">interact.gd:20-30</span></h3>
+      <p style="margin-top:6px;">互動按鍵提示，世界空間→螢幕空間浮動 UI。</p>
+      <div style="margin-top:10px;">
+        <div class="kv-row"><span class="kv-key">3D → 2D 投影</span><span class="kv-val">unproject_position()</span></div>
+        <div class="kv-row"><span class="kv-key">後方過濾</span><span class="kv-val">is_position_behind() → hide()</span></div>
+        <div class="kv-row"><span class="kv-key">居中對齊</span><span class="kv-val">position = action_pos - size/2</span></div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">
+        每幀追蹤最近互動點（<code>get_nearest_interact()</code>），
+        按鈕自動跟隨 3D 位置浮動。
+      </p>
+    </div>
+
+    <div class="card card-accent-orange">
+      <h3>notification <span class="src-tag">notification.gd:8-27</span></h3>
+      <p style="margin-top:6px;">通知佇列，<code>await</code> 動畫順序播放。</p>
+      <div style="margin-top:10px;">
+        <div class="kv-row"><span class="kv-key">佇列上限</span><span class="kv-val">無限制（普通 Array）</span></div>
+        <div class="kv-row"><span class="kv-key">播放機制</span><span class="kv-val">_process 中 await，不阻塞佇列 append</span></div>
+        <div class="kv-row"><span class="kv-key">防重複消費</span><span class="kv-val">is_playing() 條件跳過</span></div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">
+        快速連續通知時不覆蓋，排隊依序播放。
+        互動觸發本身也受通知動畫播放狀態保護（<code>player.gd:90</code>）。
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ 互動系統 ═══ -->
+<div class="section">
+  <div class="section-title">互動系統</div>
+  <div class="card card-accent-cyan">
+    <h3>互動偵測流程 <span class="src-tag">player.gd + interact.gd</span></h3>
+    <pre style="margin-top:12px;">Area3D (group="interact")
+Player.interact_with_nearest()
+  → get_overlapping_areas()      # 取所有重疊 Area3D
+  → 過濾 group = "interact"      # 確認屬於可互動群組
+  → 按距離排序，取最近           # sort by .distance_to(player)
+  → interact.get_parent().interact(player, area)
+                                  # 委派給父節點處理邏輯</pre>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;">
+      <div class="card" style="border:none;background:rgba(0,0,0,.2);">
+        <h4 style="font-size:.8rem;color:var(--green);">採集點 gathering.gd</h4>
+        <p style="font-size:.76rem;color:var(--muted);margin-top:4px;">
+          多人時只有本地玩家可採集。加權隨機抽道具（rarity 作為權重），
+          溢出通知玩家，採集耗盡後 <code>queue_free()</code>。
+        </p>
+      </div>
+      <div class="card" style="border:none;background:rgba(0,0,0,.2);">
+        <h4 style="font-size:.8rem;color:var(--orange);">大砲 cannon.gd</h4>
+        <p style="font-size:.76rem;color:var(--muted);margin-top:4px;">
+          三個 Area3D 子節點（fire / clockwise / anticlockwise）。
+          match node.name 決定行為：發射砲彈或旋轉大砲。
+          防重複旋轉：tween 進行中時忽略輸入。
+        </p>
+      </div>
+      <div class="card" style="border:none;background:rgba(0,0,0,.2);">
+        <h4 style="font-size:.8rem;color:var(--purple);">寶箱 chest.gd</h4>
+        <p style="font-size:.76rem;color:var(--muted);margin-top:4px;">
+          開箱動畫結束後並排顯示寶箱與玩家物品欄。
+          關閉後播放 close 動畫並恢復玩家控制。
+          寶箱本身有 100 格 Inventory。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 並排物品欄 ═══ -->
+<div class="section">
+  <div class="section-title">並排物品欄（open_inventories）</div>
+  <div class="card card-accent-purple">
+    <h3><code>open_inventories([shop, player])</code> <span class="src-tag">hud/inventory.gd:13-21</span></h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>並排顯示原理</strong></p>
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">1</div>
+          <div class="flow-text">設置滑鼠可見、凍結玩家輸入、禁用相機</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">2</div>
+          <div class="flow-text">將各 Inventory Panel 節點加入同一 <code>HBoxContainer</code>，可同時顯示多個</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">3</div>
+          <div class="flow-text"><code>popup()</code> 顯示彈窗，等待 <code>popup_hide</code> 信號</div>
+        </div>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">
+          NPC 商店互動：<code>shop_item.buy</code> signal 連接到 <code>player.buy_item</code>，
+          關閉後自動斷開。
+        </p>
+      </div>
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>跨欄拖曳所有權（Dict 引用型別）</strong></p>
+        <div class="kv-row"><span class="kv-key">拖曳開始</span><span class="kv-val">dragging 掛在來源 Inventory</span></div>
+        <div class="kv-row"><span class="kv-key">放下到目標欄</span><span class="kv-val">data.in_flight = false（同一 Dict 物件）</span></div>
+        <div class="kv-row"><span class="kv-key">Dict 引用型別</span><span class="kv-val">目標欄修改 in_flight，來源欄也看到</span></div>
+        <div class="kv-row"><span class="kv-key">give_back 不誤觸</span><span class="kv-val">in_flight=false → deferred 回呼直接跳過</span></div>
+        <div class="kv-row"><span class="kv-key">拖曳丟棄保護</span><span class="kv-val">只有來源 Inventory._input 正確觸發歸還</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 互動 UI 投影細節 ═══ -->
+<div class="section">
+  <div class="section-title">互動 UI 投影細節</div>
+  <div class="highlight-box hl-blue" style="font-style:normal;margin-bottom:12px;">
+    <strong>後方點鏡像保護（已實作）</strong>
+    <span style="display:block;margin-top:6px;font-size:.82rem;">
+      <code>unproject_position()</code> 對相機後方的點會產生錯誤的鏡像 2D 座標，
+      導致 UI 元素出現在螢幕錯誤位置。
+      程式碼在第 27 行明確呼叫 <code>is_position_behind(pos)</code>，
+      回傳 <code>true</code> 時執行 <code>hide()</code>，正確過濾後方情形後才呼叫 <code>unproject_position()</code>。
+    </span>
+  </div>
+  <div class="highlight-box hl-orange" style="font-style:normal;">
+    <strong>左右視錐超界未處理（已知缺陷）</strong>
+    <span style="display:block;margin-top:6px;font-size:.82rem;">
+      <code>is_position_behind()</code> 只過濾「相機後方（near plane 後方）」，
+      <strong>不過濾左右上下視錐邊界</strong>。
+      若互動物件在玩家側後方但仍在近平面前方，
+      <code>unproject_position()</code> 回傳的 2D 座標可能超出螢幕範圍，
+      導致互動按鈕飛到螢幕外（仍可見但位置錯誤）。
+      屬於已知的輕微視覺缺陷，可加入視錐邊界 clamp 修復。
+    </span>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

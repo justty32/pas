@@ -1,0 +1,14 @@
+; Godot 4 GDExtension descriptor for opennefia-cpp facade.
+; 將此檔與 opennefia_gd.dll 放在 Godot 專案的 res://bin/ 下。
+
+[configuration]
+entry_symbol = "opennefia_library_init"
+compatibility_minimum = "4.4"
+
+[libraries]
+windows.debug.x86_64   = "res://bin/opennefia_gd.dll"
+windows.release.x86_64 = "res://bin/opennefia_gd.dll"
+linux.debug.x86_64     = "res://bin/libopennefia_gd.so"
+linux.release.x86_64   = "res://bin/libopennefia_gd.so"
+macos.debug            = "res://bin/libopennefia_gd.dylib"
+macos.release          = "res://bin/libopennefia_gd.dylib"

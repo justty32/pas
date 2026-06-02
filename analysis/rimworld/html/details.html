@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C# 實作細節 — RimWorld Mod 開發分析</title>
+  <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">RimWorld 1.6 Mod 開發分析</span>
+  <div class="navbar-links">
+    <a href="index.html">總覽</a>
+    <a href="architecture.html">架構</a>
+    <a href="tutorial.html">教學</a>
+    <a href="details.html" class="active">實作細節</a>
+    <a href="others.html">設計構想</a>
+    <a href="answers.html">問答</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">C# 實作細節</h1>
+    <p class="page-subtitle">15 份文件 · 各子系統的深入原始碼剖析與實作模式</p>
+  </div>
+
+  <!-- ARPG 子系統 -->
+  <div class="section">
+    <h2 class="section-title">ARPG 子系統</h2>
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../details/arpg_core_mechanics.md">ARPG 核心機制</a></div>
+        <div class="card-desc">角色扮演轉換核心：屬性計算、技能樹資料結構、升級曲線 C# 實作</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../details/ui_system_design.md">UI 系統設計</a></div>
+        <div class="card-desc">ARPG 模組 UI 架構：狀態面板、技能選取視窗、即時數值反饋層</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../details/talent_skill_integration.md">天賦與技能整合</a></div>
+        <div class="card-desc">天賦樹與原生技能系統的整合策略：Harmony 鉤子、技能效果疊加計算</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../details/hotkey_system_design.md">快捷鍵系統設計</a></div>
+        <div class="card-desc">自訂快捷鍵綁定架構：KeyBindingDef 擴充、衝突偵測、設定持久化</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任務系統 -->
+  <div class="section">
+    <h2 class="section-title">任務系統</h2>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../details/rpg_quest_system_implementation.md">RPG 任務系統實作</a></div>
+        <div class="card-desc">自訂任務系統完整實作：任務資料庫、進度追蹤器、獎勵結算與 UI 整合</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地緣與世界 -->
+  <div class="section">
+    <h2 class="section-title">地緣政治與世界</h2>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../details/geopolitical_influence_implementation.md">地緣影響力實作</a></div>
+        <div class="card-desc">地緣影響力系統 C# 實作：Tile 影響力值計算、勢力範圍視覺化、外交效果</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../details/event_routing_implementation.md">事件路由實作</a></div>
+        <div class="card-desc">世界事件路由系統：事件訂閱/發布模式、跨 Mod 事件通訊、優先序控制</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../details/world_faction_system.md">世界派系系統</a></div>
+        <div class="card-desc">動態世界派系管理：派系誕生/滅亡邏輯、勢力消長算法、大地圖視覺同步</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 哨站 -->
+  <div class="section">
+    <h2 class="section-title">哨站系統</h2>
+    <div class="g3">
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../details/military_outpost_implementation.md">軍事哨站實作</a></div>
+        <div class="card-desc">軍事哨站完整實作：守備 AI、補給請求、防禦事件觸發、與大地圖的狀態同步</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../details/optimized_outpost_core.md">最佳化哨站核心</a></div>
+        <div class="card-desc">哨站核心效能最佳化：批次 Tick 精簡、記憶體佔用控制、序列化效率提升</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../details/productivity_profiling_implementation.md">生產力剖析實作</a></div>
+        <div class="card-desc">哨站生產力模擬：工作效率計算模型、資源產出週期、人員配置效益分析</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 領導與社交 -->
+  <div class="section">
+    <h2 class="section-title">領導與社群</h2>
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../details/leadership_system_implementation.md">領導系統實作</a></div>
+        <div class="card-desc">領導者機制 C# 實作：職位定義、影響力值、指令效果、繼任觸發條件</div>
+      </div>
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../details/sims_mode_community_implementation.md">Sims 模式社群實作</a></div>
+        <div class="card-desc">社群模擬模式實作：Pawn 關係網路擴充、社交事件生成、情緒傳播計算</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 魔紋 -->
+  <div class="section">
+    <h2 class="section-title">魔紋系統</h2>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../details/magic_tattoo_implementation.md">魔紋實作</a></div>
+        <div class="card-desc">魔紋系統 C# 實作：刺青資料結構、效果觸發鉤子、動態貼圖合成、存檔整合</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具 -->
+  <div class="section">
+    <h2 class="section-title">工具與設定</h2>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../details/mod_settings_integration.md">Mod 設定整合</a></div>
+        <div class="card-desc">ModSettings 系統完整整合：設定頁面 UI、跨版本相容序列化、執行期熱更新</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  RimWorld 1.6 Mod 開發分析 · 核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01
+</footer>
+
+</body>
+</html>

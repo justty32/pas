@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>道具 / 物品欄系統 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .tree-box{background:rgba(0,0,0,.25);border-radius:7px;padding:14px 16px;font-family:monospace;font-size:.8rem;line-height:1.9;color:var(--text);}
+  .tree-box .root{color:var(--green);font-weight:700;}
+  .tree-box .sub{color:var(--cyan);}
+  .tree-box .leaf{color:var(--text);}
+  .tree-box .note{color:var(--muted);font-style:italic;}
+  .indent1{padding-left:1.5em;}
+  .indent2{padding-left:3em;}
+  .indent3{padding-left:4.5em;}
+  .item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+  .item-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .item-card h4{font-size:.85rem;font-weight:700;margin-bottom:5px;}
+  .item-card .ic-badge{font-size:.68rem;margin-bottom:8px;}
+  .item-card p{font-size:.78rem;color:var(--muted);line-height:1.5;}
+  .bug-label{display:inline-block;background:rgba(248,81,73,.15);color:var(--red);
+    border:1px solid rgba(248,81,73,.3);border-radius:4px;font-size:.68rem;
+    font-weight:700;padding:1px 7px;letter-spacing:.5px;text-transform:uppercase;margin-left:6px;}
+  .flow-steps{counter-reset:step;}
+  .flow-step{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;}
+  .flow-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;
+    background:var(--blue);color:#000;font-size:.7rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;}
+  .flow-text{font-size:.82rem;color:var(--text);padding-top:2px;}
+  .flow-text code{font-size:.78rem;}
+  .kv-row{display:flex;justify-content:space-between;align-items:baseline;
+    padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.82rem;}
+  .kv-row:last-child{border-bottom:none;}
+  .kv-key{color:var(--muted);}
+  .kv-val{color:var(--text);font-family:monospace;font-size:.78rem;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html" class="active">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>道具 / 物品欄系統</h1>
+  <p>Template Method 設計、拖放 UI、消耗品細節</p>
+</div>
+
+<!-- ═══ 道具類別層級 ═══ -->
+<div class="section">
+  <div class="section-title">道具類別層級</div>
+  <div class="card card-accent-green" style="margin-bottom:16px;">
+    <h3>繼承結構</h3>
+    <div class="tree-box" style="margin-top:10px;">
+      <div class="root">Item <code>src/items/item.gd</code> <span class="note">— 基底（純資料類，非 Node；Reference 型別）</span></div>
+      <div class="indent1"><span style="color:var(--muted);">├── </span><span class="sub">Consumable</span> <code>src/items/consumable.gd</code> <span class="note">— 可使用消耗品，Template Method</span></div>
+      <div class="indent2"><span style="color:var(--muted);">├── </span><span class="leaf">Potion</span> <code>consumables/potion.gd</code></div>
+      <div class="indent2"><span style="color:var(--muted);">├── </span><span class="leaf">Whetstone</span> <code>consumables/whetstone.gd</code></div>
+      <div class="indent2"><span style="color:var(--muted);">├── </span><span class="leaf">Meat</span> <code>consumables/meat.gd</code></div>
+      <div class="indent2"><span style="color:var(--muted);">├── </span><span class="leaf">Barrel</span> <code>consumables/barrel.gd</code></div>
+      <div class="indent2"><span style="color:var(--muted);">├── </span><span class="leaf">CannonBall</span> <code>consumables/cannon_ball.gd</code></div>
+      <div class="indent2"><span style="color:var(--muted);">└── </span><span class="leaf">Firework</span> <code>consumables/firework.gd</code></div>
+      <div class="indent1"><span style="color:var(--muted);">└── </span><span class="sub">Collectible</span> <code>src/items/collectibles.gd</code> <span class="note">— 採集材料／掉落物</span></div>
+    </div>
+    <p style="margin-top:10px;font-size:.78rem;">
+      <strong>Item 基底欄位：</strong>
+      <code>name: String</code>&ensp;<code>icon: Texture2D</code>&ensp;<code>quantity: int</code>&ensp;<code>rarity: int（0–99）</code>
+      &ensp;—&ensp;<code>clone()</code> 以 <code>get_script().new()</code> 實現多型複製
+    </p>
+    <p style="margin-top:6px;font-size:.78rem;">
+      <strong>Template Method 設計：</strong>
+      基類 <code>use()</code> 固定流程（檢查 quantity → 呼叫 <code>effect()</code> → 扣量），
+      子類只需覆寫 <code>effect(player)</code> 實作具體效果。
+      <code>effect()</code> 回傳 <code>false</code> 表示無法使用（數量不扣除）。
+    </p>
+  </div>
+
+  <!-- 各消耗品卡片 -->
+  <div class="item-grid">
+
+    <div class="item-card card-accent-green" style="border-left:3px solid var(--blue);">
+      <h4>Potion &ensp;<span class="badge badge-blue">rarity 20</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity 10</span></div>
+      <p>回血 20 HP，觸發 <code>drink</code> 動畫。<br>
+        滿血或非 idle-loop 狀態無法使用（<code>can_consume()</code>）。<br>
+        動畫結束後 <code>entity.gd _on_animation_tree_animation_finished</code> 自動 stop。</p>
+    </div>
+
+    <div class="item-card" style="border-left:3px solid var(--green);">
+      <h4>Whetstone &ensp;<span class="badge badge-green">rarity 20</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity 20</span></div>
+      <p>回復武器銳利度 +20。<br>
+        武器已完全銳利（<code>is_sharpened()</code>）時不消耗。<br>
+        觸發 <code>whetstone</code> 動畫。</p>
+    </div>
+
+    <div class="item-card" style="border-left:3px solid var(--purple);">
+      <h4>Meat &ensp;<span class="badge badge-purple">rarity 25</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity 10</span></div>
+      <p><strong>永久</strong>提升 <code>stamina_max</code> +25。<br>
+        唯一永久提升角色數值的消耗品。<br>
+        只在 idle 且未達上限 200 時有效，觸發 <code>eat</code> 動畫。</p>
+    </div>
+
+    <div class="item-card" style="border-left:3px solid var(--red);">
+      <h4>Barrel &ensp;<span class="badge badge-red">rarity 10</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity 5</span></div>
+      <p>生成 3D 物理爆炸桶放置在玩家前方。<br>
+        連鎖爆炸：對鄰近 <code>explosive</code> 群組施加動量並縮短引信。<br>
+        延遲 [0.1, 0.5]s。</p>
+    </div>
+
+    <div class="item-card" style="border-left:3px solid var(--orange);">
+      <h4>CannonBall &ensp;<span class="badge badge-orange">rarity —</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity 1</span></div>
+      <p>裝入大砲後以 200 m/s 仰角 5° 射出。<br>
+        直接使用（快捷鍵）：丟到玩家前方，可撿回。<br>
+        動能門檻 &gt;200 才爆炸，避免低速滾動觸發。</p>
+    </div>
+
+    <div class="item-card" style="border-left:3px solid var(--cyan);">
+      <h4>Firework &ensp;<span class="badge" style="color:var(--cyan);border-color:var(--cyan);background:rgba(57,213,211,.07);">rarity 10</span></h4>
+      <div class="ic-badge"><span class="chip">max_quantity —</span></div>
+      <p>生成自動升空節點，<code>launch()</code> 立即呼叫。<br>
+        初速 70 m/s 向上 + 隨機 X 軸 ±20 m/s。<br>
+        4–5 秒後 <code>boom</code> 動畫，動畫結束 <code>queue_free()</code>。</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ 堆疊邊界分析 ═══ -->
+<div class="section">
+  <div class="section-title">堆疊邊界分析</div>
+  <div class="card card-accent-orange">
+    <h3><code>add(n)</code> 堆疊邊界行為 <span class="chip">consumable.gd:29-36</span></h3>
+    <p style="margin-top:8px;">計算公式：<code>max_n = max_quantity - quantity</code>，剩餘可放入容量。</p>
+    <pre style="margin-top:10px;">add(n: int) -> int:
+    var max_n := max_quantity - quantity   # 剩餘容量
+    if n &lt;= max_n:
+        quantity += n
+        return 0                           # 無溢出
+    quantity += max_n                      # 填滿剩餘容量
+    return n - max_n                       # 回傳溢出量</pre>
+
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div class="kv-row"><span class="kv-key">quantity 已滿時（max_n = 0）</span><span class="kv-val">整批 n 個全部溢出</span></div>
+        <div class="kv-row"><span class="kv-key">quantity 不超量</span><span class="kv-val">函式保證不超過 max_quantity</span></div>
+        <div class="kv-row"><span class="kv-key">無錯誤 / 警告</span><span class="kv-val">靜默溢出，不拋例外</span></div>
+      </div>
+      <div>
+        <div class="kv-row"><span class="kv-key">溢出由呼叫者處理</span><span class="kv-val">gathering.gd 通知玩家</span></div>
+        <div class="kv-row"><span class="kv-key">不自動尋找第二格</span><span class="kv-val">inventory.add_item 只找第一個同名格</span></div>
+        <div class="kv-row"><span class="kv-key">數量滿時 label 變紅</span><span class="kv-val">set_label_color() 視覺提示</span></div>
+      </div>
+    </div>
+
+    <div class="highlight-box hl-orange" style="margin-top:12px;">
+      溢出處理路徑：<code>gathering.gd</code> 收到 <code>overflow &gt; 0</code> 後觸發「無法攜帶更多」通知，
+      <strong>不重試</strong>部分放入。<code>inventory.add_item</code> 的同名格路徑回傳 overflow 給呼叫者，設計上由呼叫者自行決定處理方式。
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 商店定價系統 ═══ -->
+<div class="section">
+  <div class="section-title">商店定價系統</div>
+  <div class="card card-accent-orange">
+    <h3>價格公式 <span class="chip">shop-item.gd:29-37</span></h3>
+    <p style="margin-top:6px;">
+      <code>item_cost = int((100 - rarity) * cost_factor)</code>&ensp;
+      <code>cost_factor = 10</code>（由 <code>NPC.gd:37</code> 傳入）<br>
+      <span style="font-size:.78rem;color:var(--muted);">rarity 代表「掉落加權比重」，越高越常見；(100 - rarity) 將其反轉為商店定價——常見道具反而便宜。</span>
+    </p>
+    <table style="margin-top:14px;">
+      <thead>
+        <tr>
+          <th>道具</th>
+          <th>rarity</th>
+          <th>100 − rarity</th>
+          <th>× cost_factor 10</th>
+          <th>單價</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Potion</td><td>20</td><td>80</td><td>×10</td><td>800£</td></tr>
+        <tr><td>Whetstone</td><td>20</td><td>80</td><td>×10</td><td>800£</td></tr>
+        <tr><td>Meat</td><td>25</td><td>75</td><td>×10</td><td>750£</td></tr>
+        <tr><td>Barrel</td><td>10</td><td>90</td><td>×10</td><td>900£</td></tr>
+        <tr><td>Firework</td><td>10</td><td>90</td><td>×10</td><td>900£</td></tr>
+      </tbody>
+    </table>
+    <div class="highlight-box" style="background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.25);color:var(--red);margin-top:14px;">
+      <strong>Bug：購買 N 件只扣單件費用</strong>
+      <span class="bug-label">BUG</span><br>
+      <span style="font-size:.8rem;">
+        <code>shop-item.gd:58-63</code> — <code>buy.emit(player_item, item_cost)</code> 傳入的是<strong>單件</strong>價格，
+        而 <code>player_item.quantity = $Quantity.value</code>（玩家選定數量）。
+        <code>player.buy_item(item, cost)</code> 直接 <code>money -= cost</code>，
+        不論購買幾件費用都只扣 1 件的金額。
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Barrel 連鎖爆炸 ═══ -->
+<div class="section">
+  <div class="section-title">Barrel 連鎖爆炸</div>
+  <div class="card card-accent-red">
+    <h3>連鎖爆炸機制 <span class="chip">barrel-scene.gd:18-26</span></h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>延遲計算</strong></p>
+        <pre>body_timer.set_wait_time(
+    0.5 - randf_range(0, 0.4)
+)
+# 值域：[0.1, 0.5] 秒
+# 平均：約 0.3 秒</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:8px;">
+          最快連鎖間隔 0.1 秒（幾乎同時），最慢 0.5 秒（略有停頓感）。
+        </p>
+      </div>
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>雙重防重複保護</strong></p>
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-text"><code>if not body.explosion/animation.is_playing()</code>
+            — 已在爆炸動畫中的桶不被重設引信，避免無限循環</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-text"><code>if body_timer.time_left &gt; 0.5</code>
+            — 只在引信剩餘超過 0.5 秒時才縮短，防止快爆的桶被反向延遲</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:10px;">
+      同時，被觸發的桶會收到 <code>apply_central_impulse(momentum)</code> 動量推力，
+      多桶相鄰時各自獨立倒數，隨機先後引爆並再次觸發下一輪連鎖。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 物品欄拖放架構 ═══ -->
+<div class="section">
+  <div class="section-title">物品欄（Inventory）拖放架構</div>
+  <div class="g2">
+
+    <div class="card card-accent-purple">
+      <h3>Slot 內部類別 <span class="chip">inventory.gd:161-169</span></h3>
+      <div style="margin-top:10px;" class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">1</div>
+          <div class="flow-text">
+            <code>_get_drag_data()</code>：從物品欄移除道具，建立拖曳預覽，
+            設置 <code>inventory.dragging = &#123;'item', 'slot', 'in_flight': true&#125;</code>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">2</div>
+          <div class="flow-text">
+            <code>_can_drop_data()</code>：接受條件——目標格空，
+            或同名且 <code>data.quantity + item.quantity ≤ max_quantity</code>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:var(--purple);">3</div>
+          <div class="flow-text">
+            <code>_drop_data()</code>：設 <code>data.in_flight = false</code>，
+            呼叫目標 Inventory 的 <code>add_item()</code>，清空 <code>dragging</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-accent-purple">
+      <h3><code>call_deferred()</code> give_back 機制 <span class="chip">inventory.gd:35-44</span></h3>
+      <p style="margin-top:8px;font-size:.82rem;">
+        放手未命中任何格時的保護機制。
+        <strong>為何需要 deferred？</strong>
+      </p>
+      <p style="margin-top:6px;font-size:.78rem;color:var(--muted);">
+        若直接呼叫，<code>give_back_dragged_item()</code> 可能在 <code>Slot._drop_data()</code> 之前執行，
+        誤判道具仍在飛行中而歸還原位，造成成功放下的道具消失。
+      </p>
+      <p style="margin-top:6px;font-size:.78rem;color:var(--muted);">
+        <code>call_deferred()</code> 將回呼推遲到<strong>當前幀所有輸入事件處理完畢後</strong>，
+        確保 <code>_drop_data</code> 先將 <code>in_flight = false</code>，
+        再由 <code>give_back</code> 判斷是否歸還。
+      </p>
+      <div style="margin-top:10px;">
+        <p style="font-size:.78rem;"><strong>雙保護旗標：</strong></p>
+        <div class="kv-row"><span class="kv-key">Slot._drop_data</span><span class="kv-val">in_flight = false + dragging = null</span></div>
+        <div class="kv-row"><span class="kv-key">Inventory._input（下一幀）</span><span class="kv-val">dragging != null &amp;&amp; in_flight → 才歸還</span></div>
+      </div>
+      <div class="highlight-box hl-purple" style="margin-top:10px;">
+        跨欄拖曳時，<code>dragging</code> Dict 為引用型別，
+        兩個 Inventory 指向同一物件。<code>in_flight</code> 一旦被目標欄設為 <code>false</code>，
+        來源欄的 deferred 回呼也能正確判斷，不會誤觸歸還。
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:12px;border-left:3px solid var(--border);">
+    <h3>ItemStack 顯示元件 <span class="chip">inventory.gd — ItemStack extends TextureRect</span></h3>
+    <p style="margin-top:6px;font-size:.82rem;">
+      <code>layout(item)</code>：設定圖示紋理，若 <code>max_quantity &gt; 1</code> 則顯示數量標籤。
+      數量已滿時標籤顯示紅色（<code>set_label_color(label)</code>），未滿顯示白色。
+      作為拖曳預覽節點使用。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 快捷物品列 ═══ -->
+<div class="section">
+  <div class="section-title">快捷物品列（ItemsBar）</div>
+  <div class="card card-accent-blue">
+    <h3>5 格無縫循環 <span class="chip">items_bar.gd:41-58</span></h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong><code>wrapi()</code> 環繞邏輯</strong></p>
+        <pre>var null_item := Consumable.new("None", ...)
+# null_item：空選狀態，quantity=0
+
+func activate_next():
+    active_item = wrapi(
+        active_item + 1,
+        0,
+        inventory.items.size() + 1
+    )
+# 範圍 [0, size+1)，位置 0 固定 = null_item</pre>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:6px;">
+          假設物品欄 3 件：位置 0(null) → 1(道具0) → 2(道具1) → 3(道具2) → 0(null)…
+        </p>
+      </div>
+      <div>
+        <p style="font-size:.82rem;margin-bottom:8px;"><strong>null_item 指標比較與 5 格顯示</strong></p>
+        <div class="kv-row"><span class="kv-key">use_active_item()</span><span class="kv-val">if item != null_item（指標比較）</span></div>
+        <div class="kv-row"><span class="kv-key">顯示格數</span><span class="kv-val">以 active_item 為中心，左右各 2 格</span></div>
+        <div class="kv-row"><span class="kv-key">左側超出</span><span class="kv-val">inventory.get_item() 內部 wrapi 自動環繞</span></div>
+        <div class="kv-row"><span class="kv-key">觸控支援</span><span class="kv-val">水平拖曳 &gt;50px 切換物品</span></div>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:10px;">
+          <code>update()</code> 遍歷 5 個子節點（<code>active_item-2</code> 到 <code>active_item+2</code>），
+          <code>get_item(i)</code> 對負數索引也能正確環繞，視覺上無縫循環。
+        </p>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:4px;">
+          <code>null_item</code> 選中時：數量標籤隱藏（<code>$bar/use/quantity.visible = false</code>）。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

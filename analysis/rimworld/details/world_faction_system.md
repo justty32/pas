@@ -24,8 +24,15 @@ public class WorldComponent_FactionInfluence : WorldComponent
     public override void ExposeData()
     {
         base.ExposeData();
-        Scribe_Values.Look(ref tileOwners, "tileOwners");
-        Scribe_Values.Look(ref tileInfluence, "tileInfluence");
+        // ⚠️ 核對 2026-06-01：Scribe_Values.Look 只處理單一值，不支援 int[]/float[] 陣列。
+        // DataExposeUtility 只提供 LookBoolArray；對 int[]/float[] 需自行做二進位序列化，
+        // 或改用 List<int>/List<float> 搭配 Scribe_Collections.Look（存檔會很大，
+        // 對 ~100k 元素的 world tile 陣列考慮 BitConverter 逐行寫入 XML 或用壓縮 blob）。
+        // 暫以 List<int> 替代示意：
+        // Scribe_Collections.Look(ref tileOwnersList, "tileOwners", LookMode.Value);
+        // TODO: 選定儲存方案後替換
+        Scribe_Values.Look(ref tileOwners, "tileOwners");   // ❌ 無效，需替換
+        Scribe_Values.Look(ref tileInfluence, "tileInfluence"); // ❌ 無效，需替換
     }
 }
 ```
@@ -34,28 +41,37 @@ public class WorldComponent_FactionInfluence : WorldComponent
 
 勢力應從「定居點 (Settlement)」向外擴散，受距離、地形與派系強度影響。
 
+> ⚠️ **核對 2026-06-01（三個坑）**：
+> 1. `Find.WorldFloodFiller` **不存在**。`WorldFloodFiller` 屬於 `PlanetLayer`，透過 `layer.Filler` 取得。全局不存在 `Find.WorldFloodFiller` shortcut。
+> 2. lambda 參數型別應為 `PlanetTile`，不是 `int`（1.6 已全面改用 `PlanetTile` struct）。
+> 3. `world.grid[tile].IsWater`：世界 Tile 沒有 `.IsWater`；應改用 `Find.WorldGrid[tile].biome.IsSeaTile`（或檢查 biome 的 `WaterCovered` 屬性）。
+
 ```csharp
 public void UpdateInfluence()
 {
-    // 1. 初始化：每個定居點為中心點
+    // 需從 settlement.Tile.Layer 取得對應的 WorldFloodFiller
     foreach (var settlement in Find.WorldObjects.Settlements)
     {
-        int centerTile = settlement.Tile;
+        PlanetTile centerTile = settlement.Tile;  // PlanetTile，非 int
         int factionId = settlement.Faction.loadID;
-        
-        // 2. 使用廣度優先搜尋 (BFS) 擴散
-        Find.WorldFloodFiller.FloodFill(centerTile, (int tile) => {
-            // 判斷該格子是否可被控制 (例如：海洋不可控制)
-            return !world.grid[tile].IsWater;
-        }, (int tile, int dist) => {
-            float strength = CalculateStrength(settlement.Faction, dist);
-            if (strength > tileInfluence[tile])
-            {
-                tileOwners[tile] = factionId;
-                tileInfluence[tile] = strength;
-            }
-            return dist > 15; // 擴散半徑限制
-        });
+        PlanetLayer layer = centerTile.Layer;
+        WorldFloodFiller filler = layer.Filler;   // ✅ 正確取法
+
+        filler.FloodFill(
+            centerTile,
+            // passCheck：PlanetTile → bool
+            (PlanetTile tile) => !Find.WorldGrid[tile].biome.IsSeaTile,  // ✅ IsWater 替代
+            // processor：PlanetTile, int → void（或回傳 bool 表示「停止」）
+            (PlanetTile tile, int dist) => {
+                float strength = CalculateStrength(settlement.Faction, dist);
+                if (strength > tileInfluence[tile.tileId])
+                {
+                    tileOwners[tile.tileId] = factionId;
+                    tileInfluence[tile.tileId] = strength;
+                }
+            },
+            maxTilesToProcess: 200 // 限制擴散格數（替代 dist > 15 的寫法）
+        );
     }
 }
 

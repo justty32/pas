@@ -4,7 +4,7 @@
 1.  **遇襲**: `IncidentWorker_Ambush` 攔截商隊。
 2.  **生成地圖**: `GetOrGenerateMapUtility` 創建臨時地圖。
 3.  **實體化**: `CaravanEnterMapUtility.Enter()` 將小人從商隊對象轉為地圖上的實體。
-4.  **撤退**: `CaravanExitMapUtility.Exit()` 將小人重新打包回商隊對象。
+4.  **撤退**: ⚠️ 核對 2026-06-01：`CaravanExitMapUtility.Exit()` 不存在。實際方法為 `CaravanExitMapUtility.ExitMapAndJoinOrCreateCaravan(Pawn pawn, Rot4 exitDir)`（逐一讓 Pawn 離開並加入或建立商隊）。
 
 ## 2. 旅行中的狀態計算 (Traveling Simulation)
 

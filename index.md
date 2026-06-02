@@ -12,7 +12,8 @@
 | **Luanti (Minetest)**| 遊戲引擎 | 極高 (Level 1-12) | 已遷移 | 完整的引擎剖析、Lua API 綁定、渲染管線與 13 篇開發教學。 |
 | **Godot** | 遊戲引擎 | 高 (GDExtension) | 已遷移 | 核心對象系統、物理、渲染分析，以及大量 GDExtension 教學。 |
 | **Veloren** | 開源遊戲 (Rust)| 高 (Full System) | 已遷移 | 包含氣候、經濟、AI 行為與網絡同步的深度分析。 |
-| **OpenNefia** | 遊戲實作 (C#) | 中 (ECS/IOC) | 已遷移 | 著重於 ECS 架構、依賴注入與 C++ 實作計畫。 |
+| **OpenNefia** | 遊戲實作 (C#) | 高 (Architecture 14 篇) + HTML | 分析中 (源碼核對 2026-06-01) | Elona 開源重製引擎（C# .NET 8.0）。三大支柱：ECS（純資料 Component + EntitySystem + EntityEventBus 解耦）、IoC（thread-local 容器 + `[Dependency]` 反射注入）、YAML 資料驅動原型（可繼承可熱重載）。源碼核對修正舊分析：.NET 6.0→8.0、補全 17 項依賴（XamlX/Harmony/ImageSharp 等）。新增 14_xaml_wisp_ui.md：XamlX 編譯期將 .xaml 注入為 IL（同 Avalonia 技術，含「假裝是 Avalonia」騙過 Rider 的技巧）+ Wisp 自動版面 UI 框架。附 C++ 重寫計畫（EnTT+cereal+yaml-cpp，Godot GDExtension 方向）與 HTML 導覽層。核心 Phase 0–4 已完成（詳見 opennefia-cpp）。 |
+| **opennefia-cpp** | 衍生小專案分析 (C++20) | 事後分析（Architecture 1 篇）+ HTML | 分析完成 (2026-06-01) | derived/opennefia-cpp/ 的事後架構分析。godot-free 純 C++20 引擎核心重寫（仿 medps 藍本）。Phase 0–4 全部完成：CMake 雙目標骨架（cmake 4.0+ 相容）→ ECS（EntityManager + EventBus void* 定向派發 + entt::dispatcher 廣播）→ 原型系統（yaml-cpp 拓撲繼承解析 + YAML::Clone 防污染 + ComponentLoader 零反射登錄）→ 序列化三件套（AllComponents type_list + entt_cereal_archive + save_load fold expression + FolderSaveStore）→ 地圖邏輯（MapData 稠密 tile + 可走性系統 + 整合測試）。36 test cases / 139 assertions 全綠。 |
 | **MC Mod** | 遊戲模組 | 高 (Architecture) | 已遷移 | Millenaire-Reborn 的村莊邏輯、AI 目標系統與文化體系分析。 |
 | **T-Engine** | 遊戲引擎 | 中 (ToME4) | 已遷移 | 引擎架構分析與 17 篇模組/插件開發教學。 |
 | **OpenStartbound** | 遊戲引擎 | 中 (Universe) | 已遷移 | 宇宙生成、實體層級、渲染管線與 Lua 整合分析。 |
@@ -20,7 +21,7 @@
 | **Taisei** | 遊戲引擎 | 中 (Bullet Hell) | 已遷移 | 渲染引擎、任務 DSL 與 C 語言開發範例。 |
 | **ASC-HQ** | 遊戲引擎 | 基礎 (Core) | 已遷移 | 核心引擎、數據管理與子系統架構分析。 |
 | **Slay-the-Robot** | 遊戲教學 | 基礎 (Tutorial) | 已遷移 | 提供新手與進階的開發引導指南。 |
-| **Hy (Lisp-Python)** | 程式語言 | 教學導向 | 已遷移 | Lisp 與 Python 互操作性、元編程與非同步教學。 |
+| **Hy (Lisp-Python)** | 程式語言 | 教學導向 (對齊 Hy 1.3.0) | 已深化 (2026-05-26) | 教學 11 篇 + answers/。已 clone Hy 1.3.0 源碼並 venv 實測；發現舊教學基於 0.x（`&rest`/舊 import/2-arg if/`with-decorator`/`async-defn`/錯誤重整表/把 hyrule 當核心 等多項已壞），全部對齊 1.3 重寫。重點深化 macro：05 重寫＋新增 11 進階篇（編譯期模型、`require` 機制、reader macro、`hy.R`/`hy.I`、核心 vs hyrule 速查、0.x→1.x 遷移表）。answers 含「Hy 能否跑 c-mera」（不行，附 Hy-mera 自製骨架）。 |
 | **LispC** | 編譯器 | 教學導向 | 已遷移 | Lisp-to-C 轉換邏輯、宏系統與 C 語言嵌入教學。 |
 | **C-mera** | 代碼生成器 | 高 (Architecture) | 已遷移 | 基於 Lisp 的 C/C++/CUDA 生成器、AST 轉換與宏系統分析。 |
 | **godot-cpp** | 遊戲引擎組件 | Level 1 (Initial) | 分析中 | Godot 引擎的 C++ 綁定庫，用於開發 GDExtension。 |
@@ -37,11 +38,13 @@
 | **TakinGodotTemplate** | Godot 起手模板 (Godot 4.4, GDScript) | Level 1-3 | 分析中 | Takin 模板（靈感自 Maaack）：精選 plugins + 最佳實踐骨架。16 個 autoload 為骨幹，將第三方 plugin 全部 Wrapper 化成 enum/Resource 驅動的型別安全介面，SignalBus 觀察者解耦，UI 採 Component-Driven(Builder 注入)，設定走 INI、存檔走 JSON。亮點：約定式自動註冊設定（節點名=列舉名+型別後綴）、反射式存檔（get_script_property_list 自動序列化 + §§§ 簽章 + 可選加密）、HACKS 文件化（Web 剪貼簿 JS 注入）。整合 scene_manager/resonate/Log/debug_menu 等。 |
 | **godot-demo-projects** | Godot 官方範例集合 (Godot 4.6, GDScript/C#) | 編目 (Level 1-2) + 代表深入 | 分析中 | 官方 demo 集合（非單一架構）：13 分類、137 個 project.godot（含 mono/ C# 版）。level2 為核心分類目錄（2d=26/3d=32/gui=14/audio/compute/loading/misc/mobile/networking/viewport/xr…）+「主題→demo」速查表。深入剖析 4 個：2d/platformer、2d/finite_state_machine、compute/texture（render thread + Texture2DRD + ping-pong 水波）、networking/websocket_chat（poll 驅動 WS）。 |
 | **godot-tactical-rpg** | 戰棋 RPG 範本 (Godot 4.3, GDScript) | Level 1-3 | 分析中 | ramaureirac SRPG 範本（3D 場地 + 2D billboard 角色）。Model/Module/Service 三層(類 MVC)，整局由 TacticsParticipantResource.stage(0~7) 一個整數隱式狀態機驅動。亮點：「射線格子化」（執行期把 Blender 方塊 mesh 轉 StaticBody3D，鄰接靠 RayCast3D 偵測、移動範圍 BFS flood-fill、高度差即跳躍門檻）、陣營制回合、完整敵人 AI 決策鏈、成品級四層樞紐攝影機（鍵鼠/手把雙模）。已知遺留：重複 service 檔、舊 .tres 用廢欄位 mp。 |
+| **cultivation-world-simulator** | AI 驅動修仙世界模擬器 (Python/FastAPI + Vue3) | Level 1-2 | 分析中 (核對 2026-06-01) | 玩家扮演「天道」觀察 LLM 全員驅動的修仙世界自行演化。v3.4.0，Python 3.10+/FastAPI/Uvicorn/WebSocket 後端 + Vue3/PixiJS 前端。Simulator.step() = 1 月/回合，20 相位（感知→AI決策→行動→社交→死亡→年度維護）。LLM 接口用 urllib 直呼 OpenAI 相容/Anthropic 原生，無 SDK 依賴，Semaphore 控制並發。設定三層：只讀 config.yml / 用戶 settings.json / 本局 RunConfig。事件以 SQLite 持久化，query/command 分離 REST API，WebSocket 即時推播 tick 狀態。 |
+| **WuXiaAndJiangHu_Godot** | 武俠 MUD → Godot RPG 移植 (Godot 4.0, GDScript) | Level 1-2 + HTML | 分析中 (2026-06-01) | LPC MUD 武俠遊戲移植至 Godot 4.0 的進行中專案。三大架構：inherit/ 類別繼承層級（GameObject/Char/Room）、adm/daemons/ Daemon 系統（COMBAT_D/CHINESE_D 等）、feature/ Mixin 系統。核心：dbase dict（持久屬性）+ tmp_dbase dict（揮發屬性）的 LPC 相容層；AP/DP/PP 三段式概率戰鬥；10維屬性（str/int/con/dex/sta/spi/kar/per/cps/cor）+ 精力/氣血/內力；kungfu/skill/ 武學技能。大量功能仍在 TODO/注釋狀態，COMBAT_D.gd 有語法錯誤。 |
 
 ---
 ## 統計摘要
-- **總計分析專案**：31 個
-- **最近更新日期**: 2026-05-25
+- **總計分析專案**：34 個
+- **最近更新日期**: 2026-06-01
 - **維護 Agent**: Gemini CLI / Claude Code
 
 ---

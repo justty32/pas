@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenNefia 分析 — C++ 重寫計畫</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:720px){.doc-grid{grid-template-columns:1fr;}}
+.completion-banner{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);
+  border-radius:10px;padding:18px 22px;margin-bottom:26px;display:flex;align-items:flex-start;gap:14px;}
+.cb-check{font-size:1.8rem;flex-shrink:0;line-height:1.3;}
+.cb-text h3{font-size:.92rem;font-weight:700;color:var(--green);margin-bottom:5px;}
+.cb-text p{font-size:.8rem;color:var(--muted);line-height:1.6;}
+.cb-text a{color:var(--cyan);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">OpenNefia</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="cpp_plan.html" class="active">C++ 重寫計畫</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>C++ 重寫計畫</h1>
+  <p>將 C# / .NET 版 OpenNefia 以 C++ 重新實作，消除對反射的三大依賴（DI 注入 / 系統掃描 / DataField 序列化）。初期規劃 Raylib 方向；2026-06-01 確認改以 <strong>Godot 4 GDExtension</strong> 為前端方向，核心 godot-free（仿 medps）。卡片連回 <code>../details/plan_cpp/*.md</code>。</p>
+</div>
+
+<!-- 完成橫幅 -->
+<div class="completion-banner">
+  <div class="cb-check">✅</div>
+  <div class="cb-text">
+    <h3>godot-free 核心 Phase 0–4 全部完成（2026-06-01）</h3>
+    <p>衍生小專案 <code>derived/opennefia-cpp/</code> 已實作完成：CMake 骨架 → ECS（EntityManager + EventBus）→ 原型系統（yaml-cpp 繼承解析）→ 序列化三件套（AllComponents + entt_cereal + save_load）→ 地圖邏輯（MapData 稠密 tile）。<strong>36 test cases / 139 assertions 全綠</strong>，PROJECT.md §5 完成定義五點達成。<br>
+    詳見 <a href="../../analysis/opennefia-cpp/html/index.html">analysis/opennefia-cpp/html/index.html</a>（分析文件）。</p>
+  </div>
+</div>
+
+<!-- 技術棧對照 -->
+<div class="section">
+  <div class="section-title">核心技術棧選擇（C# → C++）</div>
+  <table>
+    <thead><tr><th>功能</th><th>C# 原方案</th><th>C++ 函式庫</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>圖形 / 音訊 / 輸入</td><td>Love2D (Love2dCS)</td><td><span class="badge badge-cyan">raylib</span></td><td>單一函式庫涵蓋三項</td></tr>
+      <tr><td>ECS 核心</td><td>自製 EntityManager</td><td><span class="badge badge-green">EnTT</span></td><td>高效能成熟 C++ ECS</td></tr>
+      <tr><td>YAML 解析</td><td>YamlDotNet</td><td><span class="badge badge-orange">yaml-cpp</span></td><td>原型系統與序列化</td></tr>
+      <tr><td>日誌</td><td>Serilog</td><td><span class="badge badge-blue">spdlog</span></td><td>高效能非同步日誌</td></tr>
+      <tr><td>配置</td><td>Nett (TOML)</td><td><span class="badge badge-purple">tomlplusplus</span></td><td>TOML 設定檔</td></tr>
+      <tr><td>依賴注入</td><td>反射 + [Dependency]</td><td><span class="badge badge-red">自製 ServiceLocator</span></td><td>C++ 無反射，改強型別定位器</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 最大挑戰 -->
+<div class="section">
+  <div class="section-title">重寫的根本挑戰：C# 反射不存在於 C++</div>
+  <div class="g3">
+    <div class="card card-accent-red">
+      <h3>① 依賴注入</h3>
+      <p>C# 靠反射掃描 <code>[Dependency]</code> 欄位自動注入；C++ 必須改用強型別 <code>ServiceLocator</code>，手動 <code>Resolve&lt;T&gt;()</code>。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>② 序列化</h3>
+      <p>C# 靠 <code>[DataField]</code> 屬性自動讀寫；C++ 需手寫 <code>Deserialize()</code> 或用宏 / 程式碼生成減少樣板。</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>③ 系統 / 組件自動註冊</h3>
+      <p>C# 靠 Assembly 掃描找出所有 EntitySystem 子類；C++ 需手動註冊或靜態自註冊樣板（self-registration）。</p>
+    </div>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:14px">
+    這三題已被一個真實的 C++20 ECS 後端 <code>medps</code>（EnTT + cereal，25/25 測試綠燈）逐一回答 —— 序列化用 <code>entt::type_list</code> + fold expression、系統用自由函式明確註冊、系統無狀態便不需 DI。詳見下方「<a href="../details/plan_cpp/05_lessons_from_medps.md">來自 medps 的真實答案</a>」。
+  </div>
+</div>
+
+<!-- 階段路線圖 -->
+<div class="section">
+  <div class="section-title">實作階段（Godot GDExtension 方向）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">Phase 0<br><small style="font-weight:400">CMake 骨架 ✅</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">Phase 1<br><small style="font-weight:400">ECS 地基 ✅</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">Phase 2<br><small style="font-weight:400">原型系統 ✅</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">Phase 3<br><small style="font-weight:400">序列化 ✅</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">Phase 4<br><small style="font-weight:400">地圖整合 ✅</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step" style="background:rgba(139,148,158,.08);color:var(--muted);border:1px solid var(--border)">F1 gbind/<br><small style="font-weight:400">GDExtension ⏸</small></span>
+  </div>
+</div>
+
+<!-- 文件卡片 -->
+<div class="section">
+  <div class="section-title">計畫文件</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-blue" href="../details/plan_cpp/01_foundation.md">
+      <span class="dc-no">階段一</span>
+      <h3>基礎建設 (Foundation)</h3>
+      <p>CMake 專案結構、ServiceLocator（IoC 替代）、Maths / Utility / ResourcePath、spdlog 日誌、tomlplusplus 配置與 CVar 觀察者模式。</p>
+      <span class="dc-link">→ 01_foundation.md</span>
+    </a>
+    <a class="doc-card card-accent-blue" href="../details/plan_cpp/01_foundation_detail.md">
+      <span class="dc-no">階段一 · 細節</span>
+      <h3>基礎建設（深入）</h3>
+      <p>第一階段的逐項實作細節與程式碼骨架。</p>
+      <span class="dc-link">→ 01_foundation_detail.md</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../details/plan_cpp/02_ecs.md">
+      <span class="dc-no">階段二</span>
+      <h3>ECS 與事件系統</h3>
+      <p>用 EnTT registry 封裝 EntityManager、MetaData / Spatial 組件、以 <code>entt::dispatcher</code> 實作廣播 / 定向事件匯流排、EntitySystem 生命週期。</p>
+      <span class="dc-link">→ 02_ecs.md</span>
+    </a>
+    <a class="doc-card card-accent-orange" href="../details/plan_cpp/03_prototypes.md">
+      <span class="dc-no">階段三</span>
+      <h3>原型與序列化</h3>
+      <p>yaml-cpp 序列化、<code>PrototypeId&lt;T&gt;</code> 強型別封裝、PrototypeManager 多型別存放，與 parent 欄位的繼承合併（依賴圖排序）。</p>
+      <span class="dc-link">→ 03_prototypes.md</span>
+    </a>
+    <a class="doc-card card-accent-cyan" href="../details/plan_cpp/04_graphics_ui.md">
+      <span class="dc-no">階段四 / 五</span>
+      <h3>渲染與 UI</h3>
+      <p>raylib Graphics 後端、分層 MapRenderer（Tile / Entity / Fov）、UiLayer 堆疊系統、InputManager 動作綁定與上下文、FontManager 中日英字符集。</p>
+      <span class="dc-link">→ 04_graphics_ui.md</span>
+    </a>
+    <a class="doc-card card-accent-cyan" href="../details/plan_cpp/04_graphics_ui_detail.md">
+      <span class="dc-no">階段四 / 五 · 細節</span>
+      <h3>渲染與 UI（深入）</h3>
+      <p>渲染與 UI 子系統的逐項實作細節與骨架。</p>
+      <span class="dc-link">→ 04_graphics_ui_detail.md</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../details/plan_cpp/05_lessons_from_medps.md">
+      <span class="dc-no">實戰印證</span>
+      <h3>來自 medps 的真實答案</h3>
+      <p>拿一個已跑起來的 C++20 ECS 後端（EnTT + cereal）對照三大反射難題：序列化用 <code>type_list</code> + fold、系統用自由函式明確註冊、DI 縮到單例、前端 raylib vs Godot 並列。<span class="badge badge-green">新增 2026-06-01</span></p>
+      <span class="dc-link">→ 05_lessons_from_medps.md</span>
+    </a>
+  </div>
+</div>
+
+<!-- 實作成果 -->
+<div class="section">
+  <div class="section-title">已實作產物 — derived/opennefia-cpp/（2026-06-01）</div>
+  <div class="doc-grid">
+    <a class="doc-card card-accent-green" href="../../analysis/opennefia-cpp/html/index.html">
+      <span class="dc-no">分析文件</span>
+      <h3>opennefia-cpp 分析首頁</h3>
+      <p>Phase 0–4 完成後的事後架構分析：設計決策 / 坑點彙整 / 三大反射難題解法。36 test cases / 139 assertions 全綠。<span class="badge badge-green">已完成 2026-06-01</span></p>
+      <span class="dc-link">→ analysis/opennefia-cpp/html/index.html</span>
+    </a>
+    <a class="doc-card card-accent-green" href="../../analysis/opennefia-cpp/html/architecture.html">
+      <span class="dc-no">架構細節</span>
+      <h3>opennefia-cpp 架構分析</h3>
+      <p>每個 Phase 的設計卡片 + 坑點（yaml-cpp YAML::Clone 污染 / entt::null CHECK 歧義 / cereal container include）+ 整合測試流程圖。</p>
+      <span class="dc-link">→ analysis/opennefia-cpp/html/architecture.html</span>
+    </a>
+  </div>
+</div>
+
+<!-- 檔案對照表 -->
+<div class="section">
+  <div class="section-title">C# → C++ 檔案對照表（Core）</div>
+  <table>
+    <thead><tr><th>C# Namespace / 目錄</th><th>C++ 目錄 (src/)</th><th>關鍵類別</th></tr></thead>
+    <tbody>
+      <tr><td><code>OpenNefia.Core.IoC</code></td><td><code>core/ioc/</code></td><td>ServiceLocator</td></tr>
+      <tr><td><code>OpenNefia.Core.GameObjects</code></td><td><code>core/ecs/</code></td><td>EntityManager, EntitySystem</td></tr>
+      <tr><td><code>OpenNefia.Core.Prototypes</code></td><td><code>core/prototypes/</code></td><td>PrototypeManager</td></tr>
+      <tr><td><code>OpenNefia.Core.Serialization</code></td><td><code>core/serialization/</code></td><td>SerializationManager</td></tr>
+      <tr><td><code>OpenNefia.Core.Graphics</code></td><td><code>core/graphics/</code></td><td>RaylibGraphics</td></tr>
+      <tr><td><code>OpenNefia.Core.UserInterface</code></td><td><code>core/ui/</code></td><td>UIManager</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="highlight-box hl-blue" style="margin-top:8px">
+  骨架原始碼位於 <code>../details/implements/</code>（含 <code>OpenNefia.Core/</code> 風格的 .hpp 介面與 <code>src/core/</code> 的初步實作）。
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  卡片連結指向 <code>../details/plan_cpp/*.md</code>；真實來源為 Markdown，HTML 僅為導覽呈現層。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

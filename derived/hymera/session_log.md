@@ -1,0 +1,23 @@
+- 2026-05-26 起始：Create 模式，源專案 c-mera（CL）+ 基礎技術 Hy 1.3；目標「Hy 寫的 c-mera 風格 C/C++ 生成器」。Agent: Claude Code (Opus 4.7 / 1M)。OS: Windows 11.
+- 2026-05-26: 與使用者確認三項決策——目標範圍 C+C++ 基本子集、節奏先設計後實作、命名 `hymera`。
+- 2026-05-26: 讀完 c-mera L3/L4/L5 架構分析，萃取設計 DNA 七點（節點/遍歷器/syntax/pretty-printer/proxy/多 pass/reader）。
+- 2026-05-26: 建立 `derived/hymera/` 目錄骨架（docs/decisions、src/hymera/{ast,passes,emit,syntax}、tests、session_temp）。
+- 2026-05-26: 寫 PROJECT.md（源專案、衍生目標、參照素材、技術棧、完成定義、不在範圍、目錄結構）與 CLAUDE.md（開發約定）。
+- 2026-05-26: 寫七份設計文件 docs/01-07（架構總覽、AST 形狀、Traverser/Pass、Emit 介面、Syntax 宏、C++ 擴充、v1 示例規劃）。
+- 2026-05-26: 寫三份 ADR：0001 用 functools.singledispatch、0002 v1 跳過 quoty、0003 v1 跳過 proxy 節點。
+- 2026-05-26: 放 19 個 src/ 占位檔（含一行 docstring 與設計文件交叉引用）+ tests/README.md。
+- 2026-05-26: 設計階段完成（共 34 個檔），等待使用者審閱後再進入 v1 實作。
+- 2026-05-26（修訂）：使用者指示「都依照 c-mera」——v1 範圍全面對齊，先前的 v2 deferrals 全部拉回 v1。
+- 2026-05-26（修訂）：實測驗證兩個關鍵假設：(A) `(pragma :warn-on-core-shadow False)` 後可覆寫 `if`/`for`/`+` 等核心宏；(B) `compiler.scope.defined ∪ builtins ∪ _hy_macros` 三表聯查能準確判斷編譯期 binding（6/6 case 通過）。
+- 2026-05-26（修訂）：發現 `arr[i]` 因 Hy reader 的 `[` 是語法分隔符而無法做 reader sugar，作為唯一已知 asymmetry 留下，記入新增 ADR 0004。
+- 2026-05-26（修訂）：刪除舊三份 ADR（singledispatch / skip-quoty / skip-proxy），改寫為新四份（CLOS 風格方法組合、實作 quoty、實作 proxy、reader sugar 與 arr 不對齊）。
+- 2026-05-26（修訂）：重寫 PROJECT.md（取消 v2 deferral 區塊；明列「全面對齊 c-mera」承諾與唯一不對齊處）。
+- 2026-05-26（修訂）：改寫 docs/02-07（02 改用 defnode 家族；03 改 defgeneric/defmethod；04 加 proxy 與 :before/:after/:self；05 加 quoty + 核心 shadow；06 改 defstatement；07 範例改 c-mera 風格寫法）。
+- 2026-05-26（修訂）：更新 docs/01 §2 reader 段（quoty 階段 cook）與 §6 索引；更新 CLAUDE.md 開發約定對齊新方向。
+- 2026-05-26（修訂）：src/ 骨架補 `generic.hy`、`syntax/quoty.hy`；拆 `passes/blocker.hy` 為 `if_blocker.hy` + `decl_blocker.hy`。檔案總計 38。
+- 2026-05-26（修訂）：設計階段完成（修訂版），等待使用者再次審閱。
+- 2026-05-26（實作起步）：使用者核可後開工。建 venv + editable install（Hy 1.3.0）；套件根改 `__init__.py`（import hy bootstrap）。
+- 2026-05-26（實作）：完成 `generic.hy`（GenericFunction + defgeneric/defmethod，:before/:after/:self 方法組合），smoke test 通過（三限定詞順序、:self 接管正確）。踩坑：迴圈變數勿命名 `fn`、`+` 不可當值傳（改 `sum`）。
+- 2026-05-26（實作）：完成 `ast/base.hy`（Node/Expression/Statement/Leaf/NodeList/Proxy + 五件套定義宏），smoke test 通過。關鍵修正：槽名改用 `hy.mangle`（與 kwarg/屬性存取一致）；base 用裸符號（hy.I 無法用字串組 Symbol）。
+- 2026-05-26（實作）：完成 `ast/c_nodes.hy`（全套 ~30 種 C 節點），載入與建構 smoke test 通過。
+- 2026-05-26（實作）：進度存於 `progress.md`（含構建指令、剩餘 Phase、5 個關鍵踩坑）。Phase 3 剩 traverser/passes、Phase 4-6 待續。

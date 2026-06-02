@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Freedom-Hunter 分析導覽</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{
+  padding:56px 0 40px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+  margin-bottom:32px;
+}
+.hero h1{
+  font-size:2.4rem;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--blue),var(--purple),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:10px;
+  letter-spacing:1px;
+}
+.hero p{
+  color:var(--muted);
+  font-size:.95rem;
+  margin-bottom:18px;
+}
+.badge-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+}
+.nav-card{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  text-decoration:none;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:9px;
+  padding:18px 16px;
+  transition:border-color .15s,background .15s;
+}
+.nav-card:hover{
+  border-color:var(--blue);
+  background:var(--card2);
+  text-decoration:none;
+}
+.nav-card .nc-icon{font-size:1.4rem;margin-bottom:4px;}
+.nav-card .nc-title{font-size:.88rem;font-weight:700;color:var(--text);}
+.nav-card .nc-desc{font-size:.75rem;color:var(--muted);line-height:1.5;}
+.stars{color:var(--yellow);letter-spacing:1px;font-size:.85rem;}
+.issue-fixed{color:var(--green);font-size:.75rem;font-weight:700;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Freedom-Hunter</h1>
+  <p>Godot 4.3 · GDScript · 仿 Monster Hunter 3D 動作 RPG · 開源</p>
+  <div class="badge-row">
+    <span class="badge badge-blue">Godot 4.3</span>
+    <span class="badge badge-blue">GDScript</span>
+    <span class="badge badge-purple">ENet 多人</span>
+    <span class="badge badge-gray">GPL-3.0</span>
+    <span class="badge badge-green">Android 觸控</span>
+    <span class="badge badge-orange">分析核對：2026-06-01</span>
+  </div>
+</div>
+
+<!-- 主題導覽卡片 -->
+<div class="section">
+  <div class="section-title">主題導覽</div>
+  <div class="g3">
+    <a class="nav-card card-accent-blue" href="architecture.html">
+      <span class="nc-icon">🏗</span>
+      <span class="nc-title">架構總覽</span>
+      <span class="nc-desc">Autoload 系統、Entity 繼承鏈、目錄結構全覽</span>
+    </a>
+    <a class="nav-card card-accent-red" href="combat.html">
+      <span class="nc-icon">⚔️</span>
+      <span class="nc-title">戰鬥系統</span>
+      <span class="nc-desc">HP/耐力/傷害計算、銳利度、裝備流程、已修復的參數 Bug</span>
+    </a>
+    <a class="nav-card card-accent-orange" href="items.html">
+      <span class="nc-icon">🎒</span>
+      <span class="nc-title">道具/物品欄</span>
+      <span class="nc-desc">消耗品 Template Method、拖放 UI、商店定價</span>
+    </a>
+    <a class="nav-card card-accent-cyan" href="world.html">
+      <span class="nc-icon">📷</span>
+      <span class="nc-title">相機/UI/世界</span>
+      <span class="nc-desc">第三人稱相機、HUD、互動系統</span>
+    </a>
+    <a class="nav-card card-accent-purple" href="multiplayer.html">
+      <span class="nc-icon">🌐</span>
+      <span class="nc-title">多人系統</span>
+      <span class="nc-desc">ENet 架構、RPC 同步、已知安全漏洞</span>
+    </a>
+    <a class="nav-card card-accent-orange" href="animation.html">
+      <span class="nc-icon">🎭</span>
+      <span class="nc-title">動畫/美術</span>
+      <span class="nc-desc">AnimationTree 雙層、動畫音效同步、怪物美術</span>
+    </a>
+    <a class="nav-card card-accent-green" href="shader.html">
+      <span class="nc-icon">🌿</span>
+      <span class="nc-title">草地 Shader</span>
+      <span class="nc-desc">MultiMesh + Worley 噪聲、風場模擬</span>
+    </a>
+  </div>
+</div>
+
+<!-- 系統完成度表 -->
+<div class="section">
+  <div class="section-title">系統完成度評估</div>
+  <table>
+    <thead>
+      <tr>
+        <th>系統</th>
+        <th>完成度</th>
+        <th>狀態</th>
+        <th>備註</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Entity 基底（HP/耐力/狀態機/傷害）</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="status-pill status-done">完整</span></td>
+        <td>完整</td>
+      </tr>
+      <tr>
+        <td>玩家移動/閃避/跳躍</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>右攻擊動畫缺失</td>
+      </tr>
+      <tr>
+        <td>怪物 AI（巡邏/狩獵/視野）</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>移動 RPC 未實作</td>
+      </tr>
+      <tr>
+        <td>道具/消耗品系統</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="status-pill status-done">完整</span></td>
+        <td>完整且可擴充</td>
+      </tr>
+      <tr>
+        <td>物品欄（拖放/堆疊）</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="status-pill status-done">完整</span></td>
+        <td>完整</td>
+      </tr>
+      <tr>
+        <td>武器銳利度系統</td>
+        <td><span class="stars">★★★☆☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>銳利度未影響傷害（TODO）</td>
+      </tr>
+      <tr>
+        <td>防具/技能/寶石系統</td>
+        <td><span class="stars">★☆☆☆☆</span></td>
+        <td><span class="status-pill status-planned">規劃中</span></td>
+        <td>資料結構宣告，完全未實作</td>
+      </tr>
+      <tr>
+        <td>多人同步</td>
+        <td><span class="stars">★★★☆☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>怪物移動未同步（TODO）</td>
+      </tr>
+      <tr>
+        <td>商店/NPC</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>完整，NPC 有隨機轉頭行為</td>
+      </tr>
+      <tr>
+        <td>相機系統</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="status-pill status-done">完整</span></td>
+        <td>含陀螺儀/觸控/手把</td>
+      </tr>
+      <tr>
+        <td>草地 Shader</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td><span class="status-pill status-done">完整</span></td>
+        <td>完整的 Worley 風場效果</td>
+      </tr>
+      <tr>
+        <td>元素弱點/傷害計算</td>
+        <td><span class="stars">★★☆☆☆</span></td>
+        <td><span class="status-pill status-planned">規劃中</span></td>
+        <td>資料結構在，計算未套用</td>
+      </tr>
+      <tr>
+        <td>大砲/爆炸桶/煙火</td>
+        <td><span class="stars">★★★★☆</span></td>
+        <td><span class="status-pill status-partial">部分</span></td>
+        <td>完整，連鎖爆炸機制完善</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 五大設計亮點 -->
+<div class="section">
+  <div class="section-title">五大設計亮點</div>
+  <div class="g3" style="margin-bottom:16px;">
+    <div class="card card-accent-blue">
+      <h3>動畫驅動遊戲邏輯</h3>
+      <p>AnimationTree 不只播動畫，同時驅動移動速度。<code>move_entity()</code> 讀取當前動畫狀態節點決定速度倍率（walk=5, run=7.5, dodge=8），動畫狀態即是遊戲狀態。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>雙層 AnimationPlayer 音畫同步</h3>
+      <p><code>AnimationsWithSounds</code> 把骨骼動畫 track 與 audio track 打包在同一個 AnimationPlayer 中，音效時機精確到幀（如喝藥水 t=0.35s 才響），可純用編輯器調整，不需改程式碼。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>動態腳本替換</h3>
+      <p>怪物死後不從場景移除，而是呼叫 <code>set_script()</code> 直接替換為 <code>monster drop.gd</code>，使節點搖身成為採集互動物件，既省效能又保留屍體位置。</p>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>MultiMesh 草地（1000 株一次 Draw Call）</h3>
+      <p>Planter + GrassFactory + Shader 三層分工。Planter 以 <code>@tool</code> 在編輯器即時預覽；每株草的寬高、搖擺幅度存入 <code>INSTANCE_CUSTOM.rgba</code> 傳入 Shader；Worley 噪聲模擬陣風，強風時 ROUGHNESS 下降產生閃光感。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>空白鍵語境感知操作</h3>
+      <p>跑步中按空白 = 跳躍；靜止/走路時按空白 = 閃避，完全符合 Monster Hunter 原作設計。靠 <code>movement/conditions/running</code> 狀態分流，一鍵兩用。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 已知問題彙整 -->
+<div class="section">
+  <div class="section-title">已知問題彙整</div>
+  <table>
+    <thead>
+      <tr>
+        <th>問題描述</th>
+        <th>位置</th>
+        <th>狀態</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>右攻擊動畫不存在，按右鍵實際播左攻擊</td>
+        <td><code>player.gd:101</code>, <code>entity.gd:342</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>怪物移動 transform RPC 被注解掉</td>
+        <td><code>entity.gd:218</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>銳利度未影響武器傷害</td>
+        <td><code>weapon.gd:93</code> <code>get_weapon_damage()</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>怪物元素弱點未套用到傷害計算</td>
+        <td><code>monster.gd:41-48</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>防具 skills/gems 完全未實作</td>
+        <td><code>armour.gd:7-8</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>NavigationAgent <code>debug_enabled=true</code>（正式版應關）</td>
+        <td><code>dragon.tscn:715</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>大廳伺服器 register 邏輯被注解</td>
+        <td><code>networking.gd:31-34</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td>Weapon.player 依賴固定路徑 <code>$"../../../.."</code></td>
+        <td><code>weapon.gd:41</code></td>
+        <td><span class="status-pill status-planned">待修</span></td>
+      </tr>
+      <tr>
+        <td><code>damage()</code> 傳參順序錯誤：element 收到 Weapon、weapon 收到 Player、entity 為 null；導致怪物 override 的玩家追蹤（<code>monster.gd:224</code>）永遠不觸發，debug log 全數靜默失效</td>
+        <td><code>weapon.gd:99</code></td>
+        <td><span class="status-pill status-done issue-fixed">已修正</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 原始分析文件連結 -->
+<div class="section">
+  <div class="section-title">原始分析文件</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>架構概覽</h3>
+      <p>專案基本資訊、目錄結構、系統架構圖、多人同步機制、異常狀態、互動系統、銳利度系統完整說明。</p>
+      <p style="margin-top:10px;"><a href="../architecture/overview.md">overview.md &rarr;</a></p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>分析總結</h3>
+      <p>整體架構一覽、五大設計亮點、系統完成度評估、已知問題彙整、對開發者的參考價值索引。</p>
+      <p style="margin-top:10px;"><a href="../architecture/summary.md">summary.md &rarr;</a></p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

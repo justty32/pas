@@ -1,0 +1,16 @@
+; Engine configuration file.
+; Generated for opennefia-cpp smoke test.
+
+config_version=5
+
+[application]
+
+config/name="opennefia-cpp smoke test"
+config/features=PackedStringArray("4.4")
+config/icon="res://icon.svg"
+
+[autoload]
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>opennefia-cpp — 擴充教學</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<nav>
+  <span class="nav-brand">opennefia-cpp</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html" class="active">擴充教學</a>
+  <a href="frontend.html">前端綁定</a>
+  <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>擴充教學</h1>
+  <p>如何在不破壞現有 36 個測試的前提下，擴充這套系統的各個面向。每個步驟都有對應的「速查修改點」說明哪個檔案要改。詳細程式碼見 <code>tutorial/</code> 目錄下各 .md 檔案。</p>
+</div>
+
+<!-- 速查表 -->
+<div class="section">
+  <div class="section-title">各層修改速查表</div>
+  <table>
+    <thead>
+      <tr><th>要做的事</th><th>改哪裡</th><th>教學</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>新增 component 定義</td><td><code>src/core/components/xxx_component.h</code></td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §1</a></td></tr>
+      <tr><td>讓 component 可序列化（存讀檔）</td><td><code>src/core/serialize/all_components.h</code>（加一行到 type_list）</td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §1</a></td></tr>
+      <tr><td>讓 component 從 YAML 原型載入</td><td>呼叫 <code>pm.register_loader("TypeName", lambda)</code>（初始化時）</td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §1</a></td></tr>
+      <tr><td>新增系統邏輯</td><td>自由函式 + <code>em.add_system(fn)</code></td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §2</a></td></tr>
+      <tr><td>新地形定義 ID + 渲染顏色</td><td><code>src/core/maps/terrain_defs.h</code> + <code>generate_map_image</code> switch</td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §3</a></td></tr>
+      <tr><td>暴露新資料給 GDScript</td><td><code>src/gbind/opennefia_world_gd.h+cpp</code> 新方法 + <code>_bind_methods()</code></td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §4</a></td></tr>
+      <tr><td>新的 GDExtension 工具類</td><td>新 <code>xxx_gd.h+cpp</code> + <code>register_types.cpp</code></td><td><a href="../tutorial/howto_extend_system.md">howto_extend_system §5</a></td></tr>
+      <tr><td>新增 NPC 種類</td><td><code>NpcVariant</code> enum + <code>pick_variant</code> + switch + 渲染顏色</td><td><a href="../tutorial/howto_add_npc_type.md">howto_add_npc_type</a></td></tr>
+      <tr><td>新增物品類型</td><td><code>ItemType</code> enum + <code>move()</code> 拾取 switch + 生成邏輯</td><td><a href="../tutorial/howto_add_item_type.md">howto_add_item_type</a></td></tr>
+      <tr><td>新增 GDExtension Signal</td><td><code>ADD_SIGNAL</code> + <code>emit_signal</code> + GDScript <code>connect</code></td><td><a href="../tutorial/howto_add_signal.md">howto_add_signal</a></td></tr>
+      <tr><td>C++ 成員持久化（納入存讀檔）</td><td><code>XxxStateComponent</code> 掛 map_entity_ + AllComponents + load 重建指標</td><td><a href="../tutorial/howto_save_load_pattern.md">howto_save_load_pattern</a></td></tr>
+      <tr><td>重建並更新 DLL</td><td colspan="2"><code>cmake -S . -B build -DOPENNEFIA_BUILD_GDEXTENSION=ON</code> 再 <code>cmake --build build --target opennefia_gd</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 1. 新增 Component -->
+<div class="section">
+  <div class="section-title">1. 新增一個 Component（核心層）</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「<code>HealthComponent</code>」為例。</p>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>① 定義 struct</h3>
+      <p>建 <code>src/core/components/health_component.h</code>。必須有 <code>template&lt;class Archive&gt; void serialize(Archive& ar)</code> 以支援 cereal 存讀。</p>
+      <pre>struct HealthComponent {
+    int max_hp{ 10 };
+    int cur_hp{ 10 };
+    template&lt;class Archive&gt;
+    void serialize(Archive& ar) { ar(max_hp, cur_hp); }
+};</pre>
+    </div>
+    <div class="card card-accent-green">
+      <h3>② 加入 AllComponents</h3>
+      <p><code>src/core/serialize/all_components.h</code> 的 type_list 加一行，save/load fold 自動覆蓋——不需要改其他序列化代碼。</p>
+      <pre>using AllComponents = entt::type_list&lt;
+    MetaDataComponent,
+    SpatialComponent,
+    MapData,
+    HealthComponent  // ← 新增
+&gt;;</pre>
+    </div>
+    <div class="card card-accent-green">
+      <h3>③ 視需要加 YAML loader</h3>
+      <p>若原型 YAML 要設定 HP，在初始化時呼叫 <code>register_loader</code>：</p>
+      <pre>pm.register_loader("Health",
+  [](auto& reg, auto e, const auto& n) {
+    HealthComponent h;
+    if (n["max_hp"])
+      h.max_hp = n["max_hp"].as&lt;int&gt;();
+    h.cur_hp = h.max_hp;
+    reg.emplace_or_replace&lt;HealthComponent&gt;(e, h);
+  });</pre>
+    </div>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:8px">
+    重建後跑 <code>ctest</code>，現有 36 cases 應全部繼續通過。再寫 <code>CHECK(em.has&lt;HealthComponent&gt;(e))</code> 的新測試。
+  </div>
+</div>
+
+<!-- 2. 新增系統 -->
+<div class="section">
+  <div class="section-title">2. 新增一個系統（自由函式）</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「每 tick 回復 1 HP 的再生系統」為例。</p>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>系統函式</h3>
+      <pre>void regen_system(
+    entt::registry& reg,
+    SystemCtx& ctx) {
+  auto view = reg.view&lt;HealthComponent&gt;();
+  for (auto e : view) {
+    auto& hp = view.get&lt;HealthComponent&gt;(e);
+    if (hp.cur_hp &lt; hp.max_hp) ++hp.cur_hp;
+  }
+}</pre>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>登錄到 EntityManager</h3>
+      <pre>em.add_system(opennefia::regen_system);
+// 或 lambda：
+em.add_system([](auto& reg, auto& ctx) {
+  // ...
+});</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">執行順序 = <code>add_system</code> 的呼叫順序。無需排序標記。</p>
+    </div>
+  </div>
+  <div class="highlight-box hl-blue" style="margin-top:8px">
+    <strong>關鍵原則</strong>：系統是無狀態自由函式，所有需要的服務透過 <code>SystemCtx</code> 傳入——不需要繼承、不需要介面、不需要 DI 框架。
+  </div>
+</div>
+
+<!-- 3. 新增地形 -->
+<div class="section">
+  <div class="section-title">3. 新增一種地圖地形</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「深水」為例——不可走、不擋視線。</p>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <h3>① 定義 terrain ID</h3>
+      <pre>// src/core/maps/terrain_defs.h
+constexpr uint16_t TERRAIN_FLOOR      = 0;
+constexpr uint16_t TERRAIN_WALL       = 1;
+constexpr uint16_t TERRAIN_DEEP_WATER = 2;</pre>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>② 建圖時設定 flags</h3>
+      <pre>auto& tile = map.at(x, y);
+tile.terrain = TERRAIN_DEEP_WATER;
+tile.flags   = 0;  // !walkable, !blocks_sight</pre>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>③ 渲染顏色（gbind）</h3>
+      <pre>// opennefia_world_gd.cpp
+switch (map.at(x,y).terrain) {
+  case 0: c = floor_color; break;
+  case 1: c = wall_color;  break;
+  case 2: c = Color(0.10f, 0.20f, 0.55f); break;
+  default: c = floor_color; break;
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 4. 橋接到 Godot -->
+<div class="section">
+  <div class="section-title">4. 橋接新資料到 Godot（gbind 層）</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「在 GDScript 取得 hero HP」為例。</p>
+  <div class="g2">
+    <div class="card card-accent-orange">
+      <h3>C++ 端（opennefia_world_gd）</h3>
+      <pre>// .h 宣告
+int get_hero_hp() const;
+
+// .cpp 實作
+int OpenNefiaWorld::get_hero_hp() const {
+  if (!em_.registry().valid(hero_entity_))
+    return 0;
+  const auto* hp = em_.registry()
+    .try_get&lt;HealthComponent&gt;(hero_entity_);
+  return hp ? hp->cur_hp : 0;
+}
+
+// _bind_methods() 登錄
+ClassDB::bind_method(
+  D_METHOD("get_hero_hp"),
+  &OpenNefiaWorld::get_hero_hp);</pre>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>GDScript 端</h3>
+      <pre>info_label.text = "HP: %d/%d" % [
+  world.get_hero_hp(),
+  world.get_hero_max_hp()
+]</pre>
+      <p style="margin-top:12px;font-size:.75rem;color:var(--muted);">重建：<code>cmake --build build --target opennefia_gd</code>，複製 .dll 到 <code>godot_test/bin/</code>。<br><br>新增 .cpp 後需先重跑 <code>cmake -S . -B build ...</code> 讓 GLOB_RECURSE 拾取新檔。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 5. 新增 GDExtension 類別 -->
+<div class="section">
+  <div class="section-title">5. 新增一個 GDExtension 類別</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「FOV 計算工具」為例——繼承 <code>RefCounted</code>（無狀態工具）。</p>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>① 建 header</h3>
+      <pre>class OpenNefiaFov : public godot::RefCounted {
+  GDCLASS(OpenNefiaFov, godot::RefCounted)
+protected:
+  static void _bind_methods();
+public:
+  godot::PackedVector2Array compute_fov(
+    godot::Object* world_node,
+    int cx, int cy, int radius);
+};</pre>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>② register_types.cpp 加入</h3>
+      <pre>#include "opennefia_fov_gd.h"
+// ...
+GDREGISTER_CLASS(
+  opennefia_gd::OpenNefiaFov);</pre>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>③ GDScript 使用</h3>
+      <pre>var fov := OpenNefiaFov.new()
+var visible := fov.compute_fov(
+  world, hero_x, hero_y, 5)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 新增 NPC 種類 -->
+<div class="section">
+  <div class="section-title">6. 新增 NPC 種類</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「Golem」（高 HP 低移速）為例，橫跨 4 個檔案。詳細見 <a href="../tutorial/howto_add_npc_type.md">howto_add_npc_type.md</a>。</p>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>① 宣告 + ③ 數值（C++ 核心）</h3>
+      <pre>// combat_stats_component.h
+enum class NpcVariant : uint8_t {
+    putit=0, warrior=1, bat=2,
+    golem=3  // ← 新增
+};
+
+// setup_map() switch 加 case：
+case opennefia::NpcVariant::golem:
+    npc_hp = 25 + (floor-1)*5;
+    atk = 4; mv = 25;
+    vname = "golem"; break;</pre>
+    </div>
+    <div class="card card-accent-red">
+      <h3>② 機率分支 + ④ 渲染顏色（gbind）</h3>
+      <pre>// pick_variant lambda — 加機率分支
+if (r >= 8) return NpcVariant::golem;
+
+// generate_map_image() 顏色 switch
+case NpcVariant::golem:
+    nc = Color(0.65f, 0.65f, 0.65f); // 灰
+    break;</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">新 enum 值大於現有最大值即可；舊存檔中未知值走 <code>default</code> 分支安全降級。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 7. 新增物品類型 -->
+<div class="section">
+  <div class="section-title">7. 新增物品類型</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「HP 上限強化藥水」（<code>max_hp_boost</code>）為例。詳細見 <a href="../tutorial/howto_add_item_type.md">howto_add_item_type.md</a>。</p>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>① ItemType 加值</h3>
+      <pre>enum class ItemType : uint8_t {
+    health_potion = 0,
+    max_hp_boost  = 1  // ← 新增
+};</pre>
+    </div>
+    <div class="card card-accent-green">
+      <h3>② move() 改 switch</h3>
+      <pre>switch (item.type) {
+  case health_potion:
+    hp->hp = min(hp->hp + item.value,
+                 hp->max_hp); break;
+  case max_hp_boost:
+    hp->max_hp += item.value;
+    hp->hp     += item.value; break;
+  default: break;
+}</pre>
+    </div>
+    <div class="card card-accent-green">
+      <h3>③ GDScript UI</h3>
+      <pre>func _on_item_picked_up(
+    name: String, val: int):
+  match name:
+    "health_potion":
+      label.text = "+%d HP" % val
+    "max_hp_boost":
+      label.text = "最大HP +%d" % val</pre>
+    </div>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:8px">
+    <strong>設計備注</strong>：<code>item.value</code> 欄位語義依 type 而異（回血量 vs HP 上限提升量）。若未來物品效果複雜，可考慮拆成獨立 Component（如 <code>HealOnPickupComponent</code>）。
+  </div>
+</div>
+
+<!-- 8. 新增 Signal -->
+<div class="section">
+  <div class="section-title">8. 新增 GDExtension Signal 並串接 GDScript</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">以「英雄升級 signal <code>hero_level_up(int)</code>」為例。詳細見 <a href="../tutorial/howto_add_signal.md">howto_add_signal.md</a>。</p>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>① 宣告（_bind_methods）</h3>
+      <pre>// 無參數
+ADD_SIGNAL(MethodInfo("game_over"));
+
+// 帶 int
+ADD_SIGNAL(MethodInfo("hero_level_up",
+  PropertyInfo(Variant::INT, "new_level")));
+
+// 帶 String + int
+ADD_SIGNAL(MethodInfo("item_picked_up",
+  PropertyInfo(Variant::STRING, "name"),
+  PropertyInfo(Variant::INT, "amount")));</pre>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>② 觸發（C++）</h3>
+      <pre>// 無參數
+emit_signal("game_over");
+
+// int
+emit_signal("hero_level_up", new_level);
+
+// String + int（std::string 需先轉）
+String gd_id(cpp_str.c_str());
+emit_signal("npc_died", gd_id);
+
+emit_signal("item_picked_up", iname, heal);</pre>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>③ 訂閱（GDScript）</h3>
+      <pre>func _ready() -> void:
+    world.hero_level_up.connect(
+        _on_hero_level_up)
+
+func _on_hero_level_up(lv: int) -> void:
+    label.text = "等級 %d！" % lv</pre>
+    </div>
+  </div>
+</div>
+
+<!-- 9. 存讀檔設計模式 -->
+<div class="section">
+  <div class="section-title">9. 把 C++ 成員變數納入 ECS 存讀檔</div>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;"><code>OpenNefiaWorld</code> 的 <code>turn_count_</code> / <code>current_floor_</code> 不在 ECS 中，如何讓它們隨存檔持久化？詳細見 <a href="../tutorial/howto_save_load_pattern.md">howto_save_load_pattern.md</a>。</p>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <h3>解法：StateComponent 掛在 map_entity_</h3>
+      <pre>// 1. 定義 Component
+struct WorldStateComponent {
+    int turn_count{ 0 };
+    int current_floor{ 1 };
+    template&lt;class Archive&gt;
+    void serialize(Archive& ar)
+    { ar(turn_count, current_floor); }
+};
+
+// 2. 加入 AllComponents（自動序列化）
+using AllComponents = entt::type_list&lt;
+    ..., WorldStateComponent
+&gt;;</pre>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>存前同步 / 讀後重建</h3>
+      <pre>// 存檔：先同步 members → Component
+ws->turn_count = turn_count_;
+serialize::save(reg, path);
+
+// 讀檔：clear() 後 handle 失效！
+// 用「語義查詢」重建指標：
+for (auto e : reg.view&lt;MapData&gt;())
+    map_entity_ = e;
+for (auto e : reg.view&lt;MetaData&gt;())
+    if (meta.proto_id == "hero")
+        hero_entity_ = e;
+// 還原 members
+turn_count_ = ws->turn_count;</pre>
+    </div>
+  </div>
+  <div class="highlight-box hl-cyan" style="margin-top:8px">
+    <strong>關鍵坑</strong>：<code>registry.clear()</code> 讓所有舊 <code>entt::entity</code> handle 失效。讀檔後必須用「持有特定 Component」或「MetaData::proto_id 比對」等語義查詢重建 C++ 端的快取指標，不可保留舊值。
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽呈現層。內容真實來源 (source of truth) 為 <code>tutorial/</code> 目錄下各 .md 檔案與 <code>../../derived/opennefia-cpp/</code> 下的源碼。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

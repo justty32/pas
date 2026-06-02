@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenNefia 分析 — 首頁</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--cyan) 0%,var(--blue) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.hero .sub{font-size:1rem;color:var(--muted);margin-top:10px;max-width:660px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--cyan);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--cyan);align-self:flex-end;}
+
+.oneliner{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;margin-bottom:32px;font-size:.95rem;font-style:italic;
+  color:var(--text);border-left:4px solid var(--cyan);line-height:1.8;}
+.oneliner strong{color:var(--cyan);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">OpenNefia</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="cpp_plan.html">C++ 重寫計畫</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>OpenNefia</h1>
+  <p class="sub">日式 roguelike RPG《Elona》的開源、可模組化引擎重製版<br>
+  以現代 C# / .NET 8.0 重寫，建立於 ECS + IoC + 資料驅動原型三大支柱</p>
+  <p class="sub2">— analysis/OpenNefia · 架構分析 14 篇 + C++ 重寫計畫 —</p>
+  <div class="badge-row">
+    <span class="badge badge-blue">C# / .NET 8.0</span>
+    <span class="badge badge-green">ECS</span>
+    <span class="badge badge-purple">IoC</span>
+    <span class="badge badge-orange">YAML Prototypes</span>
+    <span class="badge badge-cyan">LÖVE 2D</span>
+    <span class="badge badge-yellow">XAML / Wisp UI</span>
+  </div>
+</div>
+
+<!-- One-liner -->
+<div class="oneliner">
+  <strong>OpenNefia</strong> = 把 Elona 龐雜的 HSP 過程式原始碼，重構為「純資料 Component + 純邏輯 EntitySystem + 事件匯流排解耦」的 ECS 引擎；所有遊戲資料以 YAML 原型定義、可繼承可熱重載，子系統全用 IoC 介面解耦以利測試與多實例執行。
+</div>
+
+<!-- 三大設計支柱 -->
+<div class="section">
+  <div class="section-title">三大核心設計模式</div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>① Entity-Component-System</h3>
+      <p>實體只是整數 <code>EntityUid</code>；資料放在 <code>Component</code>、邏輯放在 <code>EntitySystem</code>；系統間透過 <code>EntityEventBus</code>（廣播 / 定向 / 排序）解耦通訊。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>② Inversion of Control</h3>
+      <p>所有子系統以介面註冊於 thread-local 容器；<code>[Dependency]</code> 屬性自動注入；測試時可替換 <code>HeadlessGraphics</code>，並支援同程序多遊戲實例。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>③ 資料驅動原型</h3>
+      <p>YAML 定義所有種族 / 物品 / 角色；<code>PrototypeId&lt;T&gt;</code> 提供型別安全參考；支援原型繼承與開發期熱重載，Mod 作者免寫 C#。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 層次結構 -->
+<div class="section">
+  <div class="section-title">專案層次結構</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-blue">OpenNefia.EntryPoint</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">OpenNefia.Core（引擎核心 · 35 子系統）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">OpenNefia.Content（遊戲內容 · 57 子系統）</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">Mods/LecchoTorte</span>
+  </div>
+</div>
+
+<!-- 頁面導覽 -->
+<div class="section">
+  <div class="section-title">文件導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="architecture.html">
+      <div class="nc-icon">🏗</div>
+      <h3>架構分析（14 篇）</h3>
+      <p>從專案概覽、IoC、ECS、遊戲循環、地圖區域、原型序列化、渲染、UI、內容子系統、AI 回合順序、存讀檔、Mod 本地化、音訊輸入，到新增的 XAML / Wisp UI 框架。</p>
+      <span class="nc-arrow">→ architecture.html</span>
+    </a>
+
+    <a class="nav-card" href="cpp_plan.html">
+      <div class="nc-icon">⚙️</div>
+      <h3>C++ 重寫計畫 <span class="badge badge-green" style="font-size:.65rem;vertical-align:middle">核心完成</span></h3>
+      <p>godot-free 純 C++20 核心 Phase 0–4 已實作完成（2026-06-01）。技術棧：EnTT + cereal + yaml-cpp + spdlog，前端改 Godot 4 GDExtension（初期 Raylib 方向已棄）。含三大反射難題的實際解法與 medps 印證。36 tests 全綠。</p>
+      <span class="nc-arrow">→ cpp_plan.html</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- 快速數字 -->
+<div class="section">
+  <div class="section-title">分析產物快照（核對 2026-06-01）</div>
+  <div class="g4">
+    <div class="card card-accent-blue">
+      <h3>架構分析</h3>
+      <p>Level 涵蓋核心引擎到遊戲內容的 14 篇完整剖析。</p>
+      <div style="margin-top:8px"><span class="badge badge-blue">14 篇</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>Core 子系統</h3>
+      <p>引擎核心負責所有與具體遊戲無關的底層功能。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">35 個</span></div>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>Content 子系統</h3>
+      <p>遊戲內容層負責 Elona 玩法相關的所有邏輯。</p>
+      <div style="margin-top:8px"><span class="badge badge-orange">57 個</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>C++ 核心實作</h3>
+      <p><code>derived/opennefia-cpp/</code> godot-free 核心 Phase 0–4 完成。分析見 <code>analysis/opennefia-cpp/</code>。</p>
+      <div style="margin-top:8px">
+        <span class="badge badge-green">36 tests ✅</span>
+        <span class="badge badge-green" style="margin-left:4px">139 assertions</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽層；所有內容的真實來源 (source of truth) 為對應的 <code>.md</code> 文件。內容更新請先改 .md。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

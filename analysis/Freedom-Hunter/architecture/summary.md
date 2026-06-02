@@ -98,6 +98,7 @@ Planter + GrassFactory + Shader 三層分工：Planter 在編輯器中以 @tool 
 | NavigationAgent debug_enabled=true（正式版應關） | `dragon.tscn:715` |
 | 大廳伺服器 register 邏輯被注解 | `networking.gd:31-34` |
 | Weapon.player 依賴固定路徑 `$"../../../.."` | `weapon.gd:41` |
+| `damage()` 傳參順序錯誤：element 收到 Weapon、weapon 收到 Player、entity 為 null；導致怪物 override 的玩家追蹤（`monster.gd:224`）永遠不觸發，debug log 也全數靜默失效（已修正） | `weapon.gd:99` |
 
 ---
 

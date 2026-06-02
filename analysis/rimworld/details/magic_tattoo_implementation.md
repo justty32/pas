@@ -92,12 +92,16 @@ public class Recipe_ApplyMagicTattoo : Recipe_Surgery
 
 要在 Pawn 身上畫出紋身，我們需要攔截 `PawnRenderer`。
 
+> ⚠️ **核對 2026-06-01**：1.6 的 `PawnRenderer.RenderPawnAt` 簽章為 `(Vector3 drawLoc, Rot4? rotOverride = null, bool neverAimWeapon = false)`。
+> 原 Postfix 的 `Rot4 rotation` / `bool portrait` 與實際參數名 `rotOverride` / `neverAimWeapon` 不符，Harmony **無法綁定**（非 `__instance`/`__result` 的具名參數必須完全對應）。已修正如下。
+
 ```csharp
 [HarmonyPatch(typeof(PawnRenderer), "RenderPawnAt")]
 public static class Patch_RenderTattoo
 {
     [HarmonyPostfix]
-    public static void Postfix(PawnRenderer __instance, Vector3 drawLoc, Rot4 rotation, bool portrait)
+    // ✅ 參數名對齊 1.6 簽章
+    public static void Postfix(PawnRenderer __instance, Vector3 drawLoc, Rot4? rotOverride, bool neverAimWeapon)
     {
         Pawn pawn = (Pawn)AccessTools.Field(typeof(PawnRenderer), "pawn").GetValue(__instance);
         

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>開發教學 — RimWorld Mod 開發分析</title>
+  <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">RimWorld 1.6 Mod 開發分析</span>
+  <div class="navbar-links">
+    <a href="index.html">總覽</a>
+    <a href="architecture.html">架構</a>
+    <a href="tutorial.html" class="active">教學</a>
+    <a href="details.html">實作細節</a>
+    <a href="others.html">設計構想</a>
+    <a href="answers.html">問答</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">開發教學</h1>
+    <p class="page-subtitle">29 份文件 · 目標導向教學，從 Mod 基礎到各子系統實作</p>
+  </div>
+
+  <!-- Mod 基礎 -->
+  <div class="section">
+    <h2 class="section-title">Mod 基礎技術</h2>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/harmony_patching.md">Harmony Patching</a></div>
+        <div class="card-desc">Prefix / Postfix / Transpiler 用法、常見陷阱、1.6 相容性注意事項</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/data_persistence.md">資料持久化</a></div>
+        <div class="card-desc">ExposeData、IExposable、Scribe 系統，存檔相容性與版本遷移策略</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/debugging_guide.md">除錯指南</a></div>
+        <div class="card-desc">日誌工具、DevMode 技巧、常見 NullRef 來源、Harmony 衝突診斷</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/distribution_guide.md">發布指南</a></div>
+        <div class="card-desc">Steam Workshop 上架、About.xml 填寫、依賴聲明、版本標籤最佳實踐</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pawn 系統 -->
+  <div class="section">
+    <h2 class="section-title">Pawn 系統</h2>
+    <div class="g3">
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/pawn_rendering.md">Pawn 渲染</a></div>
+        <div class="card-desc">Pawn 外觀渲染管線：圖層順序、自訂服裝 shader、動態貼圖更換</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/pawn_mechanism_deep_dive.md">Pawn 機制深潛</a></div>
+        <div class="card-desc">Pawn 內部組件系統（PawnTracker 群）完整解析：健康、需求、思緒、技能</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/job_and_traits.md">Job 與特質</a></div>
+        <div class="card-desc">JobDriver 撰寫、Toil 鏈設計、Trait 效果掛鉤與 StatModifier 整合</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/thinktree.md">ThinkTree</a></div>
+        <div class="card-desc">自訂 ThinkNode、JobGiver 插入時機、優先序設計與 Duty 覆蓋模式</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/tick_system.md">Tick 系統</a></div>
+        <div class="card-desc">Tick / RareTick / LongTick 差異、TickManager 排程、效能最佳化原則</div>
+      </div>
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/thing_lifecycle.md">Thing 生命週期</a></div>
+        <div class="card-desc">SpawnSetup → Tick → DeSpawn → Destroy 完整流程，ThingComp 掛載時機</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 世界與大地圖 -->
+  <div class="section">
+    <h2 class="section-title">世界與大地圖</h2>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/world_system_internals.md">世界系統內部</a></div>
+        <div class="card-desc">World 物件初始化、WorldGrid、Tile 資料結構、WorldComponent 擴充點</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/world_tick_system.md">世界 Tick 系統</a></div>
+        <div class="card-desc">大地圖 Tick 排程：WorldPawn 更新、氣候季節推進、派系事件觸發時機</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/dynamic_world_objects.md">動態世界物件</a></div>
+        <div class="card-desc">自訂 WorldObject：生成、移動、互動對話方塊、與 Caravan 的互動介面</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/caravan_battle_and_travel.md">Caravan 戰鬥與旅行</a></div>
+        <div class="card-desc">Caravan 系統：路線計算、遭遇事件、臨時地圖生成、戰鬥後資源結算</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/persistent_world_pawns.md">持久世界 Pawn</a></div>
+        <div class="card-desc">WorldPawn Pool 管理：保留、回收、遊蕩派系成員的持久化與記憶體考量</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 戰鬥與事件 -->
+  <div class="section">
+    <h2 class="section-title">戰鬥、事件與任務</h2>
+    <div class="g3">
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../tutorial/raids_and_scenarios.md">突襲與劇本</a></div>
+        <div class="card-desc">RaidStrategy / RaidArrivalMode 架構、StorytellerDef 觸發邏輯、自訂突襲設計</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../tutorial/incident_and_quest_system.md">事件與任務系統</a></div>
+        <div class="card-desc">IncidentDef / QuestDef 資料結構、Slate 變數系統、任務腳本執行流程</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../tutorial/advanced_effects_and_raids.md">進階效果與突襲</a></div>
+        <div class="card-desc">Mote、Effecter、SoundDef 整合，複雜突襲編成（分波、空降、潛伏）</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../tutorial/custom_quests.md">自訂任務</a></div>
+        <div class="card-desc">從零撰寫 QuestScriptDef：條件節點、獎勵配置、多分支結局實作</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="card-title"><a href="../tutorial/quest_and_site_generation.md">任務與地點生成</a></div>
+        <div class="card-desc">Site 與 SitePart 系統：自訂地點類型、隨機地圖生成、任務地點整合</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地圖生成 -->
+  <div class="section">
+    <h2 class="section-title">地圖生成</h2>
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../tutorial/base_generation.md">基地生成</a></div>
+        <div class="card-desc">MapGenerator 流程、GenStep 順序控制、自訂地貌/建築預置件注入</div>
+      </div>
+      <div class="card card-accent-cyan">
+        <div class="card-title"><a href="../tutorial/custom_biome_guide.md">自訂生態域</a></div>
+        <div class="card-desc">BiomeDef 定義：植物/動物密度表、地形貼圖、特殊氣候曲線設定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 派系與外交 -->
+  <div class="section">
+    <h2 class="section-title">派系與外交</h2>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <div class="card-title"><a href="../tutorial/faction_mechanics.md">派系機制</a></div>
+        <div class="card-desc">派系關係值計算、外交事件觸發、NPC 集落 AI 決策與交易系統擴充</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 環境系統 -->
+  <div class="section">
+    <h2 class="section-title">環境系統</h2>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/power_system.md">電力系統</a></div>
+        <div class="card-desc">PowerNet 電網拓撲、CompPower 介面、自訂發電/蓄電/耗電組件實作</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/temperature_system.md">溫度系統</a></div>
+        <div class="card-desc">室溫傳導模型、GenTemperature API、自訂熱源/冷源 ThingComp</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="card-title"><a href="../tutorial/pathfinding.md">尋路系統</a></div>
+        <div class="card-desc">PathFinder 架構、PathGrid 成本來源、自訂地形成本注入與效能考量</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UI -->
+  <div class="section">
+    <h2 class="section-title">UI 介面</h2>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/ui_widgets.md">UI 小工具</a></div>
+        <div class="card-desc">Widgets / Listing_Standard / Dialog 基礎元件使用，自訂 UI 視窗架構</div>
+      </div>
+      <div class="card card-accent-green">
+        <div class="card-title"><a href="../tutorial/inspect_gizmos.md">Inspect 與 Gizmo</a></div>
+        <div class="card-desc">底部資訊列 ITab 擴充、Command Gizmo 按鈕設計、自訂物件檢視面板</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 其他 -->
+  <div class="section">
+    <h2 class="section-title">其他</h2>
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <div class="card-title"><a href="../tutorial/custom_physics_mod.md">自訂物理 Mod</a></div>
+        <div class="card-desc">在 RimWorld 框架內模擬物理效果：拋射物自訂、碰撞判定、視覺反饋整合</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  RimWorld 1.6 Mod 開發分析 · 核對基準：1.6/Odyssey 反編譯源碼 · 核對日期：2026-06-01
+</footer>
+
+</body>
+</html>

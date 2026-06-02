@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>opennefia-cpp — 前端綁定 F1–F5</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.flow-box{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:14px 18px;font-size:.82rem;color:var(--muted);}
+.flow-box .fb-title{font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:6px;}
+.arrow-center{text-align:center;font-size:1.2rem;color:var(--muted);margin:4px 0;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">opennefia-cpp</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="tutorial.html">擴充教學</a>
+  <a href="frontend.html" class="active">前端綁定 F1–F5</a>
+  <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>前端綁定 F1–F5</h1>
+  <p>opennefia-cpp 的 GDExtension 橋接層——把 godot-free C++ 核心狀態透過薄殼 facade 暴露給 Godot 4 GDScript，實現完整的「輸入 → 核心 → FOV → 渲染 + 戰鬥 + 物品 + 樓層 + 存讀檔」迴路。</p>
+</div>
+
+<!-- 完整迴路 -->
+<div class="section">
+  <div class="section-title">完整輸入 → 核心 → 渲染迴路</div>
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:500px;">
+    <div class="flow-box"><div class="fb-title">① 玩家按鍵（GDScript）</div>_unhandled_input → F5/F9（存讀檔）先攔截，再判 WASD / 方向鍵 / numpad / R 重置</div>
+    <div class="arrow-center">↓</div>
+    <div class="flow-box"><div class="fb-title">② 呼叫 C++ 動作</div>world.move(dx, dy) / world.wait_turn() / world.save_game() / world.load_game()</div>
+    <div class="arrow-center">↓</div>
+    <div class="flow-box"><div class="fb-title">③ 核心處理（C++）</div>walkable 檢查 → 移動 / 攻擊 NPC / 拾取物品 / 踩樓梯 → recompute_fov → tick NPC AI</div>
+    <div class="arrow-center">↓</div>
+    <div class="flow-box"><div class="fb-title">④ emit signal（C++）</div>world_changed / hero_bumped_wall / hero_bumped_npc / npc_died / item_picked_up / game_over / floor_changed</div>
+    <div class="arrow-center">↓</div>
+    <div class="flow-box"><div class="fb-title">⑤ GDScript 刷新（_on_world_changed）</div>generate_map_image(16) → ImageTexture → Sprite2D.texture</div>
+    <div class="arrow-center">↓</div>
+    <div class="flow-box"><div class="fb-title">⑥ UI 更新</div>InfoLabel.text = "F{floor}  Hero: (x,y)  Turn: n  HP: cur/max  Enemies: n"</div>
+  </div>
+</div>
+
+<!-- gbind/ 目錄 -->
+<div class="section">
+  <div class="section-title">src/gbind/ 檔案結構</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>register_types.h/.cpp</h3>
+      <p>GDExtension 進入點。<code>opennefia_library_init</code>（extern "C"）呼叫 <code>GDExtensionBinding::InitObject</code>；在 <code>MODULE_INITIALIZATION_LEVEL_SCENE</code> 層級用 <code>GDREGISTER_CLASS</code> 登錄所有類別。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>opennefia_core_gd.h/.cpp</h3>
+      <p><code>OpenNefiaCore : RefCounted</code>。無狀態，只暴露 <code>version()</code>（呼叫核心 <code>opennefia::version()</code>）。F1 smoke test 用，驗證工具鏈端到端。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>opennefia_world_gd.h/.cpp</h3>
+      <p><code>OpenNefiaWorld : Node</code>。持有 <code>EntityManager</code> + <code>ServiceContext</code>。<code>_ready()</code> 建 20×15 測試世界（邊界牆 + 中央 hero）。F2/F3 的核心。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>godot_test/</h3>
+      <p><code>opennefia.gdextension</code>（entry_symbol + compatibility_minimum 4.4）、<code>project.godot</code>、<code>smoke_test.gd</code>（F1）、<code>map_view.gd</code>（F2/F3）、<code>bin/opennefia_gd.dll</code>（5.1 MB）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- API 一覽 -->
+<div class="section">
+  <div class="section-title">OpenNefiaWorld — 對外 API（GDScript 可用）</div>
+  <table>
+    <thead>
+      <tr><th>方法 / 信號</th><th>回傳</th><th>說明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="3" style="background:rgba(88,166,255,.07);color:var(--blue);font-size:.75rem;font-weight:700;">地圖查詢</td></tr>
+      <tr><td><code>get_map_width()</code></td><td>int</td><td>地圖寬度（格）</td></tr>
+      <tr><td><code>get_map_height()</code></td><td>int</td><td>地圖高度（格）</td></tr>
+      <tr><td><code>is_walkable(x, y)</code></td><td>bool</td><td>指定格可否通行</td></tr>
+      <tr><td><code>generate_map_image(cell_px)</code></td><td>Image</td><td>FOV 三層 + 物品（綠）+ NPC（依種類著色）+ Hero（黃）</td></tr>
+      <tr><td colspan="3" style="background:rgba(63,185,80,.07);color:var(--green);font-size:.75rem;font-weight:700;">動作</td></tr>
+      <tr><td><code>move(dx, dy)</code></td><td>bool</td><td>移動 / 攻擊 NPC / 拾取物品 / 踩樓梯；成功才 emit world_changed</td></tr>
+      <tr><td><code>wait_turn()</code></td><td>void</td><td>等待一回合；emit world_changed</td></tr>
+      <tr><td><code>restart()</code></td><td>void</td><td>完整重置（英雄重建，回到第 1 層）</td></tr>
+      <tr><td colspan="3" style="background:rgba(210,153,34,.07);color:var(--orange);font-size:.75rem;font-weight:700;">狀態查詢</td></tr>
+      <tr><td><code>get_hero_x()</code></td><td>int</td><td>hero 當前 x 座標</td></tr>
+      <tr><td><code>get_hero_y()</code></td><td>int</td><td>hero 當前 y 座標</td></tr>
+      <tr><td><code>get_turn_count()</code></td><td>int</td><td>已過回合數</td></tr>
+      <tr><td><code>get_hero_hp()</code></td><td>int</td><td>英雄當前 HP</td></tr>
+      <tr><td><code>get_hero_max_hp()</code></td><td>int</td><td>英雄最大 HP</td></tr>
+      <tr><td><code>get_npc_count()</code></td><td>int</td><td>當前地圖存活 NPC 數</td></tr>
+      <tr><td><code>get_current_floor()</code></td><td>int</td><td>當前樓層（從 1 開始）</td></tr>
+      <tr><td colspan="3" style="background:rgba(57,213,211,.07);color:var(--cyan);font-size:.75rem;font-weight:700;">存讀檔</td></tr>
+      <tr><td><code>save_game(path)</code></td><td>bool</td><td>序列化 registry → PortableBinary；map/hero 未初始化時返回 false</td></tr>
+      <tr><td><code>load_game(path)</code></td><td>bool</td><td>反序列化 + 重建 entity 指標 + recompute_fov；不存在時返回 false</td></tr>
+      <tr><td><code>has_save_game(path)</code></td><td>bool</td><td>std::filesystem::exists(path)</td></tr>
+      <tr><td colspan="3" style="background:rgba(248,81,73,.07);color:var(--red);font-size:.75rem;font-weight:700;">Signals</td></tr>
+      <tr><td><code>world_changed</code></td><td>—</td><td>每次動作成功後 emit（含 load_game 成功）</td></tr>
+      <tr><td><code>hero_bumped_wall</code></td><td>—</td><td>走入牆格或越界</td></tr>
+      <tr><td><code>hero_bumped_npc(npc_id)</code></td><td>String</td><td>攻擊 NPC 但未致死</td></tr>
+      <tr><td><code>npc_died(npc_id)</code></td><td>String</td><td>NPC HP ≤ 0，已 destroy</td></tr>
+      <tr><td><code>item_picked_up(name, heal)</code></td><td>String, int</td><td>自動拾取回血藥後</td></tr>
+      <tr><td><code>game_over</code></td><td>—</td><td>英雄 HP ≤ 0；之後輸入被 _dead 鎖定（F5/F9 不受限）</td></tr>
+      <tr><td><code>floor_changed(floor_num)</code></td><td>int</td><td>踩樓梯後，在 setup_map 完成時 emit</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 構建 -->
+<div class="section">
+  <div class="section-title">構建方式</div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>初次構建（含 godot-cpp bindings）</h3>
+      <pre>cmake -S . -B build -DOPENNEFIA_BUILD_GDEXTENSION=ON
+cmake --build build --target opennefia_gd</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);">第一次會生成 2109 個 godot-cpp binding 檔案，需數分鐘。後續增量構建只重編改動的檔案。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>新增 .cpp 後需重新 configure</h3>
+      <pre>cmake -S . -B build -DOPENNEFIA_BUILD_GDEXTENSION=ON
+cmake --build build --target opennefia_gd</pre>
+      <p style="margin-top:8px;font-size:.75rem;color:var(--muted);"><code>GLOB_RECURSE</code> 在 configure 時掃檔；新增 .cpp 不會被自動拾取，必須重跑第一行 cmake。</p>
+    </div>
+  </div>
+  <div class="highlight-box hl-blue" style="margin-top:12px">
+    <strong>godot-cpp 版本</strong>：v4.4（本地 checkout：<code>C:/code/mine/pas/projects/godot-cpp</code>）。<code>gdextension/extension_api.json</code> 預設為 4.5 API。<code>opennefia.gdextension</code> 設定 <code>compatibility_minimum = "4.4"</code>。
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽呈現層。內容真實來源 (source of truth) 為 <code>../architecture/summary.md</code> 與 <code>../../derived/opennefia-cpp/src/gbind/</code> 下的源碼。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

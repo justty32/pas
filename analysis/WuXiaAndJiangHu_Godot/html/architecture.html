@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>武俠和江湖 — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<nav>
+  <span class="nav-brand">武俠和江湖</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="migration.html">移植狀態</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>架構分析 (Level 1-2)</h1>
+  <p>類別繼承、Daemon 系統、武學技能、戰鬥流程、屬性系統完整說明。</p>
+</div>
+
+<!-- 類別繼承層級 -->
+<div class="section">
+  <div class="section-title">類別繼承層級</div>
+  <div class="g2">
+
+    <div class="card card-accent-blue">
+      <h3>Base（根基類）</h3>
+      <p><code>inherit/Base.gd</code> · <code>extends RefCounted</code></p>
+      <ul style="margin-top:8px;">
+        <li>基礎 signal：<code>on_set_name</code>、<code>on_set_dec</code>、<code>on_set_tab</code>、<code>on_trigger</code></li>
+        <li>持有 <code>att:=Att.new()</code>（屬性物件）</li>
+        <li>TYPE enum：<code>CREATURE/MACICK/HERO/TSK</code></li>
+      </ul>
+    </div>
+
+    <div class="card card-accent-blue">
+      <h3>GameObject（核心物件基類）</h3>
+      <p><code>inherit/GameObject.gd</code></p>
+      <ul style="margin-top:8px;">
+        <li><strong>dbase 系統</strong>：<code>query()</code>/<code>set()</code>/<code>add()</code>（持久屬性）</li>
+        <li><strong>tmp_dbase 系統</strong>：<code>query_temp()</code>/<code>set_temp()</code>（揮發屬性）</li>
+        <li>BBCode 顏色常數（<code>HIR/HIG/RED/GRN/CYN</code> 等）</li>
+        <li>移動系統：<code>weight</code>/<code>encumb</code>/<code>move(dest)</code></li>
+        <li>LPC 相容層：<code>mapp()</code>/<code>arrayp()</code>/<code>stringp()</code>/<code>intp()</code></li>
+      </ul>
+    </div>
+
+    <div class="card card-accent-orange">
+      <h3>Char（角色基類）</h3>
+      <p><code>inherit/Char.gd</code> · <code>extends GameObject</code></p>
+      <ul style="margin-top:8px;">
+        <li><strong>F_ACTION</strong>：忙碌狀態機（<code>busy</code>/<code>interrupt</code>/<code>start_busy()</code>）</li>
+        <li><strong>F_APPRENTICE</strong>：師徒系統（<code>create_family()</code>/<code>recruit_apprentice()</code>）</li>
+        <li><strong>F_ATTACK</strong>：戰鬥對象清單（<code>enemy[]</code>/<code>killer[]</code>/<code>is_fighting()</code>）</li>
+        <li><strong>F_SKILL</strong>：技能字典（<code>skills</code>/<code>skill_map</code>/<code>skill_prepare</code>）</li>
+        <li><strong>F_NAME</strong>：名字系統（<code>name()</code>/<code>short()</code>/<code>long()</code>）</li>
+        <li><strong>heart_beat()</strong>：心跳驅動（大量仍為 TODO）</li>
+      </ul>
+    </div>
+
+    <div class="card card-accent-green">
+      <h3>Room（房間基類）</h3>
+      <p><code>inherit/Room.gd</code> · <code>extends GameObject</code></p>
+      <ul style="margin-top:8px;">
+        <li>無重量上限（<code>max_encumbrance = 1e11</code>）</li>
+        <li><code>make_inventory(file)</code>：在房間生成物件</li>
+        <li><code>reset()</code>：重置房間物件清單</li>
+        <li><code>doors</code> dict：出口定義</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div style="margin-top:16px;" class="highlight-box hl-blue">
+    <strong>繼承鏈：</strong>
+    Base → GameObject → Char → Player / Npc<br>
+    Base → GameObject → Room<br>
+    Base → GameObject → Item → Weapon / Armor / Food / Medicine
+  </div>
+</div>
+
+<!-- Daemon 系統 -->
+<div class="section">
+  <div class="section-title">Daemon 系統（adm/daemons/）</div>
+  <table>
+    <thead>
+      <tr><th>Daemon</th><th>文件</th><th>職責</th><th>狀態</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>COMBAT_D</strong></td>
+        <td><code>adm/daemons/COMBAT_D.gd</code></td>
+        <td>戰鬥核心：<code>fight()</code>、<code>do_attack()</code>、AP/DP/PP 概率計算、傷害文字、勝負獎懲</td>
+        <td><span class="status-pill status-partial">部分（語法錯誤）</span></td>
+      </tr>
+      <tr>
+        <td><strong>CHINESE_D</strong></td>
+        <td><code>adm/daemons/CHINESE_D.gd</code></td>
+        <td>中文語言處理（Autoload）</td>
+        <td><span class="status-pill status-done">可用</span></td>
+      </tr>
+      <tr>
+        <td><strong>CHAR_D</strong></td>
+        <td><code>adm/daemons/CHAR_D.gdt</code></td>
+        <td>角色管理、屍體生成</td>
+        <td><span class="status-pill status-todo">TODO</span></td>
+      </tr>
+      <tr>
+        <td><strong>COLOR_D</strong></td>
+        <td><code>adm/daemons/COLOR_D.gd</code></td>
+        <td>顏色/BBCode 工具</td>
+        <td><span class="status-pill status-done">完成</span></td>
+      </tr>
+      <tr>
+        <td><strong>MONEY_D</strong></td>
+        <td><code>adm/daemons/MONEY_D.gd</code></td>
+        <td>貨幣系統（金/銀/銅錢）</td>
+        <td><span class="status-pill status-partial">部分</span></td>
+      </tr>
+      <tr>
+        <td><strong>NAME_D</strong></td>
+        <td><code>adm/daemons/NAME_D.gd</code></td>
+        <td>名字/稱號管理</td>
+        <td><span class="status-pill status-partial">部分</span></td>
+      </tr>
+      <tr>
+        <td><strong>mapd</strong></td>
+        <td><code>adm/daemons/mapd.gd</code></td>
+        <td>地圖 daemon</td>
+        <td><span class="status-pill status-partial">部分</span></td>
+      </tr>
+      <tr>
+        <td><strong>event daemons</strong></td>
+        <td><code>adm/daemons/event/</code></td>
+        <td>各門派事件（峨眉、崑崙、錢塘、天池、無量）</td>
+        <td><span class="status-pill status-partial">部分</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 武學技能 -->
+<div class="section">
+  <div class="section-title">武學技能系統（kungfu/skill/）</div>
+  <div class="g4">
+    <div class="card card-accent-red">
+      <h3>兵器技能</h3>
+      <ul>
+        <li>blade — 刀法</li>
+        <li>club — 棍棒</li>
+        <li>hook — 鉤法</li>
+        <li>staff — 劍法</li>
+        <li>stick — 棍法</li>
+      </ul>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>拳腳技能</h3>
+      <ul>
+        <li>claw — 爪法</li>
+        <li>cuff — 鐵拳</li>
+        <li>hand — 掌法</li>
+        <li>strike — 拳打</li>
+      </ul>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>內功技能</h3>
+      <ul>
+        <li>finger — 指法</li>
+        <li>force — 內力修煉</li>
+        <li>count — 算術（輔助）</li>
+      </ul>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>防禦技能</h3>
+      <ul>
+        <li>dodge — 輕功閃躲</li>
+        <li>parry — 招架防禦</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:12px;" class="highlight-box hl-orange">
+    技能 API：<code>set_skill()</code> / <code>query_skill(skill, raw)</code> / <code>map_skill(skill, mapped_to)</code> / <code>prepare_skill()</code><br>
+    每個技能同時有 <code>.c</code>（LPC 原始）與 <code>.gd</code>（GDScript）版本，核心方法（<code>power_point()</code>/<code>hit_ob()</code>/<code>double_attack()</code>）多數尚未實作。
+  </div>
+</div>
+
+<!-- 屬性系統 -->
+<div class="section">
+  <div class="section-title">屬性系統</div>
+  <div class="g2">
+    <div>
+      <div class="section-title" style="margin-bottom:10px;">基礎六圍（dbase 欄位）</div>
+      <table>
+        <thead><tr><th>欄位</th><th>名稱</th><th>影響</th></tr></thead>
+        <tbody>
+          <tr><td><code>str</code></td><td>膂力</td><td>傷害值</td></tr>
+          <tr><td><code>int</code></td><td>悟性</td><td>學習速度</td></tr>
+          <tr><td><code>con</code></td><td>根骨</td><td>氣血恢復</td></tr>
+          <tr><td><code>dex</code></td><td>身法</td><td>躲避能力</td></tr>
+          <tr><td><code>sta</code></td><td>耐力</td><td>內力恢復</td></tr>
+          <tr><td><code>spi</code></td><td>靈性</td><td>武功上限</td></tr>
+          <tr><td><code>kar</code></td><td>福緣</td><td>機緣觸發率</td></tr>
+          <tr><td><code>per</code></td><td>容貌</td><td>異性震懾</td></tr>
+          <tr><td><code>cps</code></td><td>定力</td><td>出招破綻少</td></tr>
+          <tr><td><code>cor</code></td><td>膽識</td><td>出手成功率</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="section-title" style="margin-bottom:10px;">戰鬥資源</div>
+      <table>
+        <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+        <tbody>
+          <tr><td><code>jing / max_jing / eff_jing</code></td><td>精力（目前/上限/有效上限）</td></tr>
+          <tr><td><code>qi / max_qi / eff_qi</code></td><td>氣血（目前/上限/有效上限）</td></tr>
+          <tr><td><code>neili / max_neili</code></td><td>內力</td></tr>
+          <tr><td><code>jingli / max_jingli</code></td><td>精氣</td></tr>
+          <tr><td><code>tili / max_tili</code></td><td>體力</td></tr>
+          <tr><td><code>combat_exp</code></td><td>實戰經驗（影響傷害修正）</td></tr>
+          <tr><td><code>potential</code></td><td>潛能（上限由聲望影響）</td></tr>
+          <tr><td><code>shen</code></td><td>聲望（影響 NPC 態度）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 戰鬥流程 -->
+<div class="section">
+  <div class="section-title">戰鬥核心流程（COMBAT_D::do_attack）</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>① 計算 AP（攻擊力）</h3>
+      <p>
+        <code>skill_power(me, attack_skill, SKILL_USAGE_ATTACK)</code><br><br>
+        公式：<code>power = (level/6) * level * level</code><br>
+        <code>AP = (power + combat_exp) / 80 * (str + base_str)</code><br><br>
+        攻擊技能選擇：weapon → prepare（組合招） → unarmed
+      </p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>② 閃躲判定（DP）</h3>
+      <p>
+        <code>skill_power(victim, "dodge", SKILL_USAGE_DEFENSE)</code><br><br>
+        <code>if random(AP + DP) &lt; DP → 閃躲成功</code><br><br>
+        成功顯示 <code>dodge_msg</code>，回傳 <code>RESULT_DODGE</code>
+      </p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>③ 招架判定（PP）</h3>
+      <p>
+        閃躲失敗後計算招架：<br>
+        持武器 = <code>skill_power(victim, "parry", ...)</code><br>
+        空手 = <code>skill_power(victim, "unarmed", ...)</code><br><br>
+        <code>if random(AP + PP) &lt; PP → 招架成功</code><br>
+        顯示 <code>parry_msg</code>，回傳 <code>RESULT_PARRY</code>
+      </p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>④ 命中傷害</h3>
+      <p>
+        <code>damage = weapon_damage + str_bonus (膂力)</code><br>
+        <code>- armor_defense（護甲減傷）</code><br>
+        <code>+ force_skill（內功加成）</code><br>
+        <code>+ martial_skill power_point（武學威力係數）</code><br><br>
+        最終：<code>victim.receive_damage("qi", damage, me)</code>
+      </p>
+    </div>
+  </div>
+  <div style="margin-top:12px;" class="highlight-box hl-purple">
+    <strong>反擊機會：</strong> 攻擊失敗且被攻擊者設有 <code>guarding</code> 狀態時，依 <code>query_cps()</code> 判定是否觸發反擊（<code>TYPE_QUICK</code> 或 <code>TYPE_RIPOSTE</code>）。
+    <br><strong>雙擊：</strong> 空手且有 prepare 組合招時自動觸發第二次 <code>do_attack()</code>（顯示「雙手分使，靈活異常」）。
+  </div>
+</div>
+
+<!-- 資料持久化 -->
+<div class="section">
+  <div class="section-title">資料持久化（data/ 目錄）</div>
+  <div class="g3">
+    <div class="card">
+      <h3>玩家存檔</h3>
+      <p><code>data/user/</code><br>JSON + .gd 格式，<code>Global.save_game()</code> 遍歷 Persist 群組序列化</p>
+    </div>
+    <div class="card">
+      <h3>商店資料</h3>
+      <p><code>data/shop/</code><br>各城市（長安/成都/大理/佛山…）店家庫存，LPC .o 序列化格式</p>
+    </div>
+    <div class="card">
+      <h3>掌門資料</h3>
+      <p><code>data/zhangmen/</code><br>丁閒師太/東方不敗/洪七公 等 19 位掌門的 .o/.json 資料</p>
+    </div>
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:32px;">
+  核對於 2026-06-01 · <a href="../architecture/02_level2_core_modules.md">原始 .md</a> ·
+  <a href="index.html">← 回首頁</a>
+</p>
+
+</div>
+</body>
+</html>

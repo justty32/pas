@@ -1,0 +1,53 @@
+# 原型測試夾具 — 供 tests/src/test_prototypes.cpp 使用
+#
+# 繼承關係：
+#   BaseEntity
+#       └── BaseChara
+#               ├── Putit         （弱小史萊姆）
+#               └── EliteWarrior  （強化版 BaseChara，示範多層覆蓋）
+#   SimpleItem                    （無父，示範獨立原型）
+
+- id: "BaseEntity"
+  components:
+    Spatial:
+      x: 0
+      y: 0
+
+- id: "BaseChara"
+  parent: "BaseEntity"
+  components:
+    CharaStats:
+      max_hp: 100
+      attack: 10
+      defense: 5
+
+- id: "Putit"
+  parent: "BaseChara"
+  components:
+    MetaData:
+      name: "Putit"
+    CharaStats:
+      max_hp: 30
+      attack: 3
+      defense: 1
+
+- id: "EliteWarrior"
+  parent: "BaseChara"
+  components:
+    MetaData:
+      name: "Elite Warrior"
+    CharaStats:
+      max_hp: 250
+      attack: 35
+      defense: 20
+    Spatial:
+      x: 10
+      y: 10
+
+- id: "SimpleItem"
+  components:
+    MetaData:
+      name: "Simple Item"
+    ItemStats:
+      weight: 5
+      value: 100

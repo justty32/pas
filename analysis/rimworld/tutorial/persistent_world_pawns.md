@@ -56,10 +56,17 @@ public class WorldObject_Stalker : WorldObject
         trackedPawn.TickRare(); 
 
         // 模擬大地圖移動：隨機向玩家基地靠近
-        int playerTile = Faction.OfPlayer.HomeWithMostPawns.Tile;
+        // ⚠️ 核對 2026-06-01：兩處 API 錯誤：
+        // 1. Faction.OfPlayer.HomeWithMostPawns 不存在 → 用 Find.AnyPlayerHomeMap?.Tile
+        // 2. WorldGrid.FindNextTileTowards 不存在 → 應用 GetTileNeighbors + GetHeadingFromTo 手動選鄰居
+        PlanetTile playerTile = Find.AnyPlayerHomeMap?.Tile ?? this.Tile;
         if (this.Tile != playerTile)
         {
-            this.Tile = Find.WorldGrid.FindNextTileTowards(this.Tile, playerTile);
+            // ✅ 替代：找所有鄰居，選方向最近的一個
+            var neighbors = new List<PlanetTile>();
+            Find.WorldGrid.GetTileNeighbors(this.Tile, neighbors);
+            if (neighbors.Count > 0)
+                this.Tile = neighbors.MinBy(t => Find.WorldGrid.GetHeadingFromTo(t, playerTile));
         }
     }
 }

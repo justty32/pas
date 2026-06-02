@@ -6,19 +6,22 @@
 
 我們需要攔截襲擊者的路徑，判斷其是否穿過玩家的勢力範圍。
 
+> ⚠️ **核對 2026-06-01**：`WorldRoutePlanner` 是玩家互動式 UI，沒有 `StartPoint`/`EndPoint` 設值器，也沒有 `GetRoute()`（已在 `answers/mod_feasibility_review.md §1❌` 標記）。真正的世界尋路需透過 `Layer.Pather.FindPath(from, to)` 取得 `WorldPath`，再走 `worldPath.NodesReversed`。下方框架保留結構，但核心尋路須替換。
+
 ```csharp
 public static class WorldPathUtility
 {
+    private static readonly List<PlanetTile> tmpPath = new List<PlanetTile>();
+
     // 檢查從來源到目標的路徑是否被玩家哨所攔截
-    public static WorldObject_Outpost GetInterceptingOutpost(int startTile, int endTile)
+    // TODO: 用 Layer.Pather.FindPath(startTile, endTile) 取得 WorldPath 後填入 tmpPath
+    public static WorldObject_Outpost GetInterceptingOutpost(PlanetTile startTile, PlanetTile endTile)
     {
-        // 獲取兩點之間的大地圖路徑 (Tile 集合)
-        List<int> path = new List<int>();
-        Find.WorldRoutePlanner.StartPoint = startTile;
-        Find.WorldRoutePlanner.EndPoint = endTile;
-        // 注意：這裡假設使用自定義路徑算法或分析現有路徑
-        
-        foreach (int tile in path)
+        tmpPath.Clear();
+        // 實際尋路：WorldPath worldPath = startTile.Layer.Pather.FindPath(startTile, endTile);
+        // foreach (PlanetTile tile in worldPath.NodesReversed) tmpPath.Add(tile);
+
+        foreach (PlanetTile tile in tmpPath)
         {
             var outpost = Find.WorldObjects.WorldObjectAt<WorldObject_Outpost>(tile);
             if (outpost != null && outpost.CanIntercept)
@@ -35,9 +38,13 @@ public static class WorldPathUtility
 
 利用 `WorldMesh` 在世界地圖上繪製具有地理感的國界線。
 
+> ⚠️ **核對 2026-06-01**：`Find.WorldGrid.tileNeighbors[tile]` 不存在。正確 API 是 `Find.WorldGrid.GetTileNeighbors(tile, tmpNeighbors)` 其中 `tmpNeighbors` 是 `List<PlanetTile>`。
+
 ```csharp
 public class WorldLayer_TerritoryBorders : WorldLayer
 {
+    private static readonly List<PlanetTile> tmpNeighbors = new List<PlanetTile>();
+
     public override IEnumerable<LayerSubMesh> Regenerate()
     {
         var influenceComp = Find.World.GetComponent<WorldComponent_FactionInfluence>();
@@ -45,7 +52,8 @@ public class WorldLayer_TerritoryBorders : WorldLayer
         foreach (var tile in influenceComp.BorderTiles)
         {
             // 獲取該 Tile 的鄰居，若鄰居屬於不同派系，則繪製邊界線
-            foreach (var neighbor in Find.WorldGrid.tileNeighbors[tile])
+            Find.WorldGrid.GetTileNeighbors(tile, tmpNeighbors);
+            foreach (var neighbor in tmpNeighbors)
             {
                 if (influenceComp.GetOwner(neighbor) != influenceComp.GetOwner(tile))
                 {
@@ -100,7 +108,10 @@ public static class Patch_RaidInterception
     {
         if (parms.target is Map map && map.IsPlayerHome)
         {
-            int sourceTile = parms.raidArrivalMode == RaidArrivalModeDefOf.EdgeWalkIn ? parms.spawnCenter.Tile : -1;
+            // ⚠️ 核對 2026-06-01：parms.spawnCenter 是 IntVec3，沒有 .Tile 屬性
+            // 世界 Tile 應從 map.Tile 取得（PlanetTile），spawnCenter 是地圖內座標，兩者概念不同
+            // 真正的「來源 Tile」需在事件生成更上游取得（如 IncidentWorker_RaidEnemy 的選址階段）
+            int sourceTile = parms.raidArrivalMode == RaidArrivalModeDefOf.EdgeWalkIn ? map.Tile : -1;
             if (sourceTile != -1)
             {
                 var interceptor = WorldPathUtility.GetInterceptingOutpost(sourceTile, map.Tile);

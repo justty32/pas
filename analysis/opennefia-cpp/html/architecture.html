@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>opennefia-cpp — 架構分析</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.phase-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.phase-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0;}
+.phase-num.blue  {background:rgba(88,166,255,.2); color:var(--blue);}
+.phase-num.green {background:rgba(63,185,80,.2);  color:var(--green);}
+.phase-num.orange{background:rgba(210,153,34,.2); color:var(--orange);}
+.phase-num.purple{background:rgba(188,140,255,.2);color:var(--purple);}
+.phase-num.cyan  {background:rgba(57,213,211,.2); color:var(--cyan);}
+.phase-title{font-size:1rem;font-weight:700;}
+.phase-subtitle{font-size:.78rem;color:var(--muted);margin-top:1px;}
+.phase-done{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.68rem;
+  font-weight:700;background:rgba(63,185,80,.12);color:var(--green);
+  border:1px solid rgba(63,185,80,.3);margin-left:8px;}
+
+.pitfall{background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.2);
+  border-left:3px solid var(--red);border-radius:7px;padding:12px 14px;margin-top:8px;}
+.pitfall .pt-title{font-size:.75rem;font-weight:700;color:var(--red);margin-bottom:4px;}
+.pitfall p{font-size:.78rem;color:var(--muted);}
+.pitfall code{color:var(--orange);}
+
+.solution{background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);
+  border-left:3px solid var(--green);border-radius:7px;padding:12px 14px;margin-top:6px;}
+.solution .sol-title{font-size:.75rem;font-weight:700;color:var(--green);margin-bottom:4px;}
+.solution p{font-size:.78rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">opennefia-cpp</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html" class="active">架構分析</a>
+  <a href="tutorial.html">擴充教學</a>
+  <a href="frontend.html">前端綁定</a>
+  <a href="../../derived/opennefia-cpp/PROJECT.md">PROJECT.md</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<div class="page-header">
+  <h1>架構分析</h1>
+  <p>opennefia-cpp godot-free 核心的逐層架構剖析：ECS 地基、原型系統、序列化三件套、地圖邏輯，以及各 Phase 踩到的關鍵坑。真實來源為 <code>../architecture/summary.md</code>。</p>
+</div>
+
+<!-- ===== Phase 0 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num blue">0</div>
+    <div>
+      <div class="phase-title">CMake 構建骨架 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">雙目標 STATIC 核心 + doctest 測試；FetchContent 五套依賴</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>opennefia_core STATIC</h3>
+      <p><code>GLOB_RECURSE src/</code> 蒐集所有 .cpp，排除 <code>/gbind/</code>；預設不連任何前端庫（<code>OPENNEFIA_BUILD_GDEXTENSION OFF</code>）。C++20，MSVC 警告層級 /W4。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>FetchContent 依賴</h3>
+      <p>EnTT v3.16.0、cereal v1.3.2、yaml-cpp 0.8.0、spdlog v1.14.1、doctest v2.4.11。全部 vendored，無需本機預裝。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑：yaml-cpp + doctest 在 CMake 4.0+ 報 cmake_minimum_required 錯誤</div>
+    <p>兩個套件的 <code>cmake_minimum_required(VERSION 2.8.12)</code> 在 CMake 4.0+（移除 &lt;3.5 向後相容）下觸發錯誤。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：CMAKE_POLICY_VERSION_MINIMUM=3.5（FetchContent 呼叫前設定）</div>
+    <p>在根 CMakeLists.txt 加 <code>set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING "...")</code>，此設定自動傳播給所有 FetchContent 子專案。</p>
+  </div>
+</div>
+
+<!-- ===== Phase 1 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num green">1</div>
+    <div>
+      <div class="phase-title">ECS 地基 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">EntityManager + EventBus（定向 + 廣播）+ SystemCtx + 基礎 Component</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-green">
+      <h3>EntityManager</h3>
+      <p>薄封裝 <code>entt::registry</code>。持有 <code>std::vector&lt;SystemFn&gt;</code>，<code>tick(ctx)</code> 依序執行。<code>add_system(lambda)</code> 顯式登錄 — 沒有 Assembly 掃描、沒有繼承。</p>
+      <code>core/ecs/entity_manager.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>EventBus（定向）</h3>
+      <p><code>void*</code> 類型抹除，<code>std::type_index</code> 為鍵，<code>raise_local&lt;Event&gt;(reg, entity, ev)</code> 分派給該實體的訂閱者 lambda。</p>
+      <code>core/ecs/event_bus.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>EventBus（廣播）</h3>
+      <p>直接暴露 <code>entt::dispatcher</code>，<code>dispatcher().sink&lt;Event&gt;().connect()</code> 訂閱；<code>dispatcher().trigger()</code> 廣播。</p>
+      <code>core/ecs/event_bus.h</code>
+    </div>
+  </div>
+  <div class="g2" style="margin-top:12px">
+    <div class="card card-accent-blue">
+      <h3>MetaDataComponent</h3>
+      <p><code>proto_id: string</code> + <code>is_alive: bool</code>。對稱 <code>serialize()</code>，cereal 序列化無歧義。</p>
+      <code>core/components/meta_data_component.h</code>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>SpatialComponent</h3>
+      <p><code>x, y: int</code> + <code>parent: entt::entity</code>。因 <code>entt::entity</code> 是強型別 enum，Phase 3 改為非對稱 <code>save()/load() split</code>（轉底層整數再存）。</p>
+      <code>core/components/spatial_component.h</code>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑：doctest MSVC 2022 — string_view 的 operator&lt;&lt; 因 ostream 不完整報錯</div>
+    <p>doctest 前向宣告 <code>std::basic_ostream</code>；MSVC 2022 中 <code>string_view</code> 的 <code>operator&lt;&lt;</code> 需完整型別，導致 C2338 / C2027 編譯錯誤。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：DOCTEST_CONFIG_USE_STD_HEADERS compile definition</div>
+    <p>讓 doctest 改 <code>#include &lt;sstream&gt;</code> 取代前向宣告。寫入 <code>tests/CMakeLists.txt</code> 的 <code>target_compile_definitions</code>。</p>
+  </div>
+</div>
+
+<!-- ===== Phase 2 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num orange">2</div>
+    <div>
+      <div class="phase-title">原型系統 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">yaml-cpp YAML 載入 + 拓撲繼承解析 + ComponentLoader 顯式登錄 + spawn</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-orange">
+      <h3>PrototypeManager 三步驟</h3>
+      <p>① <code>load_file()</code> 讀 YAML 序列（raw_defs_）→ ② <code>resolve_inheritance()</code> DFS 拓撲排序 + component flat merge →  ③ <code>spawn(em, id)</code> 呼叫已登錄的 ComponentLoader 建立實體。</p>
+      <code>core/prototypes/prototype_manager.h+cpp</code>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>ComponentLoader — 零反射</h3>
+      <p>型別 = <code>std::function&lt;void(registry&, entity, const YAML::Node&amp;)&gt;</code>。呼叫方用 <code>register_loader("Spatial", lambda)</code> 顯式登錄。未登錄的 component 在 apply_to 時靜默略過（前向相容）。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑①：yaml-cpp iterator_value 在 MSVC 的 operator= 歧義</div>
+    <p>range-based for 回傳 <code>YAML::detail::iterator_value</code>，MSVC 偏好 template <code>operator=&lt;T&gt;</code> 而非 copy assignment，觸發 C2027 "use of undefined type"。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：改用 index 存取 root[i]</div>
+    <p><code>for (std::size_t i = 0; i &lt; root.size(); ++i) &#123; YAML::Node node = root[i]; &#125;</code></p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">坑②：YAML::Node map 複製共享 detail::node，跨原型靜默污染</div>
+    <p>複製 <code>YAML::Node</code> map entry 只複製 handle（引用計數），底層 <code>detail::node</code> 共享。子原型賦值 <code>proto.components["Spatial"] = new_node</code> 會呼叫 <code>AssignNode → set_ref</code>，修改共享節點，導致所有繼承同一父原型的子類被靜默污染。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：繼承 merge 時對所有 component node 呼叫 YAML::Clone()</div>
+    <p>父原型 component 複製 + 子原型自身 override，兩者都用 <code>YAML::Clone(parent_node)</code>，確保每個原型持有獨立的 <code>detail::node</code>。</p>
+  </div>
+</div>
+
+<!-- ===== Phase 3 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num purple">3</div>
+    <div>
+      <div class="phase-title">序列化三件套 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">AllComponents type_list + entt_cereal_archive adapter + save_load fold expression</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-purple">
+      <h3>AllComponents（唯一真相來源）</h3>
+      <p><code>entt::type_list&lt;MetaData, Spatial, MapData&gt;</code>。新增 component 只改這裡，save/load fold 自動覆蓋。直接移植自 medps <code>all_components.h</code>。</p>
+      <code>core/serialize/all_components.h</code>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>entt_cereal_archive</h3>
+      <p>橋接 EnTT snapshot API 與 cereal。<code>output_archive</code> / <code>input_archive</code> 各自把 <code>entt::entity</code> 轉成 <code>underlying_type_t</code> 整數再存/讀。</p>
+      <code>core/serialize/entt_cereal_archive.h</code>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>save_load — 三層 API</h3>
+      <p>① <code>stream</code>（ostream/istream）→ ② <code>path</code>（檔案路徑）→ ③ <code>SaveStore</code>（抽象後端）。<code>FolderSaveStore</code> 以 string slot name 對應一個 .bin 檔案。</p>
+      <code>core/serialize/save_load.h, save_store.h</code>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑①：entt::entity == entt::null_t 在 doctest CHECK() 造成 C2593 歧義</div>
+    <p>doctest 的 <code>Expression_lhs&lt;entt::entity&gt;</code> 有 template <code>operator==&lt;T&gt;</code>；EnTT 也有 <code>operator==(entity, null_t)</code>，兩者同等匹配，MSVC 報 C2593 ambiguous。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：先求值成 bool 再 CHECK</div>
+    <p><code>bool parent_null = (sp.parent == entt::null); CHECK(parent_null);</code></p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">坑②：cereal 序列化 std::string / std::vector 無 include 時 static_assert</div>
+    <p>cereal 不預設知道 std containers。<code>MetaDataComponent::proto_id</code>（string）與 <code>MapData::tiles</code>（vector&lt;Tile&gt;）都需要顯式 include。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：在 save_load.h 加入兩個 include</div>
+    <p><code>#include &lt;cereal/types/string.hpp&gt;</code> + <code>#include &lt;cereal/types/vector.hpp&gt;</code></p>
+  </div>
+</div>
+
+<!-- ===== Phase 4 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num cyan">4</div>
+    <div>
+      <div class="phase-title">地圖邏輯 + 整合測試 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">MapData 稠密 tile 網格 + 可走性移動系統 + 完整 PROJECT.md §5 整合測試</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-cyan">
+      <h3>MapData — 稠密網格 component</h3>
+      <p>掛在單一「地圖 entity」上，不是一格一 entity（仿 medps Rimworld-style）。column-major 索引 <code>tiles[x * height + y]</code>。<code>at(x,y)</code> 直接存取，<code>get(x,y)</code> 越界返回 nullptr。</p>
+      <code>core/maps/map_data.h</code>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>Tile 旗標</h3>
+      <p><code>TILE_WALKABLE = 1 &lt;&lt; 0</code>，<code>TILE_BLOCKS_SIGHT = 1 &lt;&lt; 1</code>。<code>terrain</code>（uint16）+ <code>flags</code>（uint8）。cereal 對稱 <code>serialize()</code> 直接支援。</p>
+      <code>core/maps/tile.h</code>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px">Phase 4 整合測試流程（tests/src/test_phase4.cpp）</div>
+  <div class="pipeline">
+    <span class="pipe-step pipe-orange">原型 spawn<br><small>Putit (yaml-cpp)</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">地圖設定<br><small>20×20, y=5 可走</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">tick × 3<br><small>x=3→4→5→6</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">save<br><small>FolderSaveStore</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">clear + restore<br><small>EntityManager 清空</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">驗證<br><small>x==6, map tiles ✓</small></span>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:12px">
+    牆阻擋（x=10 不可走 → hero 停在 x=9 以左）與多實體並存（地圖 + hero + NPC 同時序列化 round-trip）另有獨立測試。
+  </div>
+</div>
+
+<!-- ===== 三大挑戰對照 ===== -->
+<div class="section">
+  <div class="section-title">三大反射難題 — C++ 解法對照表</div>
+  <table>
+    <thead>
+      <tr><th>cpp_plan 標示的挑戰</th><th>OpenNefia C# 做法</th><th>opennefia-cpp 實際解法</th><th>關鍵檔案</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>① 依賴注入</td>
+        <td><code>[Dependency]</code> Reflection.Emit 動態注入</td>
+        <td>系統為無狀態自由函式 → 不需要 DI；全域服務用 <code>ServiceContext</code> 強型別</td>
+        <td><code>ecs/system_ctx.h</code></td>
+      </tr>
+      <tr>
+        <td>② 序列化</td>
+        <td><code>[DataField]</code> 反射讀寫</td>
+        <td><code>AllComponents type_list</code> + fold expression + cereal adapter</td>
+        <td><code>serialize/all_components.h</code></td>
+      </tr>
+      <tr>
+        <td>③ 系統發現</td>
+        <td>Assembly 掃描 <code>GetAllChildren&lt;IEntitySystem&gt;</code></td>
+        <td><code>add_system(lambda)</code> 顯式 vector 登錄；順序即執行序</td>
+        <td><code>ecs/entity_manager.h</code></td>
+      </tr>
+      <tr>
+        <td>原型繼承</td>
+        <td>YAML <code>parent:</code> + C# 反射欄位合併</td>
+        <td>DFS 拓撲排序 + YAML::Clone 深複製 + ComponentLoader 顯式登錄</td>
+        <td><code>prototypes/prototype_manager.cpp</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== F1–F3 GDExtension ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num blue">F</div>
+    <div>
+      <div class="phase-title">GDExtension 橋接層 F1–F3 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">godot-free 核心 → Godot 4 薄殼 facade；工具鏈打通 + 渲染 + 輸入 + Signal</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>F1：OpenNefiaCore（RefCounted）</h3>
+      <p>最小 facade，只暴露 <code>version()</code>。驗證：<code>-DOPENNEFIA_BUILD_GDEXTENSION=ON</code> 編譯 + godot-cpp 4.4 bindings + .dll 載入。</p>
+      <code>src/gbind/opennefia_core_gd.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>F2：OpenNefiaWorld（Node）</h3>
+      <p>持有 <code>EntityManager</code>；<code>_ready()</code> 建 20×15 測試世界；<code>generate_map_image(cell_px) → Image</code> 三色渲染（floor/wall/hero）。</p>
+      <code>src/gbind/opennefia_world_gd.h</code>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>F3：動作 + Signal + UI</h3>
+      <p><code>move(dx,dy)</code> walkable 檢查；<code>world_changed</code> signal；GDScript WASD/arrow 8向輸入；<code>InfoLabel</code> 顯示 hero 座標 + 回合數。</p>
+      <code>godot_test/map_view.gd</code>
+    </div>
+  </div>
+  <div class="section-title" style="margin-top:20px">設計依據（core_data_layer_design.md §4）</div>
+  <div class="g2" style="margin-top:8px">
+    <div class="card card-accent-blue">
+      <h3>繼承 Node vs RefCounted</h3>
+      <p>持有模擬狀態、需要 <code>_ready</code> 生命週期 → <code>Node</code>（<code>OpenNefiaWorld</code>）。無狀態工具 → <code>RefCounted</code>（<code>OpenNefiaCore</code>）。與 <code>core_data_layer_design.md</code> 慣例二/四一致。</p>
+    </div>
+    <div class="card card-accent-green">
+      <h3>Signal Bus 模式</h3>
+      <p>核心完成動作後 emit <code>world_changed</code>；GDScript <code>.connect()</code> 訂閱並刷新渲染。C++ 不知道 GDScript 如何渲染，保持單向依賴。對應 Signal Push 模式。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">坑①：MapData::get() 無 const 版本，在 const 方法中報 C2662</div>
+    <p>OpenNefiaWorld 的查詢方法標記為 <code>const</code>，但 <code>MapData::get(x,y)</code> 沒有 const 過載，MSVC 報 C2662。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：改用 in_bounds(x,y) + at(x,y)（at 有 const 過載）</div>
+    <p><code>if (!map.in_bounds(x, y)) return false; return map.at(x, y).is_walkable();</code></p>
+  </div>
+  <div class="pitfall">
+    <div class="pt-title">坑②：EnTT 空 struct emplace 回傳 void，EntityManager wrapper 宣告 C&amp; 觸發 C2440</div>
+    <p><code>NpcAiComponent</code> 是空 struct（無資料成員）。EnTT 對空型別使用特殊 storage，<code>registry::emplace&lt;T&gt;()</code> 回傳 <code>void</code> 而非 <code>T&amp;</code>。<code>EntityManager::emplace</code> 原宣告 <code>C&amp; emplace(...)</code>，MSVC 報 C2440 "cannot convert from void to C&amp;"。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">修正：回傳型別改為 decltype(auto)，自動跟隨 EnTT 行為</div>
+    <p><code>template&lt;typename C, typename... Args&gt; decltype(auto) emplace(entt::entity e, Args&amp;&amp;... args) &#123; return reg_.emplace&lt;C&gt;(e, std::forward&lt;Args&gt;(args)...); &#125;</code></p>
+  </div>
+</div>
+
+<!-- ===== NPC AI + FOV + Chase + 碰撞 + F4 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num green">AI</div>
+    <div>
+      <div class="phase-title">NPC AI + FOV + 碰撞信號 + F4 音效 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">wander/chase 二段 AI、Bresenham LOS 霧中戰爭、碰撞事件信號、AudioStreamPlayer 框架</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>NpcAiComponent（空 struct tag）</h3>
+      <p>無資料成員。EnTT 空型別存放限制（emplace 回傳 void）透過 <code>decltype(auto)</code> wrapper 處理。已加入 <code>AllComponents</code>，load 後以空 <code>serialize()</code> round-trip 正確。</p>
+      <code>core/components/npc_ai_component.h</code>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>npc_ai_system（wander + chase）</h3>
+      <p>Chebyshev 距離 ≤ 8 → 追蹤模式（大 delta 軸優先，不踩英雄格）；超出範圍或被擋住 → 隨機 wander。英雄以 <code>view&lt;SpatialComponent&gt;(entt::exclude&lt;NpcAiComponent&gt;)</code> 識別。</p>
+      <code>core/systems/npc_ai_system.h+cpp</code>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>fov_system（Bresenham LOS）</h3>
+      <p>對 radius=8 圓內每格投射射線，擊中 <code>blocks_sight</code> 格即截止（終點牆面仍可見）。更新 <code>MapData::visible[]</code> 與 <code>explored[]</code>；在 <code>advance_turn()</code> 中、NPC tick 前呼叫。</p>
+      <code>core/systems/fov_system.h+cpp</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>FOV 渲染三層</h3>
+      <p>未探索=黑；探索未見=原色×0.4（暗）；可見=全亮。NPC 只在可見格顯示（紅）；Hero 永遠顯示（黃，最上層）。</p>
+      <code>src/gbind/opennefia_world_gd.cpp::generate_map_image</code>
+    </div>
+  </div>
+  <div class="section-title" style="margin-top:20px">碰撞信號路徑</div>
+  <div class="pipeline" style="margin-top:8px">
+    <span class="pipe-step pipe-blue">玩家按鍵<br><small>WASD</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">move(dx,dy)</span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">碰牆？<br><small>hero_bumped_wall</small></span>
+    <span class="pipe-arrow">|</span>
+    <span class="pipe-step pipe-purple">碰 NPC？<br><small>hero_bumped_npc</small></span>
+    <span class="pipe-arrow">|</span>
+    <span class="pipe-step pipe-cyan">正常移動<br><small>advance_turn</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-blue">world_changed<br><small>刷新 UI</small></span>
+  </div>
+  <div class="highlight-box hl-green" style="margin-top:12px">
+    F4 音效：GDScript 接收 <code>hero_bumped_wall</code> / <code>hero_bumped_npc</code> / <code>world_changed</code> 三個信號，各自驅動 <code>AudioStreamPlayer</code>；無音效檔時靜默（<code>if sfx.stream: sfx.play()</code>）。
+  </div>
+</div>
+
+<!-- ===== 戰鬥 + 物品 + 多樓層 + 警覺 + BSP + 存讀檔 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num orange">G</div>
+    <div>
+      <div class="phase-title">戰鬥、物品、多樓層、NPC 警覺、BSP 地城、存讀檔 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">NpcAiComponent 升級 LOS 警覺、三種 NPC 類型、物品拾取、TILE_STAIR_DOWN、WorldStateComponent save/load</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:8px">NpcAiComponent — 警覺狀態升級</div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>從空 struct → 帶狀態元件</h3>
+      <p>新增 <code>alerted: bool</code> + <code>alert_turns: int</code>，帶 <code>serialize()</code>。LOS 成立 → <code>alerted=true; alert_turns=6</code>；失去視線後每回合 -1 直到歸零解除。不再是空型別，不需要 <code>decltype(auto)</code> workaround。</p>
+      <code>core/components/npc_ai_component.h</code>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>LOS 判定（Bresenham 複用）</h3>
+      <p><code>opennefia::los(map, nx, ny, hx, hy)</code>（複用 fov_system.cpp 的 Bresenham 實作）+ Chebyshev ≤ 10。LOS 通過才升警覺。追蹤模式下鄰接（Chebyshev == 1）直接攻擊，否則大 delta 軸優先移動。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">戰鬥系統</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>英雄攻擊 NPC</h3>
+      <p>hero 走入 NPC 所在格 → <code>npc_hp->hp -= 3</code>。若死亡：<code>reg.destroy(e)</code> + emit <code>npc_died(npc_id)</code>；未死亡：emit <code>hero_bumped_npc(npc_id)</code>。</p>
+      <code>opennefia_world_gd.cpp::move()</code>
+    </div>
+    <div class="card card-accent-red">
+      <h3>NPC 攻擊英雄 + game_over</h3>
+      <p>NPC 追蹤且 Chebyshev == 1 → <code>hero_hp->hp -= stats->attack</code>。<code>advance_turn()</code> 末尾偵測 <code>hp &lt;= 0</code>：設 <code>game_over_ = true</code> + emit <code>game_over</code> signal。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">CombatStatsComponent — 三種 NPC 類型</div>
+  <table>
+    <thead><tr><th>種類</th><th>HP（基礎+樓層）</th><th>攻擊</th><th>移動機率</th><th>渲染色</th></tr></thead>
+    <tbody>
+      <tr><td>Putit</td><td>6 + (floor-1)</td><td>1</td><td>40%</td><td>紫 (0.6, 0.2, 0.7)</td></tr>
+      <tr><td>Warrior</td><td>15 + (floor-1)×3</td><td>3</td><td>65%</td><td>橙 (0.9, 0.5, 0.1)</td></tr>
+      <tr><td>Bat</td><td>5 + (floor-1)</td><td>2</td><td>90%</td><td>青 (0.2, 0.8, 0.9)</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.78rem;color:var(--muted);margin-top:6px;"><code>move_chance</code> 控制每回合行動機率；Bat 極快（90%）但脆；Warrior 強壯且攻擊最高。</p>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">ItemComponent + 物品拾取</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>ItemComponent（health_potion）</h3>
+      <p><code>ItemType::health_potion</code>，<code>value = 8 + (floor-1)*2</code>（深層回更多）。中間房間 60% 機率生成。物品以<strong>綠點</strong>渲染，只在 FOV 可見格顯示，層級低於 NPC。</p>
+      <code>core/components/item_component.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>自動拾取流程</h3>
+      <p>hero 移動後若與物品同格 → <code>hp = min(hp + value, max_hp)</code> → <code>reg.destroy(pickup_ent)</code> → emit <code>item_picked_up(name, heal_amount)</code>。在走入樓梯前觸發。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">多樓層 + BSP 地城</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>TILE_STAIR_DOWN（tile.h）</h3>
+      <p>旗標 <code>1 &lt;&lt; 2</code>。放在 BSP 地城最後一個房間中心（需至少 2 個房間）。hero 踩到 → <code>next_floor()</code>：<code>++current_floor_; setup_map(); recompute_fov(); emit floor_changed()</code>。英雄 HP 保留；NPC + 物品 + 地圖重新生成。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>BSP 地城 60×40（map_gen.h+cpp）</h3>
+      <p>取代原固定 20×15 測試地圖。回傳 <code>std::vector&lt;Room&gt;</code>，各房間中心依序放英雄（rooms[0]）、NPC/物品（中間）、樓梯（back）。NPC 上限 <code>min(4 + floor, 8)</code>。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">WorldStateComponent + 存讀檔</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <h3>WorldStateComponent</h3>
+      <p>掛在 <code>map_entity_</code> 上，隨 <code>AllComponents</code> 一併序列化。解決「C++ member variable（turn_count/floor）不在 ECS 中，無法隨 save/load 持久化」的問題，不需 sidecar 檔案。</p>
+      <code>core/components/world_state_component.h</code>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>save_game() / load_game()</h3>
+      <p>save：同步成員變數 → WorldStateComponent → <code>cereal::PortableBinaryOutputArchive</code>。load：<code>registry.clear()</code> → snapshot_loader → 重建 map/hero entity 指標（MapData / proto_id == "hero"）→ 還原 turn/floor。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>F5/F9 GDScript 整合</h3>
+      <p><code>ProjectSettings.globalize_path("user://opennefia_save.bin")</code> 取得真實路徑。F5/F9 在 <code>_unhandled_input</code> 的 <code>if _dead: return</code> 前攔截，game_over 後仍可操作。讀檔成功後設 <code>_dead = false</code> 恢復輸入。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">load 後 entity 指標失效</div>
+    <p><code>registry.clear()</code> 後所有 <code>entt::entity</code> handle 作廢。需重查：<code>map_entity_</code> ← <code>view&lt;MapData&gt;</code> 第一個；<code>hero_entity_</code> ← <code>MetaDataComponent::proto_id == "hero"</code>。不能依賴 exclude 模式（未來可能有其他無 NpcAi 的實體）。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">設計決策：以語意查詢重建指標，而非快取</div>
+    <p>每次 <code>load_game()</code> 都用語意查詢（MapData / proto_id）重建所有 C++ 指標。既無需快取機制，也不依賴實體 ID 的穩定性（snapshot_loader 能保留原始 entity ID，但此做法更不脆弱）。</p>
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
+  本頁為導覽呈現層。內容真實來源 (source of truth) 為 <code>../architecture/summary.md</code> 與 <code>../../derived/opennefia-cpp/</code> 下的源碼。
+</p>
+
+</div><!-- /max-width -->
+</body>
+</html>

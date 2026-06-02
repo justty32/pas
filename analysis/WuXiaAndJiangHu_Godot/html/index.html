@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>武俠和江湖 — 分析總覽</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.hero h1{font-size:3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--orange) 0%,var(--red) 50%,var(--purple) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-1.5px;}
+.hero .sub{font-size:.95rem;color:var(--muted);margin-top:10px;max-width:680px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.8rem;color:var(--dim);margin-top:6px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+.nav-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:720px){.nav-cards{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.nav-cards{grid-template-columns:1fr;}}
+
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s;}
+.nav-card:hover{border-color:var(--orange);text-decoration:none;}
+.nav-card .nc-icon{font-size:1.8rem;}
+.nav-card h3{font-size:.95rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.78rem;color:var(--muted);flex:1;}
+.nav-card .nc-arrow{font-size:.8rem;color:var(--orange);align-self:flex-end;}
+
+.oneliner{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;margin-bottom:32px;font-size:.93rem;
+  color:var(--text);border-left:4px solid var(--orange);line-height:1.8;}
+.oneliner strong{color:var(--orange);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">武俠和江湖</span>
+  <a href="index.html" class="active">首頁</a>
+  <a href="architecture.html">架構分析</a>
+  <a href="migration.html">移植狀態</a>
+</nav>
+
+<div style="max-width:1200px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>武俠和江湖</h1>
+  <p class="sub">LPC MUD 武俠遊戲 → Godot 4.0 移植專案<br>
+  探索武學系統、江湖道具、師徒門派的完整實作</p>
+  <p class="sub2">— WuXiaAndJiangHu_Godot · 分析日期 2026-06-01 —</p>
+  <div class="badge-row">
+    <span class="badge badge-orange">Godot 4.0</span>
+    <span class="badge badge-orange">GDScript</span>
+    <span class="badge badge-red">LPC MUD 移植</span>
+    <span class="badge badge-purple">進行中</span>
+    <span class="badge badge-gray">Level 1-2 完成</span>
+  </div>
+</div>
+
+<!-- One-liner -->
+<div class="oneliner">
+  <strong>WuXiaAndJiangHu_Godot</strong> 是一個將中文武俠 LPC MUD 伺服器邏輯移植至 Godot 4.0 的單機 RPG 專案。
+  核心架構遵循 MUD 的三大柱：<strong>dbase 字典屬性系統</strong>、<strong>Daemon 全域服務</strong>、<strong>Feature Mixin 繼承</strong>。
+  大量業務邏輯（戰鬥、死亡、屬性）仍在 TODO/注釋狀態，是探索 MUD 到圖形遊戲移植模式的絕佳範本。
+</div>
+
+<!-- Quick stats -->
+<div class="section">
+  <div class="section-title">專案快覽</div>
+  <div class="g4">
+    <div class="card card-accent-orange">
+      <h3>引擎 & 語言</h3>
+      <p>Godot 4.0 / GDScript<br>同時含 LPC (.c) 原始碼</p>
+    </div>
+    <div class="card card-accent-red">
+      <h3>主場景</h3>
+      <p><code>objs/StageRoom.tscn</code><br>3 個 Autoload</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>武學技能</h3>
+      <p>13 種武學（刀/爪/棍/拳/<br>輕功/指/內力/招架…）</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>屬性系統</h3>
+      <p>10 維基礎屬性<br>精/氣/內 3 大資源</p>
+    </div>
+  </div>
+</div>
+
+<!-- Nav cards -->
+<div class="section">
+  <div class="section-title">頁面導覽</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="architecture.html">
+      <div class="nc-icon">🏗️</div>
+      <h3>架構分析 (L1-L2)</h3>
+      <p>目錄結構、類別繼承層級（GameObject/Char/Room）、Daemon 系統、Feature Mixin、戰鬥流程、屬性系統詳解。</p>
+      <span class="nc-arrow">→ 查看</span>
+    </a>
+
+    <a class="nav-card" href="migration.html">
+      <div class="nc-icon">🔄</div>
+      <h3>LPC 移植狀態</h3>
+      <p>原始 LPC MUD 架構說明、各模組移植進度表（已完成/部分完成/尚未翻譯）、關鍵移植模式與已知語法問題。</p>
+      <span class="nc-arrow">→ 查看</span>
+    </a>
+
+    <a class="nav-card" href="../architecture/01_level1_overview.md">
+      <div class="nc-icon">📄</div>
+      <h3>原始 .md 文件</h3>
+      <p>L1 總覽、L2 模組職責、移植狀態的完整 Markdown 原始文件（source of truth）。</p>
+      <span class="nc-arrow">→ 查看</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- Key architecture overview -->
+<div class="section">
+  <div class="section-title">核心架構三柱</div>
+  <div class="g3">
+    <div class="card card-accent-blue">
+      <h3>🗄️ dbase 字典系統</h3>
+      <p><code>GameObject.gd</code> 的核心設計：所有屬性存入 <code>dbase</code> dict（持久）或 <code>tmp_dbase</code> dict（揮發）。<br><br>
+      透過 <code>query()</code>/<code>set()</code>/<code>add()</code> 存取，直接對映 LPC 的 <code>ob→query("str")</code> 語法，提供低耦合的通用屬性層。</p>
+    </div>
+    <div class="card card-accent-orange">
+      <h3>⚙️ Daemon 全域服務</h3>
+      <p><code>adm/daemons/</code> 提供 MUD 風格的全域單例服務。<br><br>
+      關鍵 daemon：<code>COMBAT_D</code>（戰鬥核心）、<code>CHINESE_D</code>（Autoload 中文處理）、<code>CHAR_D</code>（角色管理）。Godot 中以 Autoload 或動態載入實作。</p>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>🧩 Feature Mixin</h3>
+      <p><code>feature/</code> 目錄對映 LPC 的 <code>inherit F_ACTION</code> 機制。<br><br>
+      動作、攻擊、屬性、狀態、傷害、財務、移動、隊伍等功能以獨立文件提供，在 <code>Char.gd</code> 中組合繼承，避免單一超大基類。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Autoloads -->
+<div class="section">
+  <div class="section-title">Autoload（全域單例）</div>
+  <div class="g3">
+    <div class="card">
+      <h3>Global</h3>
+      <p><code>Global.gd</code><br><br>
+      存讀檔（Persist group）、JSON 資料讀取、目錄掃描、SpriteFrames 生成、數字轉中文、顏色工具。</p>
+    </div>
+    <div class="card">
+      <h3>CHINESE_D</h3>
+      <p><code>adm/daemons/CHINESE_D.gd</code><br><br>
+      中文語言處理 daemon，處理武俠文字顯示（干支年號、量詞等）。</p>
+    </div>
+    <div class="card">
+      <h3>gdutils</h3>
+      <p><code>addons/gdutils/__init__.gd</code><br><br>
+      GDScript 工具插件，提供額外的 utility 方法。</p>
+    </div>
+  </div>
+</div>
+
+<!-- File inventory -->
+<div class="section">
+  <div class="section-title">關鍵文件索引</div>
+  <table>
+    <thead>
+      <tr><th>文件</th><th>職責</th><th>移植狀態</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>inherit/GameObject.gd</code></td><td>dbase 系統、型別相容層、移動、訊息</td>
+        <td><span class="status-pill status-done">完成</span></td></tr>
+      <tr><td><code>inherit/Char.gd</code></td><td>角色基類、技能、忙碌、師徒、heart_beat</td>
+        <td><span class="status-pill status-partial">部分</span></td></tr>
+      <tr><td><code>inherit/Room.gd</code></td><td>房間基類、物件重置</td>
+        <td><span class="status-pill status-partial">部分</span></td></tr>
+      <tr><td><code>inherit/Base.gd</code></td><td>根基類、TYPE enum、Att 物件</td>
+        <td><span class="status-pill status-done">完成</span></td></tr>
+      <tr><td><code>adm/daemons/COMBAT_D.gd</code></td><td>戰鬥核心（AP/DP/PP 三段概率）</td>
+        <td><span class="status-pill status-partial">部分（語法錯誤）</span></td></tr>
+      <tr><td><code>Global.gd</code></td><td>Autoload 全域工具</td>
+        <td><span class="status-pill status-done">完成</span></td></tr>
+      <tr><td><code>inventory/GridBackpack.gd</code></td><td>格狀背包 UI</td>
+        <td><span class="status-pill status-done">基本完成</span></td></tr>
+      <tr><td><code>kungfu/skill/*.gd</code></td><td>13 種武學技能定義</td>
+        <td><span class="status-pill status-todo">多數 TODO</span></td></tr>
+      <tr><td><code>feature/*.c</code></td><td>Feature Mixin 原始 LPC 碼</td>
+        <td><span class="status-pill status-ref">僅參考</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:32px;">
+  核對於 2026-06-01 · Claude Code (Sonnet 4.6) ·
+  <a href="../session_log.md">session log</a>
+</p>
+
+</div>
+</body>
+</html>

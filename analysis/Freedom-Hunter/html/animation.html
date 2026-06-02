@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>動畫/美術系統 — Freedom-Hunter</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.wrapper{max-width:1200px;margin:0 auto;}
+.highlight-box{padding:14px 18px;border-radius:7px;font-size:.85rem;margin-bottom:16px;}
+.hl-blue  {background:rgba(88,166,255,.09); color:var(--blue);  border:1px solid rgba(88,166,255,.25);}
+.hl-orange{background:rgba(210,153,34,.09); color:var(--orange);border:1px solid rgba(210,153,34,.25);}
+.card ul{margin:8px 0 0 16px;font-size:.8rem;color:var(--muted);}
+.card ul li{margin-bottom:5px;}
+.card ul li strong{color:var(--text);}
+.card p{margin-top:6px;font-size:.8rem;color:var(--muted);}
+.section-gap{margin-top:28px;}
+.flow-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;margin-top:8px;}
+.flow-node{background:rgba(255,255,255,.06);border-radius:5px;padding:3px 10px;color:var(--text);}
+.flow-arrow{color:var(--dim);}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Freedom-Hunter</span>
+  <a href="index.html">首頁</a>
+  <a href="architecture.html">架構總覽</a>
+  <a href="combat.html">戰鬥系統</a>
+  <a href="items.html">道具/物品欄</a>
+  <a href="world.html">相機/UI/世界</a>
+  <a href="multiplayer.html">多人系統</a>
+  <a href="animation.html" class="active">動畫/美術</a>
+  <a href="shader.html">草地Shader</a>
+</nav>
+
+<div class="wrapper">
+
+<div class="page-header">
+  <h1>動畫 / 美術系統</h1>
+  <p>AnimationTree 雙層狀態機、音畫同步、怪物美術</p>
+</div>
+
+<!-- 玩家動畫架構 -->
+<div class="section">
+  <div class="section-title">玩家動畫架構</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>AnimationTree 狀態機</h3>
+      <p>主層狀態</p>
+      <div class="flow-row">
+        <span class="flow-node">idle-loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">movement</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">attack</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">rest</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node">death</span>
+      </div>
+      <p style="margin-top:10px;">移動子狀態</p>
+      <div class="flow-row">
+        <span class="flow-node">walk-loop</span>
+        <span class="flow-node">run-loop</span>
+        <span class="flow-node">dodge</span>
+        <span class="flow-node">jump</span>
+        <span class="flow-node">falling</span>
+      </div>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>AnimationsWithSounds</h3>
+      <ul>
+        <li>骨骼動畫與音效軌打包為一體</li>
+        <li>幀精確控制：音效與動畫幀同步觸發</li>
+        <li>避免音畫脫節，提升打擊感一致性</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 空白鍵語境感知 -->
+<div class="section section-gap">
+  <div class="section-title">空白鍵語境感知</div>
+  <div class="card card-accent-cyan">
+    <h3>跳躍 vs 閃避分流</h3>
+    <ul>
+      <li><strong>跑步中按空白鍵</strong> → 跳躍</li>
+      <li><strong>靜止 / 走路時按空白鍵</strong> → 閃避</li>
+      <li>分流條件：<code>movement/conditions/running</code> 狀態</li>
+    </ul>
+    <p style="margin-top:10px;color:var(--orange);">
+      競態條件：同幀鬆開方向鍵時按空白鍵 → <code>running</code> 已被清除 → 觸發閃避而非跳躍
+    </p>
+  </div>
+</div>
+
+<!-- 右攻擊動畫缺失 -->
+<div class="section section-gap">
+  <div class="section-title">右攻擊動畫缺失</div>
+  <div class="highlight-box hl-orange">
+    <strong>Bug：</strong><code>player.gd:102</code> 呼叫 <code>attack("right_attack_0")</code>，
+    但該參數被忽略。AnimationTree 中只有 <code>left_attack_0</code> 節點，
+    右攻擊輸入靜默地播放左攻擊動畫。<br><br>
+    <strong>修正方向：</strong>移除右攻擊輸入按鍵綁定，或補足完整的右攻擊 AnimationTree 節點。
+  </div>
+</div>
+
+<!-- 連按攻擊鎖定 -->
+<div class="section section-gap">
+  <div class="section-title">連按攻擊鎖定</div>
+  <div class="card card-accent-purple">
+    <h3>無自環（self-loop）機制</h3>
+    <ul>
+      <li>狀態機未設定攻擊自環：攻擊期間無法重新進入攻擊狀態</li>
+      <li>攻擊期間設 <code>attacking = true</code> 的邏輯被忽略，flag 不起作用</li>
+      <li><strong>實際效果：</strong>攻擊動畫播完後才接受下一次輸入，無法連段</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 怪物美術 -->
+<div class="section section-gap">
+  <div class="section-title">怪物美術</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>龍模型碰撞體</h3>
+      <ul>
+        <li>33 個 <code>ConvexPolygonShape3D</code> 組成複合碰撞體</li>
+        <li>AnimationTree 雙層狀態機：移動層 / 攻擊層獨立</li>
+        <li>感嘆號動畫：<code>combat=true</code> 立即設定，怪物同步開始追蹤玩家</li>
+      </ul>
+    </div>
+    <div class="card card-accent-red">
+      <h3>怪物死亡流程</h3>
+      <ul>
+        <li><code>monster.gd:76</code>：<code>call_deferred("set_script", preload("res://src/interact/monster drop.gd"))</code></li>
+        <li>碰撞體保留（仍 <strong>enabled</strong>，死後仍可被偵測）</li>
+        <li><code>monster drop.gd</code> 無 <code>_ready()</code>，透過 <code>gathering.gd</code> 提供掉落邏輯</li>
+        <li><code>queue_free()</code> 清除整個節點樹</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 火焰攻擊時序 -->
+<div class="section section-gap">
+  <div class="section-title">火焰攻擊時序</div>
+  <div class="highlight-box hl-blue">
+    <strong>粒子生命週期：</strong><br>
+    t = 0.0s：<code>emitting = true</code>（開始噴火）<br>
+    t = 3.5s：<code>emitting = false</code>（停止新粒子）<br>
+    舊粒子仍存活至 <code>lifetime = 5s</code>（視覺拖尾效果）<br><br>
+    <strong>RayCast 冷卻：</strong>1000ms — 玩家快速進出火焰區域時不會重複受傷
+  </div>
+</div>
+
+<!-- 參照連結 -->
+<div class="section section-gap">
+  <div class="section-title">原始分析文件</div>
+  <div class="card">
+    <p><a href="../details/player_art_animation_controls.md">details/player_art_animation_controls.md</a></p>
+    <p style="margin-top:6px;"><a href="../details/monster_art_animation.md">details/monster_art_animation.md</a></p>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

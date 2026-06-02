@@ -14,7 +14,7 @@ public class CompAuthority : ThingComp
     
     public override void PostExposeData()
     {
-        base.ExposeData();
+        base.PostExposeData(); // ✅ 核對 2026-06-01：ThingComp 的覆寫是 PostExposeData()，應呼叫 base.PostExposeData() 而非 base.ExposeData()
         Scribe_Values.Look(ref tier, "tier", 1);
         Scribe_Values.Look(ref renown, "renown", 0f);
     }
@@ -70,8 +70,10 @@ public class Hediff_LeadershipAura : HediffWithComps
         base.Tick();
         if (pawn.IsHashIntervalTick(60)) // 每秒檢查一次
         {
-            // 尋找範圍 10 格內的領袖
-            Pawn leader = GenRadial.RadialPawnsAround(pawn.Position, pawn.Map, 10f, true)
+            // ✅ 核對 2026-06-01：GenRadial.RadialPawnsAround 在 1.6 源碼中不存在（杜撰）。
+            // 替代：直接過濾 mapPawns，或用 GenRadial.RadialCellsAround + GetFirstPawn。
+            Pawn leader = pawn.Map.mapPawns.AllPawnsSpawned
+                .Where(p => p != pawn && p.Position.DistanceTo(pawn.Position) <= 10f)
                 .FirstOrDefault(p => p.GetComp<CompAuthority>()?.tier >= 3);
 
             if (leader != null)
