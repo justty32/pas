@@ -41,10 +41,6 @@ func _ready() -> void:
 	_refresh_display()
 	_refresh_ui()
 
-	# 鏡頭置中
-	camera.position = Vector2(world.get_map_width(), world.get_map_height()) \
-					  * CELL_PX * 0.5
-
 	print("F3+F4+戰鬥 ready — WASD/arrow/numpad 移動，. 等待")
 
 func _setup_audio() -> void:
@@ -106,12 +102,14 @@ func _refresh_display() -> void:
 	sprite.centered = false
 	sprite.position = Vector2.ZERO
 	sprite.texture  = ImageTexture.create_from_image(img)
+	camera.position = Vector2(world.get_hero_x() + 0.5, world.get_hero_y() + 0.5) * CELL_PX
 
 func _refresh_ui() -> void:
-	info_label.text = "Hero: (%d, %d)  Turn: %d  HP: %d/%d" % [
+	info_label.text = "Hero: (%d, %d)  Turn: %d  HP: %d/%d  Enemies: %d" % [
 		world.get_hero_x(),
 		world.get_hero_y(),
 		world.get_turn_count(),
 		world.get_hero_hp(),
-		world.get_hero_max_hp()
+		world.get_hero_max_hp(),
+		world.get_npc_count()
 	]

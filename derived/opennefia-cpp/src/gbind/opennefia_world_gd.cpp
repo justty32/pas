@@ -5,8 +5,10 @@
 #include "core/components/npc_ai_component.h"
 #include "core/components/health_component.h"
 #include "core/maps/map_data.h"
+#include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
 #include "core/systems/fov_system.h"
+#include <random>
 
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -29,6 +31,7 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_turn_count"),  &OpenNefiaWorld::get_turn_count);
     ClassDB::bind_method(D_METHOD("get_hero_hp"),     &OpenNefiaWorld::get_hero_hp);
     ClassDB::bind_method(D_METHOD("get_hero_max_hp"), &OpenNefiaWorld::get_hero_max_hp);
+    ClassDB::bind_method(D_METHOD("get_npc_count"),   &OpenNefiaWorld::get_npc_count);
 
     ADD_SIGNAL(MethodInfo("world_changed"));
     ADD_SIGNAL(MethodInfo("hero_bumped_wall"));
@@ -50,46 +53,34 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
 
 // ---- 測試世界建構 -----------------------------------------------------------
 //
-// 20×15 地圖，邊界牆，內部地板。
-// hero 在中央 (10, 7)，3 隻 NPC 分散於四角附近（可走格）。
+// 60×40 地圖，BSP 地城生成。
+// hero 放在第一個房間中心；後續房間各放一隻 NPC（最多 5 隻）。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
-    constexpr int W = 20, H = 15;
+    constexpr int W = 60, H = 40;
 
     // 地圖
     map_entity_ = em_.create();
     auto& map = em_.emplace<opennefia::MapData>(map_entity_, W, H);
 
-    for (int x = 0; x < W; ++x) {
-        for (int y = 0; y < H; ++y) {
-            bool is_border = (x == 0 || x == W-1 || y == 0 || y == H-1);
-            auto& tile = map.at(x, y);
-            if (is_border) {
-                tile.terrain = 1;
-                tile.flags   = opennefia::TILE_BLOCKS_SIGHT;
-            } else {
-                tile.terrain = 0;
-                tile.flags   = opennefia::TILE_WALKABLE;
-            }
-        }
-    }
+    // BSP 地城生成（房間＋走廊由 generate_bsp_dungeon 負責寫入 map）
+    std::mt19937 rng(std::random_device{}());
+    auto rooms = opennefia::generate_bsp_dungeon(map, rng);
 
-    // Hero（HP 20/20）
+    // Hero（HP 20/20）：第一個房間中心，或地圖中央（後備）
+    int hero_x = rooms.empty() ? W / 2 : rooms[0].cx();
+    int hero_y = rooms.empty() ? H / 2 : rooms[0].cy();
     hero_entity_ = em_.create();
     em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
-    em_.emplace<opennefia::SpatialComponent>(hero_entity_, W/2, H/2);
+    em_.emplace<opennefia::SpatialComponent>(hero_entity_, hero_x, hero_y);
     em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
 
-    // 3 隻 NPC（HP 10/10，放在可走格，遠離邊界）
-    struct NpcSpawn { int x, y; const char* id; };
-    constexpr NpcSpawn SPAWNS[3] = {
-        { 3,     3,    "npc_a" },
-        { W - 4, 3,    "npc_b" },
-        { W / 2, H-4,  "npc_c" },
-    };
-    for (auto& s : SPAWNS) {
+    // NPC：從第二個房間起，每間放一隻，最多 5 隻
+    int npc_count = 0;
+    for (int r = 1; r < static_cast<int>(rooms.size()) && npc_count < 5; ++r, ++npc_count) {
+        std::string npc_id = "npc_" + std::to_string(npc_count);
         auto e = em_.create();
-        em_.emplace<opennefia::MetaDataComponent>(e, s.id, true);
-        em_.emplace<opennefia::SpatialComponent>(e, s.x, s.y);
+        em_.emplace<opennefia::MetaDataComponent>(e, npc_id, true);
+        em_.emplace<opennefia::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
         em_.emplace<opennefia::NpcAiComponent>(e);
         em_.emplace<opennefia::HealthComponent>(e, 10, 10);
     }
@@ -282,4 +273,8 @@ int opennefia_gd::OpenNefiaWorld::get_hero_hp() const {
 int opennefia_gd::OpenNefiaWorld::get_hero_max_hp() const {
     const auto* hp = em_.registry().try_get<opennefia::HealthComponent>(hero_entity_);
     return hp ? hp->max_hp : 0;
+}
+
+int opennefia_gd::OpenNefiaWorld::get_npc_count() const {
+    return static_cast<int>(em_.registry().view<opennefia::NpcAiComponent>().size());
 }

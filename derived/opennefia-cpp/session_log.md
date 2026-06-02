@@ -23,3 +23,5 @@
 - 2026-06-02: FOV + NPC chase + 碰撞信號 + F4 音效框架完成。新增 fov_system.h+cpp（Bresenham LOS 射線 FOV，radius=8）；map_data.h 加 visible/explored 陣列 + split save/load；npc_ai_system 改為距離 8 格以內追蹤英雄（大 delta 軸優先），否則 wander；OpenNefiaWorld 加 hero_bumped_wall / hero_bumped_npc 信號 + recompute_fov()；generate_map_image 改三層 FOV 渲染（未探索/暗/原色）；map_view.gd 接收碰撞信號 + AudioStreamPlayer 音效框架（plug-in .ogg 即可啟用）。36 tests 仍全綠。
 
 - 2026-06-02: 戰鬥系統完成。新增 health_component.h（hp/max_hp，cereal serialize）；AllComponents 加入 HealthComponent；Hero 20/20 HP、NPC 10/10 HP；hero 撞 NPC → 扣 3 HP（致死則 destroy 實體 + emit npc_died，否則 emit hero_bumped_npc）；npc_ai_system 在 Chebyshev==1 時改為攻擊 hero（扣 2 HP）而非移動；advance_turn 後偵測 hero HP ≤ 0 → emit game_over + 鎖定輸入；InfoLabel 顯示 HP；map_view.gd 接 npc_died / game_over 信號。Build 成功，DLL 更新。
+
+- 2026-06-02: BSP 地城生成完成。新增 core/maps/map_gen.h+cpp（BSP 地下城：遞迴分割、葉節點挖房間、L 形走廊連接、回傳 Room 列表）；地圖升級 60×40；hero 放第一房間中心、NPC 依序放後續房間（最多 5 隻）；GDScript 鏡頭跟隨英雄；InfoLabel 加 Enemies 計數；get_npc_count() 暴露給 GDScript。3 個 subagent 並行開發，build 成功。

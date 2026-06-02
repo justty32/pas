@@ -49,6 +49,7 @@ public:
     int get_turn_count()  const;
     int get_hero_hp()     const;
     int get_hero_max_hp() const;
+    int get_npc_count()   const;
 
 private:
     void setup_test_world();
