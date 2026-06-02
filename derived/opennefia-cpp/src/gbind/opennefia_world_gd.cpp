@@ -6,6 +6,7 @@
 #include "core/components/health_component.h"
 #include "core/components/item_component.h"
 #include "core/components/combat_stats_component.h"
+#include "core/components/hero_component.h"
 #include "core/maps/map_data.h"
 #include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
@@ -126,6 +127,7 @@ void opennefia_gd::OpenNefiaWorld::setup_map() {
         em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
         em_.emplace<opennefia::SpatialComponent>(hero_entity_, hx, hy);
         em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
+        em_.emplace<opennefia::HeroComponent>(hero_entity_);  // 正向辨識標記
     } else {
         auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
         if (sp) { sp->x = hx; sp->y = hy; }
@@ -508,12 +510,10 @@ bool opennefia_gd::OpenNefiaWorld::load_game(const godot::String& path_gd) {
     auto& reg = em_.registry();
     for (auto e : reg.view<opennefia::MapData>()) { map_entity_ = e; break; }
 
-    // hero_entity_：MetaDataComponent::proto_id == "hero"
-    for (auto e : reg.view<opennefia::MetaDataComponent>()) {
-        if (reg.get<opennefia::MetaDataComponent>(e).proto_id == "hero") {
-            hero_entity_ = e;
-            break;
-        }
+    // hero_entity_：正向標記 HeroComponent（已序列化，存讀檔後仍在）
+    for (auto e : reg.view<opennefia::HeroComponent>()) {
+        hero_entity_ = e;
+        break;
     }
 
     // 從 WorldStateComponent 還原遊戲狀態

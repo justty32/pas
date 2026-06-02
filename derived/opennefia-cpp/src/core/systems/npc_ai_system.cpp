@@ -4,7 +4,7 @@
 #include "core/components/spatial_component.h"
 #include "core/components/health_component.h"
 #include "core/components/combat_stats_component.h"
-#include "core/components/item_component.h"
+#include "core/components/hero_component.h"
 #include "core/maps/map_data.h"
 #include "core/systems/fov_system.h"
 
@@ -27,12 +27,9 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
     if (map_ent == entt::null) return;
     const auto& map = reg.get<MapData>(map_ent);
 
-    // 找英雄實體：有 Spatial + Health、且非 NPC、非物品。
-    // （舊版只 exclude<NpcAiComponent>，物品也有 Spatial 無 NpcAi → 可能誤選物品，
-    //   攻擊就打到沒有 HealthComponent 的物品上，英雄永遠不掉血。）
+    // 找英雄實體：正向標記 HeroComponent 唯一辨識（取代脆弱的排除法）。
     entt::entity hero_ent = entt::null;
-    for (auto e : reg.view<SpatialComponent, HealthComponent>(
-                      entt::exclude<NpcAiComponent, ItemComponent>)) {
+    for (auto e : reg.view<HeroComponent, SpatialComponent>()) {
         hero_ent = e; break;
     }
 

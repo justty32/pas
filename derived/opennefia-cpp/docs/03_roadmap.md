@@ -163,11 +163,26 @@
 
 ---
 
+## F6 — GUI 實機觀察 + 戰鬥 bug 修復 + 英雄辨識正規化 ✅ 完成 2026-06-02
+
+**目標**：開圖形視窗實際操作，把 headless 看不到的行為 bug 打出來。
+
+- [x] 建 `godot_test/map_view.tscn`（`MapView/Sprite2D/Camera2D/CanvasLayer/InfoLabel`）+ `project.godot` 設 `run/main_scene`，godot-mono 開窗實玩；移動 / 等待 / 重開 / 存讀檔 / 攻擊敵人皆正常。
+- [x] **修戰鬥 bug「撞 NPC 能傷敵但英雄不掉血」**（實機加 stderr 診斷鎖定），雙重缺陷：
+  1. **主因（hero 辨識選錯實體）**：`npc_ai_system` 舊用 `view<SpatialComponent>(exclude<NpcAiComponent>)` 取首個非 NPC 的有座標實體，但**物品也符合**（有 `Spatial` 無 `NpcAi`）；EnTT 單池 view 由 storage 尾端往前迭代、真機物品建於英雄之後 → `hero_ent` 誤指向無 `HealthComponent` 的物品 → 攻擊打空，英雄永不掉血。
+  2. **次因（行動機率閘門位置）**：`if (pct >= move_chance) continue;` 擺在函式最前，把視野更新＋鄰接攻擊一併擋掉，使低 `move_chance` 弱怪短兵相接時常還不了手。
+- [x] **修法**：(1) 新增 `HeroComponent` 空 tag，系統改 `view<HeroComponent, SpatialComponent>` 正向辨識（見 `docs/decisions/01_entity_identification.md`）；gbind 建立英雄時 `emplace<HeroComponent>`、載入路徑也改用它找回。(2) 重構 `npc_ai_system`：視野每回合必更新、警覺且鄰接**必定攻擊**、閘門下移只管追蹤/徘徊移動。
+- [x] **回歸測試** `tests/src/test_npc_combat.cpp`：核心攻擊／物品建於英雄之後的真機順序／`move_chance=0` 仍攻擊／`HeroComponent` 空 tag 序列化 round-trip 四案例。
+
+**判準**：✅ ctest **40 cases、146 assertions 全綠**；headless `verify.gd` 仍 `VERIFY PASSED`（含存讀檔，已改吃 `HeroComponent`）；使用者實機確認 HP 正常下降。
+
+---
+
 ## 未來（真正剩餘）
 
-- **GUI 實機觀察**：headless 已綠；尚未開圖形視窗實際操作 `map_view.gd`（WASD 移動 / FOV / 戰鬥 / 存讀檔的視覺確認）。
 - **內容深化**：法術 / 能力系統、物品欄 UI、近戰 / 遠程武器、更多敵人類型與 AI 行為。
 - **核心回歸題**：原型 YAML 擴充（角色 / 物品定義資料化，取代硬編生成）、在地化資料、CVar 設定系統（PROJECT.md §3 列為範圍內但尚未實作）。
+- **辨識正規化的延伸**：目前僅英雄有正向 tag；若未來要區分多種「玩家可控 / 特殊」實體，沿用 tag component 而非靠「缺某 component」反推（見決策 01）。
 
 ---
 
