@@ -26,3 +26,6 @@
 - 2026-06-02：Phase 2 單元驗證：story/backstory 結構正確，nickname 10 次全唯一，部署至 projects/cultivation-world-simulator/src/local_ai/
 - 2026-06-02：Phase 3 — 建立 sect_ai.py（sect_decider 五維度決策樹、sect_thinker 30-100 字思考模板）
 - 2026-06-02：Phase 3 單元驗證：7 項斷言全通過（招募/驅逐/求和邏輯正確，thinker 字數合規），部署至 projects/
+- 2026-06-02：Phase 4 — 建立 minor_events.py（random_minor_event 12 event_key 詞庫模板，solo/pair 各 6 種）
+- 2026-06-02：Phase 4 — 修復 goals.py magic_stone 解析 bug（"50靈石" 格式無法 int() 轉換）
+- 2026-06-02：Phase 4 基準測試：100 月模擬通過，零崩潰、零 ERROR（Year 100→108，18 角色存活）

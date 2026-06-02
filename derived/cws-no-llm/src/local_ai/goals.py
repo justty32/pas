@@ -77,8 +77,11 @@ def _extract_hints(avatar_info: dict) -> dict:
     has_enemy = any(kw in event_str for kw in ("war", "enemy", "kill", "死", "殺", "仇", "敵", "戰"))
     at_war = "war" in event_str or "宣戰" in event_str
 
-    # 靈石是否不足（難以判斷絕對數字，只用比較低的標準）
-    magic_stone = int(flat.get("magic stone", flat.get("靈石", 0)) or 0)
+    # 靈石是否不足（值可能是 "50靈石" 格式，取前置數字部分）
+    import re as _re
+    _ms_raw = str(flat.get("magic stone", flat.get("靈石", 0)) or 0)
+    _ms_match = _re.match(r"\d+", _ms_raw)
+    magic_stone = int(_ms_match.group()) if _ms_match else 0
     magic_stone_low = magic_stone < 100
 
     return {

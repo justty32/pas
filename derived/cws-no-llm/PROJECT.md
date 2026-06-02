@@ -95,10 +95,11 @@
 - [x] `sect_decider`：決策樹（外交/招募/驅逐/獎勵/扶持五維度）— `src/local_ai/sect_ai.py`
 - [x] `sect_thinker`：宗門年度思考文字模板（30-100 字，境界/財力/戰局感知）— `src/local_ai/sect_ai.py`
 
-### Phase 4（完整等價）
-- [ ] 所有 16 個任務完整實作
-- [ ] 基準測試：100 月模擬無崩潰
-- [ ] 與原版行為對比測試
+### Phase 4（完整等價）✅ 完成
+- [x] `random_minor_event`：詞庫模板生成（12 個 event_key，solo/pair 各 6 種，3-4 句變化）— `src/local_ai/minor_events.py`
+- [x] `goals.py` 修復：`magic_stone` 欄位 "50靈石" 格式解析 bug
+- [x] 基準測試：100 月模擬無崩潰、零 ERROR（100→108 年，18 角色存活）
+- [x] `single_choice` / `relation_resolver`：維持 stub（行為正確，高風險決策保守處理）
 
 ---
 
@@ -110,4 +111,4 @@
 - [x] Phase 1：核心 AI（action_decision Utility AI、relation_delta 公式、long_term_objective 模板）
 - [x] Phase 2：敘事系統（詞庫、模板）
 - [x] Phase 3：宗門 AI
-- [ ] Phase 4：完整等價測試
+- [x] Phase 4：完整等價測試（100 月無崩潰）

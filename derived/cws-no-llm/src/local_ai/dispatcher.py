@@ -6,6 +6,7 @@ Phase 1: action_decision → decision.py 效用 AI
 Phase 2: story_teller / interaction_feedback / backstory → narrative.py
          nickname → epithets.py
 Phase 3: sect_decider / sect_thinker → sect_ai.py
+Phase 4: random_minor_event → minor_events.py（12 event_key 詞庫模板）
 
 返回格式全部以 projects/cultivation-world-simulator/src 原始碼核對（2026-06-02）：
   - action_decision   : ai.py:84 — {avatar_name: {"action_name_params_pairs": [...]}}
@@ -31,6 +32,7 @@ from src.local_ai.relations import calc_relation_delta
 from src.local_ai.narrative import gen_story, gen_interaction_feedback, gen_backstory
 from src.local_ai.epithets import gen_nickname
 from src.local_ai.sect_ai import gen_sect_decider, gen_sect_thinker
+from src.local_ai.minor_events import gen_minor_event
 
 logger = logging.getLogger("local_ai")
 
@@ -202,8 +204,8 @@ _HANDLERS = {
     # Phase 3 實作
     "sect_decider":             gen_sect_decider,
     "sect_thinker":             gen_sect_thinker,
-    # Phase 0 stubs（未排入計畫）
-    "random_minor_event":       _stub_random_minor_event,
+    # Phase 4 實作
+    "random_minor_event":       gen_minor_event,
     "single_choice":            _stub_single_choice,
     # 以下在原始碼未見 call_llm_with_task_name 呼叫，保留為 None fallback
     "history_influence":        lambda _: None,
