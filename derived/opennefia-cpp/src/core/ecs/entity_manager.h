@@ -26,7 +26,7 @@ public:
     // ---- Component 存取（thin wrapper，不擋路） ---------------
 
     template<typename C, typename... Args>
-    C& emplace(entt::entity e, Args&&... args) {
+    decltype(auto) emplace(entt::entity e, Args&&... args) {
         return reg_.emplace<C>(e, std::forward<Args>(args)...);
     }
 

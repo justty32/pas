@@ -4,18 +4,19 @@
 #include <godot_cpp/core/class_db.hpp>
 
 #include "core/ecs/entity_manager.h"
+#include "core/ecs/event_bus.h"
+#include "core/ecs/system_ctx.h"
 #include "core/services/service_context.h"
 
 #include <entt/entt.hpp>
 
 namespace opennefia_gd {
 
-// OpenNefiaWorld — 持有核心模擬狀態的 Node（仿 core_data_layer_design.md §4 慣例二）。
+// OpenNefiaWorld — 持有核心模擬狀態的 Node。
 //
-// 設計原則：
-// - 繼承 Node（有場景樹生命週期）；GDScript 把它加入場景樹，_ready 時建好測試世界。
-// - EntityManager + ServiceContext 是成員，跟隨 Node 生命週期。
-// - GDScript 透過 move/wait_turn 提交動作，核心處理後 emit world_changed 通知刷新。
+// F1/F2：地圖查詢 + Image 渲染。
+// F3：move/wait_turn + world_changed signal。
+// NPC AI：EntityManager 帶 npc_ai_system；每次玩家動作後推進一個 tick。
 class OpenNefiaWorld : public godot::Node {
     GDCLASS(OpenNefiaWorld, godot::Node)
 
@@ -33,25 +34,24 @@ public:
     int  get_map_height() const;
     bool is_walkable(int x, int y) const;
 
-    // 生成色彩地圖圖片（floor / wall / hero 三色；給 Sprite2D 用）
-    // cell_px：每格像素大小（建議 8–16）
+    // 生成色彩地圖圖片（floor / wall / hero=黃 / NPC=紅）
     godot::Ref<godot::Image> generate_map_image(int cell_px) const;
 
-    // ---- 動作介面（F3）----
-    // 嘗試移動 hero (dx, dy)；成功回傳 true，並 emit world_changed。
-    bool move(int dx, int dy);
-    // 原地等待一回合；永遠成功，emit world_changed。
-    void wait_turn();
+    // ---- 動作介面 ----
+    bool move(int dx, int dy);    // 移動 hero → tick NPC AI → emit world_changed
+    void wait_turn();             // 等待 → tick NPC AI → emit world_changed
 
-    // ---- 狀態查詢（供 UI Label 顯示）----
+    // ---- 狀態查詢 ----
     int get_hero_x()     const;
     int get_hero_y()     const;
     int get_turn_count() const;
 
 private:
     void setup_test_world();
+    void advance_turn();          // tick EntityManager（NPC AI 等系統）
 
-    opennefia::EntityManager em_;
+    opennefia::EntityManager  em_;
+    opennefia::EventBus       bus_;
     opennefia::ServiceContext svc_;
 
     entt::entity map_entity_{ entt::null };

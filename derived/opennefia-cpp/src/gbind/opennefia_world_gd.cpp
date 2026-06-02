@@ -2,7 +2,9 @@
 
 #include "core/components/meta_data_component.h"
 #include "core/components/spatial_component.h"
+#include "core/components/npc_ai_component.h"
 #include "core/maps/map_data.h"
+#include "core/systems/npc_ai_system.h"
 
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -12,22 +14,18 @@ using namespace godot;
 // ---- static binding --------------------------------------------------------
 
 void opennefia_gd::OpenNefiaWorld::_bind_methods() {
-    // 地圖查詢
     ClassDB::bind_method(D_METHOD("get_map_width"),  &OpenNefiaWorld::get_map_width);
     ClassDB::bind_method(D_METHOD("get_map_height"), &OpenNefiaWorld::get_map_height);
     ClassDB::bind_method(D_METHOD("is_walkable", "x", "y"), &OpenNefiaWorld::is_walkable);
     ClassDB::bind_method(D_METHOD("generate_map_image", "cell_px"), &OpenNefiaWorld::generate_map_image);
 
-    // 動作介面（F3）
     ClassDB::bind_method(D_METHOD("move", "dx", "dy"), &OpenNefiaWorld::move);
     ClassDB::bind_method(D_METHOD("wait_turn"), &OpenNefiaWorld::wait_turn);
 
-    // 狀態查詢（F3 UI）
     ClassDB::bind_method(D_METHOD("get_hero_x"),     &OpenNefiaWorld::get_hero_x);
     ClassDB::bind_method(D_METHOD("get_hero_y"),     &OpenNefiaWorld::get_hero_y);
     ClassDB::bind_method(D_METHOD("get_turn_count"), &OpenNefiaWorld::get_turn_count);
 
-    // Signal：每次動作成功後 emit，通知 GDScript 刷新渲染（Signal Bus 慣例）
     ADD_SIGNAL(MethodInfo("world_changed"));
 }
 
@@ -41,12 +39,12 @@ void opennefia_gd::OpenNefiaWorld::_ready() {
 
 // ---- 測試世界建構 -----------------------------------------------------------
 //
-// 20×15 的地圖：邊界為牆（blocks_sight, !walkable），內部為地板（walkable）。
-// 一個 hero 實體放在中央 (10, 7)。
+// 20×15 地圖，邊界牆，內部地板。
+// hero 在中央 (10, 7)，3 隻 NPC 分散於四角附近（可走格）。
 void opennefia_gd::OpenNefiaWorld::setup_test_world() {
     constexpr int W = 20, H = 15;
 
-    // 1. 建地圖實體
+    // 地圖
     map_entity_ = em_.create();
     auto& map = em_.emplace<opennefia::MapData>(map_entity_, W, H);
 
@@ -64,10 +62,27 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
         }
     }
 
-    // 2. 建 hero 實體
+    // Hero
     hero_entity_ = em_.create();
     em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
     em_.emplace<opennefia::SpatialComponent>(hero_entity_, W/2, H/2);
+
+    // 3 隻 NPC（放在可走格，遠離邊界）
+    struct NpcSpawn { int x, y; const char* id; };
+    constexpr NpcSpawn SPAWNS[3] = {
+        { 3,  3, "npc_a" },
+        { W-4, 3, "npc_b" },
+        { W/2, H-4, "npc_c" },
+    };
+    for (auto& s : SPAWNS) {
+        auto e = em_.create();
+        em_.emplace<opennefia::MetaDataComponent>(e, s.id, true);
+        em_.emplace<opennefia::SpatialComponent>(e, s.x, s.y);
+        em_.emplace<opennefia::NpcAiComponent>(e);
+    }
+
+    // 註冊 NPC AI 系統
+    em_.add_system(opennefia::npc_ai_system);
 }
 
 // ---- 地圖查詢 ---------------------------------------------------------------
@@ -90,38 +105,48 @@ bool opennefia_gd::OpenNefiaWorld::is_walkable(int x, int y) const {
 }
 
 // ---- 圖片生成 ---------------------------------------------------------------
+//
+// 四色：地板=棕 / 牆=暗 / hero=黃 / NPC=紅
 
 godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int cell_px) const {
     if (map_entity_ == entt::null) return {};
 
     const auto& map = em_.get<opennefia::MapData>(map_entity_);
-    int img_w = map.width  * cell_px;
-    int img_h = map.height * cell_px;
-
-    Ref<Image> img = Image::create(img_w, img_h, false, Image::FORMAT_RGB8);
+    Ref<Image> img = Image::create(map.width * cell_px, map.height * cell_px,
+                                   false, Image::FORMAT_RGB8);
 
     const Color floor_color(0.40f, 0.35f, 0.25f);
     const Color wall_color (0.12f, 0.10f, 0.08f);
     const Color hero_color (1.00f, 0.90f, 0.20f);
+    const Color npc_color  (0.90f, 0.20f, 0.20f);
 
-    for (int x = 0; x < map.width; ++x) {
+    // 地板 / 牆
+    for (int x = 0; x < map.width; ++x)
         for (int y = 0; y < map.height; ++y) {
             Color c = map.at(x, y).is_walkable() ? floor_color : wall_color;
-            img->fill_rect(Rect2i(x * cell_px, y * cell_px, cell_px, cell_px), c);
+            img->fill_rect(Rect2i(x*cell_px, y*cell_px, cell_px, cell_px), c);
         }
+
+    // NPC（紅點）
+    auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
+                                        opennefia::SpatialComponent>();
+    for (auto e : npc_view) {
+        const auto& sp = npc_view.get<opennefia::SpatialComponent>(e);
+        if (map.in_bounds(sp.x, sp.y))
+            img->fill_rect(Rect2i(sp.x*cell_px, sp.y*cell_px, cell_px, cell_px), npc_color);
     }
 
+    // Hero（黃點，疊在 NPC 之上）
     if (em_.registry().valid(hero_entity_)) {
         const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
-        if (sp && map.in_bounds(sp->x, sp->y)) {
-            img->fill_rect(Rect2i(sp->x * cell_px, sp->y * cell_px, cell_px, cell_px), hero_color);
-        }
+        if (sp && map.in_bounds(sp->x, sp->y))
+            img->fill_rect(Rect2i(sp->x*cell_px, sp->y*cell_px, cell_px, cell_px), hero_color);
     }
 
     return img;
 }
 
-// ---- 動作介面（F3）---------------------------------------------------------
+// ---- 動作介面 ---------------------------------------------------------------
 
 bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
     if (hero_entity_ == entt::null || map_entity_ == entt::null) return false;
@@ -131,33 +156,34 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
 
     int nx = sp->x + dx;
     int ny = sp->y + dy;
-
     const auto& map = em_.get<opennefia::MapData>(map_entity_);
     if (!map.in_bounds(nx, ny) || !map.at(nx, ny).is_walkable()) return false;
 
     sp->x = nx;
     sp->y = ny;
-    ++turn_count_;
-
-    emit_signal("world_changed");
+    advance_turn();
     return true;
 }
 
 void opennefia_gd::OpenNefiaWorld::wait_turn() {
+    advance_turn();
+}
+
+void opennefia_gd::OpenNefiaWorld::advance_turn() {
     ++turn_count_;
+    opennefia::SystemCtx ctx{ bus_ };
+    em_.tick(ctx);          // 執行所有已登錄系統（npc_ai_system 等）
     emit_signal("world_changed");
 }
 
-// ---- 狀態查詢（F3 UI）------------------------------------------------------
+// ---- 狀態查詢 ---------------------------------------------------------------
 
 int opennefia_gd::OpenNefiaWorld::get_hero_x() const {
-    if (!em_.registry().valid(hero_entity_)) return -1;
     const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
     return sp ? sp->x : -1;
 }
 
 int opennefia_gd::OpenNefiaWorld::get_hero_y() const {
-    if (!em_.registry().valid(hero_entity_)) return -1;
     const auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
     return sp ? sp->y : -1;
 }

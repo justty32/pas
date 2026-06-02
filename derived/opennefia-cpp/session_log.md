@@ -17,3 +17,5 @@
 - 2026-06-02: F2 完成（地圖資料橋接 + Image 渲染）。新增 src/gbind/opennefia_world_gd.h+cpp（OpenNefiaWorld : Node，持有 EntityManager+ServiceContext，setup_test_world 20×15 地圖，generate_map_image 三色 Image）；register_types.cpp 加入 OpenNefiaWorld；godot_test/map_view.gd（動態建 World、Image→ImageTexture→Sprite2D、Camera2D 置中）。opennefia_gd.dll 更新至 4.9 MB。
 - 2026-06-02: F3 完成（輸入 → 核心移動 → Signal 刷新 + UI）。OpenNefiaWorld 新增 move(dx,dy)/wait_turn()/get_hero_x/y/turn_count() + world_changed signal；map_view.gd 新增 _unhandled_input（WASD/arrow/numpad 8向+wait）、_on_world_changed 刷新 Sprite2D、InfoLabel 顯示座標+回合數。cmake 建置通過（5.1 MB DLL）。
 </content>
+
+- 2026-06-02: NPC AI 完成。新增 core/components/npc_ai_component.h（空 struct，已加入 AllComponents）、core/systems/npc_ai_system.h+cpp（wander AI，固定種子 RNG，4 方向試探）；OpenNefiaWorld 新增 EventBus + advance_turn()（tick EM + emit world_changed）；setup_test_world 生成 3 隻 NPC（帶 NpcAiComponent）；generate_map_image 四色（牆/地板/NPC紅/英雄黃）；修復 entity_manager.h emplace 回傳型別（decltype(auto)，EnTT 空型別 emplace 回傳 void）。36/36 tests 仍全綠，DLL 更新完成。
