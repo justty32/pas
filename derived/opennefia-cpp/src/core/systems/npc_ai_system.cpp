@@ -2,6 +2,7 @@
 
 #include "core/components/npc_ai_component.h"
 #include "core/components/spatial_component.h"
+#include "core/components/health_component.h"
 #include "core/maps/map_data.h"
 
 #include <random>
@@ -46,31 +47,40 @@ void npc_ai_system(entt::registry& reg, SystemCtx& /*ctx*/) {
                                      std::abs(hero_sp.y - sp.y));
             if (chebyshev <= 8) {
                 chasing = true;
-                int hdx = hero_sp.x - sp.x;
-                int hdy = hero_sp.y - sp.y;
-                int cx = (hdx > 0) - (hdx < 0);  // sign(hdx)
-                int cy = (hdy > 0) - (hdy < 0);  // sign(hdy)
 
-                // 優先沿 delta 較大的軸移動（4 方向）
-                int try_x[2], try_y[2];
-                if (std::abs(hdx) >= std::abs(hdy)) {
-                    try_x[0] = cx; try_y[0] = 0;
-                    try_x[1] = 0;  try_y[1] = cy;
-                } else {
-                    try_x[0] = 0;  try_y[0] = cy;
-                    try_x[1] = cx; try_y[1] = 0;
-                }
-
-                bool moved = false;
-                for (int i = 0; i < 2; ++i) {
-                    int nx = sp.x + try_x[i];
-                    int ny = sp.y + try_y[i];
-                    if (nx == hero_sp.x && ny == hero_sp.y) continue;  // 不踩英雄
-                    if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
-                        sp.x = nx; sp.y = ny; moved = true; break;
+                // 鄰接時直接攻擊英雄（不移動）
+                if (chebyshev == 1) {
+                    if (auto* hero_hp = reg.try_get<HealthComponent>(hero_ent)) {
+                        hero_hp->hp -= 2;
+                        if (hero_hp->hp < 0) hero_hp->hp = 0;
                     }
+                } else {
+                    int hdx = hero_sp.x - sp.x;
+                    int hdy = hero_sp.y - sp.y;
+                    int cx = (hdx > 0) - (hdx < 0);  // sign(hdx)
+                    int cy = (hdy > 0) - (hdy < 0);  // sign(hdy)
+
+                    // 優先沿 delta 較大的軸移動（4 方向）
+                    int try_x[2], try_y[2];
+                    if (std::abs(hdx) >= std::abs(hdy)) {
+                        try_x[0] = cx; try_y[0] = 0;
+                        try_x[1] = 0;  try_y[1] = cy;
+                    } else {
+                        try_x[0] = 0;  try_y[0] = cy;
+                        try_x[1] = cx; try_y[1] = 0;
+                    }
+
+                    bool moved = false;
+                    for (int i = 0; i < 2; ++i) {
+                        int nx = sp.x + try_x[i];
+                        int ny = sp.y + try_y[i];
+                        if (nx == hero_sp.x && ny == hero_sp.y) continue;  // 不踩英雄
+                        if (map.in_bounds(nx, ny) && map.at(nx, ny).is_walkable()) {
+                            sp.x = nx; sp.y = ny; moved = true; break;
+                        }
+                    }
+                    if (!moved) chasing = false;  // 被擋住，退回 wander
                 }
-                if (!moved) chasing = false;  // 被擋住，退回 wander
             }
         }
 

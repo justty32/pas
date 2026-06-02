@@ -44,9 +44,11 @@ public:
     void wait_turn();
 
     // ---- 狀態查詢 ----
-    int get_hero_x()     const;
-    int get_hero_y()     const;
-    int get_turn_count() const;
+    int get_hero_x()      const;
+    int get_hero_y()      const;
+    int get_turn_count()  const;
+    int get_hero_hp()     const;
+    int get_hero_max_hp() const;
 
 private:
     void setup_test_world();
@@ -60,6 +62,7 @@ private:
     entt::entity map_entity_{ entt::null };
     entt::entity hero_entity_{ entt::null };
     int turn_count_{ 0 };
+    bool game_over_{ false };
 };
 
 } // namespace opennefia_gd

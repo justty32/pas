@@ -3,6 +3,7 @@
 #include "core/components/meta_data_component.h"
 #include "core/components/spatial_component.h"
 #include "core/components/npc_ai_component.h"
+#include "core/components/health_component.h"
 #include "core/maps/map_data.h"
 #include "core/systems/npc_ai_system.h"
 #include "core/systems/fov_system.h"
@@ -23,14 +24,19 @@ void opennefia_gd::OpenNefiaWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("move", "dx", "dy"), &OpenNefiaWorld::move);
     ClassDB::bind_method(D_METHOD("wait_turn"), &OpenNefiaWorld::wait_turn);
 
-    ClassDB::bind_method(D_METHOD("get_hero_x"),     &OpenNefiaWorld::get_hero_x);
-    ClassDB::bind_method(D_METHOD("get_hero_y"),     &OpenNefiaWorld::get_hero_y);
-    ClassDB::bind_method(D_METHOD("get_turn_count"), &OpenNefiaWorld::get_turn_count);
+    ClassDB::bind_method(D_METHOD("get_hero_x"),      &OpenNefiaWorld::get_hero_x);
+    ClassDB::bind_method(D_METHOD("get_hero_y"),      &OpenNefiaWorld::get_hero_y);
+    ClassDB::bind_method(D_METHOD("get_turn_count"),  &OpenNefiaWorld::get_turn_count);
+    ClassDB::bind_method(D_METHOD("get_hero_hp"),     &OpenNefiaWorld::get_hero_hp);
+    ClassDB::bind_method(D_METHOD("get_hero_max_hp"), &OpenNefiaWorld::get_hero_max_hp);
 
     ADD_SIGNAL(MethodInfo("world_changed"));
     ADD_SIGNAL(MethodInfo("hero_bumped_wall"));
     ADD_SIGNAL(MethodInfo("hero_bumped_npc",
         PropertyInfo(Variant::STRING, "npc_id")));
+    ADD_SIGNAL(MethodInfo("npc_died",
+        PropertyInfo(Variant::STRING, "npc_id")));
+    ADD_SIGNAL(MethodInfo("game_over"));
 }
 
 // ---- ctor / lifecycle -------------------------------------------------------
@@ -67,12 +73,13 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
         }
     }
 
-    // Hero
+    // Hero（HP 20/20）
     hero_entity_ = em_.create();
     em_.emplace<opennefia::MetaDataComponent>(hero_entity_, "hero", true);
     em_.emplace<opennefia::SpatialComponent>(hero_entity_, W/2, H/2);
+    em_.emplace<opennefia::HealthComponent>(hero_entity_, 20, 20);
 
-    // 3 隻 NPC（放在可走格，遠離邊界）
+    // 3 隻 NPC（HP 10/10，放在可走格，遠離邊界）
     struct NpcSpawn { int x, y; const char* id; };
     constexpr NpcSpawn SPAWNS[3] = {
         { 3,     3,    "npc_a" },
@@ -84,6 +91,7 @@ void opennefia_gd::OpenNefiaWorld::setup_test_world() {
         em_.emplace<opennefia::MetaDataComponent>(e, s.id, true);
         em_.emplace<opennefia::SpatialComponent>(e, s.x, s.y);
         em_.emplace<opennefia::NpcAiComponent>(e);
+        em_.emplace<opennefia::HealthComponent>(e, 10, 10);
     }
 
     // 註冊 NPC AI 系統
@@ -175,6 +183,7 @@ godot::Ref<godot::Image> opennefia_gd::OpenNefiaWorld::generate_map_image(int ce
 // ---- 動作介面 ---------------------------------------------------------------
 
 bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
+    if (game_over_) return false;
     if (hero_entity_ == entt::null || map_entity_ == entt::null) return false;
 
     auto* sp = em_.registry().try_get<opennefia::SpatialComponent>(hero_entity_);
@@ -190,15 +199,29 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
         return false;
     }
 
-    // NPC 碰撞（英雄嘗試走入 NPC 格 → 碰撞事件，時間照常流逝）
-    auto npc_view = em_.registry().view<opennefia::NpcAiComponent,
-                                        opennefia::SpatialComponent,
-                                        opennefia::MetaDataComponent>();
+    // NPC 碰撞：英雄攻擊 NPC（扣 3 HP；若死亡則銷毀實體）
+    auto& reg = em_.registry();
+    auto npc_view = reg.view<opennefia::NpcAiComponent,
+                             opennefia::SpatialComponent,
+                             opennefia::MetaDataComponent>();
     for (auto e : npc_view) {
         const auto& npc_sp = npc_view.get<opennefia::SpatialComponent>(e);
         if (npc_sp.x == nx && npc_sp.y == ny) {
             const auto& meta = npc_view.get<opennefia::MetaDataComponent>(e);
-            emit_signal("hero_bumped_npc", String(meta.proto_id.c_str()));
+            String npc_id(meta.proto_id.c_str());
+
+            auto* npc_hp = reg.try_get<opennefia::HealthComponent>(e);
+            if (npc_hp) {
+                npc_hp->hp -= 3;
+                if (npc_hp->hp <= 0) {
+                    reg.destroy(e);
+                    emit_signal("npc_died", npc_id);
+                } else {
+                    emit_signal("hero_bumped_npc", npc_id);
+                }
+            } else {
+                emit_signal("hero_bumped_npc", npc_id);
+            }
             advance_turn();
             return true;
         }
@@ -212,6 +235,7 @@ bool opennefia_gd::OpenNefiaWorld::move(int dx, int dy) {
 }
 
 void opennefia_gd::OpenNefiaWorld::wait_turn() {
+    if (game_over_) return;
     advance_turn();
 }
 
@@ -219,7 +243,18 @@ void opennefia_gd::OpenNefiaWorld::advance_turn() {
     ++turn_count_;
     recompute_fov();                  // 先算 FOV（英雄移動後的視野）
     opennefia::SystemCtx ctx{ bus_ };
-    em_.tick(ctx);                    // 執行所有系統（npc_ai_system 等）
+    em_.tick(ctx);                    // 執行所有系統（npc_ai_system 等；NPC 可能攻擊英雄）
+
+    // 英雄死亡偵測（NPC 攻擊後）
+    if (!game_over_) {
+        if (const auto* hp = em_.registry().try_get<opennefia::HealthComponent>(hero_entity_)) {
+            if (hp->hp <= 0) {
+                game_over_ = true;
+                emit_signal("game_over");
+            }
+        }
+    }
+
     emit_signal("world_changed");
 }
 
@@ -237,4 +272,14 @@ int opennefia_gd::OpenNefiaWorld::get_hero_y() const {
 
 int opennefia_gd::OpenNefiaWorld::get_turn_count() const {
     return turn_count_;
+}
+
+int opennefia_gd::OpenNefiaWorld::get_hero_hp() const {
+    const auto* hp = em_.registry().try_get<opennefia::HealthComponent>(hero_entity_);
+    return hp ? hp->hp : 0;
+}
+
+int opennefia_gd::OpenNefiaWorld::get_hero_max_hp() const {
+    const auto* hp = em_.registry().try_get<opennefia::HealthComponent>(hero_entity_);
+    return hp ? hp->max_hp : 0;
 }
