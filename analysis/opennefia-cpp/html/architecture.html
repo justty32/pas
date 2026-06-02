@@ -389,6 +389,104 @@
   </div>
 </div>
 
+<!-- ===== 戰鬥 + 物品 + 多樓層 + 警覺 + BSP + 存讀檔 ===== -->
+<div class="section">
+  <div class="phase-header">
+    <div class="phase-num orange">G</div>
+    <div>
+      <div class="phase-title">戰鬥、物品、多樓層、NPC 警覺、BSP 地城、存讀檔 <span class="phase-done">✅ 完成</span></div>
+      <div class="phase-subtitle">NpcAiComponent 升級 LOS 警覺、三種 NPC 類型、物品拾取、TILE_STAIR_DOWN、WorldStateComponent save/load</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:8px">NpcAiComponent — 警覺狀態升級</div>
+  <div class="g2">
+    <div class="card card-accent-purple">
+      <h3>從空 struct → 帶狀態元件</h3>
+      <p>新增 <code>alerted: bool</code> + <code>alert_turns: int</code>，帶 <code>serialize()</code>。LOS 成立 → <code>alerted=true; alert_turns=6</code>；失去視線後每回合 -1 直到歸零解除。不再是空型別，不需要 <code>decltype(auto)</code> workaround。</p>
+      <code>core/components/npc_ai_component.h</code>
+    </div>
+    <div class="card card-accent-purple">
+      <h3>LOS 判定（Bresenham 複用）</h3>
+      <p><code>opennefia::los(map, nx, ny, hx, hy)</code>（複用 fov_system.cpp 的 Bresenham 實作）+ Chebyshev ≤ 10。LOS 通過才升警覺。追蹤模式下鄰接（Chebyshev == 1）直接攻擊，否則大 delta 軸優先移動。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">戰鬥系統</div>
+  <div class="g2">
+    <div class="card card-accent-red">
+      <h3>英雄攻擊 NPC</h3>
+      <p>hero 走入 NPC 所在格 → <code>npc_hp->hp -= 3</code>。若死亡：<code>reg.destroy(e)</code> + emit <code>npc_died(npc_id)</code>；未死亡：emit <code>hero_bumped_npc(npc_id)</code>。</p>
+      <code>opennefia_world_gd.cpp::move()</code>
+    </div>
+    <div class="card card-accent-red">
+      <h3>NPC 攻擊英雄 + game_over</h3>
+      <p>NPC 追蹤且 Chebyshev == 1 → <code>hero_hp->hp -= stats->attack</code>。<code>advance_turn()</code> 末尾偵測 <code>hp &lt;= 0</code>：設 <code>game_over_ = true</code> + emit <code>game_over</code> signal。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">CombatStatsComponent — 三種 NPC 類型</div>
+  <table>
+    <thead><tr><th>種類</th><th>HP（基礎+樓層）</th><th>攻擊</th><th>移動機率</th><th>渲染色</th></tr></thead>
+    <tbody>
+      <tr><td>Putit</td><td>6 + (floor-1)</td><td>1</td><td>40%</td><td>紫 (0.6, 0.2, 0.7)</td></tr>
+      <tr><td>Warrior</td><td>15 + (floor-1)×3</td><td>3</td><td>65%</td><td>橙 (0.9, 0.5, 0.1)</td></tr>
+      <tr><td>Bat</td><td>5 + (floor-1)</td><td>2</td><td>90%</td><td>青 (0.2, 0.8, 0.9)</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.78rem;color:var(--muted);margin-top:6px;"><code>move_chance</code> 控制每回合行動機率；Bat 極快（90%）但脆；Warrior 強壯且攻擊最高。</p>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">ItemComponent + 物品拾取</div>
+  <div class="g2">
+    <div class="card card-accent-green">
+      <h3>ItemComponent（health_potion）</h3>
+      <p><code>ItemType::health_potion</code>，<code>value = 8 + (floor-1)*2</code>（深層回更多）。中間房間 60% 機率生成。物品以<strong>綠點</strong>渲染，只在 FOV 可見格顯示，層級低於 NPC。</p>
+      <code>core/components/item_component.h</code>
+    </div>
+    <div class="card card-accent-green">
+      <h3>自動拾取流程</h3>
+      <p>hero 移動後若與物品同格 → <code>hp = min(hp + value, max_hp)</code> → <code>reg.destroy(pickup_ent)</code> → emit <code>item_picked_up(name, heal_amount)</code>。在走入樓梯前觸發。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">多樓層 + BSP 地城</div>
+  <div class="g2">
+    <div class="card card-accent-blue">
+      <h3>TILE_STAIR_DOWN（tile.h）</h3>
+      <p>旗標 <code>1 &lt;&lt; 2</code>。放在 BSP 地城最後一個房間中心（需至少 2 個房間）。hero 踩到 → <code>next_floor()</code>：<code>++current_floor_; setup_map(); recompute_fov(); emit floor_changed()</code>。英雄 HP 保留；NPC + 物品 + 地圖重新生成。</p>
+    </div>
+    <div class="card card-accent-blue">
+      <h3>BSP 地城 60×40（map_gen.h+cpp）</h3>
+      <p>取代原固定 20×15 測試地圖。回傳 <code>std::vector&lt;Room&gt;</code>，各房間中心依序放英雄（rooms[0]）、NPC/物品（中間）、樓梯（back）。NPC 上限 <code>min(4 + floor, 8)</code>。</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px;margin-bottom:8px">WorldStateComponent + 存讀檔</div>
+  <div class="g3">
+    <div class="card card-accent-cyan">
+      <h3>WorldStateComponent</h3>
+      <p>掛在 <code>map_entity_</code> 上，隨 <code>AllComponents</code> 一併序列化。解決「C++ member variable（turn_count/floor）不在 ECS 中，無法隨 save/load 持久化」的問題，不需 sidecar 檔案。</p>
+      <code>core/components/world_state_component.h</code>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>save_game() / load_game()</h3>
+      <p>save：同步成員變數 → WorldStateComponent → <code>cereal::PortableBinaryOutputArchive</code>。load：<code>registry.clear()</code> → snapshot_loader → 重建 map/hero entity 指標（MapData / proto_id == "hero"）→ 還原 turn/floor。</p>
+    </div>
+    <div class="card card-accent-cyan">
+      <h3>F5/F9 GDScript 整合</h3>
+      <p><code>ProjectSettings.globalize_path("user://opennefia_save.bin")</code> 取得真實路徑。F5/F9 在 <code>_unhandled_input</code> 的 <code>if _dead: return</code> 前攔截，game_over 後仍可操作。讀檔成功後設 <code>_dead = false</code> 恢復輸入。</p>
+    </div>
+  </div>
+  <div class="pitfall" style="margin-top:12px">
+    <div class="pt-title">load 後 entity 指標失效</div>
+    <p><code>registry.clear()</code> 後所有 <code>entt::entity</code> handle 作廢。需重查：<code>map_entity_</code> ← <code>view&lt;MapData&gt;</code> 第一個；<code>hero_entity_</code> ← <code>MetaDataComponent::proto_id == "hero"</code>。不能依賴 exclude 模式（未來可能有其他無 NpcAi 的實體）。</p>
+  </div>
+  <div class="solution">
+    <div class="sol-title">設計決策：以語意查詢重建指標，而非快取</div>
+    <p>每次 <code>load_game()</code> 都用語意查詢（MapData / proto_id）重建所有 C++ 指標。既無需快取機制，也不依賴實體 ID 的穩定性（snapshot_loader 能保留原始 entity ID，但此做法更不脆弱）。</p>
+  </div>
+</div>
+
 <p style="color:var(--dim);font-size:.75rem;text-align:center;margin-top:24px;">
   本頁為導覽呈現層。內容真實來源 (source of truth) 為 <code>../architecture/summary.md</code> 與 <code>../../derived/opennefia-cpp/</code> 下的源碼。
 </p>

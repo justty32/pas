@@ -66,8 +66,8 @@
 <div class="completion-banner">
   <div class="cb-check">✅</div>
   <div class="cb-text">
-    <h3>核心 Phase 0–4 + 前端 F1–F4 + NPC AI + FOV 全部完成（2026-06-02）</h3>
-    <p>核心：36 test cases / 139 assertions 全綠。前端完整迴路：GDExtension 工具鏈（F1）、地圖 Image 渲染（F2）、鍵盤輸入 + Signal + UI（F3）、NPC wander+chase AI、Bresenham FOV 霧中戰爭、碰撞信號（hero_bumped_wall/npc）、F4 音效框架全部就緒。</p>
+    <h3>核心 Phase 0–4 + 前端 F1–F4 + NPC AI + FOV + 戰鬥 + 物品 + 多樓層 + 存讀檔 全部完成（2026-06-02）</h3>
+    <p>核心：36 test cases / 139 assertions 全綠。完整玩法迴路：GDExtension 橋接、60×40 BSP 地城生成、Bresenham FOV 霧中戰爭、NPC 警覺+追蹤 AI（LOS 判定）、戰鬥系統（三種 NPC 類型）、物品拾取（回血藥）、多樓層（TILE_STAIR_DOWN）、F5/F9 存讀檔。</p>
   </div>
 </div>
 
@@ -120,6 +120,14 @@
     <span class="pipe-step pipe-cyan">FOV<br><small>霧中戰爭</small></span>
     <span class="pipe-arrow">→</span>
     <span class="pipe-step pipe-blue">F4<br><small>音效框架</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-green">NPC 警覺<br><small>LOS + alert</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-orange">戰鬥系統<br><small>HP + 傷害</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-purple">物品 + 樓層<br><small>藥水 + BSP</small></span>
+    <span class="pipe-arrow">→</span>
+    <span class="pipe-step pipe-cyan">存讀檔<br><small>F5 / F9</small></span>
   </div>
 </div>
 
@@ -151,8 +159,8 @@
 
     <a class="nav-card" href="frontend.html">
       <div class="nc-icon">🎮</div>
-      <h3>前端綁定（F1–F3）</h3>
-      <p>GDExtension 工具鏈打通、OpenNefiaWorld Node 設計、Image 渲染、鍵盤輸入 + Signal + UI 全迴路說明。</p>
+      <h3>前端綁定（F1–F5）</h3>
+      <p>GDExtension 工具鏈打通、OpenNefiaWorld Node 設計、完整 API 表（動作 / 查詢 / Signals / 存讀檔）、輸入迴路說明。</p>
       <span class="nc-arrow">→ frontend.html</span>
     </a>
 
@@ -216,6 +224,16 @@
     <div class="card card-accent-green">
       <h3>碰撞信號 + F4 音效 ✅</h3>
       <p><code>hero_bumped_wall</code> / <code>hero_bumped_npc(npc_id)</code> 信號；GDScript <code>AudioStreamPlayer</code> 三路框架，plug-in <code>.ogg</code> 即啟用。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>NPC 警覺 + 戰鬥 + 物品 + 多樓層 ✅</h3>
+      <p>NPC 視線偵測（LOS）+ alerted 狀態記憶；三種 NPC（putit/warrior/bat）各有 HP/攻/速；英雄攻擊 3 dmg；<code>game_over</code> signal；回血藥自動拾取；60×40 BSP 地城；<code>TILE_STAIR_DOWN</code> 多樓層切換。</p>
+      <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
+    </div>
+    <div class="card card-accent-green">
+      <h3>存讀檔 F5/F9 ✅</h3>
+      <p><code>WorldStateComponent</code>（turn_count + current_floor）掛在 map_entity_，隨 AllComponents 一併 cereal PortableBinary 序列化。<code>save_game()</code> / <code>load_game()</code> / <code>has_save_game()</code>；game_over 後仍可 F9 讀檔。</p>
       <div style="margin-top:8px"><span class="badge badge-green">✅ 完成</span></div>
     </div>
   </div>

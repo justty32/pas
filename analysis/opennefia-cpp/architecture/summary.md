@@ -31,6 +31,12 @@
 | NPC 尋路 | Chebyshev 距離追蹤 + 大 delta 軸優先 | ✅ 完成 |
 | 碰撞信號 | hero_bumped_wall / hero_bumped_npc | ✅ 完成 |
 | F4 音效 | AudioStreamPlayer 框架（plug-in .ogg 即啟用）| ✅ 完成 |
+| NPC 警覺 | alerted + alert_turns + LOS 判定；失去視線後仍追蹤 6 回合 | ✅ 完成 |
+| 戰鬥系統 | hero 攻擊 NPC（3 dmg）；NPC 依 CombatStatsComponent 反擊；game_over 偵測 | ✅ 完成 |
+| 物品系統 | ItemComponent 回血藥 + 自動拾取 + item_picked_up signal | ✅ 完成 |
+| 多樓層 | TILE_STAIR_DOWN + next_floor() + 樓層縮放難度 | ✅ 完成 |
+| BSP 地城 | 60×40 BSP 生成，Room struct 控制英雄 / NPC / 物品 / 樓梯落點 | ✅ 完成 |
+| 存讀檔 | WorldStateComponent + F5 存 / F9 讀 + game_over 後仍可操作 | ✅ 完成 |
 
 **測試結果**：36 test cases / 139 assertions 全綠（2026-06-02）
 
@@ -185,7 +191,11 @@ using AllComponents = entt::type_list<
     MetaDataComponent,
     SpatialComponent,
     MapData,
-    NpcAiComponent   // NPC AI 階段加入
+    NpcAiComponent,        // NPC AI（alerted + alert_turns）
+    HealthComponent,       // 戰鬥：英雄 / NPC 生命值
+    ItemComponent,         // 物品：回血藥
+    CombatStatsComponent,  // NPC 種類：putit / warrior / bat
+    WorldStateComponent    // 存讀檔：turn_count / current_floor
 >;
 ```
 
@@ -350,7 +360,9 @@ derived/opennefia-cpp/
 ├── src/core/
 │   ├── version.h / version.cpp
 │   ├── ecs/          entity_manager.h+cpp, event_bus.h, system_ctx.h
-│   ├── components/   meta_data_component.h, spatial_component.h, npc_ai_component.h
+│   ├── components/   meta_data_component.h, spatial_component.h, npc_ai_component.h,
+│   │                  health_component.h, item_component.h, combat_stats_component.h,
+│   │                  world_state_component.h
 │   ├── prototypes/   prototype_id.h, prototype.h, prototype_manager.h+cpp
 │   ├── serialize/    all_components.h, entt_cereal_archive.h, save_load.h, save_store.h
 │   ├── maps/         tile.h, map_data.h（+ visible/explored FOV 陣列）
@@ -585,6 +597,150 @@ world.hero_bumped_npc.connect(_on_hero_bumped_npc)     # → sfx_bump_npc.play()
 ```
 
 放入 `.ogg` / `.wav` 並取消 `sfx_*.stream = load(...)` 的注釋即可啟用。
+
+---
+
+---
+
+## 13. 戰鬥、物品、多樓層、NPC 警覺、BSP 地城與存讀檔（2026-06-02）
+
+### 13.1 NpcAiComponent — 警覺狀態升級
+
+從空 struct（NPC AI 初版）升級為帶持久狀態的元件：
+
+```cpp
+// npc_ai_component.h
+struct NpcAiComponent {
+    bool alerted{ false };    // 曾看見英雄，正在追蹤
+    int  alert_turns{ 0 };    // 失去 LOS 後剩餘追蹤回合
+
+    template<class Archive>
+    void serialize(Archive& ar) { ar(alerted, alert_turns); }
+};
+```
+
+**警覺狀態機**（`npc_ai_system.cpp`）：
+
+1. LOS 判定：`opennefia::los(map, npc_pos, hero_pos)`（複用 `fov_system.cpp`）+ Chebyshev ≤ 10。
+2. LOS 成立 → `alerted = true; alert_turns = 6`（記住 6 回合）。
+3. LOS 失效 → `--alert_turns; if (alert_turns <= 0) alerted = false`。
+4. `alerted == true` → 追蹤模式；否則 → wander 模式。
+
+### 13.2 戰鬥系統
+
+| 方向 | 觸發 | 傷害 | 結果 |
+|---|---|---|---|
+| 英雄攻擊 NPC | hero 走入 NPC 所在格 | 固定 3 HP | NPC 死亡：`reg.destroy(e)` + `npc_died(npc_id)` signal |
+| NPC 攻擊英雄 | NPC 追蹤且 Chebyshev == 1 | `CombatStatsComponent::attack` | 英雄 HP -= dmg；`advance_turn()` 末偵測 `hp <= 0` → `game_over` signal |
+
+```cpp
+// npc_ai_system.cpp — NPC 鄰接攻擊
+if (chebyshev == 1) {
+    int dmg = 2;
+    if (const auto* stats = reg.try_get<CombatStatsComponent>(e))
+        dmg = stats->attack;
+    hero_hp->hp -= dmg;
+}
+
+// opennefia_world_gd.cpp — advance_turn() 末尾
+if (hp->hp <= 0) { game_over_ = true; emit_signal("game_over"); }
+```
+
+### 13.3 CombatStatsComponent（`src/core/components/combat_stats_component.h`）
+
+```cpp
+enum class NpcVariant : uint8_t { putit=0, warrior=1, bat=2 };
+
+struct CombatStatsComponent {
+    int        attack{ 2 };
+    int        move_chance{ 50 };   // 行動機率 0-100（每回合骰到才移動）
+    NpcVariant variant{ NpcVariant::putit };
+    template<class Archive>
+    void serialize(Archive& ar) { ar(attack, move_chance, variant); }
+};
+```
+
+| 種類 | HP（基礎 + 樓層） | 攻擊 | 移動機率 | 渲染顏色 |
+|---|---|---|---|---|
+| Putit | 6 + (floor-1) | 1 | 40% | 紫 (0.6, 0.2, 0.7) |
+| Warrior | 15 + (floor-1)×3 | 3 | 65% | 橙 (0.9, 0.5, 0.1) |
+| Bat | 5 + (floor-1) | 2 | 90% | 青 (0.2, 0.8, 0.9) |
+
+### 13.4 ItemComponent（`src/core/components/item_component.h`）
+
+```cpp
+enum class ItemType : uint8_t { health_potion = 0 };
+struct ItemComponent {
+    ItemType type{ ItemType::health_potion };
+    int      value{ 8 };   // 回血量，深層遞增：8 + (floor-1)*2
+    template<class Archive>
+    void serialize(Archive& ar) { ar(type, value); }
+};
+```
+
+物品以**綠點**渲染（`Color(0.20, 0.85, 0.40)`），只在 FOV 可見格顯示，層級低於 NPC。英雄走入物品格 → 自動拾取 → `hp = min(hp + value, max_hp)` → `emit item_picked_up(name, heal_amount)`。
+
+### 13.5 多樓層（`TILE_STAIR_DOWN` + `next_floor()`）
+
+```cpp
+// tile.h — 新旗標
+inline constexpr uint8_t TILE_STAIR_DOWN = 1 << 2;
+bool is_stair_down() const { return (flags & TILE_STAIR_DOWN) != 0; }
+```
+
+樓梯放在 BSP 地城**最後一個房間**中心（需至少 2 個房間）。英雄踩到 → `next_floor()`：
+
+```cpp
+void next_floor() {
+    ++current_floor_;
+    setup_map();     // 銷毀舊 NPC + 物品 + 地圖，重新生成；英雄保留 HP
+    recompute_fov();
+    emit_signal("floor_changed", current_floor_);
+    emit_signal("world_changed");
+}
+```
+
+NPC 數量與難度隨樓層遞增：`npc_cap = min(4 + current_floor, 8)`；深層向 warrior / bat 偏移。
+
+### 13.6 BSP 地城生成（`src/core/maps/map_gen.h+cpp`）
+
+60×40 地圖，BSP（Binary Space Partitioning）演算法生成房間與走廊。回傳 `std::vector<Room>`：
+
+- `rooms[0]`：英雄出生點。
+- `rooms[1..n-2]`：NPC + 物品（中間房間，60% 機率生成回血藥）。
+- `rooms.back()`：樓梯（≥ 2 個房間時設置）。
+
+### 13.7 WorldStateComponent 與存讀檔
+
+**設計動機**：`turn_count_` / `current_floor_` 是 C++ 成員變數，不在 ECS 中。需一個不依賴 sidecar 的辦法讓它們隨 `save/load` 持久化。
+
+**解法**：建 `WorldStateComponent` 掛在 `map_entity_` 上，加入 `AllComponents` → 隨 snapshot 一併序列化。
+
+```cpp
+// world_state_component.h
+struct WorldStateComponent {
+    int turn_count{ 0 };
+    int current_floor{ 1 };
+    template<class Archive>
+    void serialize(Archive& ar) { ar(turn_count, current_floor); }
+};
+```
+
+**存檔流程**（`save_game(path)`）：
+1. 同步 `turn_count_` / `current_floor_` → `WorldStateComponent`。
+2. `opennefia::serialize::save(em_.registry(), path)` — cereal PortableBinary。
+
+**讀檔流程**（`load_game(path)`）：
+1. `em_.registry().clear()` — 清空 ECS；`systems_` vector 不受影響，`systems_ready_` 保持 `true`。
+2. `opennefia::serialize::load(em_.registry(), path)` — snapshot_loader 還原全部實體。
+3. `map_entity_` ← 首個持有 `MapData` 的實體；`hero_entity_` ← `MetaDataComponent::proto_id == "hero"`。
+4. 從 `WorldStateComponent` 還原 `turn_count_` / `current_floor_`。
+5. `recompute_fov()` + emit `world_changed`。
+
+**F5/F9 GDScript 整合**（`godot_test/map_view.gd`）：
+- `ProjectSettings.globalize_path("user://opennefia_save.bin")` 取得真實檔案路徑。
+- F5/F9 在 `_unhandled_input` 的 `if _dead: return` 前攔截，允許 game_over 後仍可存/讀。
+- 讀檔成功後設 `_dead = false`，恢復玩家輸入。
 
 ---
 
