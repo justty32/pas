@@ -35,8 +35,7 @@ mkdir derived/<project_name>
 ```
 derived/<project_name>/
 ├── PROJECT.md          # 衍生目標、參照素材、技術棧、完成定義
-├── session_log.md      # 操作日誌
-├── session_temp/       # 進度快照
+├── session_log.md      # 操作日誌（上限 50 行）
 ├── src/                # 源碼（依技術棧慣例調整）
 ├── tests/              # 測試
 ├── docs/               # 設計決策、實作說明
@@ -60,7 +59,7 @@ derived/<project_name>/
 2. **程式碼標註**：所有提到的程式碼必附原始碼位置 `path/to/file:line`；若引用自源專案則附源專案路徑
 3. **自動留檔**：技術細節自動寫入 `derived/<project_name>/docs/` 或對應子目錄
 4. **會話日誌**：每次操作後 append 一句話至 `session_log.md`
-5. **會話保存**：收到「我準備要退出了」時，在 `session_temp/session_resume.md` 建立進度保存檔，彙整當前理解、已完成項目、剩餘待辦
+5. **會話保存**：收到「我準備要退出了」時，在 `session_log.md` 末尾追加一筆進度快照（仍受 50 行上限，舊紀錄可刪），彙整當前理解、已完成項目、剩餘待辦
 6. **HTML 導覽層（選用）**：當 `docs/` 下 .md 增多、難以綜覽時，於 `derived/<project_name>/html/` 生成導覽層（`index.html` + 主題頁 + 共用 `_shared.css`），以相對路徑連回 .md。HTML 不取代 .md，內容更新一律先改 .md。參考範例：`analysis/c-mera/html/`
 
 ---

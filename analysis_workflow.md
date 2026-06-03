@@ -12,12 +12,12 @@
 
 Windows PowerShell：
 ```powershell
-mkdir work/architecture, work/tutorial, work/analysis, work/answer, work/detail, work/other, work/session_temp
+mkdir work/architecture, work/tutorial, work/analysis, work/answer, work/detail, work/other
 ```
 
 Bash / zsh：
 ```bash
-mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
+mkdir -p work/{architecture,tutorial,analysis,answer,detail,other}
 ```
 
 ### 2. 初始化日誌
@@ -48,7 +48,6 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 | `detail/` | 單點技術細節（某個 API、某個演算法…） |
 | `other/` | 不屬於上述類別的雜項 |
 | `html/` | HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔；見階段三第 4 節） |
-| `session_temp/` | 進度快照、暫存筆記、會話恢復檔 |
 
 ### 3. 程式碼標註規範
 所有程式碼片段**必須標註原始碼位置**：
@@ -56,10 +55,10 @@ mkdir -p work/{architecture,tutorial,analysis,answer,detail,other,session_temp}
 - 允許「大約行號」但需加註（例：`padog.py:198 附近`）
 
 ### 4. 會話日誌
-以 append 方式紀錄每次實際執行的事項，每項一句話。
+以 append 方式紀錄每次實際執行的事項，每項一句話。**`session_log.md` 上限 50 行**：超過時刪除舊紀錄、只保留最新數筆。
 
 ### 5. 會話進度保存
-當使用者說出「我準備要退出了」或類似語句時，在 `work/session_temp/session_resume.md` 建立／更新進度保存檔，彙整：
+當使用者說出「我準備要退出了」或類似語句時，在 `work/session_log.md` 末尾追加一筆進度快照（仍受 50 行上限，舊紀錄可刪），彙整：
 - 當前的專案理解（一句話摘要）
 - 已完成的分析路徑（對應 Level）
 - 剩餘的待辦事項

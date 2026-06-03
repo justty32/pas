@@ -41,8 +41,7 @@ mkdir patches/<patch_name>
 patches/<patch_name>/
 ├── PATCH.md            # Patch 目標、修改類型、影響範圍、分析依據
 ├── APPLY.md            # Agent 套用操作手冊（核心交付物）
-├── session_log.md      # 操作日誌
-├── session_temp/       # 進度快照
+├── session_log.md      # 操作日誌（上限 50 行）
 ├── src/                # Patch 的實際代碼（新增或修改的檔案）
 ├── tests/              # 驗證 Patch 效果的測試腳本或說明
 ├── html/               # HTML 導覽層（選用，.md 過多時生成；見階段三第 6 點）
@@ -65,7 +64,7 @@ patches/<patch_name>/
 2. **程式碼標註**：引用原專案的程式碼必附完整路徑 `path/to/file:line`；Patch 自身的程式碼同樣標註
 3. **自動留檔**：技術細節自動寫入 `patches/<patch_name>/` 下對應位置
 4. **會話日誌**：每次操作後 append 一句話至 `session_log.md`
-5. **會話保存**：收到「我準備要退出了」時，在 `session_temp/session_resume.md` 建立進度保存檔
+5. **會話保存**：收到「我準備要退出了」時，在 `session_log.md` 末尾追加一筆進度快照（仍受 50 行上限，舊紀錄可刪）
 6. **HTML 導覽層（選用）**：當 Patch 說明文件（`PATCH.md`、`APPLY.md` 等）增多、難以綜覽時，於 `patches/<patch_name>/html/` 生成導覽層（`index.html` + 主題頁 + 共用 `_shared.css`），以相對路徑連回 .md。HTML 不取代 .md，內容更新一律先改 .md。參考範例：`analysis/c-mera/html/`
 
 ---

@@ -25,8 +25,7 @@ pas/
 │       ├── details/        # 原始碼深度剖析
 │       ├── others/         # 雜項（含 patches/ 子目錄）
 │       ├── html/           # HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔）
-│       ├── gemini_temp/    # 會話進度保存文件
-│       └── session_log.md  # Agent 操作日誌
+│       └── session_log.md  # Agent 操作日誌（上限 50 行）
 ├── derived/            # 衍生小專案（Create 模式產出）
 │   └── <project_name>/
 │       ├── PROJECT.md      # 衍生目標、參照素材、技術棧

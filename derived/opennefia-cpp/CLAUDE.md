@@ -13,7 +13,7 @@
 5. **每次操作後** append 一句話到 `session_log.md`；重大里程碑更新 `PROJECT.md` 進度區。
 6. **設計決策**記 `docs/decisions/`，附追溯連結（借鑒自哪份分析）。
 7. **圖表用 Mermaid**，禁止 ASCII art 框線圖。
-8. 收到「我要退出了」→ 在 `session_temp/session_resume.md` 建進度快照。
+8. 收到「我要退出了」→ 在 `session_log.md` 末尾追加進度快照（上限 50 行，舊紀錄可刪）。
 
 ## 構建（規劃，Phase 0 後生效）
 

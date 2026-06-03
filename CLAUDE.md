@@ -14,8 +14,6 @@
 | **Create** | 基於分析產物建立獨立衍生小專案 | `create_workflow.md` |
 | **Patch** | 製作可被 agent 套用至原專案的獨立 Patch 小專案 | `patch_workflow.md` |
 
-> `project_analysis_workflow.md` 為歷史版本，保留供參考。
-
 ## 目錄結構 (Directory Structure)
 
 ```
@@ -34,13 +32,11 @@ pas/
 - `details/`: 深入的原始碼剖析
 - `others/`: 不屬於上述分類的雜項（含 `patches/` 子目錄，記錄對應的 Patch 連結）
 - `html/`: HTML 導覽層（.md 過多時生成，降低瀏覽認知負擔；詳見準則 6）
-- `gemini_temp/`: 會話進度保存文件
-- `session_log.md`: 操作日誌（每項操作一句話）
+- `session_log.md`: 操作日誌（每項操作一句話，上限 50 行）
 
 ### derived/<project_name>/ 結構
 - `PROJECT.md`: 衍生目標、參照素材、技術棧、完成定義
 - `session_log.md`: 操作日誌
-- `session_temp/`: 會話進度快照
 - `src/`, `tests/`, `docs/`: 依技術棧慣例
 - `html/`: HTML 導覽層（選用，詳見準則 6）
 
@@ -48,7 +44,6 @@ pas/
 - `PATCH.md`: Patch 目標、修改類型、影響範圍、分析依據
 - `APPLY.md`: Agent 套用操作手冊（核心交付物）
 - `session_log.md`: 操作日誌
-- `session_temp/`: 會話進度快照
 - `src/`: Patch 代碼（模擬原專案相對路徑）
 - `tests/`: 驗證腳本或說明
 - `html/`: HTML 導覽層（選用，詳見準則 6）
@@ -70,6 +65,8 @@ pas/
 
 每次操作後，以 append 方式在對應的 `session_log.md` 記錄一句話。
 
+**`session_log.md` 上限 50 行**：超過時刪除舊紀錄、只保留最新數筆（最舊的可直接放棄）。日誌僅供「接上進度」，非歷史檔案。
+
 ### 3. 分析路徑 (Analysis 模式)
 進行新專案分析時，依序執行：
 - **Level 1**: 初始探索（README、技術棧、入口點）
@@ -82,7 +79,7 @@ pas/
 - 原專案不假設有版本控制，一律以檔案操作描述步驟
 
 ### 5. 會話保存
-收到「我要準備退出了」時，在當前工作模式對應的 `session_temp/session_resume.md` 建立進度保存檔，彙整：
+收到「我要準備退出了」時，在當前工作模式對應的 `session_log.md` 末尾追加一筆進度快照（仍受 50 行上限，舊紀錄可刪），彙整：
 - 當前理解（一句話摘要）
 - 已完成項目
 - 剩餘待辦事項
