@@ -338,6 +338,15 @@ bool zone_gd::ZoneWorld::move(int dx, int dy) {
                 }
             }
             advance_turn();
+            // NPC 反擊後的英雄死亡判定
+            if (reg.valid(hero_entity_)) {
+                if (const auto* hero_hp = reg.try_get<zone::HealthComponent>(hero_entity_)) {
+                    if (hero_hp->hp <= 0 && !game_over_) {
+                        game_over_ = true;
+                        emit_signal("game_over");
+                    }
+                }
+            }
             return true;
         }
     }
