@@ -35,6 +35,10 @@ __pycache__/
 
 # Godot 編輯器快取（不應提交）
 **/.godot/
+# Godot 自動生成的 UID 檔與使用者存檔目錄
+**/*.gd.uid
+**/*.gdextension.uid
+**/user:/
 
 # GDExtension 編譯產出二進制
 others/gamecore/mapcore_godot/demo/bin/*.dll
