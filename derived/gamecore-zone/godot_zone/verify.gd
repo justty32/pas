@@ -1,13 +1,13 @@
 extends SceneTree
 
 # Headless 驗證腳本：godot-mono --headless -s res://verify.gd
-# 實際載入 libzone_gd.so，驗證 OpenNefiaCore + ZoneWorld 端到端可用。
+# 實際載入 libzone_gd.so，驗證 ZoneCore + ZoneWorld 端到端可用。
 
 var world  # 在 _initialize 建立、加入 root；_ready 要到第一幀才派發，故檢查放 _process
 
 func _initialize() -> void:
-	# --- OpenNefiaCore.version()（不依賴 _ready，可即時驗）---
-	var core := OpenNefiaCore.new()
+	# --- ZoneCore.version()（不依賴 _ready，可即時驗）---
+	var core := ZoneCore.new()
 	var v: String = core.version()
 	print("zone core version: ", v)
 	if v == "":

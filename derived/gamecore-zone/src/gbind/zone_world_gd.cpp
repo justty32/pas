@@ -255,7 +255,7 @@ int zone_gd::ZoneWorld::get_hero_max_hp() const {
     return 0;
 }
 int zone_gd::ZoneWorld::get_npc_count() const {
-    return (int)em_.registry().view<zone::NpcAiComponent>().size_hint();
+    return (int)em_.registry().view<zone::NpcAiComponent>().size();
 }
 int zone_gd::ZoneWorld::get_current_floor() const { return current_floor_; }
 
@@ -390,26 +390,40 @@ void zone_gd::ZoneWorld::wait_turn() {
 
 bool zone_gd::ZoneWorld::save_game(const godot::String& path) {
     try {
-        std::string p = path.utf8().get_data();
-        zone::serialize::FolderSaveStore store(p);
-        zone::serialize::save(em_.registry(), store);
+        // 存檔前同步最新遊戲狀態至 WorldStateComponent
+        if (map_entity_ != entt::null) {
+            if (auto* ws = em_.registry().try_get<zone::WorldStateComponent>(map_entity_)) {
+                ws->turn_count    = turn_count_;
+                ws->current_floor = current_floor_;
+            }
+        }
+        std::filesystem::path fpath{ std::string(path.utf8().get_data()) };
+        zone::serialize::save(em_.registry(), fpath);
         return true;
     } catch (...) { return false; }
 }
 
 bool zone_gd::ZoneWorld::load_game(const godot::String& path) {
     try {
-        std::string p = path.utf8().get_data();
-        zone::serialize::FolderSaveStore store(p);
-        zone::serialize::load(em_.registry(), store);
+        std::filesystem::path fpath{ std::string(path.utf8().get_data()) };
+        if (!std::filesystem::exists(fpath)) return false;
+
+        // 清空 registry 後重新載入
+        em_.registry().clear();
+        hero_entity_ = entt::null;
+        map_entity_  = entt::null;
+
+        zone::serialize::load(em_.registry(), fpath);
+
         for (auto e : em_.registry().view<zone::HeroComponent>())
             { hero_entity_ = e; break; }
         for (auto e : em_.registry().view<zone::MapData>())
             { map_entity_ = e; break; }
         if (map_entity_ != entt::null) {
-            const auto& ws = em_.registry().get<zone::WorldStateComponent>(map_entity_);
-            turn_count_    = ws.turn_count;
-            current_floor_ = ws.current_floor;
+            if (const auto* ws = em_.registry().try_get<zone::WorldStateComponent>(map_entity_)) {
+                turn_count_    = ws->turn_count;
+                current_floor_ = ws->current_floor;
+            }
         }
         recompute_fov();
         return true;
@@ -417,5 +431,5 @@ bool zone_gd::ZoneWorld::load_game(const godot::String& path) {
 }
 
 bool zone_gd::ZoneWorld::has_save_game(const godot::String& path) const {
-    return std::filesystem::exists(path.utf8().get_data());
+    return std::filesystem::exists(std::string(path.utf8().get_data()));
 }
