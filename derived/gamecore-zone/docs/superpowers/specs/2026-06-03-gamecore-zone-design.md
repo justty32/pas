@@ -1,6 +1,6 @@
 # gamecore-zone 設計文件
 
-> 狀態：初稿（待補充）  
+> 狀態：初稿 v2  
 > 日期：2026-06-03  
 > 作者：brainstorming session
 
@@ -8,7 +8,17 @@
 
 ## 1. 目標定位
 
-`derived/gamecore-zone/` 是 gamecore 三層架構中的**區域層（Zone Layer）**實作——玩家從世界層（mapcore_godot）進入某個地點時，切換到的 roguelike 格子戰術場景。
+`derived/gamecore-zone/` 是 gamecore / medps **三層世界架構**中的**第三層——區域層（Area Layer，ZoneType::Area, z=3）**的實作。
+
+三層對應關係（參照 `medps/work/design/zone_layers.md` + `gamecore/plans/002-world-structure.md`）：
+
+| 層級 | medps ZoneType | gamecore 名稱 | 現有實作 |
+|---|---|---|---|
+| 1 | World (z=1) | 世界層 | mapcore_godot |
+| 2 | Region (z=2) | 戰略層 | 尚未實作 |
+| 3 | Area (z=3) | 區域層 | **本專案** |
+
+區域層是玩家「進入某個地點」後切換到的 roguelike 格子戰術場景（一格 ≈ 數公尺）。
 
 來源：從 `derived/opennefia-cpp/` Hard Fork，保留 ECS 核心、FOV、戰鬥邏輯，刪除 OpenNefia 特有機制。
 
@@ -69,6 +79,29 @@ derived/gamecore-zone/
 - `SystemCtx`：系統執行上下文，保留不動
 - **EventBus 刪除**：系統間溝通改直接函式呼叫；GDExtension 層直接 emit Godot signal
 
+### 回合制：Actor Poll 模式
+
+遊戲是**回合制**，採 poll 輪詢執行：每次 `advance_turn()` 時，從 registry 取出所有帶有 `ActorComponent` 的實體，依序對每個 actor 執行對應的系統邏輯。
+
+```cpp
+// 概念示意（非最終 API）
+void advance_turn(ZoneContext& ctx) {
+    auto view = ctx.registry.view<ActorComponent, SpatialComponent>();
+    for (auto entity : view) {
+        if (ctx.registry.all_of<HeroComponent>(entity)) {
+            // 英雄行動由前端驅動（等待玩家輸入後才呼叫）
+        } else if (ctx.registry.all_of<NpcAiComponent>(entity)) {
+            npc_ai_system::tick(ctx, entity);
+        }
+    }
+    fov_system::update(ctx);
+}
+```
+
+**ActorComponent** 是新增的空 tag（仿 HeroComponent 模式），凡是「有行動資格」的實體（英雄、NPC）都掛此 tag；物品、地形等不掛。這讓系統不需排除法即可精確選取行動者。
+
+> 與 medps 的對應：medps 的 `GlobalManager::tick()` 也是對特定 registry view 的 poll 迭代（`zone_layers.md:139`——「不需要 lister，view 本身就是 lister」）。
+
 ### ZoneContext（取代 ServiceContext）
 只持有兩樣東西：
 ```cpp
@@ -88,6 +121,7 @@ struct ZoneContext {
 | `NpcAiComponent` | 保留 | 不動 |
 | `ItemComponent` | 保留 | 不動 |
 | `HeroComponent` | 保留 | 正向 tag，不用排除法 |
+| `ActorComponent` | **新增** | 空 tag，標記「有行動資格」的實體（英雄/NPC）；poll 輪詢依此選取 |
 | `CombatStatsComponent` | 重構 | 只留 `attack`、`base_hp`，拿掉 Elona 欄位 |
 | `MetaDataComponent` | **刪除** | 原型系統殘留 |
 
@@ -134,10 +168,11 @@ struct ZoneContext {
 
 ## 7. 待補充（使用者後續提出）
 
-- [ ] 區域層與世界層的資料介面（ZoneWorld 如何接收 mapcore 傳入的地點資訊）
+- [ ] 玩家控制介面設計（英雄行動如何由 Godot 前端驅動）
+- [ ] Godot 前端取得資料的方式（poll snapshot vs. signal-driven）
 - [ ] 是否需要新的 Component 對應 gamecore 語意（如勢力、區域 ID）
 - [ ] 長期：NPC 生成資料來源（取代原型系統的方案）
-- [ ] 測試策略調整
+- [ ] 跨層資料介面（暫緩，之後再議）
 
 ---
 
@@ -146,8 +181,9 @@ struct ZoneContext {
 1. 複製 `derived/opennefia-cpp/` → `derived/gamecore-zone/`
 2. 依刪除清單移除對應子目錄與檔案
 3. 全域搜尋替換命名（`opennefia` → `zone`、`OpenNefia` → `Zone`）
-4. 簡化 `CombatStatsComponent`
-5. 刪除 `ServiceContext`，替換為 `ZoneContext`
-6. 更新 CMakeLists.txt（移除 yaml-cpp、改目標名）
-7. 跑 ctest 確認剩餘測試全綠
-8. 建 GDExtension + headless verify
+4. 新增 `ActorComponent` 空 tag，英雄與 NPC 建立時掛上
+5. 簡化 `CombatStatsComponent`
+6. 刪除 `ServiceContext`，替換為 `ZoneContext`
+7. 更新 CMakeLists.txt（移除 yaml-cpp、改目標名）
+8. 跑 ctest 確認剩餘測試全綠
+9. 建 GDExtension + headless verify
