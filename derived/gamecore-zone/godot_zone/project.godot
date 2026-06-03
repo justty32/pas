@@ -1,0 +1,16 @@
+; Engine configuration file.
+; Generated for zone-cpp smoke test.
+
+config_version=5
+
+[application]
+
+config/name="zone-cpp smoke test"
+run/main_scene="res://map_view.tscn"
+config/features=PackedStringArray("4.4")
+
+[autoload]
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
