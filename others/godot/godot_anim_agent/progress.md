@@ -16,7 +16,7 @@
 | Phase 2 | 動作組合（2D / value 軌道） | ✅ 完成 |
 | Phase 3 ① | 動畫事件 / method 軌道 | ✅ 完成 |
 | Phase 3 ③ | 程序化擺位 / 2-bone IK | ✅ 完成 |
-| Phase 3 ② | AnimationTree / 狀態機 | ✅ 完成（合成範本，**待真機驗證**） |
+| Phase 3 ② | AnimationTree / 狀態機 | ✅ 完成（**真機驗證通過 2026-06-03**） |
 | 3D 動畫軌道 | rotation_3d/position_3d/scale_3d | ⏸ **阻塞：等使用者匯出** |
 
 ## 現有工具（都在本目錄，實測於 `examples/fighter.tres`）
@@ -58,14 +58,10 @@
 - 已生成 `examples/state_machine_sample.tres`（合成）並寫好 `anim_tree.py`，
   load→dump→load round-trip 自洽、`derive` 從 fighter.tres+meta 烘出 `examples/combo.tres` 正常。
 
-**唯一待辦（要你動手，已備好雙擊入口）**：把 `examples/` 的
-`fighter_tree.tscn` + `state_machine_sample.tres` + `fighter.tres` 三檔放進你的 Godot 專案
-（同層；非根目錄則改 .tscn 裏 ext_resource 的 `res://` 路徑），開 `fighter_tree.tscn`：
-1. 選 AnimationTree 節點，看狀態圖能否載入（idle/punch 兩狀態 + 轉場）。
-2. 按播放，看 Armature 骨架的 idle 擺動。
-3. 在 Godot 再存一次，`git diff fighter_tree.tscn state_machine_sample.tres` 看是否有格式差異
-   （uid / 屬性排序 / `&""` 寫法）。
-有差異回報，我據此微調 `anim_tree.py` 生成器。**目前格式可信但未經真機。**
+**2026-06-03 真機驗證通過（godot-mono 4.6.3 headless）**：
+`verify_sm.gd` 7 項全 OK：狀態機載入、4 狀態、3 轉場、xfade 數值、switch_mode、回存、場景掛載。
+格式 diff 僅兩點無害差異：header uid（Godot 存 uid_cache，不寫進檔案）、sub_resource id 命名慣例（語意名 vs 雜湊）。
+`anim_tree.py` 生成格式**完全正確**，無需調整。
 
 ## ⏸ B. 3D 動畫軌道支援（仍阻塞）
 **需要你給一份含 `Skeleton3D` 動畫的 `.tres`/`.animlib`**（VISION.md「解鎖 3D 所需」有完整步驟）：
@@ -97,5 +93,5 @@
 
 ## 接續點
 
-- A. Phase 3 ② 真機驗證：開 Godot 載入 `examples/fighter_tree.tscn`，Space 按住觸發出拳狀態機 → 確認狀態圖 + 播放 + `git diff`。
-- B. 3D 動畫軌道：等含 Skeleton3D 的 `.tres` 匯出。
+- A. Phase 3 ② ✅ 真機驗證已通過（2026-06-03）。
+- B. 3D 動畫軌道：等含 Skeleton3D 的 `.tres` 匯出（rotation_3d/position_3d PackedFloat 格式）。
