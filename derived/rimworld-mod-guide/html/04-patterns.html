@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常見模式 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .pattern-anchor { scroll-margin-top: 5rem; }
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.3rem 1.5rem;
+  }
+  .toc a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 0.2rem 0;
+    display: block;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent3); }
+  .toc-title {
+    grid-column: 1 / -1;
+    font-weight: 700;
+    color: var(--accent2);
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+    margin: 0.8rem 0 1.2rem;
+  }
+  @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+  .split-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+  }
+  .method-list { list-style: none; padding: 0; }
+  .method-list li {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .method-list li:last-child { border-bottom: none; }
+  .method-list code { font-size: 0.82em; }
+  .when-to-use {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0;
+    font-size: 0.88rem;
+  }
+  .when-to-use strong { color: var(--accent3); display: block; margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html" class="active">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>常見模式</h1>
+  <p>RimWorld 提供的官方擴充點體系——能用 API 就不要動 Harmony。</p>
+  <span class="badge">8 大模式 · 完整 C# 範例 · RimWorld 1.5</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">本頁索引</div>
+    <a href="#thingcomp">① ThingComp — 物件組件</a>
+    <a href="#gamecomponent">② GameComponent / MapComponent</a>
+    <a href="#workgiver">③ WorkGiver + JobDriver</a>
+    <a href="#hediff">④ Hediff — 傷勢/狀態效果</a>
+    <a href="#modsettings">⑤ Mod Settings — 設定面板</a>
+    <a href="#itab">⑥ ITab — 查看面板 Tab</a>
+    <a href="#alert">⑦ Alert — 警示系統</a>
+    <a href="#defmodextension">⑧ DefModExtension — 給 Def 加自訂欄位</a>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>設計哲學：API 優先，Harmony 其次</strong>
+    RimWorld 有一套完整的擴充點體系。每次想動 Harmony 前，先問自己：「有沒有官方提供的掛鉤點？」本頁的 8 個模式涵蓋了 80% 的常見需求，且比 Harmony patch 更穩定、更不容易與其他 mod 衝突。
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 1. ThingComp                                          -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="thingcomp">
+    <div class="section-title">① ThingComp — 物件組件</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      當你想為<em>現有物品或建築</em>附加自訂行為與資料，且不想繼承整個 ThingDef 類別時。ThingComp 是最常用的擴充點，就像 Unity 的 Component 系統。
+    </div>
+
+    <h3>核心結構</h3>
+    <p>每個 ThingComp 都需要一對：<code>ThingComp</code>（行為）+ <code>CompProperties</code>（設定值）。</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>CompProperties</h3>
+        <p>存放 XML 可以設定的參數。必須有 <code>compClass</code> 欄位（框架自動注入）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>ThingComp</h3>
+        <p>實際行為邏輯。透過 <code>this.parent</code> 存取宿主 Thing，<code>this.Props</code> 存取設定。</p>
+      </div>
+    </div>
+
+    <h3>常用覆寫方法</h3>
+    <table>
+      <tr><th>方法</th><th>呼叫時機</th><th>典型用途</th></tr>
+      <tr><td><code>PostExposeData()</code></td><td>存檔/讀檔</td><td>序列化自訂欄位</td></tr>
+      <tr><td><code>CompTick()</code></td><td>每遊戲 tick（~1/60 秒）</td><td>持續效果、計時器</td></tr>
+      <tr><td><code>CompTickRare()</code></td><td>每 250 ticks</td><td>耗能低的週期性邏輯</td></tr>
+      <tr><td><code>CompInspectStringExtra()</code></td><td>玩家點選物件</td><td>查看面板額外文字</td></tr>
+      <tr><td><code>PostDraw()</code></td><td>每幀渲染</td><td>在物件上疊加 UI 或特效</td></tr>
+      <tr><td><code>PostDeSpawn()</code></td><td>物件從地圖移除</td><td>清理監聽器等資源</td></tr>
+      <tr><td><code>GetGizmos()</code></td><td>物件被選取</td><td>加入命令按鈕（Gizmo）</td></tr>
+    </table>
+
+    <h3>完整範例：記錄物品使用次數的 ThingComp</h3>
+    <p>這個 Comp 追蹤一把武器被使用幾次，並在查看面板顯示，同時存入存檔。</p>
+
+    <div class="split">
+      <div>
+        <div class="split-label">C# — CompProperties</div>
+<pre><span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">CompProperties_UsageTracker</span>
+        : <span class="ty">CompProperties</span>
+    {
+        <span class="cm">// XML 可設定：最大使用次數上限</span>
+        <span class="kw">public int</span> maxUses = <span class="nu">100</span>;
+
+        <span class="kw">public</span> <span class="nm">CompProperties_UsageTracker</span>()
+        {
+            <span class="cm">// 框架靠這行知道對應的 Comp 類別</span>
+            compClass = <span class="kw">typeof</span>(<span class="ty">Comp_UsageTracker</span>);
+        }
+    }
+}</pre>
+      </div>
+      <div>
+        <div class="split-label">XML — ThingDef 掛載</div>
+<pre><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseWeaponMelee"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_TrackedSword<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>tracked sword<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="cm">&lt;!-- ...其他欄位... --&gt;</span>
+
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.CompProperties_UsageTracker"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;maxUses&gt;</span>200<span class="xml-tag">&lt;/maxUses&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+      </div>
+    </div>
+
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> System.Collections.Generic;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">Comp_UsageTracker</span> : <span class="ty">ThingComp</span>
+    {
+        <span class="cm">// Props 是型別安全的捷徑，避免每次都 cast</span>
+        <span class="kw">private</span> <span class="ty">CompProperties_UsageTracker</span> Props
+            => (<span class="ty">CompProperties_UsageTracker</span>)props;
+
+        <span class="kw">private int</span> useCount = <span class="nu">0</span>;
+
+        <span class="cm">// ── 存檔序列化 ──────────────────────────────────────</span>
+        <span class="kw">public override void</span> <span class="nm">PostExposeData</span>()
+        {
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> useCount, <span class="st">"useCount"</span>, <span class="nu">0</span>);
+        }
+
+        <span class="cm">// ── 查看面板文字 ─────────────────────────────────────</span>
+        <span class="kw">public override string</span> <span class="nm">CompInspectStringExtra</span>()
+        {
+            <span class="kw">return</span> <span class="st">$"使用次數：{useCount} / {Props.maxUses}"</span>;
+        }
+
+        <span class="cm">// ── 對外 API（讓 Harmony patch 或其他 Comp 呼叫）──────</span>
+        <span class="kw">public void</span> <span class="nm">RecordUse</span>()
+        {
+            useCount++;
+            <span class="kw">if</span> (useCount >= Props.maxUses)
+            {
+                <span class="cm">// 達到上限時發訊息、破壞物品等</span>
+                <span class="ty">Messages</span>.<span class="nm">Message</span>(
+                    <span class="st">$"{parent.LabelCap} 已達到使用上限，開始損耗。"</span>,
+                    parent,
+                    <span class="ty">MessageTypeDefOf</span>.NegativeEvent
+                );
+            }
+        }
+
+        <span class="cm">// ── 加入自訂 Gizmo（選取時的按鈕）───────────────────</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Gizmo</span>&gt; <span class="nm">GetGizmos</span>()
+        {
+            <span class="kw">yield return new</span> <span class="ty">Command_Action</span>
+            {
+                defaultLabel = <span class="st">"重置計數"</span>,
+                defaultDesc  = <span class="st">"將使用次數歸零（除錯用）"</span>,
+                action       = () => useCount = <span class="nu">0</span>
+            };
+        }
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>從外部存取 Comp</strong>
+      <code>thing.TryGetComp&lt;Comp_UsageTracker&gt;()</code> 回傳 null 表示此物件沒掛該 Comp。這是型別安全的，不需要 try/catch。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 2. GameComponent / MapComponent                       -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="gamecomponent">
+    <div class="section-title">② GameComponent / MapComponent — 持久全域資料</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      當你需要儲存<em>不屬於任何單一物件</em>的資料時。例如：全域統計數字、跨地圖的事件狀態、mod 的執行時期快取。<code>GameComponent</code> 跟著存檔、<code>MapComponent</code> 跟著地圖。
+    </div>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>GameComponent</h3>
+        <p>存活時間 = 整個存檔（Colony）。適合跨地圖的全域狀態。透過 <code>Current.Game.GetComponent&lt;T&gt;()</code> 存取。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>MapComponent</h3>
+        <p>存活時間 = 一張地圖。適合地圖相關的資料（建築索引、區域標記等）。透過 <code>map.GetComponent&lt;T&gt;()</code> 存取。</p>
+      </div>
+    </div>
+
+    <h3>XML 宣告</h3>
+
+    <div class="split">
+      <div>
+        <div class="split-label">GameComponent — XML</div>
+<pre><span class="xml-tag">&lt;GameComponent</span>
+  <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.MyGameComponent"</span><span class="xml-tag">/&gt;</span>
+
+<span class="cm">&lt;!-- 放在任意 Def XML 的根層級，</span>
+<span class="cm">     游戲啟動時自動掃描並實例化 --&gt;</span></pre>
+      </div>
+      <div>
+        <div class="split-label">MapComponent — XML</div>
+<pre><span class="xml-tag">&lt;MapComponent</span>
+  <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.MyMapComponent"</span><span class="xml-tag">/&gt;</span>
+
+<span class="cm">&lt;!-- 每張地圖建立時自動掛載 --&gt;</span></pre>
+      </div>
+    </div>
+
+    <h3>完整範例：追蹤全域擊殺數的 GameComponent</h3>
+
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> System.Collections.Generic;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">MyGameComponent</span> : <span class="ty">GameComponent</span>
+    {
+        <span class="cm">// 建構子必須接受 Game 參數（框架要求）</span>
+        <span class="kw">public</span> <span class="nm">MyGameComponent</span>(<span class="ty">Game</span> game) { }
+
+        <span class="cm">// ── 要持久化的資料 ─────────────────────────────────</span>
+        <span class="kw">public int</span> totalKills = <span class="nu">0</span>;
+        <span class="kw">public</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">int</span>&gt; killsByWeapon
+            = <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">int</span>&gt;();
+
+        <span class="cm">// ── 存檔序列化 ──────────────────────────────────────</span>
+        <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+        {
+            <span class="cm">// 基本型別</span>
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> totalKills, <span class="st">"totalKills"</span>, <span class="nu">0</span>);
+
+            <span class="cm">// Dictionary（key=string, value=int）</span>
+            <span class="ty">Scribe_Collections</span>.<span class="nm">Look</span>(
+                <span class="kw">ref</span> killsByWeapon, <span class="st">"killsByWeapon"</span>,
+                <span class="ty">LookMode</span>.Value, <span class="ty">LookMode</span>.Value
+            );
+
+            <span class="cm">// 讀檔後確保 Dictionary 不為 null</span>
+            <span class="kw">if</span> (<span class="ty">Scribe</span>.mode == <span class="ty">LoadSaveMode</span>.PostLoadInit)
+                killsByWeapon ??= <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">int</span>&gt;();
+        }
+
+        <span class="cm">// ── 每 tick 執行（可選，不需要就不覆寫）──────────────</span>
+        <span class="kw">public override void</span> <span class="nm">GameComponentTick</span>()
+        {
+            <span class="cm">// 全域邏輯，例如：定期觸發特殊事件</span>
+        }
+
+        <span class="cm">// ── 靜態存取捷徑 ────────────────────────────────────</span>
+        <span class="kw">public static</span> <span class="ty">MyGameComponent</span> Current
+            => <span class="ty">Verse</span>.<span class="ty">Current</span>.Game.<span class="nm">GetComponent</span>&lt;<span class="ty">MyGameComponent</span>&gt;();
+
+        <span class="cm">// ── 對外 API ────────────────────────────────────────</span>
+        <span class="kw">public void</span> <span class="nm">RecordKill</span>(<span class="ty">string</span> weaponDefName)
+        {
+            totalKills++;
+            <span class="kw">if</span> (!killsByWeapon.<span class="nm">ContainsKey</span>(weaponDefName))
+                killsByWeapon[weaponDefName] = <span class="nu">0</span>;
+            killsByWeapon[weaponDefName]++;
+        }
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>Scribe 三種模式</strong>
+      <code>Scribe_Values</code>：基本型別（int, string, float, bool, enum）。<code>Scribe_References</code>：指向已存在的 Thing/Pawn（存 ID，讀檔後重連）。<code>Scribe_Deep</code>：深度序列化整個子物件。搞錯會導致存檔損壞，務必小心。
+    </div>
+
+    <h3>MapComponent 差異點</h3>
+<pre><span class="kw">public class</span> <span class="ty">MyMapComponent</span> : <span class="ty">MapComponent</span>
+{
+    <span class="cm">// 建構子接受 Map（框架要求）</span>
+    <span class="kw">public</span> <span class="nm">MyMapComponent</span>(<span class="ty">Map</span> map) : <span class="kw">base</span>(map) { }
+
+    <span class="kw">public override void</span> <span class="nm">ExposeData</span>() { <span class="cm">/* 同 GameComponent */</span> }
+
+    <span class="cm">// Tick 方法名稱不同</span>
+    <span class="kw">public override void</span> <span class="nm">MapComponentTick</span>() { }
+
+    <span class="cm">// 存取方式（需要有 map 的引用）</span>
+    <span class="kw">public static</span> <span class="ty">MyMapComponent</span> <span class="nm">For</span>(<span class="ty">Map</span> map)
+        => map.<span class="nm">GetComponent</span>&lt;<span class="ty">MyMapComponent</span>&gt;();
+}</pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 3. WorkGiver + JobDriver                              -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="workgiver">
+    <div class="section-title">③ WorkGiver + JobDriver — 自訂 AI 任務</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      當你想讓 Pawn 主動執行一種新任務時，例如：「去檢查某個建築」、「從特定容器取物」、「對目標施法」。這是 RimWorld AI 系統的核心擴充點。
+    </div>
+
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <h3>WorkTypeDef</h3>
+        <p>定義工作大類（如「醫療」、「建設」）。通常複用現有的，只有全新工作種類才需要新增。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>WorkGiver</h3>
+        <p>「任務分配者」。決定哪些目標可以執行任務，並為每個目標建立 Job 物件。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>JobDriver</h3>
+        <p>「任務執行者」。定義 Pawn 實際做什麼：移動、動作、等待……組合成 Toil 序列。</p>
+      </div>
+    </div>
+
+    <h3>XML 宣告</h3>
+
+    <div class="split">
+      <div>
+        <div class="split-label">WorkGiverDef</div>
+<pre><span class="xml-tag">&lt;WorkGiverDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_InspectBuilding<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;giverClass&gt;</span>
+    YourMod.WorkGiver_InspectBuilding
+  <span class="xml-tag">&lt;/giverClass&gt;</span>
+  <span class="xml-tag">&lt;workType&gt;</span>Warden<span class="xml-tag">&lt;/workType&gt;</span>
+  <span class="xml-tag">&lt;priorityInType&gt;</span>35<span class="xml-tag">&lt;/priorityInType&gt;</span>
+  <span class="xml-tag">&lt;verb&gt;</span>inspect<span class="xml-tag">&lt;/verb&gt;</span>
+  <span class="xml-tag">&lt;gerund&gt;</span>inspecting<span class="xml-tag">&lt;/gerund&gt;</span>
+<span class="xml-tag">&lt;/WorkGiverDef&gt;</span></pre>
+      </div>
+      <div>
+        <div class="split-label">JobDef</div>
+<pre><span class="xml-tag">&lt;JobDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_DoInspect<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;driverClass&gt;</span>
+    YourMod.JobDriver_InspectBuilding
+  <span class="xml-tag">&lt;/driverClass&gt;</span>
+  <span class="xml-tag">&lt;toil&gt;</span>true<span class="xml-tag">&lt;/toil&gt;</span>
+  <span class="xml-tag">&lt;reportString&gt;</span>
+    inspecting TargetA.
+  <span class="xml-tag">&lt;/reportString&gt;</span>
+<span class="xml-tag">&lt;/JobDef&gt;</span></pre>
+      </div>
+    </div>
+
+    <h3>WorkGiver 實作</h3>
+<pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="cm">// WorkGiver_Scanner：掃描地圖上所有 Thing 找潛在目標</span>
+    <span class="kw">public class</span> <span class="ty">WorkGiver_InspectBuilding</span> : <span class="ty">WorkGiver_Scanner</span>
+    {
+        <span class="cm">// 只看「建築」類型的 Thing</span>
+        <span class="kw">public override</span> <span class="ty">ThingRequest</span> PotentialWorkThingRequest
+            => <span class="ty">ThingRequest</span>.<span class="nm">ForDef</span>(<span class="ty">MyModDefOf</span>.MyMod_SpecialBuilding);
+
+        <span class="cm">// Pawn 需要在目標附近才能工作（false = 不需要相鄰）</span>
+        <span class="kw">public override bool</span> ShouldSkip(<span class="ty">Pawn</span> pawn, <span class="kw">bool</span> forced = <span class="kw">false</span>)
+        {
+            <span class="cm">// 可在這裡做全域快速排除（pawn 能力不足等）</span>
+            <span class="kw">return</span> !pawn.<span class="nm">health</span>.capacities.<span class="nm">CapableOf</span>(<span class="ty">PawnCapacityDefOf</span>.Manipulation);
+        }
+
+        <span class="cm">// 判斷這個 Thing 是否有工作可做</span>
+        <span class="kw">public override bool</span> <span class="nm">HasJobOnThing</span>(
+            <span class="ty">Pawn</span> pawn, <span class="ty">Thing</span> t, <span class="kw">bool</span> forced = <span class="kw">false</span>)
+        {
+            <span class="kw">if</span> (t <span class="kw">is not</span> <span class="ty">Building</span> building) <span class="kw">return false</span>;
+
+            <span class="cm">// 確認 Comp 存在且需要檢查</span>
+            <span class="kw">var</span> comp = building.<span class="nm">TryGetComp</span>&lt;<span class="ty">Comp_NeedsInspection</span>&gt;();
+            <span class="kw">if</span> (comp == <span class="kw">null</span> || !comp.NeedsInspection) <span class="kw">return false</span>;
+
+            <span class="cm">// 確認 Pawn 可以到達目標</span>
+            <span class="kw">if</span> (!pawn.<span class="nm">CanReserveAndReach</span>(t, <span class="ty">PathEndMode</span>.Touch,
+                pawn.<span class="nm">NormalMaxDanger</span>())) <span class="kw">return false</span>;
+
+            <span class="kw">return true</span>;
+        }
+
+        <span class="cm">// 建立 Job（HasJobOnThing 回傳 true 後呼叫）</span>
+        <span class="kw">public override</span> <span class="ty">Job</span> <span class="nm">JobOnThing</span>(
+            <span class="ty">Pawn</span> pawn, <span class="ty">Thing</span> t, <span class="kw">bool</span> forced = <span class="kw">false</span>)
+        {
+            <span class="kw">return</span> <span class="ty">JobMaker</span>.<span class="nm">MakeJob</span>(<span class="ty">MyModDefOf</span>.MyMod_DoInspect, t);
+        }
+    }
+}</pre>
+
+    <h3>JobDriver 實作</h3>
+<pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">JobDriver_InspectBuilding</span> : <span class="ty">JobDriver</span>
+    {
+        <span class="cm">// 目標（job.targetA）快速存取</span>
+        <span class="kw">private</span> <span class="ty">Building</span> Target
+            => (<span class="ty">Building</span>)job.targetA.<span class="nm">Thing</span>;
+
+        <span class="cm">// 告訴框架如何保留目標</span>
+        <span class="kw">public override bool</span> <span class="nm">TryMakePreToilReservations</span>(<span class="kw">bool</span> errorOnFailed)
+        {
+            <span class="kw">return</span> pawn.<span class="nm">Reserve</span>(job.targetA, job, <span class="nu">1</span>, -<span class="nu">1</span>, <span class="kw">null</span>, errorOnFailed);
+        }
+
+        <span class="cm">// Toil 序列：Pawn 會依序執行每個 Toil</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Toil</span>&gt; <span class="nm">MakeNewToils</span>()
+        {
+            <span class="cm">// Toil 1：移動到目標旁</span>
+            <span class="kw">yield return</span> <span class="ty">Toils_Goto</span>.<span class="nm">GotoThing</span>(
+                <span class="ty">TargetIndex</span>.A, <span class="ty">PathEndMode</span>.Touch);
+
+            <span class="cm">// Toil 2：等待（模擬「正在檢查」動作）</span>
+            <span class="kw">var</span> inspect = <span class="ty">Toils_General</span>.<span class="nm">Wait</span>(<span class="nu">120</span>); <span class="cm">// 120 ticks = 2 秒</span>
+            inspect.<span class="nm">FailOnDespawnedNullOrForbidden</span>(<span class="ty">TargetIndex</span>.A);
+            inspect.<span class="nm">WithProgressBarToilDelay</span>(<span class="ty">TargetIndex</span>.A);
+            <span class="kw">yield return</span> inspect;
+
+            <span class="cm">// Toil 3：完成動作</span>
+            <span class="kw">var</span> finish = <span class="ty">ToilMaker</span>.<span class="nm">MakeToil</span>();
+            finish.initAction = () =>
+            {
+                <span class="kw">var</span> comp = Target.<span class="nm">TryGetComp</span>&lt;<span class="ty">Comp_NeedsInspection</span>&gt;();
+                comp?.<span class="nm">MarkInspected</span>(pawn);
+
+                <span class="ty">Messages</span>.<span class="nm">Message</span>(
+                    <span class="st">$"{pawn.LabelShort} 完成了檢查。"</span>,
+                    pawn,
+                    <span class="ty">MessageTypeDefOf</span>.PositiveEvent
+                );
+            };
+            finish.defaultCompleteMode = <span class="ty">ToilCompleteMode</span>.Instant;
+            <span class="kw">yield return</span> finish;
+        }
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>常用 Toil 快捷方法</strong>
+      <code>Toils_Goto.GotoThing()</code>、<code>Toils_Haul.StartCarryThing()</code>、<code>Toils_Haul.PlaceHauledThingInCell()</code>、<code>Toils_Interpersonal.WaitToBeAbleToInteract()</code>。先查現有 Toil，能複用就不要從頭寫。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 4. Hediff                                             -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="hediff">
+    <div class="section-title">④ Hediff — 傷勢 / 狀態效果</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      為 Pawn 加上任何形式的「狀態」：疾病、毒素、增益、Buff、自訂傷勢。Hediff 是 RimWorld 健康系統的基礎。
+    </div>
+
+    <h3>XML 宣告</h3>
+<pre><span class="xml-tag">&lt;HediffDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_EnergyOverload<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>energy overload<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;labelNoun&gt;</span>an energy overload<span class="xml-tag">&lt;/labelNoun&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>The body is surging with unstable energy.<span class="xml-tag">&lt;/description&gt;</span>
+
+  <span class="cm">&lt;!-- 指定自訂 Hediff C# 類別（可選，不需要自訂邏輯時省略）--&gt;</span>
+  <span class="xml-tag">&lt;hediffClass&gt;</span>YourMod.Hediff_EnergyOverload<span class="xml-tag">&lt;/hediffClass&gt;</span>
+
+  <span class="xml-tag">&lt;defaultLabelColor&gt;</span>(0.4, 0.8, 1.0)<span class="xml-tag">&lt;/defaultLabelColor&gt;</span>
+  <span class="xml-tag">&lt;maxSeverity&gt;</span>1.0<span class="xml-tag">&lt;/maxSeverity&gt;</span>
+  <span class="xml-tag">&lt;isBad&gt;</span>true<span class="xml-tag">&lt;/isBad&gt;</span>
+
+  <span class="cm">&lt;!-- 內建 Comp 組合 --&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"HediffCompProperties_SeverityPerDay"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;severityPerDay&gt;</span>-0.3<span class="xml-tag">&lt;/severityPerDay&gt;</span>  <span class="cm">&lt;!-- 負值 = 每天自然減輕 --&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="cm">&lt;!-- 自訂 HediffComp --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.HediffCompProperties_Spark"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;ticksBetweenSparks&gt;</span>300<span class="xml-tag">&lt;/ticksBetweenSparks&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+
+  <span class="cm">&lt;!-- 各嚴重度階段 --&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>minor<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;minSeverity&gt;</span>0<span class="xml-tag">&lt;/minSeverity&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>severe<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;minSeverity&gt;</span>0.5<span class="xml-tag">&lt;/minSeverity&gt;</span>
+      <span class="xml-tag">&lt;painOffset&gt;</span>0.15<span class="xml-tag">&lt;/painOffset&gt;</span>
+      <span class="xml-tag">&lt;capMods&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;capacity&gt;</span>Moving<span class="xml-tag">&lt;/capacity&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>-0.2<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capMods&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/HediffDef&gt;</span></pre>
+
+    <h3>自訂 HediffComp</h3>
+<pre><span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="cm">// CompProperties 對應 XML 的 li Class</span>
+    <span class="kw">public class</span> <span class="ty">HediffCompProperties_Spark</span> : <span class="ty">HediffCompProperties</span>
+    {
+        <span class="kw">public int</span> ticksBetweenSparks = <span class="nu">300</span>;
+
+        <span class="kw">public</span> <span class="nm">HediffCompProperties_Spark</span>()
+            => compClass = <span class="kw">typeof</span>(<span class="ty">HediffComp_Spark</span>);
+    }
+
+    <span class="kw">public class</span> <span class="ty">HediffComp_Spark</span> : <span class="ty">HediffComp</span>
+    {
+        <span class="kw">private</span> <span class="ty">HediffCompProperties_Spark</span> Props
+            => (<span class="ty">HediffCompProperties_Spark</span>)props;
+
+        <span class="kw">private int</span> ticksSinceSpark = <span class="nu">0</span>;
+
+        <span class="kw">public override void</span> <span class="nm">CompPostTick</span>(<span class="kw">ref</span> <span class="kw">float</span> severityAdjustment)
+        {
+            ticksSinceSpark++;
+            <span class="kw">if</span> (ticksSinceSpark < Props.ticksBetweenSparks) <span class="kw">return</span>;
+
+            ticksSinceSpark = <span class="nu">0</span>;
+
+            <span class="cm">// 每隔一段時間：對 Pawn 周圍造成一次傷害</span>
+            <span class="kw">var</span> pawn = Pawn;
+            <span class="kw">if</span> (pawn.Spawned)
+            {
+                <span class="ty">GenExplosion</span>.<span class="nm">DoExplosion</span>(
+                    center:      pawn.Position,
+                    map:         pawn.Map,
+                    radius:      <span class="nu">1.5f</span>,
+                    damType:     <span class="ty">DamageDefOf</span>.Flame,
+                    instigator:  pawn,
+                    damAmount:   <span class="nu">5</span>
+                );
+            }
+        }
+
+        <span class="cm">// 存檔</span>
+        <span class="kw">public override void</span> <span class="nm">CompExposeData</span>()
+        {
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> ticksSinceSpark, <span class="st">"ticksSinceSpark"</span>, <span class="nu">0</span>);
+        }
+    }
+}</pre>
+
+    <h3>從 C# 給 Pawn 加 Hediff</h3>
+<pre><span class="cm">// 方法 1：加到全身（沒有特定部位）</span>
+pawn.health.<span class="nm">AddHediff</span>(<span class="ty">MyModDefOf</span>.MyMod_EnergyOverload);
+
+<span class="cm">// 方法 2：加到特定身體部位</span>
+<span class="kw">var</span> bodyPart = pawn.health.hediffSet.GetBrain(); <span class="cm">// 或其他部位</span>
+pawn.health.<span class="nm">AddHediff</span>(<span class="ty">MyModDefOf</span>.MyMod_EnergyOverload, bodyPart);
+
+<span class="cm">// 方法 3：加上後操作 Hediff 物件（設定初始 severity）</span>
+<span class="kw">var</span> hediff = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(<span class="ty">MyModDefOf</span>.MyMod_EnergyOverload, pawn);
+hediff.Severity = <span class="nu">0.6f</span>;
+pawn.health.<span class="nm">AddHediff</span>(hediff);
+
+<span class="cm">// 移除 Hediff</span>
+<span class="kw">var</span> existing = pawn.health.hediffSet
+    .<span class="nm">GetFirstHediffOfDef</span>(<span class="ty">MyModDefOf</span>.MyMod_EnergyOverload);
+<span class="kw">if</span> (existing != <span class="kw">null</span>)
+    pawn.health.<span class="nm">RemoveHediff</span>(existing);</pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 5. Mod Settings                                       -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="modsettings">
+    <div class="section-title">⑤ Mod Settings — 設定面板</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      讓玩家在主選單的「Mod 設定」頁面調整你的 mod 參數。設定值自動持久化，不需要存在存檔裡（跨存檔生效）。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>架構概覽</strong>
+      需要兩個類別：<code>ModSettings</code>（儲存資料 + 序列化）和 <code>Mod</code>（繪製 UI + 存取設定）。RimWorld 框架掃描所有繼承 <code>Mod</code> 的類別並自動掛載。
+    </div>
+
+<pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="cm">// ── 1. 設定資料類別 ──────────────────────────────────────</span>
+    <span class="kw">public class</span> <span class="ty">MyModSettings</span> : <span class="ty">ModSettings</span>
+    {
+        <span class="kw">public bool</span>  enableFeatureX = <span class="kw">true</span>;
+        <span class="kw">public float</span> damageMultiplier = <span class="nu">1.0f</span>;
+        <span class="kw">public int</span>   maxStackSize = <span class="nu">75</span>;
+
+        <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+        {
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> enableFeatureX,    <span class="st">"enableFeatureX"</span>,    <span class="kw">true</span>);
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> damageMultiplier,  <span class="st">"damageMultiplier"</span>,  <span class="nu">1.0f</span>);
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> maxStackSize,      <span class="st">"maxStackSize"</span>,      <span class="nu">75</span>);
+        }
+    }
+
+    <span class="cm">// ── 2. Mod 主類別 ───────────────────────────────────────</span>
+    <span class="kw">public class</span> <span class="ty">MyMod</span> : <span class="ty">Mod</span>
+    {
+        <span class="kw">private</span> <span class="ty">MyModSettings</span> settings;
+
+        <span class="cm">// 建構子：框架自動呼叫，傳入 ModContentPack</span>
+        <span class="kw">public</span> <span class="nm">MyMod</span>(<span class="ty">ModContentPack</span> content) : <span class="kw">base</span>(content)
+        {
+            settings = <span class="nm">GetSettings</span>&lt;<span class="ty">MyModSettings</span>&gt;();
+        }
+
+        <span class="cm">// 設定頁標題</span>
+        <span class="kw">public override string</span> <span class="nm">SettingsCategory</span>()
+            => <span class="st">"My Awesome Mod"</span>;
+
+        <span class="cm">// ── UI 繪製 ─────────────────────────────────────────</span>
+        <span class="kw">public override void</span> <span class="nm">DoSettingsWindowContents</span>(<span class="ty">Rect</span> inRect)
+        {
+            <span class="kw">var</span> list = <span class="kw">new</span> <span class="ty">Listing_Standard</span>();
+            list.<span class="nm">Begin</span>(inRect);
+
+            <span class="cm">// CheckboxLabeled：toggle 開關</span>
+            list.<span class="nm">CheckboxLabeled</span>(
+                label:   <span class="st">"啟用功能 X"</span>,
+                checkOn: <span class="kw">ref</span> settings.enableFeatureX,
+                tooltip: <span class="st">"啟用後 XXX 效果生效。"</span>
+            );
+
+            list.<span class="nm">Gap</span>(<span class="nu">8f</span>);
+
+            <span class="cm">// SliderLabeled：浮點滑桿</span>
+            settings.damageMultiplier = list.<span class="nm">SliderLabeled</span>(
+                label:   <span class="st">$"傷害倍率：{settings.damageMultiplier:F2}x"</span>,
+                val:     settings.damageMultiplier,
+                min:     <span class="nu">0.1f</span>,
+                max:     <span class="nu">5.0f</span>,
+                tooltip: <span class="st">"調整所有武器的基礎傷害倍率。"</span>
+            );
+
+            list.<span class="nm">Gap</span>(<span class="nu">8f</span>);
+
+            <span class="cm">// 手動整數輸入（Listing_Standard 沒有內建整數 Slider）</span>
+            list.<span class="nm">Label</span>(<span class="st">$"最大堆疊數：{settings.maxStackSize}"</span>);
+            settings.maxStackSize = (<span class="kw">int</span>)list.<span class="nm">Slider</span>(
+                settings.maxStackSize, <span class="nu">1</span>, <span class="nu">300</span>);
+
+            list.<span class="nm">Gap</span>(<span class="nu">12f</span>);
+
+            <span class="cm">// 重置按鈕</span>
+            <span class="kw">if</span> (list.<span class="nm">ButtonText</span>(<span class="st">"重置為預設值"</span>))
+            {
+                settings.enableFeatureX   = <span class="kw">true</span>;
+                settings.damageMultiplier = <span class="nu">1.0f</span>;
+                settings.maxStackSize     = <span class="nu">75</span>;
+            }
+
+            list.<span class="nm">End</span>();
+
+            <span class="cm">// 將更動寫回磁碟</span>
+            <span class="nm">WriteSettings</span>();
+        }
+
+        <span class="cm">// ── 全局存取捷徑 ──────────────────────────────────────</span>
+        <span class="kw">public static</span> <span class="ty">MyModSettings</span> Settings
+            => <span class="ty">LoadedModManager</span>.<span class="nm">GetMod</span>&lt;<span class="ty">MyMod</span>&gt;()?.settings;
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>在其他地方讀取設定</strong>
+      <code>MyMod.Settings.damageMultiplier</code>——任何地方都可以直接讀取，不需要依賴注入。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 6. ITab                                               -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="itab">
+    <div class="section-title">⑥ ITab — 查看面板 Tab</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      在玩家點選建築或物件時，於查看面板底部加入自訂 Tab（類似原版的「庫存」、「訓練」Tab）。適合顯示複雜的物件資訊或提供互動控件。
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="split-label">ThingDef XML</div>
+<pre><span class="xml-tag">&lt;ThingDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_SpecialDevice<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- ...其他欄位... --&gt;</span>
+  <span class="xml-tag">&lt;inspectorTabs&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>YourMod.ITab_DeviceStatus<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/inspectorTabs&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+      </div>
+      <div>
+        <div class="split-label">Widgets 常用方法速查</div>
+        <ul class="method-list">
+          <li><code>Widgets.Label(rect, text)</code> — 文字</li>
+          <li><code>Widgets.ButtonText(rect, text)</code> — 按鈕</li>
+          <li><code>Widgets.CheckboxLabeled(rect, label, ref val)</code> — 勾選</li>
+          <li><code>Widgets.HorizontalSlider(rect, val, min, max)</code> — 滑桿</li>
+          <li><code>Widgets.DrawLine(a, b, color, w)</code> — 連線</li>
+          <li><code>Widgets.DrawTextureFitted(rect, tex, scale)</code> — 貼圖</li>
+        </ul>
+      </div>
+    </div>
+
+<pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">ITab_DeviceStatus</span> : <span class="ty">ITab</span>
+    {
+        <span class="cm">// Tab 標籤文字與面板尺寸</span>
+        <span class="kw">private static readonly</span> <span class="ty">Vector2</span> WinSize = <span class="kw">new</span> <span class="ty">Vector2</span>(<span class="nu">300f</span>, <span class="nu">250f</span>);
+
+        <span class="kw">public</span> <span class="nm">ITab_DeviceStatus</span>()
+        {
+            size    = WinSize;
+            labelKey = <span class="st">"MyMod_DeviceStatus"</span>; <span class="cm">// 對應 Keyed 翻譯字串</span>
+        }
+
+        <span class="cm">// 宿主 Thing（型別安全存取）</span>
+        <span class="kw">private</span> <span class="ty">Building</span> Device
+            => (<span class="ty">Building</span>)SelThing;
+
+        <span class="cm">// ── 繪製面板內容 ────────────────────────────────────</span>
+        <span class="kw">protected override void</span> <span class="nm">FillTab</span>()
+        {
+            <span class="cm">// inRect 是 Tab 面板的 Rect，原點在左上角</span>
+            <span class="kw">var</span> comp = Device.<span class="nm">TryGetComp</span>&lt;<span class="ty">Comp_NeedsInspection</span>&gt;();
+            <span class="kw">if</span> (comp == <span class="kw">null</span>) <span class="kw">return</span>;
+
+            <span class="kw">var</span> cur = <span class="kw">new</span> <span class="ty">Rect</span>(<span class="nu">10f</span>, <span class="nu">10f</span>, WinSize.x - <span class="nu">20f</span>, <span class="nu">28f</span>);
+
+            <span class="cm">// 標題列</span>
+            <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Medium;
+            <span class="ty">Widgets</span>.<span class="nm">Label</span>(cur, <span class="st">"裝置狀態"</span>);
+            cur.y += cur.height + <span class="nu">4f</span>;
+
+            <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Small;
+
+            <span class="cm">// 狀態列</span>
+            <span class="ty">Widgets</span>.<span class="nm">Label</span>(cur,
+                <span class="st">$"需要檢查：{(comp.NeedsInspection ? "是" : "否")}"</span>);
+            cur.y += cur.height;
+
+            <span class="ty">Widgets</span>.<span class="nm">Label</span>(cur,
+                <span class="st">$"上次檢查：{comp.LastInspectedTick.ToStringTicksToPeriod()}"</span>);
+            cur.y += cur.height + <span class="nu">8f</span>;
+
+            <span class="cm">// 分隔線</span>
+            <span class="ty">Widgets</span>.<span class="nm">DrawLineHorizontal</span>(cur.x, cur.y, cur.width);
+            cur.y += <span class="nu">10f</span>;
+
+            <span class="cm">// 按鈕</span>
+            <span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonText</span>(
+                <span class="kw">new</span> <span class="ty">Rect</span>(cur.x, cur.y, <span class="nu">120f</span>, <span class="nu">30f</span>), <span class="st">"立即標記"</span>))
+            {
+                comp.<span class="nm">ForceMarkNeedsInspection</span>();
+            }
+        }
+
+        <span class="cm">// 只有在某條件下才顯示 Tab（可選）</span>
+        <span class="kw">public override bool</span> IsVisible
+            => Device.<span class="nm">TryGetComp</span>&lt;<span class="ty">Comp_NeedsInspection</span>&gt;() != <span class="kw">null</span>;
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>座標系統</strong>
+      <code>FillTab()</code> 的繪製原點不是螢幕左上角，而是 Tab 面板的左上角（已自動平移）。用 <code>cur.y += height</code> 逐行往下排列是最簡單的佈局方式。需要捲動時改用 <code>Widgets.BeginScrollView</code>。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 7. Alert                                              -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="alert">
+    <div class="section-title">⑦ Alert — 警示系統</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      在特定條件成立時，於螢幕右上角顯示持續性警告（類似「殖民者生病」、「食物不足」）。Alert 在每個 UI 更新幀都會被輪詢，不是事件驅動，所以 <code>Active</code> 要寫得高效。
+    </div>
+
+    <h3>方法一：直接繼承 Alert（最常用）</h3>
+
+<pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> System.Collections.Generic;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">Alert_DeviceUnInspected</span> : <span class="ty">Alert</span>
+    {
+        <span class="kw">private</span> <span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; uninspectedCache = <span class="kw">new</span>();
+
+        <span class="kw">public</span> <span class="nm">Alert_DeviceUnInspected</span>()
+        {
+            <span class="cm">// 警示優先等級：Critical / High / Medium（影響顯示順序和顏色）</span>
+            defaultPriority = <span class="ty">AlertPriority</span>.Medium;
+
+            <span class="cm">// 延遲顯示（避免遊戲剛開始就跳警示）</span>
+            defaultLabel = <span class="st">"裝置需要檢查"</span>;
+        }
+
+        <span class="cm">// ── 標題文字 ───────────────────────────────────────</span>
+        <span class="kw">public override string</span> <span class="nm">GetLabel</span>()
+        {
+            <span class="kw">int</span> count = uninspectedCache.Count;
+            <span class="kw">return</span> count == <span class="nu">1</span>
+                ? <span class="st">"1 台裝置需要檢查"</span>
+                : <span class="st">$"{count} 台裝置需要檢查"</span>;
+        }
+
+        <span class="cm">// ── 展開說明文字 ────────────────────────────────────</span>
+        <span class="kw">public override</span> <span class="ty">AlertReport</span> <span class="nm">GetReport</span>()
+        {
+            uninspectedCache.<span class="nm">Clear</span>();
+
+            <span class="kw">foreach</span> (<span class="kw">var</span> map <span class="kw">in</span> <span class="ty">Find</span>.Maps)
+            <span class="kw">foreach</span> (<span class="kw">var</span> thing <span class="kw">in</span> map.listerThings
+                .<span class="nm">ThingsOfDef</span>(<span class="ty">MyModDefOf</span>.MyMod_SpecialDevice))
+            {
+                <span class="kw">var</span> comp = thing.<span class="nm">TryGetComp</span>&lt;<span class="ty">Comp_NeedsInspection</span>&gt;();
+                <span class="kw">if</span> (comp?.NeedsInspection == <span class="kw">true</span>)
+                    uninspectedCache.<span class="nm">Add</span>(thing);
+            }
+
+            <span class="cm">// AlertReport.CulpritIs：點擊警示時跳到該物件</span>
+            <span class="kw">if</span> (uninspectedCache.Count == <span class="nu">0</span>)
+                <span class="kw">return</span> <span class="ty">AlertReport</span>.Inactive;
+
+            <span class="kw">return</span> <span class="ty">AlertReport</span>.<span class="nm">CulpritsAre</span>(uninspectedCache);
+        }
+
+        <span class="cm">// ── 詳細說明（可選）────────────────────────────────</span>
+        <span class="kw">public override string</span> <span class="nm">GetExplanation</span>()
+            => <span class="st">"以下裝置的檢查週期已過：\n"</span> +
+               <span class="ty">string</span>.<span class="nm">Join</span>(<span class="st">"\n"</span>,
+                   uninspectedCache.<span class="nm">ConvertAll</span>(t => <span class="st">$"  - {t.LabelCap}"</span>));
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>Alert 的自動掛載</strong>
+      框架會自動反射掃描所有繼承 <code>Alert</code> 的類別並加入警示佇列。<strong>不需要 XML 宣告</strong>，也不需要手動 Harmony patch <code>AlertsReadout</code>。
+    </div>
+
+    <h3>AlertReport 回傳值速查</h3>
+    <table>
+      <tr><th>回傳值</th><th>效果</th></tr>
+      <tr><td><code>AlertReport.Inactive</code></td><td>不顯示此警示</td></tr>
+      <tr><td><code>AlertReport.Active</code></td><td>顯示，點擊無跳轉</td></tr>
+      <tr><td><code>AlertReport.CulpritIs(thing)</code></td><td>顯示，點擊跳到該 Thing</td></tr>
+      <tr><td><code>AlertReport.CulpritsAre(list)</code></td><td>顯示，點擊循環跳轉各目標</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- 8. DefModExtension                                    -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section pattern-anchor" id="defmodextension">
+    <div class="section-title">⑧ DefModExtension — 給 Def 加自訂欄位</div>
+
+    <div class="when-to-use">
+      <strong>何時使用</strong>
+      當你想在<em>任何現有 Def</em>（包括其他 mod 的 Def）上附加自訂資料，卻不想繼承整個 Def 類別。這是最低侵入性的資料擴充方式，不需要 Harmony。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>與 ThingComp 的差異</strong>
+      ThingComp 是執行期附加在 Thing 實例上的，每個物件有自己的狀態。DefModExtension 是附加在 Def 定義上的（唯讀設定值），所有同類物件共享同一份 Extension 資料。
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="split-label">C# — DefModExtension</div>
+<pre><span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> <span class="ty">YourMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">MyExtension_WeaponData</span>
+        : <span class="ty">DefModExtension</span>
+    {
+        <span class="cm">// XML 可設定的自訂欄位</span>
+        <span class="kw">public float</span> energyCost   = <span class="nu">10f</span>;
+        <span class="kw">public bool</span>  bypassArmor  = <span class="kw">false</span>;
+        <span class="kw">public string</span> specialEffect = <span class="kw">null</span>;
+
+        <span class="cm">// 取值輔助方法（含 null 防護）</span>
+        <span class="kw">public static</span> <span class="ty">MyExtension_WeaponData</span>
+            <span class="nm">Get</span>(<span class="ty">ThingDef</span> def)
+            => def.<span class="nm">GetModExtension</span>&lt;
+                   <span class="ty">MyExtension_WeaponData</span>&gt;();
+    }
+}</pre>
+      </div>
+      <div>
+        <div class="split-label">XML — 附加到 ThingDef</div>
+<pre><span class="xml-tag">&lt;ThingDef</span>
+  <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseWeaponMelee"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_EnergySword<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- ...標準欄位... --&gt;</span>
+
+  <span class="xml-tag">&lt;modExtensions&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.MyExtension_WeaponData"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;energyCost&gt;</span>25<span class="xml-tag">&lt;/energyCost&gt;</span>
+      <span class="xml-tag">&lt;bypassArmor&gt;</span>true<span class="xml-tag">&lt;/bypassArmor&gt;</span>
+      <span class="xml-tag">&lt;specialEffect&gt;</span>lightning<span class="xml-tag">&lt;/specialEffect&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/modExtensions&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+      </div>
+    </div>
+
+    <h3>從 C# 讀取 Extension</h3>
+<pre><span class="cm">// 方法 1：直接從 def 取（可能回傳 null）</span>
+<span class="kw">var</span> ext = thingDef.<span class="nm">GetModExtension</span>&lt;<span class="ty">MyExtension_WeaponData</span>&gt;();
+<span class="kw">if</span> (ext != <span class="kw">null</span> && ext.bypassArmor)
+{
+    <span class="cm">// 處理穿甲邏輯</span>
+}
+
+<span class="cm">// 方法 2：用輔助方法（含 null 防護）</span>
+<span class="kw">var</span> energyCost = <span class="ty">MyExtension_WeaponData</span>.<span class="nm">Get</span>(weapon.def)?.energyCost ?? <span class="nu">0f</span>;
+
+<span class="cm">// 方法 3：HasModExtension 快速判斷</span>
+<span class="kw">if</span> (thingDef.<span class="nm">HasModExtension</span>&lt;<span class="ty">MyExtension_WeaponData</span>&gt;())
+{
+    <span class="cm">// ...</span>
+}</pre>
+
+    <h3>實際應用：給其他 mod 的 Def 加欄位（PatchOperation + Extension）</h3>
+<pre><span class="cm">// Patches/AddExtensionToVanilla.xml</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="MeleeWeapon_Knife"]<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="xml-tag">&lt;modExtensions&gt;</span>
+        <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"YourMod.MyExtension_WeaponData"</span><span class="xml-tag">&gt;</span>
+          <span class="xml-tag">&lt;energyCost&gt;</span>5<span class="xml-tag">&lt;/energyCost&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/modExtensions&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>DefModExtension 可附加到任何 Def 子類別</strong>
+      不只是 ThingDef，<code>RecipeDef</code>、<code>HediffDef</code>、<code>TraitDef</code>、<code>BiomeDef</code>……所有繼承自 <code>Def</code> 的類別都支援 <code>modExtensions</code>。這讓你無需繼承就能擴充任意 Def 的資料。
+    </div>
+  </div>
+
+  <!-- ── 模式選擇速查表 ── -->
+  <div class="section">
+    <div class="section-title">模式選擇速查表</div>
+    <table>
+      <tr>
+        <th>需求</th>
+        <th>優先考慮</th>
+        <th>備選</th>
+      </tr>
+      <tr>
+        <td>為物件加行為/狀態（per-instance）</td>
+        <td><span class="tag tag-blue">ThingComp</span></td>
+        <td>Harmony Postfix</td>
+      </tr>
+      <tr>
+        <td>全域持久資料（跨存檔）</td>
+        <td><span class="tag tag-green">GameComponent</span></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>地圖相關持久資料</td>
+        <td><span class="tag tag-green">MapComponent</span></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>讓 Pawn 主動執行新任務</td>
+        <td><span class="tag tag-purple">WorkGiver + JobDriver</span></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Pawn 身上的狀態效果</td>
+        <td><span class="tag tag-orange">Hediff</span></td>
+        <td>ThingComp（不適合）</td>
+      </tr>
+      <tr>
+        <td>玩家可調整的設定</td>
+        <td><span class="tag tag-green">ModSettings</span></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>物件查看面板擴充 UI</td>
+        <td><span class="tag tag-orange">ITab</span></td>
+        <td>CompInspectStringExtra（簡單文字）</td>
+      </tr>
+      <tr>
+        <td>持續性警告提示</td>
+        <td><span class="tag tag-red">Alert</span></td>
+        <td>Messages.Message（一次性）</td>
+      </tr>
+      <tr>
+        <td>給 Def 附加唯讀設定值</td>
+        <td><span class="tag tag-purple">DefModExtension</span></td>
+        <td>繼承 Def 類別（侵入性高）</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

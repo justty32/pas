@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>世界地圖與派系 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html" class="active">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>世界地圖與派系</h1>
+  <p>World / WorldGrid / Tile 的結構、WorldObject 自訂、FactionDef 與派系關係、Caravan 與 WorldPath——掌握 RimWorld 的「行星層」資料模型。</p>
+  <span class="badge">Chapter 13 · World Map &amp; Factions</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1  World / WorldGrid / Tile 結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 World / WorldGrid / Tile 結構</div>
+
+    <p>RimWorld 的世界是一顆<strong>球面網格（goldberg polyhedron）</strong>，由數千個多邊形 Tile 鋪滿。整個行星層由 <code>RimWorld.Planet.World</code>（<code>Find.World</code>）統管，幾何資料則在 <code>WorldGrid</code>。每個 Tile 不是 class 實例，而是以 <code>tileID</code>（int）為索引存進平行陣列——這是為了在 6,000+ 個 Tile 時維持記憶體與遍歷效率。</p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>World</h3>
+        <p>行星層根物件。持有 <code>grid</code>、<code>factionManager</code>、<code>worldObjects</code>、<code>components</code>（WorldComponent 集合）等。透過 <code>Find.World</code> 取得。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>WorldGrid</h3>
+        <p>幾何與地理資料容器。以 <code>tileID</code> 索引：<code>grid[tileID]</code> 回傳 <code>Tile</code>。提供 <code>TraversalDistanceBetween</code>、<code>GetTileNeighbors</code>、<code>GetTileCenter</code> 等。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Tile</h3>
+        <p>單一格的地理屬性：<code>biome</code>、<code>hilliness</code>、<code>temperature</code>、<code>elevation</code>、<code>rainfall</code>、<code>swampiness</code>、<code>rivers</code>、<code>roads</code>。</p>
+      </div>
+    </div>
+
+    <h3>從 C# 讀取 Tile 屬性</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>.<span class="ty">Planet</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// tileID 通常來自 WorldObject.Tile、Caravan.Tile、Settlement.Tile 等</span>
+<span class="kw">int</span> tileID = caravan.<span class="nm">Tile</span>;
+
+<span class="ty">Tile</span> tile = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>[tileID];   <span class="cm">// indexer，等同 Find.World.grid[tileID]</span>
+
+<span class="ty">BiomeDef</span> biome     = tile.<span class="nm">biome</span>;          <span class="cm">// 生態域（決定動植物、地圖生成）</span>
+<span class="ty">Hilliness</span> hill     = tile.<span class="nm">hilliness</span>;      <span class="cm">// enum：Flat / SmallHills / LargeHills / Mountainous / Impassable</span>
+<span class="kw">float</span> temp         = tile.<span class="nm">temperature</span>;    <span class="cm">// 當前季節氣溫（°C，會隨季節/緯度變動）</span>
+<span class="kw">float</span> elevation    = tile.<span class="nm">elevation</span>;      <span class="cm">// 海拔（公尺，負值代表海洋）</span>
+<span class="kw">float</span> rainfall     = tile.<span class="nm">rainfall</span>;       <span class="cm">// 年降雨量（mm）</span>
+<span class="kw">float</span> swampiness   = tile.<span class="nm">swampiness</span>;     <span class="cm">// 沼澤度 0~1</span>
+
+<span class="cm">// 平均/極端溫度需用 GenTemperature（season-aware）</span>
+<span class="kw">float</span> avgTemp = <span class="ty">GenTemperature</span>.<span class="nm">AverageTemperatureAtTileForTwelfth</span>(
+    tileID, <span class="ty">Twelfth</span>.<span class="nm">Undefined</span>);
+
+<span class="cm">// 是否為海洋 / 可定居</span>
+<span class="kw">bool</span> isOcean = tile.<span class="nm">WaterCovered</span>;       <span class="cm">// elevation &lt;= 0</span>
+<span class="kw">bool</span> canBuild = !tile.<span class="nm">WaterCovered</span>
+    &amp;&amp; tile.<span class="nm">hilliness</span> != <span class="ty">Hilliness</span>.<span class="nm">Impassable</span>;</pre>
+
+    <h3>遍歷與鄰接查詢</h3>
+
+<pre><span class="cm">// 取得某 Tile 的所有相鄰 Tile（球面網格多為 6 鄰，部分為 5）</span>
+<span class="kw">var</span> neighbors = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt;();
+<span class="ty">Find</span>.<span class="ty">WorldGrid</span>.<span class="nm">GetTileNeighbors</span>(tileID, neighbors);
+
+<span class="cm">// 兩 Tile 間的「格數距離」（非 km；用於概略判斷遠近）</span>
+<span class="kw">int</span> hops = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>.<span class="nm">TraversalDistanceBetween</span>(tileA, tileB);
+
+<span class="cm">// 真實地表距離（km），用 SphericalDistance 換算</span>
+<span class="ty">Vector3</span> ca = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>.<span class="nm">GetTileCenter</span>(tileA);
+<span class="ty">Vector3</span> cb = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>.<span class="nm">GetTileCenter</span>(tileB);
+<span class="kw">float</span> km = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>.<span class="nm">ApproxDistanceInTiles</span>(tileA, tileB) * <span class="nu">8.8f</span>;</pre>
+
+    <div class="callout callout-info">
+      <strong>tileID 為何是 int 而非物件引用</strong>
+      <code>Tile</code> 是值資料容器，整張地圖以「結構陣列」形式存放。Mod 程式碼幾乎一律以 <code>int tileID</code> 傳遞與儲存位置（WorldObject、Caravan、Settlement 都用 <code>Tile</code> 屬性回傳 int），存檔時也只存 int。需要屬性時才用 <code>Find.WorldGrid[tileID]</code> 即時查表。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  WorldObject 與 WorldObjectDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 WorldObject 與 WorldObjectDef</div>
+
+    <p><code>WorldObject</code> 是「站在世界地圖某個 Tile 上的東西」——殖民地、敵對基地、商隊、墜毀船骸、臨時遭遇地點，全都是 WorldObject 的子類別。它由 <code>WorldObjectDef</code> 定義靜態屬性（材質、是否可選取、對應的 C# class），由 <code>Find.WorldObjects</code> 管理。</p>
+
+    <h3>原版主要 WorldObject 類別</h3>
+
+    <table>
+      <thead>
+        <tr><th>類別</th><th>WorldObjectDef</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Settlement</code></td><td><code>WorldObjects.Settlement</code></td><td>派系常駐基地（玩家殖民地或 NPC 聚落）</td></tr>
+        <tr><td><code>Caravan</code></td><td><code>WorldObjects.Caravan</code></td><td>玩家在世界地圖移動的商隊</td></tr>
+        <tr><td><code>Site</code></td><td>各種 <code>Site*</code></td><td>任務地點（廢墟、隊伍、出土遺跡等），由 <code>SitePart</code> 組成</td></tr>
+        <tr><td><code>MapParent</code></td><td>—</td><td>抽象基底：所有「可以生成出 Map 的 WorldObject」</td></tr>
+        <tr><td><code>TravelingTransportPods</code></td><td><code>WorldObjects.TravelingTransportPods</code></td><td>飛行中的運輸艙群</td></tr>
+        <tr><td><code>RoutePlannerWaypoint</code></td><td>—</td><td>玩家路徑規劃用的路點</td></tr>
+      </tbody>
+    </table>
+
+    <h3>WorldObjectDef XML 結構</h3>
+
+<pre><span class="cm">&lt;!-- Defs/WorldObjectDefs/MyWorldObjects.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;WorldObjectDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyAncientBeacon<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>古代信標<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="cm">&lt;!-- 對應的 C# class（繼承 WorldObject 或其子類別）--&gt;</span>
+    <span class="xml-tag">&lt;worldObjectClass&gt;</span>MyMod.WorldObject_AncientBeacon<span class="xml-tag">&lt;/worldObjectClass&gt;</span>
+    <span class="cm">&lt;!-- 世界地圖上的材質 --&gt;</span>
+    <span class="xml-tag">&lt;texture&gt;</span>World/WorldObjects/AncientBeacon<span class="xml-tag">&lt;/texture&gt;</span>
+    <span class="xml-tag">&lt;expandingIcon&gt;</span>true<span class="xml-tag">&lt;/expandingIcon&gt;</span>          <span class="cm">&lt;!-- 縮小時顯示放大圖示 --&gt;</span>
+    <span class="xml-tag">&lt;expandingIconTexture&gt;</span>World/WorldObjects/Expanding/AncientBeacon<span class="xml-tag">&lt;/expandingIconTexture&gt;</span>
+    <span class="xml-tag">&lt;expandingIconPriority&gt;</span>50<span class="xml-tag">&lt;/expandingIconPriority&gt;</span>
+    <span class="xml-tag">&lt;canHaveFaction&gt;</span>true<span class="xml-tag">&lt;/canHaveFaction&gt;</span>
+    <span class="xml-tag">&lt;selectable&gt;</span>true<span class="xml-tag">&lt;/selectable&gt;</span>
+    <span class="xml-tag">&lt;neverMultipleOnTile&gt;</span>true<span class="xml-tag">&lt;/neverMultipleOnTile&gt;</span>
+    <span class="cm">&lt;!-- 滑鼠移上去的色彩 --&gt;</span>
+    <span class="xml-tag">&lt;rotateGraphicWhenTraveling&gt;</span>false<span class="xml-tag">&lt;/rotateGraphicWhenTraveling&gt;</span>
+    <span class="cm">&lt;!-- 可附加的 WorldObjectComp（官方擴充點，免 Harmony）--&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RimWorld.Planet.TimeoutComp"</span><span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/WorldObjectDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>WorldObjectComp 是首選擴充點</strong>
+      和地圖上的 <code>ThingComp</code> 一樣，<code>WorldObjectComp</code> 讓你不必繼承整個 WorldObject 就能附加行為（計時消失、所有權、隨機事件等）。原版 <code>TimeoutComp</code>、<code>EnterCooldownComp</code> 即是範例。優先考慮 Comp，再考慮繼承。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  繼承 WorldObject 自訂世界物件
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 繼承 WorldObject 自訂世界物件</div>
+
+    <p>當 Comp 不足以表達你的邏輯（例如需要自訂 Gizmo、自訂選取資訊、或要生成地圖），就繼承 <code>WorldObject</code>（純世界物件）或 <code>MapParent</code>（要能進入產生 Map）。</p>
+
+    <h3>純世界物件（不可進入）</h3>
+
+<pre><span class="kw">using</span> <span class="ty">System</span>.<span class="ty">Collections</span>.<span class="ty">Generic</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>.<span class="ty">Planet</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">namespace</span> <span class="ty">MyMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">WorldObject_AncientBeacon</span> : <span class="ty">WorldObject</span>
+    {
+        <span class="kw">private int</span> chargeLeft = <span class="nu">5</span>;
+
+        <span class="cm">// 每 ~1 世界 tick(=遊戲 tick) 呼叫；用 Tick / TickInterval 控制</span>
+        <span class="kw">public override void</span> <span class="nm">Tick</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">Tick</span>();
+            <span class="cm">// 世界物件也用 ShouldTickNow 分散負載</span>
+            <span class="kw">if</span> (<span class="kw">this</span>.<span class="nm">IsHashIntervalTick</span>(<span class="nu">2500</span>))   <span class="cm">// 每 ~1 小時遊戲時間</span>
+            {
+                <span class="cm">// ... 週期性邏輯</span>
+            }
+        }
+
+        <span class="cm">// 滑鼠停留 / 選取時左下角的資訊文字</span>
+        <span class="kw">public override string</span> <span class="nm">GetInspectString</span>()
+        {
+            <span class="kw">return</span> <span class="st">$"剩餘充能：{chargeLeft}"</span>;
+        }
+
+        <span class="cm">// 選取時右下角的指令按鈕</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Gizmo</span>&gt; <span class="nm">GetGizmos</span>()
+        {
+            <span class="kw">foreach</span> (<span class="kw">var</span> g <span class="kw">in</span> <span class="kw">base</span>.<span class="nm">GetGizmos</span>()) <span class="kw">yield return</span> g;
+
+            <span class="kw">yield return new</span> <span class="ty">Command_Action</span>
+            {
+                defaultLabel = <span class="st">"啟動信標"</span>,
+                defaultDesc  = <span class="st">"消耗一次充能觸發效果。"</span>,
+                icon         = <span class="ty">ContentFinder</span>&lt;<span class="ty">UnityEngine</span>.<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Commands/Activate"</span>),
+                action       = <span class="nm">Activate</span>,
+                <span class="cm">// 充能耗盡則禁用</span>
+                Disabled     = chargeLeft &lt;= <span class="nu">0</span>,
+                disabledReason = <span class="st">"充能已耗盡。"</span>
+            };
+        }
+
+        <span class="kw">private void</span> <span class="nm">Activate</span>()
+        {
+            chargeLeft--;
+            <span class="ty">Messages</span>.<span class="nm">Message</span>(<span class="st">"信標已啟動。"</span>,
+                <span class="kw">this</span>, <span class="ty">MessageTypeDefOf</span>.<span class="nm">PositiveEvent</span>);
+            <span class="kw">if</span> (chargeLeft &lt;= <span class="nu">0</span>)
+                <span class="ty">Find</span>.<span class="ty">WorldObjects</span>.<span class="nm">Remove</span>(<span class="kw">this</span>);   <span class="cm">// 自我移除</span>
+        }
+
+        <span class="cm">// ★ 必須序列化自訂欄位，否則存讀檔後歸零</span>
+        <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">ExposeData</span>();
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> chargeLeft, <span class="st">"chargeLeft"</span>, <span class="nu">5</span>);
+        }
+    }
+}</pre>
+
+    <h3>從 C# 生成並放置 WorldObject</h3>
+
+<pre><span class="cm">// 用 WorldObjectMaker 工廠建立，再加入 WorldObjects 管理器</span>
+<span class="kw">int</span> tile = <span class="ty">TileFinder</span>.<span class="nm">RandomStartingTile</span>();   <span class="cm">// 或自選 tileID</span>
+
+<span class="kw">var</span> beacon = (<span class="ty">WorldObject_AncientBeacon</span>)<span class="ty">WorldObjectMaker</span>.<span class="nm">MakeWorldObject</span>(
+    <span class="ty">MyWorldObjectDefOf</span>.<span class="nm">MyAncientBeacon</span>);
+beacon.<span class="nm">Tile</span> = tile;
+beacon.<span class="nm">SetFaction</span>(<span class="ty">Faction</span>.<span class="nm">OfPlayer</span>);   <span class="cm">// 若 canHaveFaction</span>
+<span class="ty">Find</span>.<span class="ty">WorldObjects</span>.<span class="nm">Add</span>(beacon);
+
+<span class="cm">// 用 DefOf 安全引用（避免字串拼錯）</span>
+[<span class="at">DefOf</span>]
+<span class="kw">public static class</span> <span class="ty">MyWorldObjectDefOf</span>
+{
+    <span class="kw">public static</span> <span class="ty">WorldObjectDef</span> MyAncientBeacon;
+    <span class="kw">static</span> <span class="nm">MyWorldObjectDefOf</span>() =&gt; <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyWorldObjectDefOf</span>));
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>務必呼叫 base.ExposeData() 與 base.GetGizmos()</strong>
+      WorldObject 的基底 <code>ExposeData</code> 會序列化 <code>tile</code>、<code>faction</code>、<code>comps</code> 等核心狀態；忘了呼叫會導致存檔後物件位置/陣營丟失。同理 <code>GetGizmos</code> 不轉發 base 會吃掉原版（如 Settlement 的攻擊按鈕）的指令。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  FactionDef 結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 FactionDef 結構</div>
+
+    <p><code>FactionDef</code> 定義一個派系的「種類」（部落、海盜、帝國、機械……），決定其科技等級、外觀、敵友傾向、聚落生成規則。注意：<strong>FactionDef 是模板，Faction 才是執行期實例</strong>——同一個 FactionDef 可生成多個 Faction 實例。</p>
+
+    <h3>關鍵欄位</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>isPlayer</code></td><td>bool</td><td>是否為玩家派系（殖民地）</td></tr>
+        <tr><td><code>permanentEnemy</code></td><td>bool</td><td>永久敵對，goodwill 鎖死在 -100、無法談和（如機械族、蟲族）</td></tr>
+        <tr><td><code>naturalColonyGoodwill</code></td><td>IntRange</td><td>對玩家殖民地的初始好感隨機區間（如 <code>-100~-80</code> 為天生敵對）</td></tr>
+        <tr><td><code>techLevel</code></td><td>TechLevel</td><td>科技等級：Animal/Neolithic/Medieval/Industrial/Spacer/Ultra/Archotech，影響交易物與襲擊裝備</td></tr>
+        <tr><td><code>apparelStuffFilter</code></td><td>ThingFilter</td><td>該派系 Pawn 服飾可用的材質白名單（部落用皮/布，工業用合成纖維等）</td></tr>
+        <tr><td><code>pawnGroupMakers</code></td><td>List</td><td>襲擊/交易/和平訪客的隊伍組成規則</td></tr>
+        <tr><td><code>maxConfigurableAtWorldCreation</code></td><td>int</td><td>世界生成時此 Def 最多可建立幾個 Faction 實例</td></tr>
+        <tr><td><code>requiredCountAtGameStart</code></td><td>int</td><td>開局保證生成的數量</td></tr>
+        <tr><td><code>hidden</code></td><td>bool</td><td>不顯示於派系列表（如「無派系野生動物」「永久荒野」）</td></tr>
+        <tr><td><code>humanlikeFaction</code></td><td>bool</td><td>是否由類人 Pawn 組成（決定能否談判/交易）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>自訂 FactionDef 完整範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/FactionDefs/MyFaction.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;FactionDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyRaiderClan<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>灰燼劫掠者<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>崇尚焦土戰術的工業時代劫掠團。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;pawnSingular&gt;</span>劫掠者<span class="xml-tag">&lt;/pawnSingular&gt;</span>
+    <span class="xml-tag">&lt;pawnsPlural&gt;</span>劫掠者<span class="xml-tag">&lt;/pawnsPlural&gt;</span>
+    <span class="xml-tag">&lt;categoryTag&gt;</span>Pirate<span class="xml-tag">&lt;/categoryTag&gt;</span>
+
+    <span class="xml-tag">&lt;techLevel&gt;</span>Industrial<span class="xml-tag">&lt;/techLevel&gt;</span>
+    <span class="xml-tag">&lt;humanlikeFaction&gt;</span>true<span class="xml-tag">&lt;/humanlikeFaction&gt;</span>
+
+    <span class="cm">&lt;!-- 天生敵對：初始好感 -100~-85，且不可結盟 --&gt;</span>
+    <span class="xml-tag">&lt;naturalColonyGoodwill&gt;</span>
+      <span class="xml-tag">&lt;min&gt;</span>-100<span class="xml-tag">&lt;/min&gt;</span>
+      <span class="xml-tag">&lt;max&gt;</span>-85<span class="xml-tag">&lt;/max&gt;</span>
+    <span class="xml-tag">&lt;/naturalColonyGoodwill&gt;</span>
+    <span class="xml-tag">&lt;permanentEnemy&gt;</span>false<span class="xml-tag">&lt;/permanentEnemy&gt;</span>   <span class="cm">&lt;!-- false=可被收買談和 --&gt;</span>
+    <span class="xml-tag">&lt;mustStartOneEnemy&gt;</span>false<span class="xml-tag">&lt;/mustStartOneEnemy&gt;</span>
+    <span class="xml-tag">&lt;canStageAttacks&gt;</span>true<span class="xml-tag">&lt;/canStageAttacks&gt;</span>
+
+    <span class="xml-tag">&lt;maxConfigurableAtWorldCreation&gt;</span>3<span class="xml-tag">&lt;/maxConfigurableAtWorldCreation&gt;</span>
+    <span class="xml-tag">&lt;requiredCountAtGameStart&gt;</span>1<span class="xml-tag">&lt;/requiredCountAtGameStart&gt;</span>
+
+    <span class="cm">&lt;!-- 服飾材質過濾：限定合成/金屬材質 --&gt;</span>
+    <span class="xml-tag">&lt;apparelStuffFilter&gt;</span>
+      <span class="xml-tag">&lt;categories&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Fabric<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;thingDefs&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Leather_Plain<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/thingDefs&gt;</span>
+    <span class="xml-tag">&lt;/apparelStuffFilter&gt;</span>
+
+    <span class="cm">&lt;!-- 視覺：地圖標記顏色與旗幟 --&gt;</span>
+    <span class="xml-tag">&lt;colorSpectrum&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>(0.5,0.1,0.1)<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>(0.7,0.3,0.1)<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/colorSpectrum&gt;</span>
+    <span class="xml-tag">&lt;factionIconPath&gt;</span>World/WorldObjects/Expanding/Various/Pirate<span class="xml-tag">&lt;/factionIconPath&gt;</span>
+
+    <span class="cm">&lt;!-- 聚落生成的 SettlementDef（見 §9）--&gt;</span>
+    <span class="xml-tag">&lt;settlementGenerationParams&gt;</span>...<span class="xml-tag">&lt;/settlementGenerationParams&gt;</span>
+
+    <span class="cm">&lt;!-- 隊伍組成：襲擊團 --&gt;</span>
+    <span class="xml-tag">&lt;pawnGroupMakers&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;kindDef&gt;</span>Combat<span class="xml-tag">&lt;/kindDef&gt;</span>
+        <span class="xml-tag">&lt;options&gt;</span>
+          <span class="cm">&lt;!-- PawnKindDef → 權重 --&gt;</span>
+          <span class="xml-tag">&lt;Pirate_Scavenger&gt;</span>10<span class="xml-tag">&lt;/Pirate_Scavenger&gt;</span>
+          <span class="xml-tag">&lt;Pirate_Mercenary&gt;</span>5<span class="xml-tag">&lt;/Pirate_Mercenary&gt;</span>
+        <span class="xml-tag">&lt;/options&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/pawnGroupMakers&gt;</span>
+  <span class="xml-tag">&lt;/FactionDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>permanentEnemy 與 naturalColonyGoodwill 的交互</strong>
+      <code>permanentEnemy=true</code> 會強制 goodwill 鎖在 -100 並忽略 <code>naturalColonyGoodwill</code>，且 <code>TryAffectGoodwillWith</code> 對其無效（§6）。若你只想「開局敵對但仍可外交」，請用 <code>permanentEnemy=false</code> 搭配偏負的 <code>naturalColonyGoodwill</code>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  Faction 關係
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 Faction 關係（goodwill / hostility / FactionRelationKind）</div>
+
+    <p>每一對 Faction 之間維護一個 <code>FactionRelation</code>，核心是 <code>goodwill</code>（-100 ~ +100 的 int）與由其推導的 <code>FactionRelationKind</code> 列舉。關係是<strong>對稱</strong>的：A 對 B 的 goodwill 等於 B 對 A 的。</p>
+
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3>Hostile</h3>
+        <p>goodwill ≤ -75（門檻 <code>GoodwillThresholdToBecomeHostile</code>）。會發動襲擊、互相攻擊。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Neutral</h3>
+        <p>介於敵對與盟友之間。可交易、可訪問，但不會無條件協防。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Ally</h3>
+        <p>goodwill ≥ +75（<code>GoodwillThresholdToBecomeAlly</code>）。可呼叫軍援、共同對敵。</p>
+      </div>
+    </div>
+
+    <h3>查詢關係</h3>
+
+<pre><span class="ty">Faction</span> player = <span class="ty">Faction</span>.<span class="nm">OfPlayer</span>;
+<span class="ty">Faction</span> other  = <span class="cm">/* 某 NPC 派系 */</span>;
+
+<span class="cm">// 當前好感（int，-100~100）</span>
+<span class="kw">int</span> gw = player.<span class="nm">GoodwillWith</span>(other);
+
+<span class="cm">// 關係種類列舉</span>
+<span class="ty">FactionRelationKind</span> kind = player.<span class="nm">RelationKindWith</span>(other);
+<span class="cm">// → Hostile / Neutral / Ally</span>
+
+<span class="cm">// 便捷布林</span>
+<span class="kw">bool</span> hostile = player.<span class="nm">HostileTo</span>(other);
+<span class="kw">bool</span> ally    = kind == <span class="ty">FactionRelationKind</span>.<span class="nm">Ally</span>;
+
+<span class="cm">// 取得 FactionRelation 物件本身（含 baseGoodwill 等）</span>
+<span class="ty">FactionRelation</span> rel = player.<span class="nm">RelationWith</span>(other, allowNull: <span class="kw">true</span>);</pre>
+
+    <div class="callout callout-info">
+      <strong>baseGoodwill vs goodwill</strong>
+      <code>FactionRelation</code> 內部其實是 <code>baseGoodwill</code>（基礎值）；最終 goodwill 還會受臨時修正（如近期被你救援）影響。改動關係請一律走 <code>TryAffectGoodwillWith</code> 或 <code>SetRelationDirect</code>，不要直接寫欄位，否則對稱性與事件鉤子會失效。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  從 C# 建立 faction、改變 goodwill
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 從 C# 建立 Faction 與改變 Goodwill</div>
+
+    <h3>執行期動態生成一個新 Faction</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>.<span class="ty">Planet</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public static</span> <span class="ty">Faction</span> <span class="nm">SpawnRaiderClan</span>()
+{
+    <span class="ty">FactionDef</span> def = <span class="ty">MyFactionDefOf</span>.<span class="nm">MyRaiderClan</span>;
+
+    <span class="cm">// FactionGenerator 負責隨機命名、配色、leader 等</span>
+    <span class="ty">Faction</span> faction = <span class="ty">FactionGenerator</span>.<span class="nm">NewGeneratedFaction</span>(
+        <span class="kw">new</span> <span class="ty">FactionGeneratorParms</span>(def));
+
+    <span class="cm">// 與所有既有派系建立初始關係（依各 def 的 naturalGoodwill）</span>
+    <span class="kw">foreach</span> (<span class="ty">Faction</span> existing <span class="kw">in</span> <span class="ty">Find</span>.<span class="ty">FactionManager</span>.<span class="nm">AllFactionsListForReading</span>)
+    {
+        faction.<span class="nm">TryMakeInitialRelationsWith</span>(existing);
+    }
+
+    <span class="cm">// 登記到 FactionManager（★ 不做這步派系不會被遊戲承認）</span>
+    <span class="ty">Find</span>.<span class="ty">FactionManager</span>.<span class="nm">Add</span>(faction);
+
+    <span class="cm">// （選用）在世界上生成它的基地</span>
+    <span class="ty">Settlement</span> s = (<span class="ty">Settlement</span>)<span class="ty">WorldObjectMaker</span>.<span class="nm">MakeWorldObject</span>(
+        <span class="ty">WorldObjectDefOf</span>.<span class="nm">Settlement</span>);
+    s.<span class="nm">SetFaction</span>(faction);
+    s.<span class="nm">Tile</span> = <span class="ty">TileFinder</span>.<span class="nm">RandomSettlementTileFor</span>(faction);
+    s.<span class="nm">Name</span> = <span class="ty">SettlementNameGenerator</span>.<span class="nm">GenerateSettlementName</span>(s);
+    <span class="ty">Find</span>.<span class="ty">WorldObjects</span>.<span class="nm">Add</span>(s);
+
+    <span class="kw">return</span> faction;
+}</pre>
+
+    <h3>改變好感：TryAffectGoodwillWith</h3>
+
+<pre><span class="ty">Faction</span> player = <span class="ty">Faction</span>.<span class="nm">OfPlayer</span>;
+<span class="ty">Faction</span> other  = <span class="cm">/* 目標派系 */</span>;
+
+<span class="cm">// 相對調整 goodwill（會自動 clamp、觸發敵對/結盟事件、彈通知）</span>
+<span class="kw">bool</span> changed = other.<span class="nm">TryAffectGoodwillWith</span>(
+    player,                       <span class="cm">// 與誰的關係</span>
+    goodwillChange: <span class="nu">25</span>,           <span class="cm">// 增減量（正=友好）</span>
+    canSendMessage: <span class="kw">true</span>,         <span class="cm">// 是否彈出右上角通知</span>
+    canSendHostilityLetter: <span class="kw">true</span>, <span class="cm">// 跨越敵對門檻時是否寄信</span>
+    reason: <span class="ty">HistoryEventDefOf</span>.<span class="nm">DeliveredQuestReward</span>, <span class="cm">// 原因（影響 UI 文字）</span>
+    lookTarget: <span class="kw">null</span>);
+
+<span class="cm">// 直接設定到絕對值（少用；繞過 reason 系統）</span>
+player.<span class="nm">SetRelationDirect</span>(other, <span class="ty">FactionRelationKind</span>.<span class="nm">Ally</span>);
+<span class="cm">// 或設 baseGoodwill 後重算</span>
+player.<span class="nm">SetRelation</span>(<span class="kw">new</span> <span class="ty">FactionRelation</span>(other, <span class="ty">FactionRelationKind</span>.<span class="nm">Neutral</span>));</pre>
+
+    <div class="callout callout-tip">
+      <strong>TryAffectGoodwillWith 才是「正路」</strong>
+      它會：① 對稱更新雙方；② 自動 clamp 到 [-100,100]；③ 跨過 ±75 門檻時切換 RelationKind 並觸發 <code>Notify_RelationKindChanged</code>（讓 NPC 立刻轉為攻擊或停火）；④ 依 <code>reason</code> 顯示「因為你完成委託，好感 +25」之類的訊息。直接寫 goodwill 欄位會跳過這一切。
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>permanentEnemy 派系無法被影響</strong>
+      對 <code>permanentEnemy=true</code> 的派系呼叫 <code>TryAffectGoodwillWith</code> 會回傳 false 且毫無作用——機械族、蟲族、（部分 DLC）異虫不能談和。設計委託獎勵「提升好感」時要排除這類派系，否則玩家會誤以為功能失效。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  Caravan 系統與 WorldPath
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 Caravan 系統與 WorldPath</div>
+
+    <p><code>Caravan</code> 是玩家在世界地圖上移動的 Pawn 群（含載具、物資）。它是 <code>WorldObject</code> 子類別，移動依賴世界尋路系統 <code>WorldPathFinder</code>，沿著 Tile 間的「移動難度」找最短路徑。</p>
+
+    <h3>Caravan 的關鍵成員</h3>
+
+    <table>
+      <thead><tr><th>成員</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>caravan.pawns</code></td><td><code>ThingOwner&lt;Pawn&gt;</code>：商隊內所有 Pawn（含俘虜/動物）</td></tr>
+        <tr><td><code>caravan.PawnsListForReading</code></td><td>只讀 List，遍歷成員用</td></tr>
+        <tr><td><code>caravan.Tile</code></td><td>目前所在 tileID</td></tr>
+        <tr><td><code>caravan.pather</code></td><td><code>Caravan_PathFollower</code>：移動狀態機，持有當前 WorldPath</td></tr>
+        <tr><td><code>caravan.TicksPerMove</code></td><td>移動速度（受成員、地形、負重影響）</td></tr>
+        <tr><td><code>caravan.AllThings</code></td><td>商隊攜帶的所有物品（背包+載具）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>建立商隊並下達移動指令</h3>
+
+<pre><span class="cm">// 由一群 Pawn 組成商隊（通常離開地圖時呼叫）</span>
+<span class="kw">var</span> members = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt; { colonist1, colonist2, packAnimal };
+
+<span class="ty">Caravan</span> caravan = <span class="ty">CaravanMaker</span>.<span class="nm">MakeCaravan</span>(
+    members,
+    <span class="ty">Faction</span>.<span class="nm">OfPlayer</span>,
+    startingTile,
+    addToWorldPawnsIfNotAlready: <span class="kw">true</span>);
+
+<span class="cm">// 下令前往目標 Tile（pather 會自行尋路）</span>
+caravan.<span class="nm">pather</span>.<span class="nm">StartPath</span>(destinationTile, repathImmediately: <span class="kw">true</span>);
+
+<span class="cm">// 也可指定到達後的「到站動作」（進入聚落、攻擊等）</span>
+caravan.<span class="nm">pather</span>.<span class="nm">StartPath</span>(targetSettlement.<span class="nm">Tile</span>, <span class="kw">new</span> <span class="ty">CaravanArrivalAction_VisitSettlement</span>(
+    targetSettlement), repathImmediately: <span class="kw">true</span>);</pre>
+
+    <h3>WorldPath 與世界尋路</h3>
+
+<pre><span class="cm">// 手動計算一條世界路徑（評估距離/天數，不實際移動）</span>
+<span class="kw">using</span> (<span class="ty">WorldPath</span> path = <span class="ty">Find</span>.<span class="ty">WorldPathFinder</span>.<span class="nm">FindPath</span>(
+    startTile, destTile, traveler: caravan))
+{
+    <span class="kw">if</span> (path != <span class="ty">WorldPath</span>.<span class="nm">NotFound</span>)
+    {
+        <span class="kw">float</span> totalCost = path.<span class="nm">TotalCost</span>;          <span class="cm">// 總移動成本（ticks 概念）</span>
+        <span class="ty">List</span>&lt;<span class="kw">int</span>&gt; nodes = path.<span class="nm">NodesReversed</span>;       <span class="cm">// tileID 序列（終點→起點）</span>
+
+        <span class="cm">// 估計旅程天數</span>
+        <span class="kw">int</span> ticks = <span class="ty">CaravanArrivalTimeEstimator</span>.<span class="nm">EstimatedTicksToArrive</span>(
+            startTile, destTile, caravan);
+        <span class="kw">float</span> days = ticks / (<span class="kw">float</span>)<span class="ty">GenDate</span>.<span class="nm">TicksPerDay</span>;
+    }
+}   <span class="cm">// ★ WorldPath 實作 IDisposable，務必 using 釋放回 pool</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>WorldPath 是池化資源，記得 Dispose</strong>
+      <code>Find.WorldPathFinder.FindPath</code> 回傳的 <code>WorldPath</code> 來自物件池，用完必須 <code>Dispose()</code>（用 <code>using</code> 區塊最保險）歸還，否則池耗盡會拋例外。Caravan 的 <code>pather</code> 內部已自管路徑，只有你「手動評估路徑」時才需要自己 FindPath。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  BiomeDef 與動植物分布
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 BiomeDef 與 Biome 動植物分布</div>
+
+    <p><code>BiomeDef</code> 定義一個生態域：能長什麼植物、出沒什麼動物、地圖生成的密度、可否定居、移動難度。每個 Tile 都綁定一個 BiomeDef（<code>tile.biome</code>），它同時影響世界層（移動成本）與地圖層（生成內容）。</p>
+
+    <h3>動植物分布的權重機制</h3>
+
+    <p>BiomeDef 內以 <code>wildPlants</code> / <code>wildAnimals</code> 列出 <em>ThingDef → commonality（出現權重）</em>。地圖生成時依權重隨機抽選；權重越高、密度（<code>plantDensity</code> / <code>animalDensity</code>）越大，該生態域就越「茂密」或「多獸」。</p>
+
+<pre><span class="cm">&lt;!-- Defs/BiomeDefs/MyBiome.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;BiomeDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>AshenWastes<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>灰燼荒原<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>火山灰覆蓋的貧瘠地帶。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>BiomeWorker_Desert<span class="xml-tag">&lt;/workerClass&gt;</span>  <span class="cm">&lt;!-- 決定哪些 Tile 成為此 biome --&gt;</span>
+
+    <span class="xml-tag">&lt;canBuildBase&gt;</span>true<span class="xml-tag">&lt;/canBuildBase&gt;</span>
+    <span class="xml-tag">&lt;canAutoChoose&gt;</span>true<span class="xml-tag">&lt;/canAutoChoose&gt;</span>
+    <span class="xml-tag">&lt;allowRoads&gt;</span>true<span class="xml-tag">&lt;/allowRoads&gt;</span>
+    <span class="xml-tag">&lt;allowRivers&gt;</span>false<span class="xml-tag">&lt;/allowRivers&gt;</span>
+
+    <span class="cm">&lt;!-- 整體密度（影響地圖生成的植物/動物總量）--&gt;</span>
+    <span class="xml-tag">&lt;plantDensity&gt;</span>0.08<span class="xml-tag">&lt;/plantDensity&gt;</span>
+    <span class="xml-tag">&lt;animalDensity&gt;</span>0.6<span class="xml-tag">&lt;/animalDensity&gt;</span>
+    <span class="xml-tag">&lt;diseaseMtbDays&gt;</span>60<span class="xml-tag">&lt;/diseaseMtbDays&gt;</span>
+    <span class="xml-tag">&lt;movementDifficulty&gt;</span>2<span class="xml-tag">&lt;/movementDifficulty&gt;</span>  <span class="cm">&lt;!-- 世界層商隊移動難度 --&gt;</span>
+    <span class="xml-tag">&lt;forageability&gt;</span>0.2<span class="xml-tag">&lt;/forageability&gt;</span>
+
+    <span class="cm">&lt;!-- 野生植物：ThingDef → commonality --&gt;</span>
+    <span class="xml-tag">&lt;wildPlants&gt;</span>
+      <span class="xml-tag">&lt;Plant_Bush&gt;</span>2.0<span class="xml-tag">&lt;/Plant_Bush&gt;</span>
+      <span class="xml-tag">&lt;Plant_TreeDrago&gt;</span>0.3<span class="xml-tag">&lt;/Plant_TreeDrago&gt;</span>
+    <span class="xml-tag">&lt;/wildPlants&gt;</span>
+
+    <span class="cm">&lt;!-- 野生動物：ThingDef(animal) → commonality --&gt;</span>
+    <span class="xml-tag">&lt;wildAnimals&gt;</span>
+      <span class="xml-tag">&lt;Hare&gt;</span>1.0<span class="xml-tag">&lt;/Hare&gt;</span>
+      <span class="xml-tag">&lt;Boomrat&gt;</span>0.8<span class="xml-tag">&lt;/Boomrat&gt;</span>
+      <span class="xml-tag">&lt;Megasloth&gt;</span>0.05<span class="xml-tag">&lt;/Megasloth&gt;</span>
+    <span class="xml-tag">&lt;/wildAnimals&gt;</span>
+
+    <span class="cm">&lt;!-- 可額外用 PatchOperation 把動物塞進原版 biome（見下方 callout）--&gt;</span>
+  <span class="xml-tag">&lt;/BiomeDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>從 C# 查詢 Biome 的動植物</h3>
+
+<pre><span class="ty">BiomeDef</span> biome = tile.<span class="nm">biome</span>;
+
+<span class="cm">// 取得此 biome 所有可生成的動物（含權重）</span>
+<span class="kw">foreach</span> (<span class="ty">PawnKindDef</span> animal <span class="kw">in</span> biome.<span class="nm">AllWildAnimals</span>)
+{
+    <span class="kw">float</span> commonality = biome.<span class="nm">CommonalityOfAnimal</span>(animal);
+    <span class="cm">// ...</span>
+}
+
+<span class="cm">// 植物</span>
+<span class="kw">foreach</span> (<span class="ty">ThingDef</span> plant <span class="kw">in</span> biome.<span class="nm">AllWildPlants</span>)
+{
+    <span class="kw">float</span> c = biome.<span class="nm">CommonalityOfPlant</span>(plant);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>給原版 Biome 加動物：用 PatchOperationAdd</strong>
+      與其複製整個 BiomeDef，不如用 Patch 把你的動物插進原版 biome 的 <code>wildAnimals</code>：<br>
+      <code>&lt;xpath&gt;/Defs/BiomeDef[defName="TemperateForest"]/wildAnimals&lt;/xpath&gt;</code> + <code>PatchOperationAdd</code>。這樣相容性最佳、不覆蓋他人改動。詳見「常見模式」章的 PatchOperations。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  SettlementDef 與 SitePartDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 SettlementDef 與 SitePartDef</div>
+
+    <p>聚落與任務地點是兩條不同的世界物件管線：<strong>Settlement</strong> 是派系的長駐基地（用 <code>WorldObjectDef</code> 為 Settlement 的 def），其防禦/外觀由派系的 <code>settlementGenerationParams</code> 與地圖生成器決定；<strong>Site</strong> 是臨時任務點，由一個或多個 <code>SitePart</code> 拼裝而成，每個 SitePart 對應一個 <code>SitePartDef</code>。</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Settlement（常駐基地）</h3>
+        <p>WorldObject 子類 <code>Settlement</code>。綁定 Faction，可被攻擊/交易/拜訪。進入時由 <code>WorldObjectDef</code> 與派系的生成參數共同產生地圖（含建築、防禦、駐軍）。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Site（任務地點）</h3>
+        <p>WorldObject 子類 <code>Site</code>，內含 <code>List&lt;SitePart&gt;</code>。每個 SitePart 由 <code>SitePartDef</code> + <code>SitePartWorker</code> 定義地圖生成內容與威脅（如「叛軍隊伍」「精密廢墟」）。</p>
+      </div>
+    </div>
+
+    <h3>SitePartDef XML 與從 C# 生成 Site</h3>
+
+<pre><span class="cm">&lt;!-- Defs/SitePartDefs/MySitePart.xml --&gt;</span>
+<span class="xml-tag">&lt;SitePartDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>AshenCache<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>灰燼藏匿點<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>SitePartWorker_ItemStash<span class="xml-tag">&lt;/workerClass&gt;</span>  <span class="cm">&lt;!-- 控制地圖內容 --&gt;</span>
+  <span class="xml-tag">&lt;tags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>ItemStash<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/tags&gt;</span>
+  <span class="xml-tag">&lt;defaultHidden&gt;</span>false<span class="xml-tag">&lt;/defaultHidden&gt;</span>
+<span class="xml-tag">&lt;/SitePartDef&gt;</span></pre>
+
+<pre><span class="cm">// 用 SiteMaker 組裝一個含多個 SitePart 的 Site</span>
+<span class="kw">var</span> parts = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">SitePartDefWithParams</span>&gt;
+{
+    <span class="kw">new</span> <span class="ty">SitePartDefWithParams</span>(
+        <span class="ty">MySitePartDefOf</span>.<span class="nm">AshenCache</span>,
+        <span class="kw">new</span> <span class="ty">SitePartParams</span> { threatPoints = <span class="nu">300f</span> })
+};
+
+<span class="ty">Site</span> site = <span class="ty">SiteMaker</span>.<span class="nm">MakeSite</span>(
+    parts,
+    tile: <span class="ty">TileFinder</span>.<span class="nm">RandomStartingTile</span>(),
+    faction: enemyFaction);
+
+site.<span class="nm">GetComponent</span>&lt;<span class="ty">TimeoutComp</span>&gt;()?.<span class="nm">StartTimeout</span>(<span class="nu">15</span> * <span class="ty">GenDate</span>.<span class="nm">TicksPerDay</span>); <span class="cm">// 15 天後消失</span>
+<span class="ty">Find</span>.<span class="ty">WorldObjects</span>.<span class="nm">Add</span>(site);</pre>
+
+    <div class="callout callout-info">
+      <strong>Site 通常由 QuestNode 生成</strong>
+      在 1.3+ 的 Quest 系統中，Site 一般透過 <code>QuestNode_GenerateSite</code> 在委託腳本內生成並掛上獎勵/威脅，而非手動 <code>SiteMaker</code>。若你的世界物件是「委託目標」，優先寫成 QuestScriptDef + QuestNode（見「事件敘事」章）。手動 SiteMaker 適用於非委託的自發性世界事件。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10  常見坑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 常見坑</div>
+
+    <h3>世界生成時序：別在錯的時間點動世界</h3>
+
+    <p>世界與遊戲的初始化有嚴格順序。最常見的錯誤是在「世界還沒建好」時就嘗試讀 <code>Find.World</code>，或在 <code>StaticConstructorOnStartup</code>（遊戲啟動、尚無 World）中存取 <code>Find.WorldGrid</code>。</p>
+
+    <table>
+      <thead><tr><th>鉤子</th><th>此時可用</th><th>適合做</th></tr></thead>
+      <tbody>
+        <tr><td><code>[StaticConstructorOnStartup]</code></td><td>Defs、材質；<span class="tag tag-red">無 World/Game</span></td><td>Harmony patch、預載材質、建 DefOf 快取</td></tr>
+        <tr><td><code>GameComponent.FinalizeInit</code></td><td>World、Maps 均就緒</td><td>讀世界資料、初始化每局狀態</td></tr>
+        <tr><td><code>WorldComponent.FinalizeInit</code></td><td>World 就緒（Map 可能尚未）</td><td>世界層持久化資料初始化</td></tr>
+        <tr><td><code>GenStep / WorldGenStep</code></td><td>正在生成中</td><td>插入世界/地圖生成步驟</td></tr>
+      </tbody>
+    </table>
+
+<pre><span class="cm">// ✗ 錯誤：StaticConstructorOnStartup 時 Find.World 為 null</span>
+[<span class="at">StaticConstructorOnStartup</span>]
+<span class="kw">public static class</span> <span class="ty">BadInit</span>
+{
+    <span class="kw">static</span> <span class="nm">BadInit</span>()
+    {
+        <span class="kw">var</span> t = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>[<span class="nu">0</span>];  <span class="cm">// NullReferenceException！</span>
+    }
+}
+
+<span class="cm">// ✓ 正確：用 GameComponent 在每局載入完成後才動世界</span>
+<span class="kw">public class</span> <span class="ty">MyGameComponent</span> : <span class="ty">GameComponent</span>
+{
+    <span class="kw">public</span> <span class="nm">MyGameComponent</span>(<span class="ty">Game</span> game) { }
+
+    <span class="kw">public override void</span> <span class="nm">FinalizeInit</span>()
+    {
+        <span class="cm">// 此刻 Find.World / Find.Maps 已就緒</span>
+        <span class="kw">var</span> tile = <span class="ty">Find</span>.<span class="ty">WorldGrid</span>[<span class="ty">Find</span>.<span class="ty">CurrentMap</span>?.<span class="nm">Tile</span> ?? <span class="nu">0</span>];
+    }
+}</pre>
+
+    <h3>WorldComponent 持久化：忘了 ExposeData 就遺失資料</h3>
+
+    <p>世界層的自訂狀態（派系陰謀進度、全域旗標、跨地圖追蹤）應放在 <code>WorldComponent</code>。它隨世界存讀檔，但<strong>你必須自己實作 ExposeData 序列化欄位</strong>，且要在 XML 註冊或直接靠反射自動載入。</p>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>.<span class="ty">Planet</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">WorldComponent_ClanTracker</span> : <span class="ty">WorldComponent</span>
+{
+    <span class="kw">private int</span> totalRaidsSurvived;
+    <span class="kw">private</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Faction</span>, <span class="kw">int</span>&gt; betrayalCount = <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Faction</span>, <span class="kw">int</span>&gt;();
+
+    <span class="cm">// 建構子簽章固定為 (World world)</span>
+    <span class="kw">public</span> <span class="nm">WorldComponent_ClanTracker</span>(<span class="ty">World</span> world) : <span class="kw">base</span>(world) { }
+
+    <span class="cm">// 世界層的週期更新（注意是 World tick，不是 Map tick）</span>
+    <span class="kw">public override void</span> <span class="nm">WorldComponentTick</span>()
+    {
+        <span class="kw">if</span> (<span class="ty">Find</span>.<span class="ty">TickManager</span>.<span class="nm">TicksGame</span> % <span class="nu">60000</span> == <span class="nu">0</span>)
+        {
+            <span class="cm">// 每遊戲天結算一次</span>
+        }
+    }
+
+    <span class="cm">// ★ 持久化：漏寫此方法 = 存讀檔後資料全失</span>
+    <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">ExposeData</span>();
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> totalRaidsSurvived, <span class="st">"totalRaidsSurvived"</span>, <span class="nu">0</span>);
+        <span class="ty">Scribe_Collections</span>.<span class="nm">Look</span>(<span class="kw">ref</span> betrayalCount, <span class="st">"betrayalCount"</span>,
+            <span class="ty">LookMode</span>.<span class="nm">Reference</span>, <span class="ty">LookMode</span>.<span class="nm">Value</span>);
+
+        <span class="kw">if</span> (<span class="ty">Scribe</span>.<span class="nm">mode</span> == <span class="ty">LoadSaveMode</span>.<span class="nm">PostLoadInit</span>)
+            betrayalCount ??= <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Faction</span>, <span class="kw">int</span>&gt;();
+    }
+}
+
+<span class="cm">// 取用（RimWorld 會自動為每個 WorldComponent 子類建立實例）</span>
+<span class="kw">var</span> tracker = <span class="ty">Find</span>.<span class="ty">World</span>.<span class="nm">GetComponent</span>&lt;<span class="ty">WorldComponent_ClanTracker</span>&gt;();</pre>
+
+    <div class="callout callout-danger">
+      <strong>用 Scribe_References 存 Faction，別用 Scribe_Deep</strong>
+      <code>Faction</code> 由 <code>FactionManager</code> 擁有，存自訂資料時對 Faction 一律用 <code>Scribe_References.Look</code>（或字典的 <code>LookMode.Reference</code>）。若誤用 Deep 會在讀檔時複製出孤兒 Faction，造成關係系統與地圖派系標記錯亂。同理，存 tileID 用 int（<code>Scribe_Values</code>），別存 Tile 物件。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>WorldComponent 會被自動建立——但只在「新世界」</strong>
+      RimWorld 在世界生成時掃描所有 <code>WorldComponent</code> 子類並各建一個實例。若玩家用<strong>舊存檔</strong>（你的 Mod 是後加的）載入，新版本的 WorldComponent 仍會被補建（建構子被呼叫），但<code>ExposeData</code> 讀不到對應節點 → 欄位保持預設值。設計遷移時要容忍「首次出現、資料為空」的情況。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       本章重點回顧
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-green">
+        <h3>Tile = int</h3>
+        <p>地圖以 tileID 索引平行陣列，存位置用 int，查屬性用 <code>Find.WorldGrid[id]</code></p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>WorldObject</h3>
+        <p>優先 WorldObjectComp，必要時繼承；自訂欄位記得 base.ExposeData()</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>派系關係</h3>
+        <p>對稱 goodwill，改動走 TryAffectGoodwillWith；permanentEnemy 不可談和</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>持久化</h3>
+        <p>WorldComponent 漏 ExposeData = 失資料；Faction 用 References 非 Deep</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 13 世界地圖與派系<br>
+  適用 RimWorld 1.4 / 1.5 · Harmony 2.x · 繁體中文
+</footer>
+
+</body>
+</html>

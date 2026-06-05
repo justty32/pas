@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事件與敘事者 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html" class="active">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>事件與敘事者</h1>
+  <p>Incidents 與 Storyteller——RimWorld 敘事引擎的核心。從 IncidentDef 到威脅點數計算，打造你自己的襲擊、訪客與天災。</p>
+  <span class="badge">Chapter 12 · Incidents &amp; Storyteller</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §0  總覽：敘事引擎的資料流
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§0 敘事引擎資料流總覽</div>
+
+    <p>RimWorld 沒有固定劇本，所有事件都由 <strong>Storyteller</strong>（敘事者）在執行期動態決定。整條鏈路是：Storyteller 內含一組 <code>StorytellerComp</code>，每個 Comp 依自己的節律（時間週期、隨機骰、派系互動）產出候選的 <code>FiringIncident</code>，經由 <code>IncidentWorker</code> 的可觸發性檢查（<code>CanFireNow</code>）後執行，最終透過 <code>Letter</code> 通知玩家。</p>
+
+    <div class="callout callout-info">
+      <strong>三個核心抽象的職責劃分</strong>
+      <code>IncidentDef</code> = 「事件是什麼」（資料）；<code>IncidentWorker</code> = 「事件怎麼觸發與執行」（邏輯）；<code>StorytellerComp</code> = 「何時、以什麼頻率挑選事件」（節奏）。三者透過 <code>IncidentParms</code> 傳遞執行期參數（威脅點數、目標、派系）。
+    </div>
+
+<pre><span class="cm">// 敘事引擎一次 tick 的概念流程（Verse / RimWorld 命名空間）</span>
+<span class="ty">Storyteller</span>.<span class="nm">StorytellerTick</span>()
+  └─ <span class="kw">foreach</span> (<span class="ty">StorytellerComp</span> comp <span class="kw">in</span> storytellerComps)
+       └─ comp.<span class="nm">MakeIntervalIncidents</span>(target)   <span class="cm">// 產出 FiringIncident 候選</span>
+            └─ <span class="kw">每個</span> <span class="ty">FiringIncident</span> { def, parms, source }
+                 └─ def.<span class="nm">Worker</span>.<span class="nm">CanFireNow</span>(parms)        <span class="cm">// 可觸發性閘門</span>
+                      └─ def.<span class="nm">Worker</span>.<span class="nm">TryExecute</span>(parms)     <span class="cm">// 真正執行</span>
+                           └─ <span class="ty">TryExecuteWorker</span>(parms)        <span class="cm">// 你要覆寫的方法</span></pre>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>IncidentDef</h3>
+        <p>XML 定義的事件元資料：分類、目標型別、基礎機率、冷卻、指向的 Worker class。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>IncidentWorker</h3>
+        <p>C# 邏輯：判斷現在能否觸發、計算實際效果、生成 Pawn / GameCondition / Letter。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>StorytellerComp</h3>
+        <p>節奏控制器：OnOffCycle、RandomMain、FactionInteraction 等決定事件頻率與時機。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §1  IncidentDef 結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 IncidentDef 結構解析</div>
+
+    <p><code>IncidentDef</code> 是事件的資料骨架，定義於 XML。對資深工程師而言，最重要的是理解每個欄位如何被敘事引擎讀取——它們不是裝飾，而是 Storyteller 過濾與選擇候選事件的判據。</p>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>category</code></td>
+          <td><code>IncidentCategoryDef</code></td>
+          <td>事件分類（如 <code>ThreatBig</code>、<code>ThreatSmall</code>、<code>Misc</code>、<code>FactionArrival</code>）。Storyteller 各 Comp 只挑選自己負責分類的事件。</td>
+        </tr>
+        <tr>
+          <td><code>workerClass</code></td>
+          <td><code>Type</code></td>
+          <td>處理此事件的 <code>IncidentWorker</code> 子類別全名。實際邏輯都在這裡。</td>
+        </tr>
+        <tr>
+          <td><code>targetTags</code></td>
+          <td><code>List&lt;IncidentTargetTagDef&gt;</code></td>
+          <td>事件作用的目標型別標籤（地圖 / 商隊 / 世界）。<strong>與目標的 acceptedTags 必須相交</strong>，否則永遠不會觸發。</td>
+        </tr>
+        <tr>
+          <td><code>baseChance</code></td>
+          <td><code>float</code></td>
+          <td>基礎權重（非百分比）。在同分類候選池中做加權隨機抽選時使用，數值愈大愈常被選中。</td>
+        </tr>
+        <tr>
+          <td><code>minRefireDays</code></td>
+          <td><code>float</code></td>
+          <td>同事件兩次觸發之間的最短間隔（遊戲日）。冷卻期間 <code>CanFireNow</code> 自動回傳 false。</td>
+        </tr>
+        <tr>
+          <td><code>earliestDay</code> / <code>minPopulation</code></td>
+          <td><code>int</code></td>
+          <td>最早可觸發日 / 最低殖民者人數門檻。常用於避免開局就出現高難度事件。</td>
+        </tr>
+        <tr>
+          <td><code>pointsScaleable</code></td>
+          <td><code>bool</code></td>
+          <td>true 時威脅點數會隨財富與時間縮放（襲擊類必開）。</td>
+        </tr>
+        <tr>
+          <td><code>letterDef</code> / <code>letterLabel</code> / <code>letterText</code></td>
+          <td><code>LetterDef</code> / string</td>
+          <td>事件觸發後預設通知信的樣式與文字（也可在 Worker 內手動發信覆蓋）。</td>
+        </tr>
+        <tr>
+          <td><code>allowedBiomes</code> / <code>disallowedBiomes</code></td>
+          <td><code>List&lt;BiomeDef&gt;</code></td>
+          <td>生態域白/黑名單（如「火山冬天」不在沙漠觸發）。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>典型 IncidentDef XML</h3>
+
+<pre><span class="cm">&lt;!-- Defs/IncidentDefs/Incidents_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;IncidentDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_GiftCaravan<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>友好商隊來訪<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="cm">&lt;!-- category 決定哪個 StorytellerComp 會挑到它 --&gt;</span>
+    <span class="xml-tag">&lt;category&gt;</span>FactionArrival<span class="xml-tag">&lt;/category&gt;</span>
+    <span class="cm">&lt;!-- workerClass 指向你的 C# 邏輯 --&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.IncidentWorker_GiftCaravan<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="cm">&lt;!-- targetTags：作用於「地圖」型目標 --&gt;</span>
+    <span class="xml-tag">&lt;targetTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Map_PlayerHome<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/targetTags&gt;</span>
+    <span class="xml-tag">&lt;baseChance&gt;</span>2.0<span class="xml-tag">&lt;/baseChance&gt;</span>
+    <span class="xml-tag">&lt;minRefireDays&gt;</span>15<span class="xml-tag">&lt;/minRefireDays&gt;</span>
+    <span class="xml-tag">&lt;earliestDay&gt;</span>5<span class="xml-tag">&lt;/earliestDay&gt;</span>
+    <span class="xml-tag">&lt;minPopulation&gt;</span>2<span class="xml-tag">&lt;/minPopulation&gt;</span>
+    <span class="xml-tag">&lt;letterDef&gt;</span>PositiveEvent<span class="xml-tag">&lt;/letterDef&gt;</span>
+    <span class="xml-tag">&lt;letterLabel&gt;</span>友好商隊<span class="xml-tag">&lt;/letterLabel&gt;</span>
+    <span class="xml-tag">&lt;letterText&gt;</span>一支友好的商隊帶著禮物抵達了你的殖民地。<span class="xml-tag">&lt;/letterText&gt;</span>
+  <span class="xml-tag">&lt;/IncidentDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>常見 IncidentCategoryDef</h3>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>威脅類</h3>
+        <p>
+          <code>ThreatBig</code> — 大型威脅（襲擊、機械蟲、墜艦）<br>
+          <code>ThreatSmall</code> — 小型威脅（瘋狂動物、毒鼠）<br>
+          <span class="tag tag-red">由 OnOffCycle / Threat 類 Comp 驅動</span>
+        </p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>非威脅類</h3>
+        <p>
+          <code>Misc</code> — 雜項（天氣、資源、商隊）<br>
+          <code>FactionArrival</code> — 派系到訪（訪客、貿易商）<br>
+          <code>AllyAssistance</code> — 盟友求援<br>
+          <code>DiseaseHuman</code> / <code>DiseaseAnimal</code> — 疾病
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  繼承 IncidentWorker
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 繼承 IncidentWorker：CanFireNowSub 與 TryExecuteWorker</div>
+
+    <p><code>IncidentWorker</code> 是事件的行為核心。你幾乎只會覆寫兩個 protected 方法：<code>CanFireNowSub</code>（額外的可觸發性條件）與 <code>TryExecuteWorker</code>（實際執行）。注意基底的 <code>CanFireNow</code> 與 <code>TryExecute</code> 是 public 入口，內部已處理 <code>minRefireDays</code>、targetTags、人口門檻等通用檢查，<strong>不要直接覆寫它們</strong>，否則會繞過內建守衛。</p>
+
+    <h3>方法職責對照</h3>
+
+    <table>
+      <thead>
+        <tr><th>方法</th><th>可見性</th><th>你該做的事</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CanFireNowSub(parms)</code></td>
+          <td>protected virtual</td>
+          <td>回傳是否符合「本事件專屬」的觸發條件。預設回傳 true。例：襲擊需要有敵對派系、天氣事件需要當前無相同 GameCondition。</td>
+        </tr>
+        <tr>
+          <td><code>TryExecuteWorker(parms)</code></td>
+          <td>protected abstract</td>
+          <td>真正執行事件並回傳 bool。回傳 false 代表「執行失敗，視為未觸發」（敘事引擎會另選事件，不消耗冷卻）。</td>
+        </tr>
+        <tr>
+          <td><code>CanFireNow(parms)</code></td>
+          <td>public（基底實作）</td>
+          <td><strong>勿覆寫。</strong>基底會檢查 def 條件後再呼叫你的 <code>CanFireNowSub</code>。</td>
+        </tr>
+      </tbody>
+    </table>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">namespace</span> <span class="ty">MyMod</span>
+{
+    <span class="kw">public class</span> <span class="ty">IncidentWorker_GiftCaravan</span> : <span class="ty">IncidentWorker</span>
+    {
+        <span class="cm">// ① 額外觸發條件——基底通用檢查通過後才會呼叫</span>
+        <span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+        {
+            <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+
+            <span class="cm">// 需要存在一個可作為「禮物來源」的友好派系</span>
+            <span class="kw">return</span> <span class="ty">Find</span>.FactionManager.<span class="nm">AllFactionsVisible</span>
+                .<span class="nm">Any</span>(f =&gt; !f.IsPlayer
+                       &amp;&amp; !f.def.hidden
+                       &amp;&amp; f.<span class="nm">PlayerRelationKind</span> == <span class="ty">FactionRelationKind</span>.Ally);
+        }
+
+        <span class="cm">// ② 實際執行；回傳 false = 視為未觸發</span>
+        <span class="kw">protected override bool</span> <span class="nm">TryExecuteWorker</span>(<span class="ty">IncidentParms</span> parms)
+        {
+            <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+
+            <span class="cm">// 取得來源派系（parms 沒帶就自己挑一個盟友）</span>
+            <span class="ty">Faction</span> faction = parms.faction
+                ?? <span class="ty">Find</span>.FactionManager.<span class="nm">RandomAlliedFaction</span>();
+            <span class="kw">if</span> (faction == <span class="kw">null</span>) <span class="kw">return false</span>;
+
+            <span class="cm">// 找一個邊緣可生成點</span>
+            <span class="kw">if</span> (!<span class="ty">CellFinder</span>.<span class="nm">TryFindRandomEdgeCellWith</span>(
+                    c =&gt; map.<span class="nm">reachability</span>.<span class="nm">CanReachColony</span>(c),
+                    map, <span class="ty">CellFinder</span>.EdgeRoadChance_Neutral,
+                    <span class="kw">out</span> <span class="ty">IntVec3</span> spawnCell))
+            {
+                <span class="kw">return false</span>;
+            }
+
+            <span class="cm">// ... 生成 Pawn / 放置禮物（見 §4 完整範例）...</span>
+
+            <span class="cm">// 發送通知信</span>
+            <span class="nm">SendStandardLetter</span>(parms, <span class="kw">new</span> <span class="ty">TargetInfo</span>(spawnCell, map));
+            <span class="kw">return true</span>;
+        }
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>SendStandardLetter 自動讀 def 的信件欄位</strong>
+      基底提供的 <code>SendStandardLetter(parms, lookTargets)</code> 會自動使用 <code>def.letterDef</code>、<code>def.letterLabel</code>、<code>def.letterText</code> 發信，並把點擊信件時的鏡頭定位到 <code>lookTargets</code>。若需要動態文字，改用 §8 的 <code>Find.LetterStack.ReceiveLetter</code> 手動發信。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  IncidentParms
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 IncidentParms：執行期參數載體</div>
+
+    <p><code>IncidentParms</code> 是事件「這一次」觸發的執行期上下文。Storyteller 生成候選事件時建立它，並沿著 <code>CanFireNow → TryExecute → TryExecuteWorker</code> 一路傳遞。最關鍵的三個欄位是 <code>points</code>、<code>target</code>、<code>faction</code>。</p>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>points</code></td>
+          <td><code>float</code></td>
+          <td>威脅點數（threat points）。決定襲擊規模、敵人數量與裝備強度。由 Storyteller 依財富與難度計算（見 §7）。</td>
+        </tr>
+        <tr>
+          <td><code>target</code></td>
+          <td><code>IIncidentTarget</code></td>
+          <td>事件作用對象。可能是 <code>Map</code>、<code>Caravan</code> 或 <code>World</code>。需依 def.targetTags 與目標相容。</td>
+        </tr>
+        <tr>
+          <td><code>faction</code></td>
+          <td><code>Faction</code></td>
+          <td>觸發此事件的派系（襲擊者 / 訪客來源）。可能為 null，Worker 內常需自行挑選。</td>
+        </tr>
+        <tr>
+          <td><code>raidArrivalMode</code></td>
+          <td><code>PawnsArrivalModeDef</code></td>
+          <td>襲擊到達方式（步行入侵 / 空投 / 爬行而出）。null 時 RaidWorker 會依點數隨機挑選。</td>
+        </tr>
+        <tr>
+          <td><code>raidStrategy</code></td>
+          <td><code>RaidStrategyDef</code></td>
+          <td>襲擊策略（立即攻擊 / 圍城 / 偷襲）。</td>
+        </tr>
+        <tr>
+          <td><code>pawnGroupMakerSeed</code></td>
+          <td><code>int?</code></td>
+          <td>生成敵人群組的隨機種子，便於重現特定組合。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>手動建立 IncidentParms（除錯 / 觸發器）</h3>
+
+    <p>當你想在自訂邏輯（如某個建築完工、研究解鎖）中主動觸發事件，可手動組裝 parms：</p>
+
+<pre><span class="cm">// 用 StorytellerUtility 取得「依目標縮放後」的預設 parms</span>
+<span class="ty">IncidentParms</span> parms = <span class="ty">StorytellerUtility</span>.<span class="nm">DefaultParmsNow</span>(
+    <span class="ty">IncidentCategoryDefOf</span>.ThreatBig,   <span class="cm">// 分類（決定 points 縮放曲線）</span>
+    map);                                <span class="cm">// IIncidentTarget</span>
+
+<span class="cm">// 覆寫想要的參數</span>
+parms.points = <span class="ty">Mathf</span>.<span class="nm">Max</span>(parms.points, <span class="nu">500f</span>);   <span class="cm">// 至少 500 點</span>
+parms.faction = <span class="ty">Find</span>.FactionManager.<span class="nm">RandomEnemyFaction</span>();
+parms.raidArrivalMode = <span class="ty">PawnsArrivalModeDefOf</span>.EdgeWalkIn;
+
+<span class="cm">// 取得 IncidentDef 並觸發</span>
+<span class="ty">IncidentDef</span> incident = <span class="ty">IncidentDefOf</span>.RaidEnemy;
+<span class="kw">if</span> (incident.Worker.<span class="nm">CanFireNow</span>(parms))
+{
+    incident.Worker.<span class="nm">TryExecute</span>(parms);
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>DefaultParmsNow 的分類必須對應</strong>
+      傳給 <code>DefaultParmsNow</code> 的 <code>IncidentCategoryDef</code> 決定了 points 的縮放方式。給襲擊用 <code>ThreatBig</code>、給非威脅事件用 <code>Misc</code>。用錯分類會得到不合理的點數（例如禮物事件拿到襲擊等級的點數，雖然點數對禮物無意義，但若你的 Worker 依 points 縮放規模就會出問題）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  完整範例
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 完整範例：三種事件型別</div>
+
+    <h3>4.1 自訂襲擊事件（繼承 IncidentWorker_Raid）</h3>
+
+    <p>襲擊類最好繼承 <code>IncidentWorker_RaidEnemy</code> 而非從零自製——可重用原版的群組生成、到達模式、策略選擇邏輯。下例覆寫 <code>ResolveRaidPoints</code> 與 <code>TryGenerateRaidInfo</code> 來注入自訂行為。</p>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">UnityEngine</span>;
+
+<span class="kw">namespace</span> <span class="ty">MyMod</span>
+{
+    <span class="cm">// 「狂怒襲擊」：點數翻倍、強制步行入侵、全員 berserk 傾向</span>
+    <span class="kw">public class</span> <span class="ty">IncidentWorker_FrenzyRaid</span> : <span class="ty">IncidentWorker_RaidEnemy</span>
+    {
+        <span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+        {
+            <span class="cm">// 必須先滿足原版襲擊的所有條件（有敵對派系等）</span>
+            <span class="kw">if</span> (!<span class="kw">base</span>.<span class="nm">CanFireNowSub</span>(parms)) <span class="kw">return false</span>;
+
+            <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+            <span class="cm">// 額外條件：殖民地財富需達門檻才有資格觸發狂怒襲擊</span>
+            <span class="kw">return</span> map.<span class="nm">wealthWatcher</span>.<span class="nm">WealthTotal</span> &gt; <span class="nu">50000f</span>;
+        }
+
+        <span class="kw">protected override void</span> <span class="nm">ResolveRaidPoints</span>(<span class="ty">IncidentParms</span> parms)
+        {
+            <span class="kw">if</span> (parms.points &lt;= <span class="nu">0f</span>)
+                parms.points = <span class="ty">StorytellerUtility</span>.<span class="nm">DefaultThreatPointsNow</span>(parms.target);
+            parms.points *= <span class="nu">2f</span>;   <span class="cm">// 狂怒：點數翻倍</span>
+        }
+
+        <span class="kw">protected override bool</span> <span class="nm">TryExecuteWorker</span>(<span class="ty">IncidentParms</span> parms)
+        {
+            <span class="cm">// 強制步行入侵 + 立即攻擊策略</span>
+            parms.raidArrivalMode = <span class="ty">PawnsArrivalModeDefOf</span>.EdgeWalkIn;
+            parms.raidStrategy = <span class="ty">RaidStrategyDefOf</span>.ImmediateAttack;
+
+            <span class="cm">// 交給基底生成敵人群組並安排到達</span>
+            <span class="kw">bool</span> result = <span class="kw">base</span>.<span class="nm">TryExecuteWorker</span>(parms);
+
+            <span class="kw">if</span> (result)
+            {
+                <span class="cm">// 額外：讓所有襲擊者進入狂暴心智狀態</span>
+                <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> ((<span class="ty">Map</span>)parms.target)
+                         .mapPawns.<span class="nm">SpawnedPawnsInFaction</span>(parms.faction))
+                {
+                    p.<span class="nm">mindState</span>.mentalStateHandler
+                        .<span class="nm">TryStartMentalState</span>(<span class="ty">MentalStateDefOf</span>.Berserk);
+                }
+            }
+            <span class="kw">return</span> result;
+        }
+    }
+}</pre>
+
+    <h3>4.2 自訂訪客事件（生成友好 Pawn 群組）</h3>
+
+<pre><span class="kw">public class</span> <span class="ty">IncidentWorker_GiftCaravan</span> : <span class="ty">IncidentWorker</span>
+{
+    <span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="kw">return</span> <span class="ty">Find</span>.FactionManager.<span class="nm">RandomAlliedFaction</span>(
+            allowHidden: <span class="kw">false</span>, allowDefeated: <span class="kw">false</span>,
+            allowNonHumanlike: <span class="kw">false</span>) != <span class="kw">null</span>;
+    }
+
+    <span class="kw">protected override bool</span> <span class="nm">TryExecuteWorker</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+        <span class="ty">Faction</span> faction = parms.faction
+            ?? <span class="ty">Find</span>.FactionManager.<span class="nm">RandomAlliedFaction</span>();
+        <span class="kw">if</span> (faction == <span class="kw">null</span>) <span class="kw">return false</span>;
+
+        <span class="cm">// 找入場點</span>
+        <span class="kw">if</span> (!<span class="ty">RCellFinder</span>.<span class="nm">TryFindRandomPawnEntryCell</span>(
+                <span class="kw">out</span> <span class="ty">IntVec3</span> entry, map, <span class="ty">CellFinder</span>.EdgeRoadChance_Friendly))
+        {
+            <span class="kw">return false</span>;
+        }
+
+        <span class="cm">// 用 PawnGroupMaker 生成一群訪客</span>
+        <span class="kw">var</span> groupParms = <span class="kw">new</span> <span class="ty">PawnGroupMakerParms</span>
+        {
+            groupKind = <span class="ty">PawnGroupKindDefOf</span>.Peaceful,
+            tile = map.Tile,
+            faction = faction,
+            points = <span class="ty">Mathf</span>.<span class="nm">Max</span>(parms.points, faction.def.<span class="nm">MinPointsToGeneratePawnGroup</span>(
+                <span class="ty">PawnGroupKindDefOf</span>.Peaceful))
+        };
+
+        <span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt; visitors =
+            <span class="ty">PawnGroupMakerUtility</span>.<span class="nm">GeneratePawns</span>(groupParms).<span class="nm">ToList</span>();
+        <span class="kw">if</span> (visitors.<span class="nm">Count</span> == <span class="nu">0</span>) <span class="kw">return false</span>;
+
+        <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> visitors)
+        {
+            <span class="ty">IntVec3</span> loc = <span class="ty">CellFinder</span>.<span class="nm">RandomClosewalkCellNear</span>(entry, map, <span class="nu">5</span>);
+            <span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(p, loc, map);
+        }
+
+        <span class="cm">// 指派「友好訪問」LordJob，讓 AI 表現得像訪客</span>
+        <span class="ty">LordMaker</span>.<span class="nm">MakeNewLord</span>(faction,
+            <span class="kw">new</span> <span class="ty">LordJob_VisitColony</span>(faction, entry), map, visitors);
+
+        <span class="nm">SendStandardLetter</span>(parms, visitors[<span class="nu">0</span>]);
+        <span class="kw">return true</span>;
+    }
+}</pre>
+
+    <h3>4.3 自訂天氣事件（觸發 GameCondition）</h3>
+
+<pre><span class="kw">public class</span> <span class="ty">IncidentWorker_AshStorm</span> : <span class="ty">IncidentWorker</span>
+{
+    <span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+        <span class="cm">// 已經有同類 GameCondition 時不重複觸發</span>
+        <span class="kw">return</span> !map.gameConditionManager
+            .<span class="nm">ConditionIsActive</span>(<span class="ty">MyDefOf</span>.MyMod_AshStorm);
+    }
+
+    <span class="kw">protected override bool</span> <span class="nm">TryExecuteWorker</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.target;
+
+        <span class="cm">// 持續時間：3~7 天（以 tick 計）</span>
+        <span class="kw">int</span> duration = <span class="ty">Rand</span>.<span class="nm">Range</span>(<span class="nu">60000</span>, <span class="nu">140000</span>);
+
+        <span class="ty">GameCondition</span> cond = <span class="ty">GameConditionMaker</span>.<span class="nm">MakeCondition</span>(
+            <span class="ty">MyDefOf</span>.MyMod_AshStorm, duration);
+        map.gameConditionManager.<span class="nm">RegisterCondition</span>(cond);
+
+        <span class="nm">SendStandardLetter</span>(parms, map.Parent);  <span class="cm">// 鏡頭定位到地圖</span>
+        <span class="kw">return true</span>;
+    }
+}</pre>
+
+    <p>對應的 <code>GameConditionDef</code> XML（決定視覺與環境效果）：</p>
+
+<pre><span class="cm">&lt;!-- Defs/GameConditionDefs/GC_AshStorm.xml --&gt;</span>
+<span class="xml-tag">&lt;GameConditionDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_AshStorm<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;conditionClass&gt;</span>GameCondition_NoSunlight<span class="xml-tag">&lt;/conditionClass&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>灰燼風暴<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>火山灰遮蔽天空，作物生長與太陽能發電停擺。<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;endMessage&gt;</span>灰燼風暴已散去。<span class="xml-tag">&lt;/endMessage&gt;</span>
+  <span class="xml-tag">&lt;preventRain&gt;</span>true<span class="xml-tag">&lt;/preventRain&gt;</span>
+<span class="xml-tag">&lt;/GameConditionDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>[DefOf] 快取你的 Def 引用</strong>
+      上例的 <code>MyDefOf.MyMod_AshStorm</code> 來自一個標註 <code>[DefOf]</code> 的靜態類別，欄位名與 defName 相同，遊戲啟動時自動填入。避免每次用 <code>DefDatabase&lt;GameConditionDef&gt;.GetNamed("...")</code> 字串查詢。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  Storyteller 架構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 Storyteller 架構</div>
+
+    <p><code>Storyteller</code>（如 Cassandra、Phoebe、Randy）本身只是個薄外殼——真正的節奏邏輯全在它所掛載的一組 <code>StorytellerComp</code> 裡。一個 <code>StorytellerDef</code> 透過 <code>&lt;comps&gt;</code> 列表組合多個 Comp，每個 Comp 用對應的 <code>StorytellerCompProperties</code> 攜帶參數。</p>
+
+    <h3>StorytellerDef XML 結構</h3>
+
+<pre><span class="cm">&lt;!-- 仿原版 Cassandra 的精簡結構 --&gt;</span>
+<span class="xml-tag">&lt;StorytellerDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_CustomTeller<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>自訂敘事者<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;listOrder&gt;</span>100<span class="xml-tag">&lt;/listOrder&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="cm">&lt;!-- 大型威脅：開/關循環，營造「平靜—危機」節奏 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StorytellerCompProperties_OnOffCycle"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;category&gt;</span>ThreatBig<span class="xml-tag">&lt;/category&gt;</span>
+      <span class="xml-tag">&lt;onDays&gt;</span>1.5<span class="xml-tag">&lt;/onDays&gt;</span>
+      <span class="xml-tag">&lt;offDays&gt;</span>5<span class="xml-tag">&lt;/offDays&gt;</span>
+      <span class="xml-tag">&lt;minSpacingDays&gt;</span>0.4<span class="xml-tag">&lt;/minSpacingDays&gt;</span>
+      <span class="xml-tag">&lt;numIncidentsRange&gt;</span>0.6~1.5<span class="xml-tag">&lt;/numIncidentsRange&gt;</span>
+      <span class="xml-tag">&lt;acceptFractionByDaysPassedCurve&gt;</span>
+        <span class="xml-tag">&lt;points&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>(0, 0.05)<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>(8, 1)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/points&gt;</span>
+      <span class="xml-tag">&lt;/acceptFractionByDaysPassedCurve&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="cm">&lt;!-- 雜項事件：純隨機抽選 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StorytellerCompProperties_RandomMain"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;mtbDays&gt;</span>4<span class="xml-tag">&lt;/mtbDays&gt;</span>
+      <span class="xml-tag">&lt;randomChance&gt;</span>1<span class="xml-tag">&lt;/randomChance&gt;</span>
+      <span class="xml-tag">&lt;categoryWeights&gt;</span>
+        <span class="xml-tag">&lt;Misc&gt;</span>1<span class="xml-tag">&lt;/Misc&gt;</span>
+        <span class="xml-tag">&lt;ThreatSmall&gt;</span>0.5<span class="xml-tag">&lt;/ThreatSmall&gt;</span>
+      <span class="xml-tag">&lt;/categoryWeights&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="cm">&lt;!-- 派系互動：訪客、貿易商、求援 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StorytellerCompProperties_FactionInteraction"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;incident&gt;</span>VisitorGroup<span class="xml-tag">&lt;/incident&gt;</span>
+      <span class="xml-tag">&lt;baseIncidentsPerYear&gt;</span>12<span class="xml-tag">&lt;/baseIncidentsPerYear&gt;</span>
+      <span class="xml-tag">&lt;minSpacingDays&gt;</span>2.5<span class="xml-tag">&lt;/minSpacingDays&gt;</span>
+      <span class="xml-tag">&lt;fullAlliesOnly&gt;</span>false<span class="xml-tag">&lt;/fullAlliesOnly&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/StorytellerDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>Comp 與 Properties 的配對慣例</strong>
+      每個 <code>StorytellerComp_X</code> 都有一個對應的 <code>StorytellerCompProperties_X</code>。XML 的 <code>&lt;li Class="...Properties_X"&gt;</code> 會在載入時實例化 Properties，並由它的 <code>CompClass</code> 屬性反向建立對應的 Comp。寫自訂 Comp 時兩者都要實作。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  三大 StorytellerComp
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 OnOffCycle / RandomMain / FactionInteraction</div>
+
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3>OnOffCycle</h3>
+        <p>在「開啟期」密集產生事件、「關閉期」沉寂。這就是 Cassandra 著名的「危機—喘息」節奏來源，最常用於 <code>ThreatBig</code>。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>RandomMain</h3>
+        <p>以 MTB（平均間隔天數）為基礎做隨機抽骰，依 <code>categoryWeights</code> 加權選分類。Randy 大量依賴它，節奏較不可預測。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>FactionInteraction</h3>
+        <p>專責派系到訪類事件（訪客、貿易商、盟友求援），以「每年次數」為節律，並做派系關係篩選。</p>
+      </div>
+    </div>
+
+    <h3>關鍵參數對照</h3>
+
+    <table>
+      <thead>
+        <tr><th>Comp</th><th>關鍵參數</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="3"><code>OnOffCycle</code></td>
+          <td><code>onDays</code> / <code>offDays</code></td>
+          <td>開啟期 / 關閉期的長度（遊戲日），構成循環週期。</td>
+        </tr>
+        <tr>
+          <td><code>numIncidentsRange</code></td>
+          <td>單一開啟期內預期觸發的事件數量範圍。</td>
+        </tr>
+        <tr>
+          <td><code>acceptFractionByDaysPassedCurve</code></td>
+          <td>隨遊戲天數調整接受率的曲線（前期溫和、後期全開）。</td>
+        </tr>
+        <tr>
+          <td rowspan="2"><code>RandomMain</code></td>
+          <td><code>mtbDays</code></td>
+          <td>事件平均觸發間隔（Mean Time Between）。</td>
+        </tr>
+        <tr>
+          <td><code>categoryWeights</code></td>
+          <td>各 IncidentCategory 的抽選權重。</td>
+        </tr>
+        <tr>
+          <td rowspan="2"><code>FactionInteraction</code></td>
+          <td><code>baseIncidentsPerYear</code></td>
+          <td>每遊戲年的基礎觸發次數。</td>
+        </tr>
+        <tr>
+          <td><code>minSpacingDays</code></td>
+          <td>同類事件最小間隔，避免訪客連續刷屏。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>自訂 StorytellerComp 範例</h3>
+
+    <p>若要實作全新節律（例如「每滿月觸發一次威脅」），繼承 <code>StorytellerComp</code> 覆寫 <code>MakeIntervalIncidents</code>：</p>
+
+<pre><span class="cm">// Properties：攜帶 XML 參數</span>
+<span class="kw">public class</span> <span class="ty">StorytellerCompProperties_FullMoon</span> : <span class="ty">StorytellerCompProperties</span>
+{
+    <span class="kw">public</span> <span class="ty">IncidentDef</span> incident;
+    <span class="kw">public float</span> pointsFactor = <span class="nu">1f</span>;
+
+    <span class="kw">public</span> <span class="nm">StorytellerCompProperties_FullMoon</span>()
+    {
+        <span class="cm">// 把 Properties 綁定到對應的 Comp 類別</span>
+        compClass = <span class="kw">typeof</span>(<span class="ty">StorytellerComp_FullMoon</span>);
+    }
+}
+
+<span class="cm">// Comp：實際節律邏輯</span>
+<span class="kw">public class</span> <span class="ty">StorytellerComp_FullMoon</span> : <span class="ty">StorytellerComp</span>
+{
+    <span class="kw">private</span> <span class="ty">StorytellerCompProperties_FullMoon</span> Props
+        =&gt; (<span class="ty">StorytellerCompProperties_FullMoon</span>)props;
+
+    <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">FiringIncident</span>&gt; <span class="nm">MakeIntervalIncidents</span>(
+        <span class="ty">IIncidentTarget</span> target)
+    {
+        <span class="cm">// 每天被呼叫一次；只在「滿月日」產出事件</span>
+        <span class="kw">int</span> dayOfMonth = <span class="ty">GenLocalDate</span>.<span class="nm">DayOfTwelfth</span>(target);
+        <span class="kw">if</span> (dayOfMonth != <span class="nu">6</span>) <span class="kw">yield break</span>;   <span class="cm">// 非滿月不觸發</span>
+
+        <span class="ty">IncidentParms</span> parms = <span class="nm">GenerateParms</span>(
+            Props.incident.category, target);
+        parms.points *= Props.pointsFactor;
+
+        <span class="kw">if</span> (Props.incident.Worker.<span class="nm">CanFireNow</span>(parms))
+        {
+            <span class="kw">yield return new</span> <span class="ty">FiringIncident</span>(
+                Props.incident, <span class="kw">this</span>, parms);
+        }
+    }
+}</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  威脅點數計算
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 威脅點數 (Threat Points / Wealth) 計算</div>
+
+    <p>威脅點數是 RimWorld 難度曲線的核心。它由殖民地財富、殖民者數量、遊戲天數、難度設定共同決定，並透過 <code>IncidentParms.points</code> 影響襲擊規模。理解計算來源能讓你的自訂事件「合理地」隨進度變難。</p>
+
+    <h3>點數來源 API</h3>
+
+    <table>
+      <thead>
+        <tr><th>API</th><th>回傳</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>StorytellerUtility.DefaultThreatPointsNow(target)</code></td>
+          <td><code>float</code></td>
+          <td>當下的標準威脅點數（已套用財富、人數、天數、難度與 Storyteller 自身的調整）。自訂威脅事件首選。</td>
+        </tr>
+        <tr>
+          <td><code>StorytellerUtility.DefaultParmsNow(category, target)</code></td>
+          <td><code>IncidentParms</code></td>
+          <td>連同 points 一起組好的 parms（內部就是呼叫上面那個算點數）。</td>
+        </tr>
+        <tr>
+          <td><code>map.wealthWatcher.WealthTotal</code></td>
+          <td><code>float</code></td>
+          <td>地圖總財富（建築 + 物品 + Pawn）。是點數的主要輸入。</td>
+        </tr>
+        <tr>
+          <td><code>map.wealthWatcher.WealthItems</code> / <code>WealthBuildings</code></td>
+          <td><code>float</code></td>
+          <td>分項財富，用於診斷「為何襲擊變強」。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>點數計算的概念公式</h3>
+
+<pre><span class="cm">// 概念示意（非原始碼逐行，說明影響因子）</span>
+<span class="kw">float</span> basePoints =
+      財富因子(wealth)              <span class="cm">// 財富愈高點數愈高（非線性，有遞減）</span>
+    + 殖民者因子(colonistCount)     <span class="cm">// 每名殖民者貢獻固定點數</span>
+    + 已馴服動物因子;
+
+basePoints *= 天數曲線(daysPassed); <span class="cm">// 開局數天有大幅折扣，逐步爬升到 1.0</span>
+basePoints *= 難度設定.threatScale;  <span class="cm">// 玩家選的難度（和平~極限）</span>
+basePoints *= storyteller 隨機波動;  <span class="cm">// ±隨機，避免每次都一樣</span>
+
+<span class="cm">// 最終 clamp 在合理範圍</span>
+points = <span class="ty">Mathf</span>.<span class="nm">Clamp</span>(basePoints, <span class="nu">35f</span>, <span class="nu">10000f</span>);</pre>
+
+    <div class="callout callout-warn">
+      <strong>財富爆炸 = 襲擊爆炸</strong>
+      新手常見抱怨「我才剛起步就被打爆」，根因通常是堆了大量高價值物品/建築拉高 <code>WealthTotal</code>。設計自訂威脅事件時若用 <code>DefaultThreatPointsNow</code>，就自動繼承這套機制；若自己硬寫點數，務必也納入財富縮放，否則後期會過於簡單。
+    </div>
+
+    <h3>把點數轉成敵人群組</h3>
+
+<pre><span class="cm">// 點數 → 一群敵兵的標準流程</span>
+<span class="kw">float</span> points = <span class="ty">StorytellerUtility</span>.<span class="nm">DefaultThreatPointsNow</span>(map);
+
+<span class="kw">var</span> groupParms = <span class="kw">new</span> <span class="ty">PawnGroupMakerParms</span>
+{
+    groupKind = <span class="ty">PawnGroupKindDefOf</span>.Combat,
+    tile      = map.Tile,
+    faction   = enemyFaction,
+    points    = points       <span class="cm">// PawnGroupMaker 依點數決定兵力與裝備</span>
+};
+
+<span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt; raiders =
+    <span class="ty">PawnGroupMakerUtility</span>.<span class="nm">GeneratePawns</span>(groupParms).<span class="nm">ToList</span>();</pre>
+
+    <div class="callout callout-tip">
+      <strong>除錯點數：開發者面板的 Incident Tester</strong>
+      Dev Mode 下的 <code>Debug Actions → Incidents</code> 可手動觸發任意 IncidentDef 並指定點數，是調校威脅曲線最快的方式。搭配 <code>Find.Storyteller</code> 的內部狀態檢視，能看到各 Comp 的下次觸發倒數。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  LetterDef 與通知信件
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 LetterDef 與通知信件</div>
+
+    <p>事件對玩家的可見性幾乎完全靠 <strong>Letter</strong>（左下角的通知信）。<code>LetterDef</code> 定義信件的視覺樣式（顏色、音效、是否暫停遊戲）；發信則透過 <code>Find.LetterStack.ReceiveLetter</code>。</p>
+
+    <h3>常用內建 LetterDef</h3>
+
+    <table>
+      <thead>
+        <tr><th>LetterDef</th><th>顏色 / 行為</th><th>適用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>PositiveEvent</code></td><td>藍色，溫和</td><td>禮物、好事、研究完成</td></tr>
+        <tr><td><code>NeutralEvent</code></td><td>灰色</td><td>中性通知（商隊路過）</td></tr>
+        <tr><td><code>NegativeEvent</code></td><td>紅色</td><td>壞事但非急迫（疾病、財損）</td></tr>
+        <tr><td><code>ThreatSmall</code></td><td>橙色 + 提示音</td><td>小型威脅</td></tr>
+        <tr><td><code>ThreatBig</code></td><td>紅色 + 警報音 + 可暫停</td><td>大型襲擊</td></tr>
+      </tbody>
+    </table>
+
+    <h3>手動發送信件（動態內容）</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// 組裝動態文字（含 named arguments，支援在地化 grammar）</span>
+<span class="ty">TaggedString</span> label = <span class="st">"友好商隊"</span>;
+<span class="ty">TaggedString</span> text = <span class="st">"來自 "</span> + faction.Name
+    + <span class="st">" 的商隊帶來了 "</span> + giftCount + <span class="st">" 件禮物。"</span>;
+
+<span class="ty">Find</span>.LetterStack.<span class="nm">ReceiveLetter</span>(
+    label,
+    text,
+    <span class="ty">LetterDefOf</span>.PositiveEvent,
+    <span class="kw">new</span> <span class="ty">LookTargets</span>(visitors[<span class="nu">0</span>]),  <span class="cm">// 點信件時鏡頭定位</span>
+    faction);                          <span class="cm">// 相關派系（信件可顯示派系資訊）</span>
+
+<span class="cm">// 威脅類：可加入「選擇威脅目標」的快捷按鈕</span>
+<span class="kw">var</span> letter = (<span class="ty">ChoiceLetter</span>)<span class="ty">LetterMaker</span>.<span class="nm">MakeLetter</span>(
+    <span class="st">"襲擊！"</span>, <span class="st">"一支敵對部隊正在逼近。"</span>,
+    <span class="ty">LetterDefOf</span>.ThreatBig,
+    <span class="kw">new</span> <span class="ty">LookTargets</span>(raiders[<span class="nu">0</span>]),
+    enemyFaction);
+<span class="ty">Find</span>.LetterStack.<span class="nm">ReceiveLetter</span>(letter);</pre>
+
+    <h3>自訂 LetterDef XML</h3>
+
+<pre><span class="cm">&lt;!-- Defs/LetterDefs/Letters_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;LetterDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"LetterBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Ominous<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;letterClass&gt;</span>ChoiceLetter<span class="xml-tag">&lt;/letterClass&gt;</span>
+  <span class="xml-tag">&lt;color&gt;</span>(0.7, 0.2, 0.8)<span class="xml-tag">&lt;/color&gt;</span>
+  <span class="xml-tag">&lt;bounce&gt;</span>true<span class="xml-tag">&lt;/bounce&gt;</span>
+  <span class="xml-tag">&lt;flashInterval&gt;</span>1<span class="xml-tag">&lt;/flashInterval&gt;</span>
+  <span class="xml-tag">&lt;arriveSound&gt;</span>LetterArrive_BadUrgent<span class="xml-tag">&lt;/arriveSound&gt;</span>
+<span class="xml-tag">&lt;/LetterDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>TaggedString 與在地化</strong>
+      信件文字應走 <code>"MyMod_GiftLetterText".Translate(faction.Name, giftCount)</code> 取 Keyed/grammar 翻譯，而非硬編字串。<code>TaggedString</code> 會保留富文字標記（顏色、超連結到 Pawn），與在地化系統（見第 10 章）整合。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  觸發 GameCondition
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 觸發 GameCondition（天氣、日蝕等）</div>
+
+    <p><code>GameCondition</code> 是「持續一段時間、影響整張地圖或世界」的狀態（日蝕、極光、火山冬天、毒霧）。它與一次性 Incident 的差別在於「有持續期 + 每 tick 施加效果 + 結束時自動清理」。</p>
+
+    <h3>GameCondition 生命週期</h3>
+
+    <ol class="steps">
+      <li><code>GameConditionMaker.MakeCondition(def, durationTicks)</code> 建立實例。</li>
+      <li><code>map.gameConditionManager.RegisterCondition(cond)</code> 註冊（地圖層級）；世界層級用 <code>Find.World.gameConditionManager</code>。</li>
+      <li>每 tick 引擎呼叫 <code>cond.GameConditionTick()</code>，子類別在此施加效果（如 <code>GameCondition_NoSunlight</code> 關閉日照）。</li>
+      <li>到期或被 <code>cond.End()</code> 移除時自動清理並顯示 <code>endMessage</code>。</li>
+    </ol>
+
+    <h3>內建 conditionClass 速查</h3>
+
+    <table>
+      <thead>
+        <tr><th>conditionClass</th><th>效果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GameCondition_NoSunlight</code></td><td>日蝕：太陽能停擺、亮度下降（日蝕、灰燼風暴的基底）</td></tr>
+        <tr><td><code>GameCondition_PsychicEmanation</code></td><td>靈能放射：影響特定性別/全體心情</td></tr>
+        <tr><td><code>GameCondition_ColdSnap</code> / <code>HeatWave</code></td><td>寒流 / 熱浪：氣溫偏移</td></tr>
+        <tr><td><code>GameCondition_ToxicFallout</code></td><td>毒霧：戶外 Pawn 與動植物中毒</td></tr>
+        <tr><td><code>GameCondition_VolcanicWinter</code></td><td>火山冬天：長期降溫 + 減產</td></tr>
+        <tr><td><code>GameCondition_Aurora</code></td><td>極光：夜間視覺 + 微心情加成</td></tr>
+      </tbody>
+    </table>
+
+    <h3>自訂 GameCondition 子類別（每 tick 效果）</h3>
+
+<pre><span class="kw">public class</span> <span class="ty">GameCondition_AcidRain</span> : <span class="ty">GameCondition</span>
+{
+    <span class="kw">private const int</span> DamageInterval = <span class="nu">300</span>;  <span class="cm">// 每 5 秒一次</span>
+
+    <span class="kw">public override void</span> <span class="nm">GameConditionTick</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">GameConditionTick</span>();
+
+        <span class="kw">if</span> (<span class="ty">Find</span>.TickManager.TicksGame % DamageInterval != <span class="nu">0</span>)
+            <span class="kw">return</span>;
+
+        <span class="kw">foreach</span> (<span class="ty">Map</span> map <span class="kw">in</span> <span class="kw">this</span>.<span class="nm">AffectedMaps</span>)
+        {
+            <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> map.mapPawns.AllPawnsSpawned)
+            {
+                <span class="cm">// 只傷害露天（無屋頂）的 Pawn</span>
+                <span class="kw">if</span> (!p.Position.<span class="nm">Roofed</span>(map))
+                {
+                    p.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class="ty">DamageInfo</span>(
+                        <span class="ty">DamageDefOf</span>.Deterioration, <span class="nu">1f</span>));
+                }
+            }
+        }
+    }
+
+    <span class="cm">// 影響天氣/亮度時可覆寫 SkyTarget / SkyGazeChanceFactor 等</span>
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>AffectedMaps 自動處理地圖/世界範疇</strong>
+      <code>GameCondition.AffectedMaps</code> 會依 condition 註冊在哪個 manager（單一地圖 vs 世界）回傳正確的地圖集合，不需自己判斷。世界層級的 condition（如全域火山冬天）會套用到所有當前地圖。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10  常見坑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 常見坑：事件無法觸發的系統化除錯</div>
+
+    <p>「我的事件就是不出現」是 incident 開發最常見的問題。由於敘事引擎有多層過濾閘門，逐層排查最有效。下表按出現頻率排序。</p>
+
+    <table>
+      <thead>
+        <tr><th>症狀 / 原因</th><th>診斷</th><th>修正</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>targetTags 與目標不相交</strong><br>最常見。def 寫 <code>Map_PlayerHome</code> 但你以為作用於商隊。</td>
+          <td>檢查目標的 <code>IIncidentTarget.AcceptedTypes()</code> 是否包含 def.targetTags 之一。</td>
+          <td>確認 targetTags 與目標型別匹配。地圖事件用 <code>Map_PlayerHome</code>，世界事件用 <code>World</code>。</td>
+        </tr>
+        <tr>
+          <td><strong>沒有任何 StorytellerComp 負責此 category</strong></td>
+          <td>事件的 category 是否出現在當前 Storyteller 的某個 Comp 設定中？</td>
+          <td>用既有 category（如 ThreatBig/Misc），或 PatchOperation 把你的 category 加進 Storyteller comps。</td>
+        </tr>
+        <tr>
+          <td><strong>CanFireNowSub 永遠回傳 false</strong></td>
+          <td>在方法首行加 <code>Log.Message</code> 確認是否被呼叫、條件結果。</td>
+          <td>檢查條件邏輯（如要求盟友派系但存檔沒有盟友）。</td>
+        </tr>
+        <tr>
+          <td><strong>earliestDay / minPopulation 門檻未達</strong></td>
+          <td>對照當前遊戲天數與殖民者數。</td>
+          <td>除錯時暫時調低門檻或用 Dev Mode 強制觸發。</td>
+        </tr>
+        <tr>
+          <td><strong>minRefireDays 冷卻中</strong></td>
+          <td>剛觸發過？冷卻內 CanFireNow 必為 false。</td>
+          <td>等待冷卻或除錯時設為 0。</td>
+        </tr>
+        <tr>
+          <td><strong>baseChance 過低被其他事件淹沒</strong></td>
+          <td>同分類池內其他 def 權重遠高於你的。</td>
+          <td>提高 baseChance，或用獨立 FactionInteraction/自訂 Comp 隔離。</td>
+        </tr>
+        <tr>
+          <td><strong>workerClass 寫錯（型別找不到）</strong></td>
+          <td>啟動時 Log 會報 <code>Could not resolve cross-reference</code> 或型別載入失敗。</td>
+          <td>用完整命名空間 + 類別名，確認 DLL 已正確編譯載入。</td>
+        </tr>
+        <tr>
+          <td><strong>TryExecuteWorker 回傳 false</strong><br>邏輯執行但因找不到生成點等而失敗。</td>
+          <td>在各 early-return 處加 Log，定位是哪個前置條件失敗。</td>
+          <td>處理邊界情況（無可用 cell、無合適派系）並記錄。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>系統化除錯流程</h3>
+
+<pre><span class="cm">// 在 CanFireNowSub / TryExecuteWorker 灑診斷日誌</span>
+<span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+{
+    <span class="kw">bool</span> hasAlly = <span class="ty">Find</span>.FactionManager.<span class="nm">RandomAlliedFaction</span>() != <span class="kw">null</span>;
+
+    <span class="cm">// 只在 Dev Mode 輸出，避免污染正式日誌</span>
+    <span class="kw">if</span> (<span class="ty">Prefs</span>.DevMode)
+    {
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] GiftCaravan CanFireNowSub: "</span>
+            + <span class="st">$"hasAlly={hasAlly}, target={parms.target}, "</span>
+            + <span class="st">$"points={parms.points}"</span>);
+    }
+    <span class="kw">return</span> hasAlly;
+}</pre>
+
+    <ol class="steps">
+      <li>開啟 Dev Mode，用 <code>Debug Actions → Incidents → Do incident (map)</code> 直接觸發你的 def——能觸發代表 Worker 本身沒問題，問題在 Storyteller 挑選層。</li>
+      <li>若手動觸發也失敗，看 Log 是否印出 Worker 的診斷訊息；沒印出代表 <code>CanFireNow</code> 在基底層就被擋下（targetTags / 冷卻 / 門檻）。</li>
+      <li>用 <code>Debug Inspector → View Settings → Storyteller</code> 觀察各 Comp 的下次觸發倒數與當前點數。</li>
+      <li>確認 def 已被載入：<code>DefDatabase&lt;IncidentDef&gt;.GetNamedSilentFail("MyDef") != null</code>。</li>
+    </ol>
+
+    <div class="callout callout-danger">
+      <strong>targetTags 不符 = 永遠靜默失敗</strong>
+      這是最隱蔽的坑：def 完全正確載入、Worker 沒報錯，但事件就是不觸發，且<strong>不會有任何錯誤訊息</strong>。因為 Storyteller 在挑選階段就因 targetTags 不相交而跳過它。務必第一個檢查：<code>map.IncidentTargetTags()</code>（或 caravan/world 對應方法）是否包含 def.targetTags 中至少一個。
+    </div>
+  </div>
+
+  <!-- 本章重點回顧 -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>IncidentDef</h3>
+        <p>category 決定誰挑它，targetTags 必須與目標相交，workerClass 指向邏輯</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>IncidentWorker</h3>
+        <p>覆寫 CanFireNowSub + TryExecuteWorker，勿動 public 入口</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Storyteller</h3>
+        <p>OnOffCycle 危機節奏、RandomMain 隨機、FactionInteraction 派系</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>除錯</h3>
+        <p>先查 targetTags，再查 category 是否有 Comp 負責，Dev Mode 強制觸發</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 12 事件與敘事者<br>
+  適用 RimWorld 1.4 / 1.5 · Harmony 2.x · 繁體中文
+</footer>
+
+</body>
+</html>

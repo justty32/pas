@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>測試與 CI — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html" class="active">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>測試與 CI</h1>
+  <p>在一個沒有 headless 模式、緊綁 Unity 執行期的遊戲裡，如何建立可信賴的測試與自動化驗證流程。</p>
+  <span class="badge">Chapter 16 · Testing &amp; CI</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1 根本挑戰
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 為什麼 RimWorld modding 很難「測試」</div>
+
+    <p>對習慣了 xUnit／TDD／CI 綠燈的資深 C# 工程師而言，RimWorld modding 最違反直覺的一點是：<strong>幾乎沒有任何「正規」的測試入口</strong>。原因不是 mod 作者不想測，而是執行環境的本質使然。</p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>Unity 執行期依賴</h3>
+        <p>絕大多數 <code>Verse</code> / <code>RimWorld</code> 型別在 static 建構或屬性存取時就會觸碰 Unity 物件（<code>GameObject</code>、<code>Texture2D</code>、<code>Material</code>、<code>AudioClip</code>）。在 Unity runtime 之外 <code>new</code> 一個 <code>Pawn</code> 或讀 <code>ThingDef.graphic</code>，通常直接擲出例外或回傳 null。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>無 headless 模式</h3>
+        <p>RimWorld 沒有 <code>-batchmode -nographics</code> 之類能在 CI 跑完整邏輯的官方開關。遊戲必須開圖形視窗、載入完整 Def 資料庫、跑 mod static ctor 才會進入可用狀態，無法在無顯示器的 runner 上「跑一局」。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>全域可變狀態</h3>
+        <p><code>Find.CurrentMap</code>、<code>Current.Game</code>、<code>DefDatabase&lt;T&gt;</code> 全是 static singleton。沒有 DI 容器、沒有可注入的時鐘或 RNG（<code>Rand</code> 也是 static）。單一測試很容易污染下一個測試。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>啟動成本極高</h3>
+        <p>即使能在遊戲內測，從點擊到進入地圖數十秒起跳。回饋迴圈遠比一般後端專案慢，逼得測試策略必須「分層」：能離線測的盡量離線測，剩下的才進遊戲。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>核心結論</strong>
+      不要試圖在遊戲內「跑單元測試」，也不要試圖把整個 Verse 搬進測試專案。正確策略是<strong>分層</strong>：純邏輯離線用 NUnit/xUnit 測；觸碰 Verse 的部分用 Dev mode + DebugAction 手動驗證；端到端用遊戲啟動時的自我檢查腳本。下面逐層展開。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2 純邏輯抽離
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 純邏輯抽離：可測試性的第一原則</div>
+
+    <p>能進 NUnit/xUnit 的，只有<strong>不 import <code>Verse</code> / <code>RimWorld</code> / <code>UnityEngine</code> 命名空間的純 C# 邏輯</strong>。因此最重要的設計原則就是：把「決策／計算」與「對遊戲狀態的讀寫」徹底切開。</p>
+
+    <h3>反模式：邏輯與 Verse 糾纏</h3>
+    <pre><code><span class="cm">// ✗ 無法測試：函式同時讀 Pawn、算公式、又寫回 Need</span>
+<span class="kw">public</span> <span class="kw">void</span> <span class="nm">ApplyMoodDecay</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="ty">Need_Mood</span> mood = pawn.needs.mood;
+    <span class="kw">float</span> outdoorBonus = pawn.Position.Roofed(pawn.Map) ? <span class="nu">0f</span> : <span class="nu">0.05f</span>;
+    <span class="kw">float</span> decay = <span class="nu">0.1f</span> - outdoorBonus + (pawn.health.hediffSet.PainTotal * <span class="nu">0.2f</span>);
+    mood.CurLevel = <span class="ty">Mathf</span>.Clamp01(mood.CurLevel - decay);
+}</code></pre>
+
+    <h3>正模式：抽出純函式</h3>
+    <p>把公式抽成一個<strong>只吃基本型別 / DTO、只回傳結果</strong>的 static class。它不認識 <code>Pawn</code>，因此可在任何 runner 上跑。薄薄的 Verse 包裝層只負責「取值 → 呼叫純函式 → 寫值」。</p>
+
+    <pre><code><span class="cm">// MyMod.Core.dll —— 不引用 Assembly-CSharp.dll，純邏輯</span>
+<span class="kw">namespace</span> <span class="ty">MyMod.Core</span>
+{
+    <span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">struct</span> <span class="ty">MoodDecayInput</span>
+    {
+        <span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">bool</span> IsRoofed;
+        <span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">float</span> PainTotal;     <span class="cm">// 0..1</span>
+        <span class="kw">public</span> <span class="kw">readonly</span> <span class="kw">float</span> CurrentMood;   <span class="cm">// 0..1</span>
+
+        <span class="kw">public</span> <span class="nm">MoodDecayInput</span>(<span class="kw">bool</span> isRoofed, <span class="kw">float</span> painTotal, <span class="kw">float</span> currentMood)
+        {
+            IsRoofed = isRoofed;
+            PainTotal = painTotal;
+            CurrentMood = currentMood;
+        }
+    }
+
+    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> <span class="ty">MoodMath</span>
+    {
+        <span class="kw">public</span> <span class="kw">const</span> <span class="kw">float</span> BaseDecay = <span class="nu">0.1f</span>;
+        <span class="kw">public</span> <span class="kw">const</span> <span class="kw">float</span> OutdoorBonus = <span class="nu">0.05f</span>;
+        <span class="kw">public</span> <span class="kw">const</span> <span class="kw">float</span> PainWeight = <span class="nu">0.2f</span>;
+
+        <span class="cm">/// &lt;summary&gt;回傳衰減後的新心情值（0..1）。純函式，無副作用。&lt;/summary&gt;</span>
+        <span class="kw">public</span> <span class="kw">static</span> <span class="kw">float</span> <span class="nm">NextMood</span>(<span class="kw">in</span> <span class="ty">MoodDecayInput</span> input)
+        {
+            <span class="kw">float</span> bonus = input.IsRoofed ? <span class="nu">0f</span> : OutdoorBonus;
+            <span class="kw">float</span> decay = BaseDecay - bonus + (input.PainTotal * PainWeight);
+            <span class="kw">return</span> <span class="ty">Clamp01</span>(input.CurrentMood - decay);
+        }
+
+        <span class="kw">private</span> <span class="kw">static</span> <span class="kw">float</span> <span class="nm">Clamp01</span>(<span class="kw">float</span> v) =&gt; v &lt; <span class="nu">0f</span> ? <span class="nu">0f</span> : (v &gt; <span class="nu">1f</span> ? <span class="nu">1f</span> : v);
+    }
+}</code></pre>
+
+    <pre><code><span class="cm">// MyMod.dll —— 薄包裝，引用 Assembly-CSharp.dll + MyMod.Core.dll</span>
+<span class="kw">public</span> <span class="kw">void</span> <span class="nm">ApplyMoodDecay</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="kw">var</span> input = <span class="kw">new</span> <span class="ty">MoodDecayInput</span>(
+        isRoofed:    pawn.Position.Roofed(pawn.Map),
+        painTotal:   pawn.health.hediffSet.PainTotal,
+        currentMood: pawn.needs.mood.CurLevel);
+
+    pawn.needs.mood.CurLevel = <span class="ty">MoodMath</span>.<span class="nm">NextMood</span>(input);  <span class="cm">// ← 純函式，已被測過</span>
+}</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>專案結構建議</strong>
+      開兩個 <code>.csproj</code>：<code>MyMod.Core</code>（無遊戲依賴，<code>net472</code>/<code>netstandard2.0</code>）與 <code>MyMod</code>（引用 <code>Assembly-CSharp.dll</code> 與 Core）。測試專案只引用 <code>MyMod.Core</code>。兩個 DLL 都丟進 mod 的 <code>Assemblies/</code> 即可被遊戲載入。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3 完整 NUnit 範例
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 完整範例：抽離邏輯 + NUnit 測試</div>
+
+    <p>承上節的 <code>MoodMath</code>。測試專案 <code>MyMod.Tests</code> 只引用 <code>MyMod.Core</code> 與 <code>NUnit</code>，<strong>完全不碰遊戲 DLL</strong>，所以能在任意 CI runner 上 <code>dotnet test</code>。</p>
+
+    <pre><code><span class="kw">using</span> <span class="ty">NUnit.Framework</span>;
+<span class="kw">using</span> <span class="ty">MyMod.Core</span>;
+
+<span class="kw">namespace</span> <span class="ty">MyMod.Tests</span>
+{
+    [<span class="at">TestFixture</span>]
+    <span class="kw">public</span> <span class="kw">class</span> <span class="ty">MoodMathTests</span>
+    {
+        <span class="kw">private</span> <span class="kw">const</span> <span class="kw">float</span> Eps = <span class="nu">1e-4f</span>;
+
+        [<span class="at">Test</span>]
+        <span class="kw">public</span> <span class="kw">void</span> <span class="nm">Roofed_NoPain_DecaysByBase</span>()
+        {
+            <span class="kw">var</span> input = <span class="kw">new</span> <span class="ty">MoodDecayInput</span>(isRoofed: <span class="kw">true</span>, painTotal: <span class="nu">0f</span>, currentMood: <span class="nu">0.8f</span>);
+            <span class="kw">float</span> result = <span class="ty">MoodMath</span>.<span class="nm">NextMood</span>(input);
+            <span class="ty">Assert</span>.<span class="nm">That</span>(result, <span class="ty">Is</span>.EqualTo(<span class="nu">0.7f</span>).Within(Eps)); <span class="cm">// 0.8 - 0.1</span>
+        }
+
+        [<span class="at">Test</span>]
+        <span class="kw">public</span> <span class="kw">void</span> <span class="nm">Outdoor_GetsBonus_DecaysLess</span>()
+        {
+            <span class="kw">var</span> input = <span class="kw">new</span> <span class="ty">MoodDecayInput</span>(isRoofed: <span class="kw">false</span>, painTotal: <span class="nu">0f</span>, currentMood: <span class="nu">0.8f</span>);
+            <span class="kw">float</span> result = <span class="ty">MoodMath</span>.<span class="nm">NextMood</span>(input);
+            <span class="ty">Assert</span>.<span class="nm">That</span>(result, <span class="ty">Is</span>.EqualTo(<span class="nu">0.75f</span>).Within(Eps)); <span class="cm">// 0.8 - (0.1 - 0.05)</span>
+        }
+
+        [<span class="at">Test</span>]
+        <span class="kw">public</span> <span class="kw">void</span> <span class="nm">HighPain_AcceleratesDecay</span>()
+        {
+            <span class="kw">var</span> input = <span class="kw">new</span> <span class="ty">MoodDecayInput</span>(isRoofed: <span class="kw">true</span>, painTotal: <span class="nu">0.5f</span>, currentMood: <span class="nu">0.8f</span>);
+            <span class="kw">float</span> result = <span class="ty">MoodMath</span>.<span class="nm">NextMood</span>(input);
+            <span class="cm">// 0.8 - (0.1 + 0.5*0.2) = 0.8 - 0.2 = 0.6</span>
+            <span class="ty">Assert</span>.<span class="nm">That</span>(result, <span class="ty">Is</span>.EqualTo(<span class="nu">0.6f</span>).Within(Eps));
+        }
+
+        [<span class="at">TestCase</span>(<span class="nu">0.05f</span>, <span class="nu">1f</span>,  <span class="nu">0f</span>)]   <span class="cm">// 大量疼痛 → clamp 到下限 0</span>
+        [<span class="at">TestCase</span>(<span class="nu">1f</span>,    <span class="nu">0f</span>,  <span class="nu">0.9f</span>)] <span class="cm">// 室內無痛 → 0.9</span>
+        <span class="kw">public</span> <span class="kw">void</span> <span class="nm">Clamps_To_ValidRange</span>(<span class="kw">float</span> mood, <span class="kw">float</span> pain, <span class="kw">float</span> expected)
+        {
+            <span class="kw">var</span> input = <span class="kw">new</span> <span class="ty">MoodDecayInput</span>(isRoofed: <span class="kw">true</span>, painTotal: pain, currentMood: mood);
+            <span class="kw">float</span> result = <span class="ty">MoodMath</span>.<span class="nm">NextMood</span>(input);
+            <span class="ty">Assert</span>.<span class="nm">That</span>(result, <span class="ty">Is</span>.EqualTo(expected).Within(Eps));
+            <span class="ty">Assert</span>.<span class="nm">That</span>(result, <span class="ty">Is</span>.InRange(<span class="nu">0f</span>, <span class="nu">1f</span>));
+        }
+    }
+}</code></pre>
+
+    <p>跑法與一般 .NET 專案無異：</p>
+    <pre><code><span class="cm"># 整個解決方案只測 Core，秒級回饋，可進 pre-commit hook</span>
+dotnet test MyMod.Tests/MyMod.Tests.csproj -c Release</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>xUnit 亦可</strong>
+      若團隊慣用 xUnit，把 <code>[Test]</code> 換成 <code>[Fact]</code>、<code>[TestCase]</code> 換成 <code>[Theory]</code>+<code>[InlineData]</code>、斷言改 <code>Assert.Equal(expected, actual, precision)</code> 即可。重點不在框架，而在「被測對象不依賴 Verse」。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4 DebugAction & Dev mode
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 <code>[DebugAction]</code> 與 Dev mode 手動測試</div>
+
+    <p>觸碰 Verse 的程式碼無法離線測，但可以用 <strong>Dev mode 的 Debug Actions Menu</strong> 把它變成「一鍵可重現的手動測試」。在 <em>Options → Development mode</em> 開啟後，右上工具列的小蟲圖示會展開選單，你的 <code>[DebugAction]</code> 會出現在指定分類下。</p>
+
+    <pre><code><span class="kw">using</span> <span class="ty">LudeonTK</span>;   <span class="cm">// 1.5+ DebugAction 已移到 LudeonTK 命名空間</span>
+<span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+
+<span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> <span class="ty">MyModDebugActions</span>
+{
+    [<span class="at">DebugAction</span>(<span class="st">"MyMod"</span>, <span class="st">"Spawn test colonist (mood=50%)"</span>,
+                 allowedGameStates = <span class="ty">AllowedGameStates</span>.PlayingOnMap)]
+    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">void</span> <span class="nm">SpawnTestColonist</span>()
+    {
+        <span class="ty">Map</span> map = <span class="ty">Find</span>.CurrentMap;
+        <span class="ty">Pawn</span> p = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(<span class="ty">PawnKindDefOf</span>.Colonist, <span class="ty">Faction</span>.OfPlayer);
+        <span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(p, <span class="ty">UI</span>.<span class="nm">MouseCell</span>(), map);
+        p.needs.mood.CurLevel = <span class="nu">0.5f</span>;
+        <span class="ty">Log</span>.<span class="nm">Message</span>($<span class="st">"[MyMod] spawned {p.LabelShort}, mood={p.needs.mood.CurLevel:F2}"</span>);
+    }
+
+    <span class="cm">// DebugActionType.ToolMapForPawns：點選 pawn 後對其執行，最適合驗證單體效果</span>
+    [<span class="at">DebugAction</span>(<span class="st">"MyMod"</span>, <span class="st">"Apply mood decay tick"</span>,
+                 actionType = <span class="ty">DebugActionType</span>.ToolMapForPawns,
+                 allowedGameStates = <span class="ty">AllowedGameStates</span>.PlayingOnMap)]
+    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">void</span> <span class="nm">DecayMood</span>(<span class="ty">Pawn</span> p)
+    {
+        <span class="kw">float</span> before = p.needs.mood.CurLevel;
+        <span class="kw">new</span> <span class="ty">MoodComp</span>().<span class="nm">ApplyMoodDecay</span>(p);
+        <span class="ty">Log</span>.<span class="nm">Message</span>($<span class="st">"[MyMod] {p.LabelShort}: {before:F2} -&gt; {p.needs.mood.CurLevel:F2}"</span>);
+    }
+}</code></pre>
+
+    <ul>
+      <li><code>DebugActionType.Action</code>：一般一鍵動作（預設）。</li>
+      <li><code>DebugActionType.ToolMap</code> / <code>ToolMapForPawns</code>：進入「點選工具」模式，對地圖格或 pawn 執行。</li>
+      <li><code>allowedGameStates</code>：限制只在 <code>PlayingOnMap</code>、<code>Entry</code>（主選單）等狀態出現，避免在錯誤情境崩潰。</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>1.4 vs 1.5 命名空間變動</strong>
+      <code>DebugAction</code>、<code>DebugOutput</code> 等開發工具在 1.5 被搬進 <code>LudeonTK</code> 命名空間。跨版本維護時這是常見的編譯失敗點——詳見 §9 版本回歸。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5 QuickTest 啟動參數
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 QuickTest 啟動參數與 scenario 自動載入</div>
+
+    <p>每次手動點「New colony → 選 scenario → 等地圖生成」太慢。RimWorld 提供命令列參數讓你直接跳進一局，把回饋迴圈從分鐘級壓到數十秒，特別適合搭配 §4 的 DebugAction。</p>
+
+    <table>
+      <thead><tr><th>參數</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td><code>-quicktest</code></td><td>跳過主選單，用內建測試 scenario 直接生成一張小地圖並進入。</td></tr>
+        <tr><td><code>-savedatafolder=PATH</code></td><td>指定獨立的設定／存檔資料夾，讓測試環境與正式遊戲隔離（測試 mod 清單不污染日常存檔）。</td></tr>
+        <tr><td><code>-disableglobalfaststartup</code></td><td>停用部分快取，確保每次都重新跑 Def 載入流程——驗證 mod 載入路徑時有用。</td></tr>
+        <tr><td><code>-popupwindow / -screen-width / -screen-height</code></td><td>Unity 通用參數，控制視窗化與解析度，方便側開遊戲邊改邊看。</td></tr>
+      </tbody>
+    </table>
+
+    <p>建立一個本機測試捷徑（PowerShell 為例）：</p>
+    <pre><code><span class="cm"># test-rimworld.ps1 —— 啟用測試 mod 清單，直接進地圖</span>
+&amp; <span class="st">"D:\Steam\steamapps\common\RimWorld\RimWorldWin64.exe"</span> `
+  -quicktest `
+  -savedatafolder=<span class="st">"D:\rw-test-profile"</span> `
+  -logfile=<span class="st">"D:\rw-test-profile\latest.log"</span></code></pre>
+
+    <div class="callout callout-info">
+      <strong>搭配自我檢查腳本</strong>
+      <code>-quicktest</code> + §7 的 <code>GameComponent</code> 自我檢查 = 一條命令就能「啟動 → 進地圖 → 跑斷言 → 把結果寫進 log」。再配 <code>-logfile</code> 指定固定路徑，CI 之外的「半自動煙霧測試」就成型了。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6 Mock 的困難
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 Mock RimWorld 型別：為什麼通常不值得</div>
+
+    <p>來自後端世界的直覺是「介面化 + Moq」。但 Verse 幾乎沒有為此設計，硬 mock 的代價極高：</p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>幾乎沒有介面</h3>
+        <p><code>Pawn</code>、<code>Thing</code>、<code>Map</code> 都是具象 class，欄位多為 public field 而非 virtual property。Moq 只能 mock virtual/interface 成員，對這些型別幾乎無從下手。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>建構即副作用</h3>
+        <p><code>new Pawn()</code> 看似可行，但任何進一步存取（<code>needs</code>、<code>health</code>、<code>def</code>）都依賴尚未初始化的 comp 樹與 DefDatabase，<code>NullReferenceException</code> 滿天飛。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>static 無法注入</h3>
+        <p><code>Rand</code>、<code>Find</code>、<code>GenDate</code> 全 static。Mock 它們需要 <em>shim</em> 級框架（如 Microsoft Fakes / Pose），授權與維護成本高，且仍可能在 type 初始化時觸雷。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>務實替代</h3>
+        <p>與其 mock <code>Pawn</code>，不如把它需要的資料抽成 DTO（§2 的 <code>MoodDecayInput</code>）。「在邊界提取基本型別」幾乎總是比「mock 整個遊戲物件」便宜且更穩定。</p>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>策略</th><th>適用</th><th>代價</th></tr></thead>
+      <tbody>
+        <tr><td>DTO 萃取（§2）</td><td>純計算邏輯</td><td><span class="tag tag-green">低</span> 首選</td></tr>
+        <tr><td>對自己的 interface 用 Moq</td><td>你自己寫的服務層</td><td><span class="tag tag-green">低</span></td></tr>
+        <tr><td>Reflection 手刻假物件</td><td>少數非測不可的 Verse 互動</td><td><span class="tag tag-orange">中高</span> 脆弱</td></tr>
+        <tr><td>Fakes/Pose shim static</td><td>幾乎不建議</td><td><span class="tag tag-red">高</span> 授權+觸雷</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7 整合測試 GameComponent
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 整合測試：啟動時自我檢查腳本</div>
+
+    <p>要驗證「在真實遊戲環境裡邏輯正確」，最實用的做法是掛一個 <code>GameComponent</code>（或 <code>StaticConstructorOnStartup</code>），在遊戲進入特定狀態時自動跑一串斷言，把結果寫進 log。這不是傳統意義的單元測試，而是<strong>環境內的端到端煙霧測試</strong>。</p>
+
+    <pre><code><span class="kw">using</span> <span class="ty">System</span>;
+<span class="kw">using</span> <span class="ty">System.Collections.Generic</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+
+<span class="cm">// 只在 -quicktest 或定義環境變數時啟用，避免污染正式遊戲</span>
+<span class="kw">public</span> <span class="kw">class</span> <span class="ty">SelfCheckGameComponent</span> : <span class="ty">GameComponent</span>
+{
+    <span class="kw">private</span> <span class="kw">bool</span> _ran;
+
+    <span class="kw">public</span> <span class="nm">SelfCheckGameComponent</span>(<span class="ty">Game</span> game) { }
+
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">GameComponentTick</span>()
+    {
+        <span class="kw">if</span> (_ran || <span class="ty">Find</span>.TickManager.TicksGame &lt; <span class="nu">60</span>) <span class="kw">return</span>; <span class="cm">// 等地圖穩定一秒</span>
+        _ran = <span class="kw">true</span>;
+        <span class="kw">if</span> (<span class="ty">Environment</span>.<span class="nm">GetEnvironmentVariable</span>(<span class="st">"MYMOD_SELFCHECK"</span>) != <span class="st">"1"</span>) <span class="kw">return</span>;
+        <span class="nm">RunSelfCheck</span>();
+    }
+
+    <span class="kw">private</span> <span class="kw">void</span> <span class="nm">RunSelfCheck</span>()
+    {
+        <span class="kw">var</span> failures = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">string</span>&gt;();
+
+        <span class="nm">Check</span>(failures, <span class="st">"Def loaded"</span>,
+            <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">GetNamedSilentFail</span>(<span class="st">"MyMod_Gizmo"</span>) != <span class="kw">null</span>);
+
+        <span class="ty">Pawn</span> p = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(<span class="ty">PawnKindDefOf</span>.Colonist, <span class="ty">Faction</span>.OfPlayer);
+        p.needs.mood.CurLevel = <span class="nu">0.8f</span>;
+        <span class="kw">new</span> <span class="ty">MoodComp</span>().<span class="nm">ApplyMoodDecay</span>(p);
+        <span class="nm">Check</span>(failures, <span class="st">"mood decayed below 0.8"</span>, p.needs.mood.CurLevel &lt; <span class="nu">0.8f</span>);
+
+        <span class="kw">if</span> (failures.Count == <span class="nu">0</span>)
+            <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">"[MyMod][SELFCHECK] ALL PASSED"</span>);
+        <span class="kw">else</span>
+            <span class="kw">foreach</span> (<span class="kw">var</span> f <span class="kw">in</span> failures)
+                <span class="ty">Log</span>.<span class="nm">Error</span>($<span class="st">"[MyMod][SELFCHECK] FAILED: {f}"</span>); <span class="cm">// ← 見 §10</span>
+    }
+
+    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">void</span> <span class="nm">Check</span>(<span class="ty">List</span>&lt;<span class="kw">string</span>&gt; fails, <span class="kw">string</span> name, <span class="kw">bool</span> ok)
+    {
+        <span class="kw">if</span> (!ok) fails.Add(name);
+    }
+}</code></pre>
+
+    <p>用 <code>GameComponent</code> 而非 <code>StaticConstructorOnStartup</code> 的好處：前者在「遊戲已載入、地圖已存在」時才跑，可以安全觸碰 <code>Find.CurrentMap</code> 與生成 pawn；後者在 Def 載入階段就執行，地圖還不存在。</p>
+
+    <div class="callout callout-warn">
+      <strong>務必加開關</strong>
+      自我檢查會生成 pawn、寫狀態，絕不能在玩家正式存檔裡跑。用環境變數、命令列旗標或一個只在 dev build 啟用的 <code>#if DEBUG</code> 條件包起來。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8 CI 設想
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 CI 設想：GitHub Actions 編譯驗證</div>
+
+    <p>因為跑不了遊戲，CI 的務實定位是「<strong>編譯閘門 + 純邏輯測試</strong>」，而非端到端。它能擋住的問題已經很多：Verse API 簽章變動、命名空間搬遷、語法錯誤、純邏輯回歸。</p>
+
+    <h3>關鍵問題：CI 上沒有遊戲 DLL</h3>
+    <p><code>Assembly-CSharp.dll</code> 受版權保護，不能 commit 進 repo。兩種務實解法：</p>
+    <ol class="steps">
+      <li><strong>NuGet 參考組件</strong>：用社群維護的 <code>Krafs.Rimworld.Ref</code> 套件（剝離 IL、僅含公開簽章的 reference assembly），合法且可放心進 CI，讓 <code>MyMod</code> 主專案也能在 runner 上編譯。</li>
+      <li><strong>只測 Core</strong>：若不想引入參考組件，CI 至少能跑 <code>MyMod.Core</code> 的單元測試（§3），它根本不需要遊戲 DLL。</li>
+    </ol>
+
+    <pre><code><span class="cm"># .github/workflows/ci.yml</span>
+<span class="at">name</span>: ci
+<span class="at">on</span>: [push, pull_request]
+
+<span class="at">jobs</span>:
+  build-and-test:
+    <span class="at">runs-on</span>: ubuntu-latest
+    <span class="at">steps</span>:
+      - <span class="at">uses</span>: actions/checkout@v4
+      - <span class="at">uses</span>: actions/setup-dotnet@v4
+        <span class="at">with</span>:
+          <span class="at">dotnet-version</span>: <span class="st">'8.0.x'</span>
+
+      <span class="cm"># Core 引用 Krafs.Rimworld.Ref（NuGet），無需真正的遊戲 DLL</span>
+      - <span class="at">name</span>: Restore
+        <span class="at">run</span>: dotnet restore
+
+      - <span class="at">name</span>: Build (warnings as errors)
+        <span class="at">run</span>: dotnet build -c Release --no-restore -warnaserror
+
+      - <span class="at">name</span>: Unit tests (pure logic)
+        <span class="at">run</span>: dotnet test MyMod.Tests/MyMod.Tests.csproj -c Release --no-build
+
+      <span class="cm"># 可選：把編好的 mod DLL 當 artifact 上傳，供手動煙霧測試下載</span>
+      - <span class="at">uses</span>: actions/upload-artifact@v4
+        <span class="at">with</span>:
+          <span class="at">name</span>: mod-assemblies
+          <span class="at">path</span>: <span class="st">'**/Assemblies/*.dll'</span></code></pre>
+
+    <div class="callout callout-tip">
+      <strong>CI 在 Linux 上即可編譯</strong>
+      Mod DLL 目標多為 <code>net472</code>，靠 NuGet 參考組件即可在 ubuntu runner 上用 SDK 編譯，毋需 Windows 也毋需安裝遊戲。把 <code>-warnaserror</code> 打開能讓 API 棄用警告變成硬失敗，提早抓到版本問題。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9 版本回歸
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 版本回歸測試：多 RimWorld 版本編譯</div>
+
+    <p>RimWorld 每個大版本（1.3 / 1.4 / 1.5 …）都會改 API。維護「同時支援多版本」的 mod，最有價值的回歸測試就是<strong>對每個目標版本各編一次</strong>。CI 矩陣化非常合適。</p>
+
+    <h3>多 target + 條件編譯</h3>
+    <pre><code><span class="cm">&lt;!-- MyMod.csproj：用 MSBuild property 切換參考組件版本 --&gt;</span>
+<span class="xml-tag">&lt;PropertyGroup&gt;</span>
+  <span class="xml-tag">&lt;RimWorldVersion</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(RimWorldVersion)'==''"</span><span class="xml-tag">&gt;</span><span class="xml-val">1.5</span><span class="xml-tag">&lt;/RimWorldVersion&gt;</span>
+  <span class="xml-tag">&lt;DefineConstants</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(RimWorldVersion)'=='1.5'"</span><span class="xml-tag">&gt;</span><span class="xml-val">RW_1_5</span><span class="xml-tag">&lt;/DefineConstants&gt;</span>
+  <span class="xml-tag">&lt;DefineConstants</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(RimWorldVersion)'=='1.4'"</span><span class="xml-tag">&gt;</span><span class="xml-val">RW_1_4</span><span class="xml-tag">&lt;/DefineConstants&gt;</span>
+<span class="xml-tag">&lt;/PropertyGroup&gt;</span>
+
+<span class="xml-tag">&lt;ItemGroup&gt;</span>
+  <span class="xml-tag">&lt;PackageReference</span> <span class="xml-attr">Include</span>=<span class="xml-val">"Krafs.Rimworld.Ref"</span>
+                    <span class="xml-attr">Version</span>=<span class="xml-val">"1.5.4297"</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"$(RW_1_5)"</span> <span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;/ItemGroup&gt;</span></code></pre>
+
+    <pre><code><span class="cm">// 用 #if 隔離版本差異，例如 §4 提到的命名空間搬遷</span>
+<span class="kw">#if</span> RW_1_5
+<span class="kw">using</span> <span class="ty">LudeonTK</span>;     <span class="cm">// DebugAction 1.5 起在這</span>
+<span class="kw">#else</span>
+<span class="kw">using</span> <span class="ty">Verse</span>;        <span class="cm">// 1.4 及以前</span>
+<span class="kw">#endif</span></code></pre>
+
+    <p>CI 矩陣對每個版本各跑一次 build，任一版本壞了立刻紅燈：</p>
+    <pre><code><span class="at">strategy</span>:
+  <span class="at">matrix</span>:
+    <span class="at">rwver</span>: [<span class="st">'1.4'</span>, <span class="st">'1.5'</span>]
+<span class="at">steps</span>:
+  - <span class="at">run</span>: dotnet build -c Release -p:RimWorldVersion=${{ matrix.rwver }} -warnaserror</code></pre>
+
+    <div class="callout callout-info">
+      <strong>輸出到對應資料夾</strong>
+      多版本 mod 的慣例是把不同版本 DLL 放進 <code>1.4/Assemblies/</code>、<code>1.5/Assemblies/</code>，再由 <code>LoadFolders.xml</code> 指定。CI 可把每個矩陣產物 publish 到對應路徑，直接打包成可發布結構。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10 log-based assertion
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 log-based assertion：用 <code>Log.Error</code> 當失敗信號</div>
+
+    <p>遊戲內沒有測試 runner，但有 log。把「<code>Log.Error</code> 出現 = 測試失敗」當成約定，就能讓<strong>外部腳本只靠 grep log 判定半自動測試結果</strong>——這正是 §5 + §7 串起來的最後一塊。</p>
+
+    <h3>偵測「非預期錯誤」本身就是一種測試</h3>
+    <p>RimWorld 在 Dev mode 會把例外、紅字錯誤都寫進 log。許多 mod bug 不會崩潰、只會默默 <code>Log.Error</code>。因此「跑一局後 log 裡有沒有錯誤」本身就是極有價值的回歸信號。</p>
+
+    <pre><code><span class="cm"># run-smoketest.ps1 —— 啟動 → 跑自我檢查 → 解析 log 判定退出碼</span>
+$env:MYMOD_SELFCHECK = <span class="st">"1"</span>
+$log = <span class="st">"D:\rw-test-profile\latest.log"</span>
+<span class="kw">if</span> (Test-Path $log) { Remove-Item $log }
+
+$proc = Start-Process -PassThru `
+  <span class="st">"D:\Steam\...\RimWorldWin64.exe"</span> `
+  -ArgumentList <span class="st">"-quicktest"</span>, <span class="st">"-logfile=$log"</span>
+
+Start-Sleep -Seconds <span class="nu">90</span>           <span class="cm"># 給它時間進地圖跑自我檢查</span>
+Stop-Process -Id $proc.Id -Force
+
+$text = Get-Content $log -Raw
+<span class="kw">if</span> ($text -match <span class="st">"\[MyMod\]\[SELFCHECK\] ALL PASSED"</span> `
+    -and $text -notmatch <span class="st">"\[MyMod\]\[SELFCHECK\] FAILED"</span>) {
+    Write-Host <span class="st">"SMOKE TEST PASSED"</span>; exit <span class="nu">0</span>
+} <span class="kw">else</span> {
+    Write-Host <span class="st">"SMOKE TEST FAILED"</span>; exit <span class="nu">1</span>
+}</code></pre>
+
+    <p>對應的斷言輔助：把失敗統一導向 <code>Log.Error</code> 並打上可 grep 的前綴標記。</p>
+    <pre><code><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> <span class="ty">RuntimeAssert</span>
+{
+    <span class="kw">private</span> <span class="kw">const</span> <span class="kw">string</span> Prefix = <span class="st">"[MyMod][ASSERT]"</span>;
+
+    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">void</span> <span class="nm">True</span>(<span class="kw">bool</span> cond, <span class="kw">string</span> msg)
+    {
+        <span class="kw">if</span> (!cond)
+            <span class="ty">Log</span>.<span class="nm">Error</span>($<span class="st">"{Prefix} FAILED: {msg}"</span>);   <span class="cm">// 失敗 → 紅字 → 被 grep 抓到</span>
+    }
+
+    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">void</span> <span class="nm">Equal</span>&lt;T&gt;(T expected, T actual, <span class="kw">string</span> ctx)
+    {
+        <span class="kw">if</span> (!<span class="ty">EqualityComparer</span>&lt;T&gt;.Default.<span class="nm">Equals</span>(expected, actual))
+            <span class="ty">Log</span>.<span class="nm">Error</span>($<span class="st">"{Prefix} FAILED: {ctx} expected={expected} actual={actual}"</span>);
+    }
+}</code></pre>
+
+    <div class="callout callout-danger">
+      <strong>注意 log 噪音與時序</strong>
+      其他 mod 也會 <code>Log.Error</code>，所以一定要用<strong>專屬前綴</strong>過濾自己的訊息，別用泛泛的 "error" 比對。<code>Start-Sleep</code> 等固定秒數很脆弱——更穩健是輪詢 log 直到出現 <code>ALL PASSED</code> 或逾時。此法是「半自動煙霧測試」，不是可進 GitHub Actions 的全自動 CI（runner 上跑不了遊戲）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       小結
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">本章小結：測試金字塔（RimWorld 版）</div>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <h3>底層 · 純邏輯單元測試</h3>
+        <p>抽 DTO + 純函式，NUnit/xUnit 秒級回饋，進 CI、進 pre-commit。<strong>能放這層就放這層。</strong></p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>中層 · 編譯閘門</h3>
+        <p>GitHub Actions 用參考組件多版本 build + <code>-warnaserror</code>，擋 API 變動與命名空間搬遷。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>頂層 · 環境內煙霧測試</h3>
+        <p><code>-quicktest</code> + <code>GameComponent</code> 自我檢查 + log-based assertion，半自動驗證真實環境行為。</p>
+      </div>
+    </div>
+    <div class="callout callout-tip">
+      <strong>一句話</strong>
+      RimWorld 不給你 headless，所以測試的藝術在於「<em>盡量把邏輯擠出 Verse</em>」。離線測得越多，依賴遊戲啟動的脆弱測試就越少。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 16 測試與 CI · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

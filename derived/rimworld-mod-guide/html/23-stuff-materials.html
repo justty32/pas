@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>材質系統 (Stuff &amp; Materials) — RimWorld Mod 指南</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html" class="active">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>材質系統 (Stuff &amp; Materials)</h1>
+  <p>同一個 ThingDef，木製、鋼製、銀製——一套資料驅動機制如何讓單一定義衍生出無數變體</p>
+  <span class="badge">Chapter 23</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       §1  Stuff 概念
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1　Stuff 概念——一個 ThingDef，多種材質</div>
+
+    <p>
+      RimWorld 的「材質系統」(Stuff system) 讓<strong>一個 ThingDef 不必為每種材質各寫一份定義</strong>。
+      一把「劍」的 ThingDef 只定義基礎屬性，實際製作時玩家選擇用木頭、鋼鐵還是白銀，
+      引擎在執行期把材質的屬性套疊上去，得到「木劍」「鋼劍」「銀劍」三種截然不同的成品。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>產品 (Product)</h3>
+        <p>啟用了材質的 <code>ThingDef</code>，例如劍、椅子、牆。它本身不是材質，而是「可由材質製作的東西」。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>材質 (Stuff)</h3>
+        <p>同樣是 <code>ThingDef</code>，但帶有 <code>&lt;stuffProps&gt;</code> 區塊，例如 <code>Steel</code>、<code>WoodLog</code>、<code>Silver</code>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>分類 (Category)</h3>
+        <p><code>StuffCategoryDef</code>，是材質與產品之間的橋樑。產品宣告它接受哪些分類，材質宣告它屬於哪些分類。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>三者的關係（核心心智模型）</strong>
+      產品透過 <code>&lt;stuffCategories&gt;</code> 宣告「我接受 Metallic 與 Woody」；材質透過
+      <code>&lt;stuffProps&gt;&lt;categories&gt;</code> 宣告「我是 Metallic」。引擎在生成 UI 與配方時，
+      以 <code>StuffCategoryDef</code> 作為交集鍵，列出所有可用材質。實際成品的能力值＝
+      產品的 <code>statBases</code> ×（材質的 <code>statFactors</code> ＋ <code>statOffsets</code>）。
+    </div>
+
+    <pre><code><span class="cm">// 概念上的資料流（虛擬碼）</span>
+final.MaxHitPoints = product.statBases[MaxHitPoints]
+                   * stuff.stuffProps.statFactors[MaxHitPoints]
+                   + stuff.stuffProps.statOffsets[MaxHitPoints];</code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2  stuffProps 區塊
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2　stuffProps 區塊——把一個 ThingDef 變成材質</div>
+
+    <p>
+      要讓某個 <code>ThingDef</code> 能被當作材質使用，在其下加入 <code>&lt;stuffProps&gt;</code>。
+      此區塊對應 C# 的 <code>RimWorld.StuffProperties</code> 類別（<code>ThingDef.stuffProps</code> 欄位）。
+      以下是鋼鐵 <code>Steel</code> 的典型寫法：
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Materials/Steel.xml（節錄） --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ResourceBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Steel<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>鋼鐵<span class="xml-tag">&lt;/label&gt;</span>
+
+  <span class="cm">&lt;!-- 關鍵：有此區塊才會被視為材質 --&gt;</span>
+  <span class="xml-tag">&lt;stuffProps&gt;</span>
+
+    <span class="cm">&lt;!-- ① categories：此材質屬於哪些 StuffCategoryDef --&gt;</span>
+    <span class="xml-tag">&lt;categories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Metallic<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/categories&gt;</span>
+
+    <span class="cm">&lt;!-- ② commonality：地圖 / 商隊隨機生成此材質物品的相對權重 --&gt;</span>
+    <span class="xml-tag">&lt;commonality&gt;</span>1.5<span class="xml-tag">&lt;/commonality&gt;</span>
+
+    <span class="cm">&lt;!-- ③ statFactors：以乘數方式調整成品能力值（key = StatDef.defName） --&gt;</span>
+    <span class="xml-tag">&lt;statFactors&gt;</span>
+      <span class="xml-tag">&lt;MaxHitPoints&gt;</span>1.8<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+      <span class="xml-tag">&lt;Beauty&gt;</span>0.6<span class="xml-tag">&lt;/Beauty&gt;</span>
+      <span class="xml-tag">&lt;Flammability&gt;</span>0<span class="xml-tag">&lt;/Flammability&gt;</span>
+    <span class="xml-tag">&lt;/statFactors&gt;</span>
+
+    <span class="cm">&lt;!-- statOffsets：以加法方式調整（較少見，但對護甲很常用） --&gt;</span>
+    <span class="xml-tag">&lt;statOffsets&gt;</span>
+      <span class="xml-tag">&lt;ArmorRating_Sharp&gt;</span>0.10<span class="xml-tag">&lt;/ArmorRating_Sharp&gt;</span>
+    <span class="xml-tag">&lt;/statOffsets&gt;</span>
+
+    <span class="cm">&lt;!-- ④ color：成品著色用的主色（影響貼圖染色與 UI） --&gt;</span>
+    <span class="xml-tag">&lt;color&gt;</span>(126, 135, 145)<span class="xml-tag">&lt;/color&gt;</span>
+
+    <span class="cm">&lt;!-- ⑤ appearance：外觀風格（StuffAppearanceDef），影響貼圖選擇 --&gt;</span>
+    <span class="xml-tag">&lt;appearance&gt;</span>Metal<span class="xml-tag">&lt;/appearance&gt;</span>
+
+    <span class="cm">&lt;!-- 製作此材質成品時的傷害效果 / 音效 --&gt;</span>
+    <span class="xml-tag">&lt;soundImpactStuff&gt;</span>BulletImpact_Metal<span class="xml-tag">&lt;/soundImpactStuff&gt;</span>
+    <span class="xml-tag">&lt;soundMeleeHitSharp&gt;</span>MeleeHit_Metal_Sharp<span class="xml-tag">&lt;/soundMeleeHitSharp&gt;</span>
+
+    <span class="cm">&lt;!-- 製作成品的價格倍率（影響 MarketValue 計算） --&gt;</span>
+    <span class="xml-tag">&lt;stuffAdjective&gt;</span>鋼製<span class="xml-tag">&lt;/stuffAdjective&gt;</span>
+  <span class="xml-tag">&lt;/stuffProps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></code></pre>
+
+    <table>
+      <thead>
+        <tr><th>stuffProps 欄位</th><th>C# 型別</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>categories</code></td><td><code>List&lt;StuffCategoryDef&gt;</code></td><td>此材質歸屬的分類；產品以此匹配</td></tr>
+        <tr><td><code>commonality</code></td><td><code>float</code></td><td>隨機生成（地圖散落、商隊、敵人裝備）的權重</td></tr>
+        <tr><td><code>statFactors</code></td><td><code>List&lt;StatModifier&gt;</code></td><td>成品能力值的<strong>乘數</strong></td></tr>
+        <tr><td><code>statOffsets</code></td><td><code>List&lt;StatModifier&gt;</code></td><td>成品能力值的<strong>加項</strong></td></tr>
+        <tr><td><code>color</code></td><td><code>Color</code></td><td>貼圖染色主色（RGB 0–255 或 0–1）</td></tr>
+        <tr><td><code>appearance</code></td><td><code>StuffAppearanceDef</code></td><td>外觀風格，影響可用貼圖集</td></tr>
+        <tr><td><code>constructEffect</code></td><td><code>EffecterDef</code></td><td>建造時的粒子特效</td></tr>
+        <tr><td><code>stuffAdjective</code></td><td><code>string</code></td><td>成品 label 前綴形容詞（「鋼製長劍」）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>color 格式陷阱</strong>
+      <code>&lt;color&gt;</code> 同時接受 0–255 整數三元組 <code>(126, 135, 145)</code> 與 0–1 浮點三元組
+      <code>(0.5, 0.53, 0.57)</code>。引擎以「是否有任一分量 &gt; 1」判定使用哪種解讀，混用會導致顏色完全錯誤。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3  StuffCategoryDef
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3　StuffCategoryDef——內建分類</div>
+
+    <p>
+      <code>StuffCategoryDef</code>（<code>RimWorld.StuffCategoryDef</code>）本身結構極簡，主要就是一個有 <code>defName</code> 與
+      <code>label</code> 的標籤。它的價值在於作為「產品接受清單」與「材質歸屬清單」之間的<strong>匹配鍵</strong>。
+      原版內建五大分類：
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-orange">
+        <h3>Metallic</h3>
+        <p>金屬類：Steel、Plasteel、Silver、Gold、Uranium。高耐久、不可燃、美觀偏低。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Woody</h3>
+        <p>木質類：WoodLog。中庸耐久、可燃、製作快、美觀中等。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Stony</h3>
+        <p>石材類：BlocksGranite、BlocksMarble 等（石磚）。極高耐久、不可燃、笨重、製作慢。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Fabric</h3>
+        <p>布料類：Cloth、Synthread、DevilstrandCloth、Hyperweave。用於服裝。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>Leathery</h3>
+        <p>皮革類：各種動物皮 Leather_*、人皮 Human。用於服裝與部分家具。</p>
+      </div>
+    </div>
+
+    <pre><code><span class="cm">&lt;!-- 原版 StuffCategoryDef 的實際定義（極簡） --&gt;</span>
+<span class="xml-tag">&lt;StuffCategoryDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Metallic<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>金屬<span class="xml-tag">&lt;/label&gt;</span>
+<span class="xml-tag">&lt;/StuffCategoryDef&gt;</span></code></pre>
+
+    <div class="callout callout-info">
+      <strong>分類沒有屬性</strong>
+      所有能力值差異都來自<strong>各材質的 stuffProps</strong>，而非分類本身。分類只是「哪些材質可用於哪些產品」的歸類用標籤。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4  ThingDef 啟用 stuff
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4　ThingDef 啟用材質——產品端設定</div>
+
+    <p>要讓一個產品 ThingDef 可由材質製作，需設定三個關鍵欄位：</p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>stuffCategories</h3>
+        <p>宣告此產品接受哪些 <code>StuffCategoryDef</code>。<strong>設定此欄位即自動使 <code>MadeFromStuff = true</code></strong>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>costStuffCount</h3>
+        <p>製作所需的材質單位數量（不分材質種類，數量固定；材質種類由玩家在配方中選）。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>MadeFromStuff</h3>
+        <p><strong>唯讀屬性</strong>（C# 端 <code>=&gt; stuffCategories != null</code>），不直接寫 XML。它決定 UI 是否顯示材質選擇器。</p>
+      </div>
+    </div>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Items/MyCorp_Chair.xml --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"FurnitureBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Chair<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>椅子<span class="xml-tag">&lt;/label&gt;</span>
+
+  <span class="cm">&lt;!-- ① 接受哪些材質分類 → 自動啟用 MadeFromStuff --&gt;</span>
+  <span class="xml-tag">&lt;stuffCategories&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Metallic<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Woody<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Stony<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stuffCategories&gt;</span>
+
+  <span class="cm">&lt;!-- ② 需要多少單位材質 --&gt;</span>
+  <span class="xml-tag">&lt;costStuffCount&gt;</span>45<span class="xml-tag">&lt;/costStuffCount&gt;</span>
+
+  <span class="cm">&lt;!-- 也可同時要求固定的非材質額外成本 --&gt;</span>
+  <span class="xml-tag">&lt;costList&gt;</span>
+    <span class="xml-tag">&lt;Steel&gt;</span>10<span class="xml-tag">&lt;/Steel&gt;</span>   <span class="cm">&lt;!-- 不論選什麼材質都額外要 10 鋼 --&gt;</span>
+  <span class="xml-tag">&lt;/costList&gt;</span>
+
+  <span class="cm">&lt;!-- 基礎能力值——會被材質 statFactors 縮放 --&gt;</span>
+  <span class="xml-tag">&lt;statBases&gt;</span>
+    <span class="xml-tag">&lt;MaxHitPoints&gt;</span>100<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+    <span class="xml-tag">&lt;Beauty&gt;</span>4<span class="xml-tag">&lt;/Beauty&gt;</span>
+    <span class="xml-tag">&lt;Mass&gt;</span>5<span class="xml-tag">&lt;/Mass&gt;</span>
+  <span class="xml-tag">&lt;/statBases&gt;</span>
+
+  <span class="cm">&lt;!-- 圖形需從材質取色（見 §6） --&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/Furniture/MyCorp/Chair<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+    <span class="xml-tag">&lt;color&gt;</span>(255,255,255)<span class="xml-tag">&lt;/color&gt;</span>  <span class="cm">&lt;!-- 白底，方便被材質色乘算 --&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></code></pre>
+
+    <div class="callout callout-tip">
+      <strong>限制可用材質的進階欄位</strong>
+      除了 <code>stuffCategories</code>，可用 <code>&lt;stuffCategoriesToAllow&gt;</code>（白名單細化）或在配方端用
+      <code>ThingFilter</code> 限制（見 §9）。也可用 <code>&lt;stuffCategories&gt;</code> 搭配特定材質的
+      <code>&lt;allowedArchonexusCount&gt;</code> 等做更細的控制。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5  StatFactors 如何影響成品
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5　StatFactors 如何影響成品</div>
+
+    <p>
+      成品的最終能力值在 <code>StatWorker.GetValueUnfinalized()</code> 階段計算，材質的
+      <code>statFactors</code>（乘）與 <code>statOffsets</code>（加）會疊到產品的 <code>statBases</code> 上。
+      同一張椅子，木製與鋼製的耐久、美觀、重量天差地別：
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>StatDef</th><th>椅子 statBases</th><th>WoodLog factor</th><th>Steel factor</th><th>木椅成品</th><th>鋼椅成品</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>MaxHitPoints</code></td><td>100</td><td>×1.0</td><td>×1.8</td><td>100</td><td>180</td></tr>
+        <tr><td><code>Beauty</code></td><td>4</td><td>×1.0</td><td>×0.6</td><td>4</td><td>2.4</td></tr>
+        <tr><td><code>Flammability</code></td><td>1.0</td><td>×1.0</td><td>×0</td><td>1.0（會燒）</td><td>0（不燃）</td></tr>
+        <tr><td><code>MarketValue</code></td><td>—</td><td>依材質單價</td><td>依材質單價</td><td>較低</td><td>較高</td></tr>
+      </tbody>
+    </table>
+
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <h3>哪些 Stat 受材質影響？</h3>
+        <p>只有材質 <code>statFactors</code>/<code>statOffsets</code> 中<strong>有列出的 StatDef</strong> 才被調整。
+        未列出者直接沿用產品 statBases。常見：<code>MaxHitPoints</code>、<code>Beauty</code>、
+        <code>WorkToMake</code>、<code>Mass</code>、<code>Flammability</code>、各 <code>ArmorRating_*</code>、
+        近戰武器的 <code>SharpDamageMultiplier</code>/<code>BluntDamageMultiplier</code>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>StatDef 的 statFactorStuff 開關</h3>
+        <p>StatDef 端的 <code>&lt;parts&gt;</code>/<code>&lt;applyFactorsIfNegative&gt;</code> 與 <code>StatPart_Stuff</code>
+        決定該 Stat 是否吃材質乘數。若你自訂 StatDef 想吃材質乘數，需確認其 StatWorker 走材質路徑。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>statFactor 缺漏 = 用 ×1.0</strong>
+      如果某材質的 <code>statFactors</code> 漏列了某個 Stat，引擎<strong>不報錯</strong>，而是當作 ×1.0。
+      這常導致「鋼劍居然跟木劍一樣脆」之類的隱性 bug——務必為每種材質補齊 <code>MaxHitPoints</code> 等關鍵 Stat。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6  材質貼圖著色
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6　材質貼圖著色</div>
+
+    <p>
+      材質成品的視覺差異來自<strong>貼圖染色</strong>：引擎以材質的 <code>stuffProps.color</code> 對產品的灰階/白色貼圖做
+      乘法染色。因此一張貼圖就能呈現木色、鋼色、銀色。處理流程在 <code>Graphic.GetColoredVersion()</code> 與
+      <code>GraphicDatabase</code> 內。
+    </p>
+
+    <h3>讓貼圖吃材質色</h3>
+    <pre><code><span class="xml-tag">&lt;graphicData&gt;</span>
+  <span class="xml-tag">&lt;texPath&gt;</span>Things/Item/Equipment/MyCorp/Sword<span class="xml-tag">&lt;/texPath&gt;</span>
+  <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+
+  <span class="cm">&lt;!-- 用白色當底色，染色後 = 純材質色；用灰色保留材質色但壓暗 --&gt;</span>
+  <span class="xml-tag">&lt;color&gt;</span>(255,255,255)<span class="xml-tag">&lt;/color&gt;</span>
+
+  <span class="cm">&lt;!-- 若貼圖有第二色遮罩，可指定第二材質色（少用） --&gt;</span>
+  <span class="xml-tag">&lt;colorTwo&gt;</span>(255,255,255)<span class="xml-tag">&lt;/colorTwo&gt;</span>
+<span class="xml-tag">&lt;/graphicData&gt;</span></code></pre>
+
+    <div class="callout callout-info">
+      <strong>染色發生在哪？</strong>
+      對 <code>MadeFromStuff</code> 的物件，引擎在繪製時呼叫 <code>thing.DrawColor</code>，
+      其值預設為 <code>Stuff.stuffProps.color</code>（除非物件被手動上色）。
+      白色貼圖 × 材質色 = 材質色；非白貼圖則是兩者相乘。
+    </div>
+
+    <h3>stuffAppearance——不同材質用不同貼圖風格</h3>
+    <p>
+      <code>StuffAppearanceDef</code>（材質 <code>stuffProps.appearance</code>）讓<strong>同一產品在不同材質下使用不同貼圖集</strong>，
+      例如石牆與金屬牆的紋理完全不同。產品需提供對應 appearance 的貼圖變體，引擎依材質的 appearance 選圖：
+    </p>
+    <pre><code><span class="cm">&lt;!-- 內建 StuffAppearanceDef：Smooth / Bricks / Planks / Metal / Tile ... --&gt;</span>
+<span class="xml-tag">&lt;StuffAppearanceDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Planks<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>木板<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="cm">&lt;!-- 產品貼圖會以 texPath + "_" + appearance 後綴尋找變體 --&gt;</span>
+<span class="xml-tag">&lt;/StuffAppearanceDef&gt;</span></code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §7  從 C# 取材質屬性
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7　從 C# 取材質屬性</div>
+
+    <p>執行期判斷一個物件的材質、讀取材質屬性、取得材質縮放後的最終 Stat：</p>
+
+    <pre><code><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static void</span> <span class="nm">InspectMaterial</span>(<span class="ty">Thing</span> thing)
+{
+    <span class="cm">// ① thing.Stuff：取得材質的 ThingDef（無材質時為 null）</span>
+    <span class="ty">ThingDef</span> stuff = thing.<span class="nm">Stuff</span>;
+    <span class="kw">if</span> (stuff == <span class="kw">null</span>)
+    {
+        Log.<span class="nm">Message</span>(<span class="st">$"{thing.LabelCap} 不是用材質製作的"</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="cm">// ② 取得 StuffProperties（= stuff.stuffProps）</span>
+    <span class="ty">StuffProperties</span> props = stuff.<span class="nm">stuffProps</span>;
+    Log.<span class="nm">Message</span>(<span class="st">$"材質：{stuff.label}，主色：{props.color}"</span>);
+
+    <span class="cm">// 檢查材質屬於哪些分類</span>
+    <span class="kw">bool</span> isMetal = props.<span class="nm">categories</span>.Contains(<span class="ty">StuffCategoryDefOf</span>.Metallic);
+
+    <span class="cm">// 直接讀材質對某 Stat 的乘數（可能為 null）</span>
+    <span class="kw">float</span> hpFactor = props.<span class="nm">statFactors</span>
+        .GetStatFactorFromList(<span class="ty">StatDefOf</span>.MaxHitPoints);
+
+    <span class="cm">// ③ thing.GetStatValue：取得材質縮放後的「最終」Stat 值</span>
+    <span class="cm">//    內部已套用 statFactors / statOffsets / quality / 環境等所有 StatPart</span>
+    <span class="kw">float</span> finalHp = thing.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.MaxHitPoints);
+    <span class="kw">float</span> beauty  = thing.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.Beauty);
+
+    Log.<span class="nm">Message</span>(<span class="st">$"耐久乘數 {hpFactor}，最終耐久 {finalHp}，美觀 {beauty}"</span>);
+}</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>未生成的 Def 也能算 Stat</strong>
+      若只有 ThingDef + stuff（尚未生成 Thing），用
+      <code>def.GetStatValueAbstract(StatDefOf.MaxHitPoints, stuffDef)</code> 取得材質縮放後的抽象值——
+      UI 預覽、配方比較常用此重載。
+    </div>
+
+    <h3>取得某產品所有可用材質</h3>
+    <pre><code><span class="cm">// 列出某 ThingDef 在當前設定下所有可製作材質</span>
+<span class="ty">IEnumerable</span>&lt;<span class="ty">ThingDef</span>&gt; <span class="nm">AllowedStuffsFor</span>(<span class="ty">ThingDef</span> product)
+{
+    <span class="kw">return</span> <span class="ty">GenStuff</span>.<span class="nm">AllowedStuffsFor</span>(product);
+}
+
+<span class="cm">// 取得預設材質（commonality 最高、可取得者）</span>
+<span class="ty">ThingDef</span> defaultStuff = <span class="ty">GenStuff</span>.<span class="nm">DefaultStuffFor</span>(productDef);
+
+<span class="cm">// 隨機挑一個材質（依 commonality 權重；可帶 faction / techLevel 過濾）</span>
+<span class="ty">ThingDef</span> randomStuff = <span class="ty">GenStuff</span>.<span class="nm">RandomStuffByCommonalityFor</span>(productDef);</code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §8  自訂 StuffCategory 與新材質
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8　自訂 StuffCategory 與新材質</div>
+
+    <p>假設要新增一種科幻材質「結晶鋼 (Crystalsteel)」，並為它建立專屬分類 <code>MyCorp_Crystalline</code>：</p>
+
+    <ol class="steps">
+      <li>定義新的 <code>StuffCategoryDef</code>（純標籤）。</li>
+      <li>定義材質 <code>ThingDef</code> 並掛上 <code>stuffProps</code>，分類引用上一步。</li>
+      <li>讓產品的 <code>stuffCategories</code> 包含新分類（自家產品，或用 PatchOperation 加進原版產品）。</li>
+      <li>（選用）為產品提供對應 appearance 的貼圖變體。</li>
+    </ol>
+
+    <pre><code><span class="cm">&lt;!-- Defs/StuffCategoryDefs/MyCorp_Categories.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;StuffCategoryDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Crystalline<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>結晶<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;/StuffCategoryDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Materials/MyCorp_Crystalsteel.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ResourceBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Crystalsteel<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>結晶鋼<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>晶格強化的合金，極度堅韌且美觀。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;stackLimit&gt;</span>200<span class="xml-tag">&lt;/stackLimit&gt;</span>
+
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MarketValue&gt;</span>8.0<span class="xml-tag">&lt;/MarketValue&gt;</span>
+      <span class="xml-tag">&lt;Mass&gt;</span>0.5<span class="xml-tag">&lt;/Mass&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="xml-tag">&lt;stuffProps&gt;</span>
+      <span class="xml-tag">&lt;categories&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>MyCorp_Crystalline<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="cm">&lt;!-- 也可同時歸入 Metallic，讓所有接受金屬的產品都能用 --&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Metallic<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;commonality&gt;</span>0.2<span class="xml-tag">&lt;/commonality&gt;</span>
+      <span class="xml-tag">&lt;constructEffect&gt;</span>ConstructMetal<span class="xml-tag">&lt;/constructEffect&gt;</span>
+      <span class="xml-tag">&lt;color&gt;</span>(120, 200, 230)<span class="xml-tag">&lt;/color&gt;</span>
+      <span class="xml-tag">&lt;appearance&gt;</span>Metal<span class="xml-tag">&lt;/appearance&gt;</span>
+      <span class="xml-tag">&lt;stuffAdjective&gt;</span>結晶<span class="xml-tag">&lt;/stuffAdjective&gt;</span>
+
+      <span class="cm">&lt;!-- 補齊所有關鍵 Stat，避免落回 ×1.0（見 §5 警告） --&gt;</span>
+      <span class="xml-tag">&lt;statFactors&gt;</span>
+        <span class="xml-tag">&lt;MaxHitPoints&gt;</span>2.4<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+        <span class="xml-tag">&lt;Beauty&gt;</span>1.6<span class="xml-tag">&lt;/Beauty&gt;</span>
+        <span class="xml-tag">&lt;Flammability&gt;</span>0<span class="xml-tag">&lt;/Flammability&gt;</span>
+        <span class="xml-tag">&lt;WorkToMake&gt;</span>1.3<span class="xml-tag">&lt;/WorkToMake&gt;</span>
+        <span class="xml-tag">&lt;SharpDamageMultiplier&gt;</span>1.5<span class="xml-tag">&lt;/SharpDamageMultiplier&gt;</span>
+      <span class="xml-tag">&lt;/statFactors&gt;</span>
+      <span class="xml-tag">&lt;statOffsets&gt;</span>
+        <span class="xml-tag">&lt;ArmorRating_Sharp&gt;</span>0.25<span class="xml-tag">&lt;/ArmorRating_Sharp&gt;</span>
+      <span class="xml-tag">&lt;/statOffsets&gt;</span>
+    <span class="xml-tag">&lt;/stuffProps&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <h3>用 PatchOperation 讓原版產品接受新分類</h3>
+    <pre><code><span class="cm">&lt;!-- Patches/MyCorp_AddCrystalline.xml --&gt;</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="cm">&lt;!-- 讓原版長劍可用結晶分類 --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="MeleeWeapon_LongSword"]/stuffCategories<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyCorp_Crystalline<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+
+    <div class="callout callout-warn">
+      <strong>StuffCategoryDefOf 需引擎或自註冊</strong>
+      若要在 C# 用 <code>StuffCategoryDefOf.MyCorp_Crystalline</code>，需自建 <code>[DefOf]</code> 靜態類別宣告該欄位
+      （見 XML Def 章節 §6）。原版 <code>StuffCategoryDefOf</code> 只含內建五類。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §9  ThingFilter 與材質篩選
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9　ThingFilter 與材質篩選（Bill 限定材質）</div>
+
+    <p>
+      配方 <code>RecipeDef</code> 透過 <code>fixedIngredientFilter</code>/<code>defaultIngredientFilter</code>（型別
+      <code>ThingFilter</code>）控制「這個配方可用哪些材質」。玩家在工作台帳單 (Bill) UI 中看到的材質勾選欄，就來自此 filter。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- 配方：只允許金屬材質製作此產品 --&gt;</span>
+<span class="xml-tag">&lt;RecipeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Make_MyCorp_Chair<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>製作椅子<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;workAmount&gt;</span>3500<span class="xml-tag">&lt;/workAmount&gt;</span>
+
+  <span class="xml-tag">&lt;ingredients&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;filter&gt;</span>
+        <span class="cm">&lt;!-- 以 categories 限定可接受的材質類 --&gt;</span>
+        <span class="xml-tag">&lt;categories&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Metallic<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;/filter&gt;</span>
+      <span class="xml-tag">&lt;count&gt;</span>45<span class="xml-tag">&lt;/count&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/ingredients&gt;</span>
+
+  <span class="cm">&lt;!-- 固定過濾器：玩家不可在 Bill UI 中放寬此範圍 --&gt;</span>
+  <span class="xml-tag">&lt;fixedIngredientFilter&gt;</span>
+    <span class="xml-tag">&lt;categories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Metallic<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/categories&gt;</span>
+    <span class="cm">&lt;!-- 也可排除特定材質 --&gt;</span>
+    <span class="xml-tag">&lt;disallowedThingDefs&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Gold<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/disallowedThingDefs&gt;</span>
+  <span class="xml-tag">&lt;/fixedIngredientFilter&gt;</span>
+
+  <span class="xml-tag">&lt;products&gt;</span>
+    <span class="xml-tag">&lt;MyCorp_Chair&gt;</span>1<span class="xml-tag">&lt;/MyCorp_Chair&gt;</span>
+  <span class="xml-tag">&lt;/products&gt;</span>
+<span class="xml-tag">&lt;/RecipeDef&gt;</span></code></pre>
+
+    <h3>C# 端檢查 ThingFilter</h3>
+    <pre><code><span class="cm">// 某材質是否被此配方接受</span>
+<span class="kw">bool</span> ok = recipe.<span class="nm">fixedIngredientFilter</span>.<span class="nm">Allows</span>(<span class="ty">ThingDefOf</span>.Steel);
+
+<span class="cm">// 取得帳單實際允許的材質（合併 recipe filter 與玩家在 Bill 的勾選）</span>
+<span class="ty">Bill_Production</span> bill = ...;
+<span class="kw">bool</span> billAllows = bill.<span class="nm">ingredientFilter</span>.<span class="nm">Allows</span>(someStuffDef);</code></pre>
+
+    <div class="callout callout-info">
+      <strong>fixedIngredientFilter vs defaultIngredientFilter</strong>
+      <code>fixedIngredientFilter</code> 是<strong>硬上限</strong>，玩家無法在 Bill UI 中超出；
+      <code>defaultIngredientFilter</code> 只是<strong>初始勾選狀態</strong>，玩家可在硬上限內自由調整。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §10  常見坑
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10　常見坑</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>① 漏寫 stuffCategories</h3>
+        <p>想讓物品由材質製作，卻只設了 <code>costStuffCount</code> 而忘了 <code>stuffCategories</code>。
+        <code>MadeFromStuff</code> 是 <code>=&gt; stuffCategories != null</code> 的唯讀屬性，
+        沒有分類就 <strong>= false</strong>，材質選擇器不會出現，<code>costStuffCount</code> 被忽略。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>② statFactor 缺漏 → ×1.0</h3>
+        <p>材質沒列某 Stat 的 factor 時靜默當 ×1.0，不報錯。常見症狀：自訂材質的成品耐久/傷害異常地低。
+        為每種材質補齊 <code>MaxHitPoints</code> 等關鍵 Stat。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>③ 貼圖染色變黑/變怪</h3>
+        <p>產品 <code>graphicData.color</code> 不是白色，又被材質色相乘，導致顏色失真。
+        材質產品的底圖建議用白色或灰階，讓材質色完整呈現。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>④ color 0–255 vs 0–1 混用</h3>
+        <p>同一份 <code>&lt;color&gt;</code> 不可混用兩種尺度。任一分量 &gt; 1 即被當 0–255 解讀，否則當 0–1。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>⑤ 產品分類與材質分類不交集</h3>
+        <p>產品接受 <code>Woody</code>，但你的新材質只標 <code>MyCorp_Crystalline</code>，兩者無交集 → 該材質做不出此產品。
+        確認分類有交集，或為材質加上對應分類。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>⑥ 自訂 StuffCategoryDef 未被任何材質引用</h3>
+        <p>建了分類卻沒材質歸入，產品接受它也無材質可選 → 玩家看到空材質列表，無法製作。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>⑦ 服裝/家具用錯分類</h3>
+        <p>服裝應接受 <code>Fabric</code>/<code>Leathery</code>，誤設 <code>Metallic</code> 會做出「鋼襯衫」並破壞平衡。
+        對照原版同類物品的 <code>stuffCategories</code>。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>⑧ 用 GetStatValueAbstract 忘了傳 stuff</h3>
+        <p>對 MadeFromStuff 的 Def 算抽象 Stat 卻沒帶 stuff 參數，會得到未縮放（×1.0）的值，
+        導致 UI 預覽與實際成品不符。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>除錯起手式</strong>
+      開發者模式下用 <code>Debug actions → Spawn thing</code> 直接生成各材質變體，
+      搭配 <code>God mode</code> 即時建造，肉眼確認顏色、耐久 (滑鼠懸停看 inspect string)、是否出現在材質列表。
+      Log 視窗若有 <code>Could not resolve cross-reference</code> 多半是分類 defName 拼錯。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       底部導覽
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>← 返回</h3>
+        <p><a href="index.html">總覽</a> — 回到指南章節列表</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>相關章節</h3>
+        <p><a href="02-xml-defs.html">XML Def 系統</a> — ThingDef、DefOf、PatchOperation 基礎</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Mod 指南 &mdash; 材質系統 (Stuff &amp; Materials) &mdash; 繁體中文版
+</footer>
+
+</body>
+</html>

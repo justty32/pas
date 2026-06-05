@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>儲存、分類與篩選 — RimWorld Modding</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html" class="active">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>儲存、分類與篩選</h1>
+  <p>ThingCategoryDef 樹狀分類、ThingFilter 與 StorageSettings、繼承 Building_Storage 自訂儲存建築、物品堆疊、ThingRequest + ListerThings 查詢，以及 SpecialThingFilterDef 與常見坑。</p>
+  <span class="badge">RimWorld 1.5 · Verse / RimWorld · Storage, Categories &amp; Filters</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. 心智模型 ── -->
+  <div class="section">
+    <div class="section-title">1. 心智模型：分類樹 → 篩選器 → 儲存設定</div>
+
+    <p>
+      RimWorld 的儲存系統由三層概念疊起來，務必先分清楚誰是誰：
+      <strong>ThingCategoryDef</strong> 是靜態的「物品分類樹」（編譯/載入期決定），
+      <strong>ThingFilter</strong> 是一份可變的「哪些物品被允許」的勾選狀態（玩家在 UI 裡勾的就是它），
+      <strong>StorageSettings</strong> 則在 ThingFilter 之外再加上「優先度」並把它掛到一個儲存載體上。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>ThingCategoryDef</h3>
+        <p>靜態分類樹的節點，有 <code>parent</code> 與 <code>childCategories</code>，葉節點掛著一堆 <code>ThingDef</code>。這是篩選器 UI 樹狀展開的骨架。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>ThingFilter</h3>
+        <p>執行期的「允許集合」。內含 <code>allowedDefs</code>（攤平後的最終結果）與設定來源（categories / specialFilters / 品質 / hitpoints 範圍）。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>StorageSettings</h3>
+        <p>= 一個 ThingFilter + 一個 <code>Priority</code>，並持有指向其擁有者（<code>IStoreSettingsParent</code>）的參照。儲存格、貨架、傾印區用的都是它。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>關鍵分野</strong>
+      ThingCategoryDef 是「世界上有哪些分類」（共享、唯讀、全 mod 共用一棵樹）；ThingFilter 是「這個容器接受哪些東西」（每個容器一份、可被玩家改）。
+      新手最常把兩者混為一談——你<strong>不會</strong>為了「我的箱子只收木頭」去改分類樹，而是去設定那個箱子的 ThingFilter。
+    </div>
+
+    <h3>三層關係</h3>
+<pre><span class="cm">ThingCategoryDef（樹，全域共享、靜態）</span>
+<span class="cm"> └─ 提供 UI 樹的結構 + 「整類勾選」的展開來源</span>
+<span class="cm">        ↓ 被引用</span>
+<span class="cm">ThingFilter（每容器一份，可變）</span>
+<span class="cm"> ├─ categories / disallowedCategories  ← 來源設定</span>
+<span class="cm"> ├─ specialFiltersToAllow/Disallow     ← SpecialThingFilterDef</span>
+<span class="cm"> ├─ allowedQualities / allowedHitPointsPercents</span>
+<span class="cm"> └─ allowedDefs（HashSet&lt;ThingDef&gt;）    ← 最終攤平結果，查詢就看它</span>
+<span class="cm">        ↓ 被包進</span>
+<span class="cm">StorageSettings（ThingFilter + Priority + owner）</span>
+<span class="cm">        ↓ 掛在</span>
+<span class="cm">IStoreSettingsParent（Building_Storage、Zone_Stockpile…）</span></pre>
+  </div>
+
+  <!-- ── 2. ThingCategoryDef 階層 ── -->
+  <div class="section">
+    <div class="section-title">2. ThingCategoryDef 階層</div>
+
+    <p>
+      <code>ThingCategoryDef</code>（<code>Verse</code> 命名空間）以 <code>parent</code> 構成單一父鏈、自動回填 <code>childCategories</code> 與 <code>childThingDefs</code>，
+      形成一棵全域共享的分類樹。根節點是內建的 <code>Root</code>。樹是在 def 載入後由
+      <code>ThingCategoryDef.ResolveReferences</code> / DefDatabase 後處理階段建立雙向連結的。
+    </p>
+
+    <h3>ThingCategoryDef 重要欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>defName</code></td><td>string</td><td>唯一名，ThingDef 的 <code>thingCategories</code> 以此引用</td></tr>
+      <tr><td><code>label</code></td><td>string</td><td>UI 顯示名（篩選器樹上的文字）</td></tr>
+      <tr><td><code>parent</code></td><td>ThingCategoryDef</td><td>父分類；不填則只能掛在 Root 下 <span class="tag tag-orange">建議填</span></td></tr>
+      <tr><td><code>childCategories</code></td><td>List&lt;ThingCategoryDef&gt;</td><td><strong>執行期自動回填</strong>，勿手寫</td></tr>
+      <tr><td><code>childThingDefs</code></td><td>List&lt;ThingDef&gt;</td><td><strong>執行期自動回填</strong>：所有 <code>thingCategories</code> 指向本類的 ThingDef</td></tr>
+      <tr><td><code>childSpecialFilters</code></td><td>List&lt;SpecialThingFilterDef&gt;</td><td>掛在此分類下的特殊篩選（如「允許腐敗」）</td></tr>
+      <tr><td><code>resourceReadoutRoot</code></td><td>bool</td><td>是否作為左下資源面板的彙總根</td></tr>
+    </table>
+
+    <h3>新增一個分類（掛到內建分類樹下）</h3>
+<pre>&lt;<span class="xml-tag">Defs</span>&gt;
+  <span class="cm">&lt;!-- 在內建 ResourcesRaw 下新增子分類 --&gt;</span>
+  &lt;<span class="xml-tag">ThingCategoryDef</span>&gt;
+    &lt;<span class="xml-tag">defName</span>&gt;MyMod_ExoticOres&lt;/<span class="xml-tag">defName</span>&gt;
+    &lt;<span class="xml-tag">label</span>&gt;exotic ores&lt;/<span class="xml-tag">label</span>&gt;
+    <span class="cm">&lt;!-- 關鍵：parent 指向已存在的分類 defName --&gt;</span>
+    &lt;<span class="xml-tag">parent</span>&gt;ResourcesRaw&lt;/<span class="xml-tag">parent</span>&gt;
+  &lt;/<span class="xml-tag">ThingCategoryDef</span>&gt;
+&lt;/<span class="xml-tag">Defs</span>&gt;</pre>
+
+    <div class="callout callout-warn">
+      <strong>不要手寫 childCategories / childThingDefs</strong>
+      這兩個 List 由引擎在載入後雙向回填：分類的父子靠 <code>parent</code> 建立，分類與物品的關係靠 ThingDef 端的 <code>thingCategories</code> 建立。
+      手寫只會被覆蓋或造成重複，永遠從「子指向父」的方向宣告。
+    </div>
+
+    <h3>常見內建分類（作為 parent 的落點）</h3>
+    <table>
+      <tr><th>defName</th><th>用途</th></tr>
+      <tr><td><code>Root</code></td><td>整棵樹的根，一般不直接掛</td></tr>
+      <tr><td><code>ResourcesRaw</code></td><td>原物料（木材、鋼鐵、布料…）</td></tr>
+      <tr><td><code>Manufactured</code></td><td>加工/製成品（零件、藥物…）</td></tr>
+      <tr><td><code>Foods</code> / <code>FoodMeals</code> / <code>FoodRaw</code></td><td>食物相關</td></tr>
+      <tr><td><code>Weapons</code> / <code>Apparel</code></td><td>武器 / 衣物</td></tr>
+      <tr><td><code>Items</code></td><td>雜項物品的常見落點</td></tr>
+    </table>
+  </div>
+
+  <!-- ── 3. thingCategories 欄位 ── -->
+  <div class="section">
+    <div class="section-title">3. ThingDef.thingCategories — 把物品歸類</div>
+
+    <p>
+      物品要出現在篩選器樹的某個分類下，<strong>方向是反過來的</strong>：不是在分類裡列出物品，而是在
+      <code>ThingDef</code> 上用 <code>&lt;thingCategories&gt;</code> 列出它屬於哪些分類。引擎會據此回填到對應
+      ThingCategoryDef 的 <code>childThingDefs</code>。
+    </p>
+
+<pre>&lt;<span class="xml-tag">ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ResourceBase"</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_Voidstone&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">label</span>&gt;voidstone&lt;/<span class="xml-tag">label</span>&gt;
+  &lt;<span class="xml-tag">stackLimit</span>&gt;75&lt;/<span class="xml-tag">stackLimit</span>&gt;
+  <span class="cm">&lt;!-- 一個物品可同時屬於多個分類；篩選器樹中會出現在每一處 --&gt;</span>
+  &lt;<span class="xml-tag">thingCategories</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;MyMod_ExoticOres&lt;/<span class="xml-tag">li</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;ResourcesRaw&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">thingCategories</span>&gt;
+&lt;/<span class="xml-tag">ThingDef</span>&gt;</pre>
+
+    <div class="callout callout-danger">
+      <strong>最常見坑：thingCategories 沒掛 → 物品在篩選器裡「不存在」</strong>
+      若一個 ThingDef 完全沒有 <code>thingCategories</code>（且其 ParentName 也沒帶），它就不屬於任何分類節點，
+      於是<strong>無法被任何 StorageSettings 的「整類勾選」收納，也不會出現在貯藏區/貨架的篩選器樹上</strong>。
+      症狀：物品生得出來、能撿、但永遠被標為「不允許貯藏」殖民者不搬。第 10 節有完整排查。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>透過 ParentName 繼承分類</strong>
+      多數情況你會 <code>ParentName="ResourceBase"</code> 之類繼承一個 abstract base，base 已帶 <code>thingCategories</code>。
+      若你在子 def 重寫 <code>&lt;thingCategories&gt;</code>，預設是<strong>整段取代</strong>（非合併）；要追加用
+      <code>&lt;thingCategories&gt;...&lt;li&gt;X&lt;/li&gt;&lt;/thingCategories&gt;</code> 並自行把 base 的也列上，或用
+      <code>Inherit="False"</code> 控制。
+    </div>
+  </div>
+
+  <!-- ── 4. ThingFilter ── -->
+  <div class="section">
+    <div class="section-title">4. ThingFilter — 允許集合的核心</div>
+
+    <p>
+      <code>ThingFilter</code>（<code>RimWorld</code> 命名空間）是真正決定「哪些東西被允許」的物件。
+      它對外暴露多種「設定維度」，但最終都會解析（resolve）成一個攤平的
+      <code>allowedDefs</code>（<code>HashSet&lt;ThingDef&gt;</code>）。查詢時呼叫 <code>Allows(thing)</code> 即可。
+    </p>
+
+    <h3>ThingFilter 設定維度</h3>
+    <table>
+      <tr><th>維度</th><th>API / 欄位</th><th>說明</th></tr>
+      <tr><td>整類允許</td><td><code>SetAllow(ThingCategoryDef, bool)</code></td><td>勾整個分類（含子類遞迴展開）</td></tr>
+      <tr><td>單品允許</td><td><code>SetAllow(ThingDef, bool)</code></td><td>勾單一物品</td></tr>
+      <tr><td>特殊篩選</td><td><code>SetAllow(SpecialThingFilterDef, bool)</code></td><td>如「允許腐敗 / 允許汙染」</td></tr>
+      <tr><td>品質範圍</td><td><code>allowedQualities</code> (QualityRange)</td><td>武器/衣物等有品質者</td></tr>
+      <tr><td>耐久範圍</td><td><code>allowedHitPointsPercents</code> (FloatRange)</td><td>0~1，過濾破損品</td></tr>
+      <tr><td>最終結果</td><td><code>AllowedThingDefs</code> / <code>allowedDefs</code></td><td>攤平後的允許集合（唯讀枚舉）</td></tr>
+    </table>
+
+    <h3>常用 ThingFilter API</h3>
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="ty">ThingFilter</span> f = <span class="kw">new</span> <span class="ty">ThingFilter</span>();
+
+<span class="cm">// 1) 整類允許（會遞迴納入該分類底下所有 childThingDefs）</span>
+f.<span class="nm">SetAllow</span>(<span class="ty">ThingCategoryDefOf</span>.Foods, <span class="kw">true</span>);
+
+<span class="cm">// 2) 在整類基礎上排除單品</span>
+f.<span class="nm">SetAllow</span>(<span class="ty">ThingDefOf</span>.MealNutrientPaste, <span class="kw">false</span>);
+
+<span class="cm">// 3) 特殊篩選：不允許腐敗中的食物</span>
+f.<span class="nm">SetAllow</span>(<span class="ty">SpecialThingFilterDefOf</span>.AllowRotten, <span class="kw">false</span>);
+
+<span class="cm">// 4) 品質 / 耐久範圍（對有品質的物品才有意義）</span>
+f.allowedHitPointsPercents = <span class="kw">new</span> <span class="ty">FloatRange</span>(<span class="nu">0.5f</span>, <span class="nu">1f</span>);
+
+<span class="cm">// 5) 查詢：某 Thing 是否被允許</span>
+<span class="kw">bool</span> ok = f.<span class="nm">Allows</span>(someThing);          <span class="cm">// 綜合所有維度</span>
+<span class="kw">bool</span> okDef = f.<span class="nm">Allows</span>(someThing.def);     <span class="cm">// 只看 def 層級</span>
+
+<span class="cm">// 6) 全勾 / 全清（常用於初始化）</span>
+f.<span class="nm">SetAllowAll</span>(parentFilter: <span class="kw">null</span>);          <span class="cm">// 全允許（受 parent 限制）</span>
+f.<span class="nm">SetDisallowAll</span>();                          <span class="cm">// 全不允許</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>parentFilter（父篩選器）：合法範圍的上界</strong>
+      多數 ThingFilter 解析時會帶一個 <code>parentFilter</code>——它界定「這個容器理論上可能接受的最大集合」。
+      例如某種專收武器的貨架，其 parentFilter 只含武器類，玩家就無法在 UI 裡勾出食物。
+      <code>SetAllowAll(parentFilter)</code> 的「全勾」其實是「勾滿 parentFilter 容許的範圍」。
+    </div>
+
+    <h3>ThingFilter 的 XML 形態</h3>
+    <p>ThingFilter 也能直接寫在 def 裡（例如 fixedStorageSettings、配方的 fixedIngredientFilter）。XML 結構對應上述維度：</p>
+<pre>&lt;<span class="xml-tag">filter</span>&gt;
+  <span class="cm">&lt;!-- 整類允許 --&gt;</span>
+  &lt;<span class="xml-tag">categories</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;ResourcesRaw&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">categories</span>&gt;
+  <span class="cm">&lt;!-- 在整類中額外排除的分類 --&gt;</span>
+  &lt;<span class="xml-tag">disallowedCategories</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;Wools&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">disallowedCategories</span>&gt;
+  <span class="cm">&lt;!-- 額外點名允許的單品（不在上述分類也會被收） --&gt;</span>
+  &lt;<span class="xml-tag">thingDefs</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;MyMod_Voidstone&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">thingDefs</span>&gt;
+  <span class="cm">&lt;!-- 點名排除的單品 --&gt;</span>
+  &lt;<span class="xml-tag">disallowedThingDefs</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;Steel&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">disallowedThingDefs</span>&gt;
+  <span class="cm">&lt;!-- 特殊篩選 --&gt;</span>
+  &lt;<span class="xml-tag">specialFiltersToDisallow</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;AllowRotten&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">specialFiltersToDisallow</span>&gt;
+&lt;/<span class="xml-tag">filter</span>&gt;</pre>
+  </div>
+
+  <!-- ── 5. StorageSettings / IStoreSettingsParent ── -->
+  <div class="section">
+    <div class="section-title">5. StorageSettings 與 IStoreSettingsParent</div>
+
+    <p>
+      <code>StorageSettings</code> = <code>ThingFilter filter</code> + <code>StoragePriority priority</code> + 指向擁有者的
+      <code>owner</code>（<code>IStoreSettingsParent</code>）。所有可貯藏載體——貯藏區（<code>Zone_Stockpile</code>）、
+      貨架/箱子（<code>Building_Storage</code>）、傾印區——都透過實作 <code>IStoreSettingsParent</code> 來持有它。
+    </p>
+
+    <h3>IStoreSettingsParent 介面</h3>
+<pre><span class="kw">public interface</span> <span class="ty">IStoreSettingsParent</span>
+{
+    <span class="cm">// 這個容器目前生效的設定（玩家可改的那份）</span>
+    <span class="ty">StorageSettings</span> <span class="nm">GetStoreSettings</span>();
+
+    <span class="cm">// 上界：父設定，限制玩家在 UI 裡能勾的最大範圍（可回 null）</span>
+    <span class="ty">StorageSettings</span> <span class="nm">GetParentStoreSettings</span>();
+
+    <span class="cm">// 1.5+：UI 是否顯示「優先度」下拉（傾印區之類可能不顯示）</span>
+    <span class="kw">bool</span> StorageTabVisible { <span class="kw">get</span>; }
+
+    <span class="cm">// 設定變更後的回呼（讓搬運工作重算）</span>
+    <span class="kw">void</span> <span class="nm">Notify_SettingsChanged</span>();
+}</pre>
+
+    <h3>StoragePriority 與查詢</h3>
+    <table>
+      <tr><th>值</th><th>說明</th></tr>
+      <tr><td><code>Unstored</code></td><td>未貯藏（地上散落），最低</td></tr>
+      <tr><td><code>Low</code> / <code>Normal</code> / <code>Preferred</code> / <code>Important</code> / <code>Critical</code></td><td>由低到高；殖民者把物品從低優先度搬向高優先度的合法格</td></tr>
+    </table>
+
+<pre><span class="cm">// 找「能收這個 thing、且優先度高於現處」的最佳貯藏格</span>
+<span class="ty">IntVec3</span> cell;
+<span class="kw">bool</span> found = <span class="ty">StoreUtility</span>.<span class="nm">TryFindBestBetterStoreCellFor</span>(
+    thing, carrier, map,
+    <span class="ty">StoreUtility</span>.<span class="nm">CurrentStoragePriorityOf</span>(thing),
+    carrier.Faction, <span class="kw">out</span> cell);
+
+<span class="cm">// 某格目前的貯藏設定是否允許某 thing</span>
+<span class="kw">bool</span> ok = thing.Position.<span class="nm">GetSlotGroup</span>(map)
+              ?.Settings.<span class="ty">AllowedToAccept</span>(thing) ?? <span class="kw">false</span>;</pre>
+
+    <div class="callout callout-info">
+      <strong>SlotGroup：把「格子」與「設定」綁起來的中介</strong>
+      每個 <code>IStoreSettingsParent</code> 對應一個 <code>SlotGroup</code>（<code>thing.Position.GetSlotGroup(map)</code> 取得），
+      由 <code>map.haulDestinationManager</code> 統一管理。搬運 AI 找落點時走的是 SlotGroup，不是直接問建築。
+    </div>
+  </div>
+
+  <!-- ── 6. 自訂儲存建築 ── -->
+  <div class="section">
+    <div class="section-title">6. 自訂儲存建築（繼承 Building_Storage）</div>
+
+    <p>
+      想做「貨架 / 保險箱 / 專用容器」最省事的做法是繼承 <code>Building_Storage</code>——它已實作
+      <code>IStoreSettingsParent</code>、自帶 Storage gizmo、會把自身格子註冊成 SlotGroup。
+      你只需在 XML 給它 <code>building.fixedStorageSettings</code>（上界）與 <code>defaultStorageSettings</code>（預設勾選）。
+    </p>
+
+    <h3>XML：貨架類建築定義</h3>
+<pre>&lt;<span class="xml-tag">ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_OreRack&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">label</span>&gt;ore rack&lt;/<span class="xml-tag">label</span>&gt;
+  &lt;<span class="xml-tag">thingClass</span>&gt;MyMod.Building_OreRack&lt;/<span class="xml-tag">thingClass</span>&gt;
+  &lt;<span class="xml-tag">category</span>&gt;Building&lt;/<span class="xml-tag">category</span>&gt;
+  &lt;<span class="xml-tag">building</span>&gt;
+    <span class="cm">&lt;!-- 標記為可貯藏建築；多格貨架 --&gt;</span>
+    &lt;<span class="xml-tag">fixedStorageSettings</span>&gt;
+      &lt;<span class="xml-tag">filter</span>&gt;
+        <span class="cm">&lt;!-- 上界：這個架子最多只能設成收原物料 --&gt;</span>
+        &lt;<span class="xml-tag">categories</span>&gt;
+          &lt;<span class="xml-tag">li</span>&gt;ResourcesRaw&lt;/<span class="xml-tag">li</span>&gt;
+        &lt;/<span class="xml-tag">categories</span>&gt;
+      &lt;/<span class="xml-tag">filter</span>&gt;
+    &lt;/<span class="xml-tag">fixedStorageSettings</span>&gt;
+    &lt;<span class="xml-tag">defaultStorageSettings</span>&gt;
+      &lt;<span class="xml-tag">priority</span>&gt;Important&lt;/<span class="xml-tag">priority</span>&gt;
+      &lt;<span class="xml-tag">filter</span>&gt;
+        <span class="cm">&lt;!-- 預設勾：玩家放下時就生效的初始選擇 --&gt;</span>
+        &lt;<span class="xml-tag">categories</span>&gt;
+          &lt;<span class="xml-tag">li</span>&gt;ResourcesRaw&lt;/<span class="xml-tag">li</span>&gt;
+        &lt;/<span class="xml-tag">categories</span>&gt;
+      &lt;/<span class="xml-tag">filter</span>&gt;
+    &lt;/<span class="xml-tag">defaultStorageSettings</span>&gt;
+  &lt;/<span class="xml-tag">building</span>&gt;
+  <span class="cm">&lt;!-- 多格、可被踏入的貨架（依需求）--&gt;</span>
+  &lt;<span class="xml-tag">size</span>&gt;(1,2)&lt;/<span class="xml-tag">size</span>&gt;
+  &lt;<span class="xml-tag">passability</span>&gt;PassThroughOnly&lt;/<span class="xml-tag">passability</span>&gt;
+&lt;/<span class="xml-tag">ThingDef</span>&gt;</pre>
+
+    <h3>C#：擴充 Building_Storage</h3>
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public class</span> <span class="ty">Building_OreRack</span> : <span class="ty">Building_Storage</span>
+{
+    <span class="cm">// 物品被放入此貯藏格時觸發（含搬運送達）</span>
+    <span class="kw">public override void</span> <span class="nm">Notify_ReceivedThing</span>(<span class="ty">Thing</span> newItem)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_ReceivedThing</span>(newItem);
+        <span class="cm">// 例：放入即標記、播效果、更新貼圖層數…</span>
+    }
+
+    <span class="cm">// 物品離開此格時觸發</span>
+    <span class="kw">public override void</span> <span class="nm">Notify_LostThing</span>(<span class="ty">Thing</span> newItem)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_LostThing</span>(newItem);
+    }
+
+    <span class="cm">// 可選：對接受條件再加自訂限制（如只在通電時收）</span>
+    <span class="kw">public override bool</span> <span class="nm">Accepts</span>(<span class="ty">Thing</span> t)
+    {
+        <span class="kw">if</span> (!<span class="kw">base</span>.<span class="nm">Accepts</span>(t)) <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="kw">var</span> power = <span class="nm">GetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        <span class="kw">return</span> power == <span class="kw">null</span> || power.PowerOn;   <span class="cm">// 沒電就不收</span>
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>Building_Storage 已幫你做掉的事</strong>
+      Storage gizmo（含 Copy/Paste 設定按鈕）、SlotGroup 註冊、與搬運 AI 的對接、設定持久化（存檔）。
+      你幾乎只需處理「收到/失去物品的副作用」與「額外接受條件（<code>Accepts</code> override）」。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>多格 vs 單格貨架的容量</strong>
+      原版貯藏建築每格仍受該物品 <code>stackLimit</code> 限制。要「一格放超量」需另寫邏輯（如 LWM Deep Storage 的做法：override
+      容量計算與堆疊顯示）。單純繼承 Building_Storage 不會自動突破 stackLimit。
+    </div>
+  </div>
+
+  <!-- ── 7. 物品堆疊 ── -->
+  <div class="section">
+    <div class="section-title">7. 物品堆疊：stackLimit 與堆疊合併</div>
+
+    <p>
+      堆疊上限由 ThingDef 的 <code>&lt;stackLimit&gt;</code> 決定（資源類常見 75 或 100，餐點常為 10，武器/衣物為 1 不可疊）。
+      合併、拆分由 <code>Thing.stackCount</code> 與 <code>TryAbsorbStack</code> / <code>SplitOff</code> 處理。
+      可疊與否並非靠額外 Comp，而是直接看 <code>stackLimit &gt; 1</code>。
+    </p>
+
+    <h3>堆疊相關欄位 / API</h3>
+    <table>
+      <tr><th>成員</th><th>說明</th></tr>
+      <tr><td><code>def.stackLimit</code></td><td>單堆最大數量；1 表示不可疊</td></tr>
+      <tr><td><code>thing.stackCount</code></td><td>當前這堆的數量</td></tr>
+      <tr><td><code>thing.TryAbsorbStack(other, respect)</code></td><td>嘗試把 other 併入本堆（受 stackLimit 約束）</td></tr>
+      <tr><td><code>thing.SplitOff(count)</code></td><td>從本堆拆出 count 個成為新 Thing</td></tr>
+      <tr><td><code>thing.CanStackWith(other)</code></td><td>兩者能否合併（同 def、同品質/材質/腐敗度…）</td></tr>
+    </table>
+
+<pre><span class="cm">// 從一堆木頭拆 30 出來，生成獨立 Thing</span>
+<span class="ty">Thing</span> wood = ...;                 <span class="cm">// stackCount = 100</span>
+<span class="ty">Thing</span> portion = wood.<span class="nm">SplitOff</span>(<span class="nu">30</span>);  <span class="cm">// portion=30, wood=70</span>
+
+<span class="cm">// 把兩堆合併（若同 def 且未達 stackLimit）</span>
+<span class="kw">if</span> (a.<span class="nm">CanStackWith</span>(b))
+    a.<span class="nm">TryAbsorbStack</span>(b, respectStackLimit: <span class="kw">true</span>);</pre>
+
+    <div class="callout callout-info">
+      <strong>「CompStackable」其實不是原版類別</strong>
+      原版 RimWorld 的堆疊能力<strong>內建於 Thing/ThingDef</strong>（看 <code>stackLimit</code>），並無一個叫 <code>CompStackable</code> 的官方 Comp。
+      某些 mod 會自製類似 Comp 來擴充「不可疊物品也能疊」或「巨量堆疊」。若你看到 <code>CompStackable</code>，它幾乎都來自第三方框架，
+      請勿假設核心 API 存在它。要改堆疊行為，調 <code>stackLimit</code> 或 override 相關方法才是原版路徑。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>品質/材質會阻止合併</strong>
+      <code>CanStackWith</code> 嚴格：不同材質（鋼鐵 vs 木製）、不同品質、不同腐敗進度、被汙染與否都會讓兩堆無法合併。
+      做「自動整理」類功能時別假設同 defName 就能併。
+    </div>
+  </div>
+
+  <!-- ── 8. ThingRequest / ListerThings ── -->
+  <div class="section">
+    <div class="section-title">8. ThingRequest 與 ListerThings — 查詢地圖物品</div>
+
+    <p>
+      要在地圖上找「所有某類物品」，不要自己掃格子，用 <code>map.listerThings</code>。它以
+      <code>ThingRequest</code> 為查詢鍵，內部維護多種預先分組的清單（依 def、依 group），查詢是 O(結果數) 而非 O(全圖)。
+    </p>
+
+    <h3>ThingRequest 三種建構</h3>
+    <table>
+      <tr><th>建構</th><th>回傳</th><th>備註</th></tr>
+      <tr><td><code>ThingRequest.ForDef(ThingDef)</code></td><td>該 def 的所有實例</td><td>最精確、最快</td></tr>
+      <tr><td><code>ThingRequest.ForGroup(ThingRequestGroup)</code></td><td>整個語意群組</td><td>如 <code>HaulableEver</code>、<code>FoodSource</code>、<code>Weapon</code></td></tr>
+      <tr><td><code>ThingRequest.ForUndefined()</code></td><td>無分組查詢</td><td>少用</td></tr>
+    </table>
+
+    <h3>ListerThings 查詢</h3>
+<pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="ty">Map</span> map = ...;
+
+<span class="cm">// A) 依 def：取地圖上所有鋼鐵堆</span>
+<span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; allSteel =
+    map.listerThings.<span class="nm">ThingsOfDef</span>(<span class="ty">ThingDefOf</span>.Steel);
+
+<span class="cm">// B) 依群組：所有「曾可搬運」的物品</span>
+<span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; haulables =
+    map.listerThings.<span class="nm">ThingsInGroup</span>(<span class="ty">ThingRequestGroup</span>.HaulableEver);
+
+<span class="cm">// C) 用 ThingRequest 物件（給需要 request 參數的 API）</span>
+<span class="ty">ThingRequest</span> req = <span class="ty">ThingRequest</span>.<span class="nm">ForGroup</span>(<span class="ty">ThingRequestGroup</span>.FoodSource);
+
+<span class="cm">// D) 配合 GenClosest 找最近且通過篩選的一個</span>
+<span class="ty">Thing</span> nearestFood = <span class="ty">GenClosest</span>.<span class="nm">ClosestThingReachable</span>(
+    pawn.Position, map, req,
+    <span class="ty">PathEndMode</span>.ClosestTouch,
+    <span class="ty">TraverseParms</span>.<span class="nm">For</span>(pawn),
+    maxDistance: <span class="nu">9999f</span>,
+    validator: t =&gt; myFilter.<span class="nm">Allows</span>(t) &amp;&amp; !t.IsForbidden(pawn));</pre>
+
+    <div class="callout callout-warn">
+      <strong>不要 cache ThingsOfDef 回傳的 List</strong>
+      <code>ThingsOfDef</code> / <code>ThingsInGroup</code> 回的是 lister <strong>內部的活清單</strong>，會隨生成/銷毀即時變動。
+      若你要在迴圈中刪改物品，先 <code>.ToList()</code> 複製一份再迭代，否則會「集合在迭代中被修改」例外或漏掉元素。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>常用 ThingRequestGroup</strong>
+      <code>HaulableEver</code> / <code>HaulableAlways</code>、<code>FoodSource</code>、<code>Weapon</code>、<code>Apparel</code>、
+      <code>Plant</code>、<code>Corpse</code>、<code>BuildingArtificial</code>、<code>Pawn</code>。群組由引擎在物品生成時自動歸入（依 def 屬性），查詢免維護。
+    </div>
+  </div>
+
+  <!-- ── 9. ThingDefCountClass ── -->
+  <div class="section">
+    <div class="section-title">9. ThingDefCountClass — 成本 / 產出列表</div>
+
+    <p>
+      凡是「一個 def + 一個數量」的清單（建築造價、配方產出、貿易包內容）都用
+      <code>ThingDefCountClass</code>（欄位 <code>thingDef</code> 與 <code>count</code>）。它的 XML 寫法很特別：
+      用 <strong>屬性式</strong> <code>&lt;li&gt;ThingDefName&gt;Count&lt;/li&gt;</code> 形式（自訂解析），而非巢狀子節點。
+    </p>
+
+    <h3>XML：建築造價</h3>
+<pre>&lt;<span class="xml-tag">ThingDef</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_OreRack&lt;/<span class="xml-tag">defName</span>&gt;
+  ...
+  &lt;<span class="xml-tag">costList</span>&gt;
+    <span class="cm">&lt;!-- 格式：&lt;li&gt;ThingDef&gt;數量&lt;/li&gt; --&gt;</span>
+    &lt;<span class="xml-tag">li</span>&gt;Steel&gt;75&lt;/<span class="xml-tag">li</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;ComponentIndustrial&gt;2&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">costList</span>&gt;
+&lt;/<span class="xml-tag">ThingDef</span>&gt;</pre>
+
+    <h3>C#：建構與讀取</h3>
+<pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="cm">// 程式化建立一張產出/成本表</span>
+<span class="ty">List</span>&lt;<span class="ty">ThingDefCountClass</span>&gt; products = <span class="kw">new</span>()
+{
+    <span class="kw">new</span> <span class="ty">ThingDefCountClass</span>(<span class="ty">ThingDefOf</span>.Steel, <span class="nu">15</span>),
+    <span class="kw">new</span> <span class="ty">ThingDefCountClass</span>(<span class="ty">ThingDefOf</span>.ChunkSlagSteel, <span class="nu">1</span>),
+};
+
+<span class="cm">// 例：依表生成物品到某格</span>
+<span class="kw">foreach</span> (<span class="ty">ThingDefCountClass</span> tc <span class="kw">in</span> products)
+{
+    <span class="ty">Thing</span> made = <span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(tc.thingDef);
+    made.stackCount = tc.count;
+    <span class="ty">GenPlace</span>.<span class="nm">TryPlaceThing</span>(made, cell, map, <span class="ty">ThingPlaceMode</span>.Near);
+}
+
+<span class="cm">// 讀取建築的造價（cost）</span>
+<span class="ty">List</span>&lt;<span class="ty">ThingDefCountClass</span>&gt; cost = myDef.costList;</pre>
+
+    <div class="callout callout-info">
+      <strong>相關的「def + 數量」型別</strong>
+      <code>ThingDefCountClass</code>（含 count，給造價/產出）；<code>IngredientCount</code>（配方材料，含 filter + 數量，較複雜）；
+      <code>ThingDefCount</code>（struct 版，無 XML 解析、純值傳遞用）。寫配方 <code>RecipeDef</code> 用的是
+      <code>ingredients</code>(IngredientCount) 與 <code>products</code>(ThingDefCountClass)。
+    </div>
+  </div>
+
+  <!-- ── 10. SpecialThingFilterDef ── -->
+  <div class="section">
+    <div class="section-title">10. SpecialThingFilterDef — 特殊篩選</div>
+
+    <p>
+      有些「篩選條件」不是分類、也不是單品，而是一種<strong>動態謂詞</strong>（依物品執行期狀態判斷），
+      例如「允許腐敗中的食物」「允許汙染品」「允許無利刃武器」。這類由 <code>SpecialThingFilterDef</code> 定義，
+      搭配一個 <code>SpecialThingFilterWorker</code> 子類實作判斷邏輯。
+    </p>
+
+    <h3>內建範例</h3>
+    <table>
+      <tr><th>defName</th><th>含意</th></tr>
+      <tr><td><code>AllowRotten</code></td><td>是否允許腐敗（含腐爛進行中）的食物/屍體</td></tr>
+      <tr><td><code>AllowFresh</code></td><td>是否允許新鮮（未腐）品</td></tr>
+      <tr><td><code>AllowDeadmansApparel</code></td><td>是否允許死人衣</td></tr>
+      <tr><td><code>AllowBiocodedWeapons</code></td><td>是否允許生物編碼武器</td></tr>
+    </table>
+
+    <h3>自訂 SpecialThingFilterDef + Worker</h3>
+<pre>&lt;<span class="xml-tag">SpecialThingFilterDef</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_AllowCharged&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">label</span>&gt;allow charged cells&lt;/<span class="xml-tag">label</span>&gt;
+  &lt;<span class="xml-tag">description</span>&gt;Allow energy cells that still hold charge.&lt;/<span class="xml-tag">description</span>&gt;
+  &lt;<span class="xml-tag">parentCategory</span>&gt;Items&lt;/<span class="xml-tag">parentCategory</span>&gt;   <span class="cm">&lt;!-- 掛到分類樹的哪個節點 --&gt;</span>
+  &lt;<span class="xml-tag">allowedByDefault</span>&gt;true&lt;/<span class="xml-tag">allowedByDefault</span>&gt;
+  &lt;<span class="xml-tag">workerClass</span>&gt;MyMod.SpecialThingFilterWorker_Charged&lt;/<span class="xml-tag">workerClass</span>&gt;
+&lt;/<span class="xml-tag">SpecialThingFilterDef</span>&gt;</pre>
+
+<pre><span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">SpecialThingFilterWorker_Charged</span> : <span class="ty">SpecialThingFilterWorker</span>
+{
+    <span class="cm">// 回傳「這個 thing 是否被本特殊篩選視為『匹配』」</span>
+    <span class="kw">public override bool</span> <span class="nm">Matches</span>(<span class="ty">Thing</span> t)
+    {
+        <span class="kw">var</span> comp = t.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompCharge</span>&gt;();
+        <span class="kw">return</span> comp != <span class="kw">null</span> &amp;&amp; comp.ChargePercent &gt; <span class="nu">0f</span>;
+    }
+
+    <span class="cm">// 此特殊篩選對哪些 def 「可能適用」（決定它是否出現在該 def 的篩選 UI）</span>
+    <span class="kw">public override bool</span> <span class="nm">CanEverMatch</span>(<span class="ty">ThingDef</span> def)
+    {
+        <span class="kw">return</span> def.<span class="nm">HasComp</span>(<span class="kw">typeof</span>(<span class="ty">CompCharge</span>));
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>Matches vs CanEverMatch</strong>
+      <code>CanEverMatch(def)</code> 是<strong>靜態可能性</strong>（決定 UI 要不要顯示這個勾選項給該類物品）；
+      <code>Matches(thing)</code> 是<strong>執行期實際判定</strong>（這一件具體物品此刻算不算）。兩者都要實作，否則 UI 不顯示或判定全錯。
+    </div>
+  </div>
+
+  <!-- ── 11. 常見坑 ── -->
+  <div class="section">
+    <div class="section-title">11. 常見坑與排查清單</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>thingCategories 未掛載</h3>
+        <p>ThingDef 沒任何 <code>thingCategories</code>（自身與 ParentName 都沒），物品不屬於任何分類節點，<strong>篩選器找不到、整類勾選收不到、殖民者不搬</strong>。最高頻坑。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>parent 指向不存在的分類</h3>
+        <p>ThingCategoryDef 的 <code>parent</code> 或 ThingDef 的 <code>thingCategories</code> 寫了不存在的 defName，啟動 log 會報 cross-reference 解析失敗，該節點被丟棄。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>filter 階層 / parentFilter 矛盾</h3>
+        <p>容器的 <code>fixedStorageSettings</code>（上界）不含某分類，玩家就永遠勾不出它。「我的貨架怎麼勾不到木頭」常是 fixedStorageSettings 把它擋在上界外。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>手寫 childThingDefs / childCategories</h3>
+        <p>這兩個是引擎回填欄位，手寫會被覆蓋或重複。分類關係只能從「子→父」(parent / thingCategories) 宣告。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>誤以為 CompStackable 是原版</h3>
+        <p>原版堆疊內建於 ThingDef.stackLimit，無官方 CompStackable。看到它多半是第三方框架，別假設核心存在。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>cache 了 ListerThings 活清單</h3>
+        <p>ThingsOfDef/ThingsInGroup 回傳內部活 List，物品增刪即變。迭代中要改物品先 .ToList() 複製。</p>
+      </div>
+    </div>
+
+    <h3>「物品無法被貯藏 / 搬運工不搬」排查步驟</h3>
+    <div class="steps">
+      <ol>
+        <li>開 dev mode，啟動 log 是否有此 ThingDef / ThingCategoryDef 的 cross-reference 解析錯誤。</li>
+        <li>確認該 ThingDef（含 ParentName 繼承）<strong>至少有一個</strong> <code>thingCategories</code> 條目。</li>
+        <li>在遊戲內打開任一貯藏區的篩選器樹，確認物品出現在預期分類下；找不到 → 回步驟 2。</li>
+        <li>確認目標容器的 <code>fixedStorageSettings</code>（上界）涵蓋該分類，否則玩家勾不到。</li>
+        <li>確認 <code>defaultStorageSettings</code> 或玩家手動勾選有實際允許它（<code>filter.Allows(thing)</code> 為 true）。</li>
+        <li>確認物品屬於 <code>HaulableEver</code> 群組（<code>def.EverHaulable</code>），否則搬運 AI 根本不考慮它。</li>
+        <li>用 <code>map.listerThings.ThingsOfDef(yourDef)</code> 確認物品確實存在於地圖、未被 forbidden。</li>
+      </ol>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>快速自測一行</strong>
+      在 dev 動作裡對某物件呼叫 <code>Log.Message(thing.def.thingCategories?.Count.ToString() ?? "NULL");</code>
+      若印出 <code>NULL</code> 或 <code>0</code>，分類沒掛——這就是它消失在篩選器與搬運邏輯之外的根因。
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 儲存、分類與篩選 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

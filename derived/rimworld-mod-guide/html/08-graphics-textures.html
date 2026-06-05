@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>貼圖與圖形系統 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html" class="active">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>貼圖與圖形系統</h1>
+  <p>從 GraphicData 到 PawnRenderer、Mote 與 Shader——RimWorld 怎麼把一張 PNG 變成畫面上的物件。</p>
+  <span class="badge">Chapter 08 · 美術整合</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1  GraphicData 與 graphicClass
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 GraphicData 與 graphicClass</div>
+
+    <p>RimWorld 中幾乎所有「能在地圖上看到」的東西，視覺都由 <code>GraphicData</code>（Verse.GraphicData）這個 XML 區塊描述。它本身只是<strong>資料</strong>：指向貼圖路徑、尺寸、shader、繪製類別等。真正負責「怎麼畫」的是 <code>graphicClass</code> 指定的 <code>Graphic</code> 子類別。</p>
+
+    <p>典型的 <code>ThingDef</code> 裡的 graphicData：</p>
+
+<pre><span class="cm">&lt;!-- Defs/ThingDefs/MyThing.xml --&gt;</span>
+<span class="xml-tag">&lt;ThingDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyLamp<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thingClass&gt;</span>Building<span class="xml-tag">&lt;/thingClass&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/MyLamp<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Multi<span class="xml-tag">&lt;/graphicClass&gt;</span>
+    <span class="xml-tag">&lt;drawSize&gt;</span>(1, 1)<span class="xml-tag">&lt;/drawSize&gt;</span>
+    <span class="xml-tag">&lt;shaderType&gt;</span>CutoutComplex<span class="xml-tag">&lt;/shaderType&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>texPath 是「資料夾 / 檔名前綴」，不是檔案路徑</strong>
+      <code>texPath</code> 相對於任一 Mod 的 <code>Textures/</code> 目錄，且<strong>不含副檔名</strong>。對於多方向貼圖（Graphic_Multi），它是<em>前綴</em>，RimWorld 會自動附加 <code>_north</code>/<code>_south</code>/<code>_east</code> 後綴去找檔案。
+    </div>
+
+    <h3>graphicClass 對照表</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>graphicClass</th>
+          <th>用途</th>
+          <th>貼圖檔案需求</th>
+          <th>常見對象</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Graphic_Single</code></td>
+          <td>單張貼圖，所有方向共用一張</td>
+          <td>一個檔案（<code>texPath.png</code>）</td>
+          <td>地板物、物品、無方向建物</td>
+        </tr>
+        <tr>
+          <td><code>Graphic_Multi</code></td>
+          <td>多方向貼圖，依朝向切換</td>
+          <td><code>_north</code>/<code>_south</code>/<code>_east</code>（east 自動鏡像 west）</td>
+          <td>有朝向的建物、傢俱、Pawn 裝備</td>
+        </tr>
+        <tr>
+          <td><code>Graphic_Random</code></td>
+          <td>從一組變體中隨機挑一張（依 thingID 決定，存檔穩定）</td>
+          <td><code>texPathA</code>/<code>texPathB</code>… 多個編號檔</td>
+          <td>岩石、樹木、屍體、雜物</td>
+        </tr>
+        <tr>
+          <td><code>Graphic_Stack</code></td>
+          <td>依堆疊數量切換貼圖（少/中/多）</td>
+          <td>多張表示不同數量的檔</td>
+          <td>地上的資源堆（鋼鐵、木材）</td>
+        </tr>
+        <tr>
+          <td><code>Graphic_Linked</code></td>
+          <td>依相鄰同類物件自動連接（牆、管線）</td>
+          <td>Atlas（含各種連接組合的拼圖）</td>
+          <td>牆壁、電線、地板邊界</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Graphic_Random 的 XML</h3>
+        <p>用 <code>&lt;graphicClass&gt;Graphic_Random&lt;/graphicClass&gt;</code>，texPath 指向資料夾，RimWorld 自動載入該資料夾下所有 PNG 當變體。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Graphic_Linked 衍生</h3>
+        <p>實務上多用 <code>Graphic_LinkedTransmitter</code>（電線）、<code>Graphic_Single</code>+linkFlags 的牆。需搭配 <code>&lt;linkFlags&gt;</code> / <code>&lt;linkType&gt;</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Graphic_Appearances</h3>
+        <p>服裝專用：依材質（布/皮/合成）切換外觀，是 Pawn 裝備繪製的特例，後面 §6 會談。</p>
+      </div>
+    </div>
+
+    <h3>Graphic_Random 完整範例</h3>
+
+<pre><span class="cm">&lt;!-- texPath 指向資料夾，內含 RockA.png / RockB.png / RockC.png --&gt;</span>
+<span class="xml-tag">&lt;graphicData&gt;</span>
+  <span class="xml-tag">&lt;texPath&gt;</span>Things/Rock/Chunks<span class="xml-tag">&lt;/texPath&gt;</span>
+  <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Random<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;drawSize&gt;</span>(1.2, 1.2)<span class="xml-tag">&lt;/drawSize&gt;</span>
+<span class="xml-tag">&lt;/graphicData&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>Graphic_Random 的「隨機」是決定性的</strong>
+      變體選擇用 <code>thing.thingIDNumber</code> 取模，所以同一個物件每次讀檔都顯示同一張，不會閃爍。這也是為什麼你不能假設它「真的隨機」。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  多方向貼圖命名規則
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 多方向貼圖命名規則</div>
+
+    <p><code>Graphic_Multi</code> 是有方向物件的標準作法。RimWorld 以 <code>texPath</code> 為前綴，自動拼接方向後綴尋找四個朝向的貼圖。</p>
+
+    <table>
+      <thead>
+        <tr><th>朝向 (Rot4)</th><th>檔名後綴</th><th>必要性</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>South（南，朝下 / 預設正面）</td><td><code>_south</code></td><td><span class="tag tag-red">必要</span></td><td>缺其他方向時的 fallback</td></tr>
+        <tr><td>North（北，朝上 / 背面）</td><td><code>_north</code></td><td><span class="tag tag-orange">建議</span></td><td>缺則 fallback 到 south</td></tr>
+        <tr><td>East（東，朝右）</td><td><code>_east</code></td><td><span class="tag tag-orange">建議</span></td><td>會被自動鏡像當 west 用</td></tr>
+        <tr><td>West（西，朝左）</td><td><code>_west</code></td><td><span class="tag tag-green">選用</span></td><td>提供時覆蓋 east 的鏡像</td></tr>
+      </tbody>
+    </table>
+
+<pre><span class="cm"># Textures 目錄結構（Graphic_Multi）</span>
+MyMod/
+└── Textures/
+    └── Things/Building/
+        ├── MyLamp_south.png   <span class="cm"># 必要——也是 fallback</span>
+        ├── MyLamp_north.png
+        └── MyLamp_east.png    <span class="cm"># 自動鏡像成 west</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>East 自動鏡像 West 的陷阱</strong>
+      若貼圖左右不對稱且含文字 / logo，鏡像後的 west 會「鏡像翻轉」（例如文字反過來）。此時必須另外提供 <code>_west.png</code> 來覆蓋自動鏡像。RimWorld 偵測到 <code>_west</code> 檔存在就停止鏡像。
+    </div>
+
+    <h3>RimWorld 的方向座標約定</h3>
+
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <h3>Rot4 列舉</h3>
+        <p>
+          <code>Rot4.South = 0</code>（朝下，玩家視角的「正面」）<br>
+          <code>Rot4.East = 1</code>（朝右）<br>
+          <code>Rot4.North = 2</code>（朝上，背面）<br>
+          <code>Rot4.West = 3</code>（朝左）
+        </p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>美術製作慣例</h3>
+        <p>
+          South 是「面向相機」的視角，畫得最仔細。<br>
+          North 是背面（常是頭髮 / 背包）。<br>
+          East 是側面，west 多半靠鏡像省工。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  Graphic 載入流程
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 Graphic 載入流程（GraphicDatabase.Get）</div>
+
+    <p>貼圖載入的核心是 <code>GraphicDatabase</code>（Verse.GraphicDatabase）——一個全域快取。<code>GraphicData.GraphicColoredFor</code> / <code>Graphic</code> 屬性在第一次存取時透過它建構並快取 <code>Graphic</code> 物件，後續直接命中快取。</p>
+
+    <div class="callout callout-info">
+      <strong>為何要快取？</strong>
+      建構 <code>Graphic</code> 涉及從磁碟讀 PNG、上傳到 GPU 成 <code>Texture2D</code>、建立 <code>Material</code>（含 shader 與顏色）。這些都很貴。<code>GraphicDatabase</code> 以「graphicClass + path + shader + color + drawSize」為 key 去重，相同組合全遊戲只建一次。
+    </div>
+
+    <h3>典型呼叫鏈</h3>
+
+    <ol class="steps">
+      <li>XML 載入後，<code>GraphicData</code> 持有 texPath / graphicClass 等欄位（尚未建 Graphic）。</li>
+      <li>首次需要繪製時，呼叫 <code>graphicData.Graphic</code>（getter）。</li>
+      <li>內部呼叫 <code>GraphicDatabase.Get&lt;TGraphicClass&gt;(path, shader, drawSize, color, ...)</code>。</li>
+      <li><code>GraphicDatabase</code> 用 <code>ContentFinder&lt;Texture2D&gt;.Get</code> 從所有啟用 Mod 的 <code>Textures/</code> 找貼圖。</li>
+      <li>建構對應的 <code>Graphic</code> 子類別、產生 <code>Material</code>，存入快取並回傳。</li>
+    </ol>
+
+<pre><span class="cm">// 在 C# 中手動取得一個 Graphic（例如自訂繪製時）</span>
+<span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">UnityEngine</span>;
+
+<span class="ty">Graphic</span> graphic = <span class="ty">GraphicDatabase</span>.<span class="nm">Get</span>&lt;<span class="ty">Graphic_Single</span>&gt;(
+    <span class="st">"Things/Item/MyIcon"</span>,            <span class="cm">// texPath（無副檔名）</span>
+    <span class="ty">ShaderDatabase</span>.Cutout,           <span class="cm">// shader</span>
+    <span class="kw">new</span> <span class="ty">Vector2</span>(<span class="nu">1f</span>, <span class="nu">1f</span>),            <span class="cm">// drawSize</span>
+    <span class="ty">Color</span>.white);                     <span class="cm">// 著色</span>
+
+<span class="cm">// 直接讀一張 Texture2D（不建 Graphic / Material）</span>
+<span class="ty">Texture2D</span> tex = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Icons/MyIcon"</span>);</pre>
+
+    <div class="callout callout-warn">
+      <strong>ContentFinder.Get 的找不到行為</strong>
+      <code>ContentFinder&lt;Texture2D&gt;.Get(path)</code> 找不到時會記 Error 並回傳 RimWorld 內建的 <code>BadTexture</code>（紫黑棋盤）。若要靜默嘗試，傳第二參數 <code>reportFailure: false</code>，找不到時回 <code>null</code>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  drawSize / drawOffset / shaderType
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 drawSize、drawOffset 與 shaderType</div>
+
+    <h3>幾何控制：drawSize / drawOffset</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>drawSize</code></td><td><code>Vector2</code></td><td>繪製尺寸（單位＝格）。<code>(2,2)</code> 表示佔 2×2 格大小，貼圖本身會被縮放。</td></tr>
+        <tr><td><code>drawOffset</code></td><td><code>Vector3</code></td><td>整體繪製偏移（x 右、z 上；y 是繪製層高度）。常用於讓貼圖在格子內上移。</td></tr>
+        <tr><td><code>drawOffsetNorth/South/East/West</code></td><td><code>Vector3?</code></td><td>各朝向獨立偏移（覆蓋通用 drawOffset），處理不對稱朝向。</td></tr>
+        <tr><td><code>drawRotated</code></td><td><code>bool</code></td><td>是否允許隨朝向旋轉貼圖（Graphic_Single 物件常用）。</td></tr>
+        <tr><td><code>color</code> / <code>colorTwo</code></td><td><code>Color</code></td><td>主色 / 次色，配合 CutoutComplex shader 做 mask 著色。</td></tr>
+      </tbody>
+    </table>
+
+<pre><span class="cm">&lt;!-- 一個 2x1 的長物件，整體往上移半格 --&gt;</span>
+<span class="xml-tag">&lt;graphicData&gt;</span>
+  <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/LongBench<span class="xml-tag">&lt;/texPath&gt;</span>
+  <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Multi<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;drawSize&gt;</span>(2, 1)<span class="xml-tag">&lt;/drawSize&gt;</span>
+  <span class="xml-tag">&lt;drawOffset&gt;</span>(0, 0, 0.5)<span class="xml-tag">&lt;/drawOffset&gt;</span>
+  <span class="xml-tag">&lt;shaderType&gt;</span>Cutout<span class="xml-tag">&lt;/shaderType&gt;</span>
+  <span class="xml-tag">&lt;color&gt;</span>(120, 100, 80)<span class="xml-tag">&lt;/color&gt;</span>
+<span class="xml-tag">&lt;/graphicData&gt;</span></pre>
+
+    <h3>shaderType 對照</h3>
+
+    <table>
+      <thead>
+        <tr><th>shaderType</th><th>Alpha 處理</th><th>著色 (color/colorTwo)</th><th>適用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Cutout</code></td>
+          <td>硬邊（alpha &gt; 0.5 顯示，否則透明，無半透明）</td>
+          <td>支援單一 color 整體染色</td>
+          <td>絕大多數物件、建物、物品（預設首選）</td>
+        </tr>
+        <tr>
+          <td><code>Transparent</code></td>
+          <td>支援半透明漸層（alpha blending）</td>
+          <td>單一 color</td>
+          <td>玻璃、光暈、煙霧、需要柔邊的東西</td>
+        </tr>
+        <tr>
+          <td><code>CutoutComplex</code></td>
+          <td>硬邊 + mask 通道</td>
+          <td><strong>雙色</strong>：用同名 <code>_m</code> mask 貼圖分區套 color / colorTwo</td>
+          <td>可染色裝備、有金屬/能量配色的建物</td>
+        </tr>
+        <tr>
+          <td><code>MetaOverlay</code></td>
+          <td>半透明，繪於最上層 overlay 層</td>
+          <td>單一 color</td>
+          <td>UI 疊加、選取框、區域提示等「不屬於世界」的覆蓋層</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>CutoutComplex 的 mask 貼圖規則</strong>
+      使用 CutoutComplex 時，除了主貼圖 <code>MyThing_south.png</code>，再放一張同名加 <code>m</code> 的 mask <code>MyThing_southm.png</code>。mask 的<strong>紅色通道</strong>區域吃 <code>colorTwo</code>，其餘吃 <code>color</code>。沒有 mask 檔則整張吃 color。這是 RimWorld 雙色染色（如不同金屬色武器）的基礎。
+    </div>
+
+    <h3>C# 端取得 Shader</h3>
+
+<pre><span class="cm">// ShaderDatabase 提供所有內建 shader 的快取入口</span>
+<span class="ty">Shader</span> cutout      = <span class="ty">ShaderDatabase</span>.Cutout;
+<span class="ty">Shader</span> transparent = <span class="ty">ShaderDatabase</span>.Transparent;
+<span class="ty">Shader</span> complex     = <span class="ty">ShaderDatabase</span>.CutoutComplex;
+<span class="ty">Shader</span> overlay     = <span class="ty">ShaderDatabase</span>.MetaOverlay;
+
+<span class="cm">// 依字串名取得（XML shaderType 解析用的同一條路徑）</span>
+<span class="ty">Shader</span> s = <span class="ty">ShaderDatabase</span>.<span class="nm">LoadShader</span>(<span class="st">"Map/CutoutComplex"</span>);</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  自訂 Graphic class
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 自訂 Graphic class（繼承 Graphic）</div>
+
+    <p>當內建 graphicClass 無法滿足需求（例如要疊兩層、依資料動態決定貼圖、加動畫偏移），可以繼承 <code>Verse.Graphic</code> 自訂繪製邏輯。核心要覆寫兩個方法：</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>DrawWorker</h3>
+        <p><code>DrawWorker(Vector3 loc, Rot4 rot, ThingDef def, Thing thing, float extraRotation)</code><br><br>負責<strong>即時渲染</strong>（每幀呼叫），用於會移動 / 動畫的物件，如 Pawn、彈射物。內部呼叫 <code>Graphics.DrawMesh</code>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Print</h3>
+        <p><code>Print(SectionLayer layer, Thing thing, float extraRotation)</code><br><br>把貼圖<strong>烘焙進地圖的靜態網格層</strong>（只在物件變動時重印一次），用於不動的建物 / 地板，效能遠高於每幀 Draw。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Print vs Draw 的關鍵差異</strong>
+      靜態物件（牆、傢俱）走 <code>Print</code>，貼圖被批次合併進 <code>SectionLayer</code> 大網格，幾乎零 per-frame 成本。會動的（Pawn、Mote、彈道）走 <code>DrawWorker</code> 每幀重畫。選錯會嚴重影響效能——把會動的東西用 Print 會「定格」，把靜態的用 Draw 會吃滿 CPU。
+    </div>
+
+    <h3>需要實作的成員</h3>
+
+<pre><span class="kw">using</span> <span class="ty">UnityEngine</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">Graphic_TwoLayer</span> : <span class="ty">Graphic</span>
+{
+    <span class="kw">private</span> <span class="ty">Material</span> baseMat;
+    <span class="kw">private</span> <span class="ty">Material</span> overlayMat;
+
+    <span class="cm">// ① Init：從 GraphicRequest 取出 path/shader/color 建立 Material</span>
+    <span class="kw">public override void</span> <span class="nm">Init</span>(<span class="ty">GraphicRequest</span> req)
+    {
+        data = req.graphicData;
+        path = req.path;
+        color = req.color;
+        drawSize = req.drawSize;
+
+        <span class="ty">Texture2D</span> baseTex = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(req.path);
+        <span class="ty">Texture2D</span> overTex = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(req.path + <span class="st">"_overlay"</span>, <span class="kw">false</span>);
+
+        baseMat = <span class="ty">MaterialPool</span>.<span class="nm">MatFrom</span>(<span class="kw">new</span> <span class="ty">MaterialRequest</span>(baseTex, req.shader, color));
+        <span class="kw">if</span> (overTex != <span class="kw">null</span>)
+            overlayMat = <span class="ty">MaterialPool</span>.<span class="nm">MatFrom</span>(<span class="kw">new</span> <span class="ty">MaterialRequest</span>(overTex, <span class="ty">ShaderDatabase</span>.Transparent, color));
+    }
+
+    <span class="cm">// ② MatAt：回傳指定朝向的主 Material（PawnRenderer / Print 都會問它）</span>
+    <span class="kw">public override</span> <span class="ty">Material</span> <span class="nm">MatAt</span>(<span class="ty">Rot4</span> rot, <span class="ty">Thing</span> thing = <span class="kw">null</span>) =&gt; baseMat;
+    <span class="kw">public override</span> <span class="ty">Material</span> MatSingle =&gt; baseMat;
+
+    <span class="cm">// ③ DrawWorker：動態物件每幀繪製</span>
+    <span class="kw">public override void</span> <span class="nm">DrawWorker</span>(<span class="ty">Vector3</span> loc, <span class="ty">Rot4</span> rot,
+        <span class="ty">ThingDef</span> thingDef, <span class="ty">Thing</span> thing, <span class="kw">float</span> extraRotation)
+    {
+        <span class="ty">Mesh</span> mesh = <span class="ty">MeshAt</span>(rot);
+        <span class="ty">Quaternion</span> quat = <span class="nm">QuatFromRot</span>(rot);
+        <span class="kw">if</span> (extraRotation != <span class="nu">0f</span>) quat *= <span class="ty">Quaternion</span>.<span class="nm">Euler</span>(<span class="ty">Vector3</span>.up * extraRotation);
+
+        <span class="ty">Graphics</span>.<span class="nm">DrawMesh</span>(mesh, loc, quat, baseMat, <span class="nu">0</span>);
+        <span class="kw">if</span> (overlayMat != <span class="kw">null</span>)
+            <span class="ty">Graphics</span>.<span class="nm">DrawMesh</span>(mesh, loc + <span class="ty">Altitudes</span>.<span class="nm">AltIncVect</span>, quat, overlayMat, <span class="nu">0</span>);
+    }
+
+    <span class="cm">// ④ Print：靜態物件烘焙到地圖網格層</span>
+    <span class="kw">public override void</span> <span class="nm">Print</span>(<span class="ty">SectionLayer</span> layer, <span class="ty">Thing</span> thing, <span class="kw">float</span> extraRotation)
+    {
+        <span class="ty">Printer_Plane</span>.<span class="nm">PrintPlane</span>(layer, thing.<span class="ty">TrueCenter</span>(),
+            drawSize, baseMat, extraRotation);
+        <span class="kw">if</span> (overlayMat != <span class="kw">null</span>)
+            <span class="ty">Printer_Plane</span>.<span class="nm">PrintPlane</span>(layer,
+                thing.<span class="ty">TrueCenter</span>() + <span class="ty">Altitudes</span>.<span class="nm">AltIncVect</span>,
+                drawSize, overlayMat, extraRotation);
+    }
+
+    <span class="cm">// ⑤ GetColoredVersion：支援著色快取（被 GraphicDatabase 呼叫）</span>
+    <span class="kw">public override</span> <span class="ty">Graphic</span> <span class="nm">GetColoredVersion</span>(<span class="ty">Shader</span> newShader, <span class="ty">Color</span> newColor, <span class="ty">Color</span> newColorTwo)
+        =&gt; <span class="ty">GraphicDatabase</span>.<span class="nm">Get</span>&lt;<span class="ty">Graphic_TwoLayer</span>&gt;(path, newShader, drawSize, newColor, newColorTwo);
+}</pre>
+
+    <p>在 XML 中指定自訂類別（含命名空間）：</p>
+
+<pre><span class="xml-tag">&lt;graphicData&gt;</span>
+  <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/MyMachine<span class="xml-tag">&lt;/texPath&gt;</span>
+  <span class="xml-tag">&lt;graphicClass&gt;</span>MyMod.Graphic_TwoLayer<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;shaderType&gt;</span>Cutout<span class="xml-tag">&lt;/shaderType&gt;</span>
+<span class="xml-tag">&lt;/graphicData&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>MaterialPool 而非 new Material</strong>
+      永遠用 <code>MaterialPool.MatFrom</code> 建立 Material，它會依 (texture, shader, color) 去重快取。直接 <code>new Material(...)</code> 會每次產生新 Material 物件，造成 GPU 記憶體洩漏與 draw call 暴增。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  PawnRenderer 與圖層
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 PawnRenderer 與服裝 / 體型圖層</div>
+
+    <p>Pawn 的繪製是 RimWorld 圖形系統中最複雜的部分，由 <code>PawnRenderer</code>（1.5 起重構為 <code>PawnRenderTree</code> + 多個 <code>PawnRenderNode</code>）統籌。它把身體、頭、頭髮、衣服、裝備、Hediff 等拆成多個圖層由下往上疊繪。</p>
+
+    <h3>核心概念：分層疊繪</h3>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Body（體型）</h3>
+        <p><code>BodyTypeDef</code> 決定身形（Thin/Fat/Hulk/Male/Female）。每種 body type 有獨立的軀幹貼圖與衣服繪製錨點。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Head（頭部）</h3>
+        <p>頭骨形狀來自 <code>HeadTypeDef</code>，再疊上頭髮（<code>HairDef</code>）、鬍子（<code>BeardDef</code>）、臉部 Tattoo / Gene 外觀。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Apparel（服裝）</h3>
+        <p>每件 <code>Apparel</code> 依其 <code>apparelLayer</code> 與 <code>bodyPartGroups</code> 決定畫在哪層、蓋住身體哪部分。</p>
+      </div>
+    </div>
+
+    <h3>服裝繪製的 XML（ApparelProperties）</h3>
+
+<pre><span class="cm">&lt;!-- 一件外套的 Def 片段 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ApparelMakeableBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Apparel_MyCoat<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;apparel&gt;</span>
+    <span class="xml-tag">&lt;bodyPartGroups&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Torso<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Shoulders<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/bodyPartGroups&gt;</span>
+    <span class="cm">&lt;!-- 穿戴後繪製貼圖前綴；RimWorld 找 _north/_south/_east --&gt;</span>
+    <span class="xml-tag">&lt;wornGraphicPath&gt;</span>Things/Pawn/Apparel/MyCoat/MyCoat<span class="xml-tag">&lt;/wornGraphicPath&gt;</span>
+    <span class="xml-tag">&lt;layers&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Shell<span class="xml-tag">&lt;/li&gt;</span>   <span class="cm">&lt;!-- 繪製層：OnSkin / Middle / Shell / Overhead --&gt;</span>
+    <span class="xml-tag">&lt;/layers&gt;</span>
+  <span class="xml-tag">&lt;/apparel&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="cm">&lt;!-- 這是「掉在地上 / 庫存」的圖示，與穿戴貼圖不同 --&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Pawn/Apparel/MyCoat/MyCoat<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Multi<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <table>
+      <thead>
+        <tr><th>apparel layer</th><th>位置</th><th>例子</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>OnSkin</code></td><td>貼皮膚最內層</td><td>襯衫、緊身衣</td></tr>
+        <tr><td><code>Middle</code></td><td>中層</td><td>防彈衣、護甲</td></tr>
+        <tr><td><code>Shell</code></td><td>最外層</td><td>外套、斗篷、動力裝甲</td></tr>
+        <tr><td><code>Overhead</code></td><td>頭部之上</td><td>帽子、頭盔（畫在 head 層）</td></tr>
+        <tr><td><code>EyeCover</code></td><td>覆蓋眼睛</td><td>面罩、護目鏡（1.4+）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>C# 取得 / 操作 Pawn 圖形</h3>
+
+<pre><span class="cm">// 取得 Pawn 的 renderer 並強制重繪（換裝 / 改外觀後）</span>
+<span class="ty">Pawn</span> pawn = ...;
+pawn.<span class="nm">Drawer</span>.<span class="nm">renderer</span>.<span class="nm">SetAllGraphicsDirty</span>();   <span class="cm">// 1.5：重建 render tree</span>
+
+<span class="cm">// 取頭髮 / 身體的著色 Graphic（1.4 風格）</span>
+<span class="ty">Graphic</span> bodyGraphic = pawn.<span class="nm">Drawer</span>.<span class="nm">renderer</span>.<span class="nm">BodyGraphic</span>;
+
+<span class="cm">// 自訂裝備穿戴貼圖（需 Harmony patch ApparelGraphicRecordGetter</span>
+<span class="cm">// 或實作 PawnRenderNodeWorker，視版本而定）</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>1.4 → 1.5 PawnRenderer 大改版</strong>
+      RimWorld 1.5 把 PawnRenderer 重寫為 <code>PawnRenderTree</code> + <code>PawnRenderNode</code> / <code>PawnRenderNodeWorker</code> 的節點樹架構。1.4 直接 patch <code>RenderPawnInternal</code> 的 Mod 在 1.5 幾乎全壞。新增自訂圖層在 1.5 應透過 <code>PawnRenderNodeProperties</code> + 自訂 <code>PawnRenderNodeWorker</code>，而非 Harmony 硬切繪製流程。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  Mote 粒子 / 特效
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 Mote（粒子 / 特效）</div>
+
+    <p><code>Mote</code> 是 RimWorld 的輕量特效系統——飄起的煙、攻擊火花、文字提示、心情泡泡都是 Mote。它們是「假 Thing」：有貼圖會動會淡出，但不參與遊戲邏輯、不存檔、不阻擋路徑，生命週期一到就自動消滅。</p>
+
+    <h3>MoteDef 定義</h3>
+
+<pre><span class="cm">&lt;!-- Defs/ThingDefs_Motes/Motes_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"MoteBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Mote_MySpark<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thingClass&gt;</span>MoteThrown<span class="xml-tag">&lt;/thingClass&gt;</span>  <span class="cm">&lt;!-- MoteThrown 可給初速 --&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Mote/MySpark<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+    <span class="xml-tag">&lt;shaderType&gt;</span>Transparent<span class="xml-tag">&lt;/shaderType&gt;</span>  <span class="cm">&lt;!-- 特效幾乎都用 Transparent --&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+  <span class="xml-tag">&lt;mote&gt;</span>
+    <span class="xml-tag">&lt;fadeInTime&gt;</span>0.05<span class="xml-tag">&lt;/fadeInTime&gt;</span>
+    <span class="xml-tag">&lt;solidTime&gt;</span>0.2<span class="xml-tag">&lt;/solidTime&gt;</span>
+    <span class="xml-tag">&lt;fadeOutTime&gt;</span>0.4<span class="xml-tag">&lt;/fadeOutTime&gt;</span>     <span class="cm">&lt;!-- 總壽命 = fadeIn+solid+fadeOut --&gt;</span>
+    <span class="xml-tag">&lt;growthRate&gt;</span>0.5<span class="xml-tag">&lt;/growthRate&gt;</span>       <span class="cm">&lt;!-- 隨時間放大 --&gt;</span>
+    <span class="xml-tag">&lt;acceleration&gt;</span>(0, 0, -1)<span class="xml-tag">&lt;/acceleration&gt;</span>
+  <span class="xml-tag">&lt;/mote&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <h3>C# 生成 Mote</h3>
+
+    <p>RimWorld 提供 <code>MoteMaker</code> 系列靜態方法產生 Mote。最常用的是靜態（不動）與拋射（帶速度）兩類：</p>
+
+<pre><span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">UnityEngine</span>;
+
+<span class="cm">// ① 靜態 Mote：固定位置淡入淡出（如地面圖示、提示）</span>
+<span class="ty">MoteMaker</span>.<span class="nm">MakeStaticMote</span>(
+    cell.<span class="ty">ToVector3Shifted</span>(),          <span class="cm">// 位置（格中心）</span>
+    map,
+    <span class="ty">MyMoteDefOf</span>.Mote_MySpark,           <span class="cm">// MoteDef</span>
+    scale: <span class="nu">1f</span>);                          <span class="cm">// 初始縮放</span>
+
+<span class="cm">// ② 拋射 Mote：給初速 / 角度（火花、碎屑）</span>
+<span class="ty">MoteThrown</span> mote = (<span class="ty">MoteThrown</span>)<span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(<span class="ty">MyMoteDefOf</span>.Mote_MySpark);
+mote.<span class="nm">Scale</span> = <span class="nu">1.2f</span>;
+mote.<span class="nm">exactPosition</span> = origin.<span class="ty">ToVector3Shifted</span>();
+mote.<span class="nm">SetVelocity</span>(<span class="ty">Rand</span>.<span class="nm">Range</span>(<span class="nu">0</span>, <span class="nu">360</span>), <span class="ty">Rand</span>.<span class="nm">Range</span>(<span class="nu">1f</span>, <span class="nu">3f</span>));
+<span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(mote, origin, map);
+
+<span class="cm">// ③ 文字 Mote：飄字（傷害數字 / 提示）</span>
+<span class="ty">MoteMaker</span>.<span class="nm">ThrowText</span>(pawn.<span class="ty">DrawPos</span>, map, <span class="st">"+50"</span>, <span class="ty">Color</span>.green);</pre>
+
+    <div class="callout callout-warn">
+      <strong>Mote 數量上限與節流</strong>
+      地圖上同時存在的 Mote 有上限（<code>MoteCounter</code>），超量時新 Mote 會被丟棄而不生成。所以別在 Tick 裡無節制地噴 Mote——超量時你的特效會「隨機消失」，且這是<strong>視覺特效，不要拿來承載遊戲邏輯</strong>（不存檔、不可靠）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  Overlay 與 Gizmo 圖示
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 Overlay 與 Command Gizmo 圖示</div>
+
+    <h3>地圖 Overlay（OverlayDrawer）</h3>
+
+    <p>Overlay 是疊在物件上的小圖示——沒電的閃電、需維修的扳手、休眠的 Z。由 <code>OverlayDrawer</code>（<code>map.overlayDrawer</code>）統一管理，繪在物件上方。</p>
+
+<pre><span class="cm">// 在 Building 的 Draw / DrawAt 中疊一個內建 overlay</span>
+<span class="kw">public override void</span> <span class="nm">DrawAt</span>(<span class="ty">Vector3</span> drawLoc, <span class="kw">bool</span> flip = <span class="kw">false</span>)
+{
+    <span class="kw">base</span>.<span class="nm">DrawAt</span>(drawLoc, flip);
+
+    <span class="kw">if</span> (!powered)
+        <span class="ty">Map</span>.<span class="nm">overlayDrawer</span>.<span class="nm">DrawOverlay</span>(<span class="kw">this</span>, <span class="ty">OverlayTypes</span>.NeedsPower);
+}
+
+<span class="cm">// 自訂貼圖 overlay：用 OverlayDrawer.RenderPulsingOverlay</span>
+<span class="kw">private static readonly</span> <span class="ty">Material</span> AlertMat =
+    <span class="ty">MaterialPool</span>.<span class="nm">MatFrom</span>(<span class="st">"UI/Overlays/MyAlert"</span>, <span class="ty">ShaderDatabase</span>.MetaOverlay);
+
+<span class="ty">Map</span>.<span class="nm">overlayDrawer</span>.<span class="nm">RenderPulsingOverlay</span>(<span class="kw">this</span>, AlertMat, <span class="nu">0</span>);</pre>
+
+    <h3>Command / Gizmo 圖示</h3>
+
+    <p>Gizmo 是選取物件時左下角的按鈕。<code>Command_Action</code> 的 <code>icon</code> 是一張 <code>Texture2D</code>，透過 <code>ContentFinder</code> 載入。</p>
+
+<pre><span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">UnityEngine</span>;
+
+<span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Gizmo</span>&gt; <span class="nm">GetGizmos</span>()
+{
+    <span class="kw">foreach</span> (<span class="kw">var</span> g <span class="kw">in</span> <span class="kw">base</span>.<span class="nm">GetGizmos</span>()) <span class="kw">yield return</span> g;
+
+    <span class="kw">yield return</span> <span class="kw">new</span> <span class="ty">Command_Action</span>
+    {
+        defaultLabel = <span class="st">"啟動"</span>,
+        defaultDesc  = <span class="st">"開啟這台機器。"</span>,
+        <span class="cm">// 圖示：建議 64x64 或 128x128，放在 Textures/UI/Commands/</span>
+        icon = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Commands/MyActivate"</span>),
+        iconDrawScale = <span class="nu">1f</span>,
+        action = () =&gt; { <span class="kw">this</span>.active = <span class="kw">true</span>; }
+    };
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>內建 Gizmo 圖示複用</strong>
+      原版有許多現成圖示可直接用路徑取得，例如 <code>UI/Commands/Halt</code>、<code>UI/Commands/Attack</code>、<code>UI/Designators/...</code>。先翻原版 <code>Textures</code> 再決定要不要自己畫，能省大量美術工。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  貼圖最佳實踐
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 貼圖最佳實踐</div>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>解析度與每格像素</h3>
+        <p>RimWorld 一格約對應 <strong>64×64 px</strong>（原版多數物件）。1×1 物件畫 128×128、2×2 畫 256×256 是常見高品質作法（2x 供縮放）。過大只是浪費 VRAM。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Power-of-Two 尺寸</h3>
+        <p>邊長用 2 的次方（64 / 128 / 256 / 512）。非 POT 貼圖在部分 GPU / 壓縮格式下會被填補或拒絕壓縮，浪費記憶體。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>透明背景 PNG</h3>
+        <p>用 32-bit RGBA PNG，背景全透明。Cutout shader 只看 alpha 是否 &gt; 0.5；半透明邊緣在 Cutout 下會被硬切，柔邊需改 Transparent。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>壓縮（DXT / Crunch）</h3>
+        <p>RimWorld 載入時依設定可對貼圖做 GPU 壓縮（DXT5）。POT + RGBA 才能正確壓縮；過小的圖（&lt;4px 邊）反而不該壓。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>檔案組織</h3>
+        <p>依 <code>Textures/Things/...</code>、<code>Textures/UI/...</code> 分類。Mod 間 texPath 會合併命名空間，加 Mod 專屬前綴資料夾（如 <code>Textures/MyMod/</code>）避免撞名覆蓋。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>命名一致性</h3>
+        <p>多方向務必嚴格 <code>_north/_south/_east</code> 小寫。大小寫錯（如 <code>_North</code>）在 Windows 開發機可能能跑，到 Linux 玩家機就找不到檔。</p>
+      </div>
+    </div>
+
+    <h3>ContentFinder 預載（StaticConstructorOnStartup）</h3>
+
+    <p>頻繁使用的貼圖 / Material 應在啟動時一次載入並快取為靜態欄位，避免執行期反覆查找：</p>
+
+<pre><span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">UnityEngine</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+
+<span class="cm">// [StaticConstructorOnStartup] 確保此類別在遊戲載入完成、</span>
+<span class="cm">// GPU 資源可用後才執行靜態建構式——這是預載貼圖的正確時機</span>
+[<span class="at">StaticConstructorOnStartup</span>]
+<span class="kw">public static class</span> <span class="ty">MyTextures</span>
+{
+    <span class="kw">public static readonly</span> <span class="ty">Texture2D</span> IconActivate =
+        <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Commands/MyActivate"</span>);
+
+    <span class="kw">public static readonly</span> <span class="ty">Material</span> BeamMat =
+        <span class="ty">MaterialPool</span>.<span class="nm">MatFrom</span>(<span class="st">"Things/Mote/MyBeam"</span>, <span class="ty">ShaderDatabase</span>.Transparent);
+
+    <span class="cm">// 預先取一個 Graphic（會連帶建好 Material 並進快取）</span>
+    <span class="kw">public static readonly</span> <span class="ty">Graphic</span> RingGraphic =
+        <span class="ty">GraphicDatabase</span>.<span class="nm">Get</span>&lt;<span class="ty">Graphic_Single</span>&gt;(
+            <span class="st">"Things/Special/Ring"</span>, <span class="ty">ShaderDatabase</span>.Transparent,
+            <span class="ty">Vector2</span>.one, <span class="ty">Color</span>.white);
+}
+
+<span class="cm">// 使用：零執行期載入成本</span>
+icon = <span class="ty">MyTextures</span>.IconActivate;</pre>
+
+    <div class="callout callout-danger">
+      <strong>絕對不要在主執行緒外或 StaticConstructorOnStartup 前碰 GPU 資源</strong>
+      <code>ContentFinder&lt;Texture2D&gt;.Get</code>、<code>MaterialPool</code>、<code>Graphics.DrawMesh</code> 都依賴 Unity 主執行緒與已初始化的渲染環境。在 Def 的 <code>ResolveReferences</code> 或背景執行緒呼叫會崩潰或回傳 null。一律集中在 <code>[StaticConstructorOnStartup]</code> 或實際繪製時機。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>除錯：看 RimWorld 怎麼載你的貼圖</strong>
+      開發者模式（Options → Development mode）下，<code>Debug log</code> 會記錄找不到的貼圖路徑。貼圖顯示成紫黑棋盤＝ texPath 錯或檔名後綴錯；顯示成全白方塊＝ alpha 通道全不透明或 shader 選錯。
+    </div>
+  </div>
+
+  <!-- 本頁重點回顧 -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>GraphicData</h3>
+        <p>graphicClass 選 Single/Multi/Random/Stack/Linked；texPath 是前綴非檔案</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>方向 & Shader</h3>
+        <p>_south 必備、east 自動鏡像 west；Cutout 為主、CutoutComplex 雙色染</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>繪製分流</h3>
+        <p>靜態用 Print、動態用 DrawWorker；Material 一律走 MaterialPool</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>特效 & 預載</h3>
+        <p>Mote 不存檔有上限；貼圖 POT + StaticConstructorOnStartup 預載</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 08 貼圖與圖形系統<br>
+  適用 RimWorld 1.4 / 1.5 · 繁體中文
+</footer>
+
+</body>
+</html>

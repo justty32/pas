@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基因與異種 (Genes &amp; Xenotypes) — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+  .biostat-table td:nth-child(1) { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html" class="active">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>基因與異種</h1>
+  <p>Biotech DLC 的核心：用 GeneDef / XenotypeDef 重新定義「pawn 是什麼」，並從 C# 動態操控基因組。</p>
+  <span class="badge">Biotech DLC · RimWorld 1.5 · Ludeon.RimWorld.Biotech</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#genedef">GeneDef 結構與 biostat 預算</a></li>
+      <li><a href="#effects">Gene 效果（statFactors / forcedTraits / capMods …）</a></li>
+      <li><a href="#geneclass">自訂 Gene class（PostAdd / Tick / Active）</a></li>
+      <li><a href="#xenotype">XenotypeDef（基因列表 / inheritable）</a></li>
+      <li><a href="#csharp">從 C# 操作基因（AddGene / HasGene …）</a></li>
+      <li><a href="#endo-xeno">Endogene vs Xenogene</a></li>
+      <li><a href="#template">GeneTemplate（程式化生成基因）</a></li>
+      <li><a href="#mayrequire">MayRequire 與 DLC 優雅降級</a></li>
+      <li><a href="#genepack">染色體、基因庫與 GeneAssembler</a></li>
+      <li><a href="#pitfalls">常見坑</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念 -->
+  <div class="section">
+    <div class="section-title">心智模型：三層結構</div>
+    <p>
+      Biotech 把「一個 pawn 的生物特徵」拆成三層。對 C# 工程師而言，可以類比成
+      <em>介面定義 → 實作 instance → 組合策略</em>。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>GeneDef</h3>
+        <p>Def（XML 資料），描述「一個基因能做什麼」。對應反編譯後的 <code>RimWorld.GeneDef : Def</code>。可指定 <code>geneClass</code> 綁定行為。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Gene</h3>
+        <p>執行期 instance（<code>Verse.Gene</code>），每個 pawn 擁有的活基因物件。生命週期方法：<code>PostAdd</code> / <code>Tick</code> / <code>PostRemove</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>XenotypeDef</h3>
+        <p>一組 GeneDef 的命名組合（=「物種模板」），決定 pawn 生成時帶哪些基因，以及是否可遺傳。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>反編譯定位</strong>
+      用 dnSpy 開 <code>Assembly-CSharp.dll</code>，關注 namespace <code>RimWorld</code> 下的
+      <code>GeneDef</code>、<code>XenotypeDef</code>、<code>GeneTemplateDef</code>、<code>Pawn_GeneTracker</code>，以及 <code>Verse.Gene</code>。
+      所有自訂行為都圍繞這幾個型別。
+    </div>
+  </div>
+
+  <!-- ═══ 1. GeneDef ═══ -->
+  <div class="section" id="genedef">
+    <div class="section-title">1 · GeneDef 結構與 biostat 預算</div>
+
+    <p>
+      GeneDef 是純資料 Def。最關鍵的不是欄位本身，而是三個 <strong>biostat</strong>——它們構成基因庫
+      （genepack）組裝時的「預算系統」，是平衡的核心。
+    </p>
+
+    <table class="biostat-table">
+      <tr><th>biostat</th><th>意義</th><th>方向</th></tr>
+      <tr><td>biostatCpx</td><td>複雜度 (Complexity)。基因占用的「組裝空間」，需由基因組裝機提供算力覆蓋。</td><td>正值=消耗預算</td></tr>
+      <tr><td>biostatMet</td><td>代謝效率 (Metabolism)。正值=降低飢餓速度，負值=更快餓。整個 xenotype 的總和決定飲食 buff/debuff。</td><td>正/負皆可</td></tr>
+      <tr><td>biostatArc</td><td>古文物複雜度 (Archite Complexity)。需要 archite capsule 才能植入；代表「超自然」等級基因。</td><td>正值=需 archite</td></tr>
+    </table>
+
+    <h3>最小可用 GeneDef</h3>
+    <pre><span class="cm">&lt;!-- Defs/GeneDefs/Genes_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;GeneDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_IronGut<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>鐵胃<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>消化系統極為強韌，幾乎不會食物中毒。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;iconPath&gt;</span>UI/Genes/MyMod_IronGut<span class="xml-tag">&lt;/iconPath&gt;</span>
+
+    <span class="cm">&lt;!-- ── biostat 預算 ── --&gt;</span>
+    <span class="xml-tag">&lt;biostatCpx&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/biostatCpx&gt;</span>   <span class="cm">&lt;!-- 占 1 點複雜度 --&gt;</span>
+    <span class="xml-tag">&lt;biostatMet&gt;</span><span class="xml-val">-1</span><span class="xml-tag">&lt;/biostatMet&gt;</span>  <span class="cm">&lt;!-- 代謝 -1：略增飢餓（作為強力效果的代價） --&gt;</span>
+    <span class="cm">&lt;!-- biostatArc 省略 = 0，不需 archite --&gt;</span>
+
+    <span class="cm">&lt;!-- ── 分類 / UI 排序 ── --&gt;</span>
+    <span class="xml-tag">&lt;displayCategory&gt;</span>Digestion<span class="xml-tag">&lt;/displayCategory&gt;</span>
+    <span class="xml-tag">&lt;displayOrderInCategory&gt;</span><span class="xml-val">10</span><span class="xml-tag">&lt;/displayOrderInCategory&gt;</span>
+
+    <span class="cm">&lt;!-- ── 相依與互斥 ── --&gt;</span>
+    <span class="xml-tag">&lt;prerequisites&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_BaseMetabolism<span class="xml-tag">&lt;/li&gt;</span>  <span class="cm">&lt;!-- 必須先有此基因才能加入 --&gt;</span>
+    <span class="xml-tag">&lt;/prerequisites&gt;</span>
+    <span class="xml-tag">&lt;exclusionTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>DigestionStrength<span class="xml-tag">&lt;/li&gt;</span>     <span class="cm">&lt;!-- 同 tag 的基因互斥（如「弱胃」也用此 tag） --&gt;</span>
+    <span class="xml-tag">&lt;/exclusionTags&gt;</span>
+  <span class="xml-tag">&lt;/GeneDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <h3>prerequisites</h3>
+        <p><code>List&lt;GeneDef&gt;</code>。pawn 必須已擁有列表中的<em>所有</em>基因，此基因才合法。UI 與 <code>AddGene</code> 都會檢查（但 C# 可繞過，見坑 §10）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>exclusionTags</h3>
+        <p><code>List&lt;string&gt;</code>。同一 pawn 上，相同 tag 的基因只能存在一個。加入新基因時，舊的同 tag 基因會被移除（互斥替換語意）。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>biostat 不是裝飾</strong>
+      若你的基因效果很強卻給 <code>biostatCpx</code> 設太低，玩家可以塞滿超強基因庫——破壞平衡。
+      慣例：每多一個顯著正面效果就 +1~2 複雜度，並用負 <code>biostatMet</code> 作為飲食代價配平。
+      原版「強力」基因常見 cpx 2、met -2。
+    </div>
+  </div>
+
+  <!-- ═══ 2. Gene 效果 ═══ -->
+  <div class="section" id="effects">
+    <div class="section-title">2 · Gene 效果欄位</div>
+
+    <p>
+      多數常見效果<strong>不需寫任何 C#</strong>，直接在 GeneDef XML 宣告即可。
+      原版 <code>Gene</code> 基底已經會在 <code>PostAdd</code> / <code>PostRemove</code> 時套用這些欄位。
+    </p>
+
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>效果</th></tr>
+      <tr><td><code>statFactors</code></td><td>List&lt;StatModifier&gt;</td><td>對 pawn 的 stat 套用<em>乘數</em>（1.2 = +20%）</td></tr>
+      <tr><td><code>statOffsets</code></td><td>List&lt;StatModifier&gt;</td><td>對 stat 套用<em>加減</em>（絕對值偏移）</td></tr>
+      <tr><td><code>forcedTraits</code></td><td>List&lt;GeneticTraitData&gt;</td><td>強制賦予 trait（pawn 生成/加基因時自動帶上）</td></tr>
+      <tr><td><code>capMods</code></td><td>List&lt;PawnCapacityModifier&gt;</td><td>修改身體能力（如 Moving、Consciousness）</td></tr>
+      <tr><td><code>makeImmuneTo</code></td><td>List&lt;HediffDef&gt;</td><td>對指定 Hediff（疾病）完全免疫</td></tr>
+      <tr><td><code>damageFactors</code></td><td>List&lt;DamageFactor&gt;</td><td>對指定 DamageDef 的傷害乘數（&lt;1 = 抗性）</td></tr>
+      <tr><td><code>hediffGivers</code></td><td>List&lt;HediffGiver&gt;</td><td>週期性賦予 Hediff（搭配 geneClass 觸發）</td></tr>
+      <tr><td><code>painFactor</code></td><td>float</td><td>整體疼痛乘數</td></tr>
+      <tr><td><code>aptitudes</code></td><td>List&lt;Aptitude&gt;</td><td>技能天賦加成（等同 +N 技能等級）</td></tr>
+    </table>
+
+    <h3>綜合範例：一個「岩石膚」防禦型基因</h3>
+    <pre><span class="xml-tag">&lt;GeneDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_StoneSkin<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>岩石膚<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>皮膚硬如岩石，抗鈍擊但行動遲緩。<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;iconPath&gt;</span>UI/Genes/MyMod_StoneSkin<span class="xml-tag">&lt;/iconPath&gt;</span>
+  <span class="xml-tag">&lt;biostatCpx&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/biostatCpx&gt;</span>
+  <span class="xml-tag">&lt;biostatMet&gt;</span><span class="xml-val">-2</span><span class="xml-tag">&lt;/biostatMet&gt;</span>
+
+  <span class="cm">&lt;!-- 乘數型 stat --&gt;</span>
+  <span class="xml-tag">&lt;statFactors&gt;</span>
+    <span class="xml-tag">&lt;MoveSpeed&gt;</span><span class="xml-val">0.85</span><span class="xml-tag">&lt;/MoveSpeed&gt;</span>          <span class="cm">&lt;!-- 移速 -15% --&gt;</span>
+  <span class="xml-tag">&lt;/statFactors&gt;</span>
+
+  <span class="cm">&lt;!-- 加減型 stat --&gt;</span>
+  <span class="xml-tag">&lt;statOffsets&gt;</span>
+    <span class="xml-tag">&lt;ArmorRating_Blunt&gt;</span><span class="xml-val">0.40</span><span class="xml-tag">&lt;/ArmorRating_Blunt&gt;</span> <span class="cm">&lt;!-- 鈍擊護甲 +0.40 --&gt;</span>
+  <span class="xml-tag">&lt;/statOffsets&gt;</span>
+
+  <span class="cm">&lt;!-- 對特定傷害類型的乘數 --&gt;</span>
+  <span class="xml-tag">&lt;damageFactors&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;damageDef&gt;</span>Blunt<span class="xml-tag">&lt;/damageDef&gt;</span>
+      <span class="xml-tag">&lt;factor&gt;</span><span class="xml-val">0.7</span><span class="xml-tag">&lt;/factor&gt;</span>           <span class="cm">&lt;!-- 受到鈍擊傷害 ×0.7 --&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/damageFactors&gt;</span>
+
+  <span class="cm">&lt;!-- 強制 trait --&gt;</span>
+  <span class="xml-tag">&lt;forcedTraits&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;def&gt;</span>Tough<span class="xml-tag">&lt;/def&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/forcedTraits&gt;</span>
+
+  <span class="cm">&lt;!-- 能力修正 --&gt;</span>
+  <span class="xml-tag">&lt;capMods&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;capacity&gt;</span>Moving<span class="xml-tag">&lt;/capacity&gt;</span>
+      <span class="xml-tag">&lt;offset&gt;</span><span class="xml-val">-0.1</span><span class="xml-tag">&lt;/offset&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/capMods&gt;</span>
+
+  <span class="cm">&lt;!-- 對某些疾病免疫 --&gt;</span>
+  <span class="xml-tag">&lt;makeImmuneTo&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Flu<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/makeImmuneTo&gt;</span>
+<span class="xml-tag">&lt;/GeneDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>statFactors vs statOffsets</strong>
+      乘數會疊乘、偏移會疊加，且兩者再與裝備/trait 等其他來源綜合。
+      設計時：百分比型效果用 <code>statFactors</code>，固定數值（如護甲點數）用 <code>statOffsets</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 3. 自訂 Gene class ═══ -->
+  <div class="section" id="geneclass">
+    <div class="section-title">3 · 自訂 Gene class（需要 C# 行為時）</div>
+
+    <p>
+      當效果無法用上述靜態欄位表達（例如「每隔 X tick 觸發」、「依環境條件動態啟用」），
+      就繼承 <code>Verse.Gene</code>，並在 GeneDef 用 <code>&lt;geneClass&gt;</code> 綁定。
+    </p>
+
+    <h3>Gene 生命週期的關鍵成員</h3>
+    <table>
+      <tr><th>成員</th><th>時機 / 用途</th></tr>
+      <tr><td><code>PostAdd()</code></td><td>基因加入 pawn 時呼叫一次。設定初始狀態、賦予一次性 Hediff。<strong>務必先呼叫 base.PostAdd()</strong>（base 會套用 statFactors 等）。</td></tr>
+      <tr><td><code>PostRemove()</code></td><td>基因移除時清理。</td></tr>
+      <tr><td><code>Tick()</code></td><td>每 game tick 呼叫（60/秒）。<em>高頻</em>，必須做節流。預設 <code>Gene.Tick</code> 不被呼叫——需在 GeneDef 開啟（見下）。</td></tr>
+      <tr><td><code>Active</code> (get)</td><td>基因是否生效。可覆寫加入動態條件（如僅夜晚生效）。<code>Active=false</code> 時引擎略過其 stat 效果。</td></tr>
+      <tr><td><code>Overridden</code></td><td>是否被同 displayCategory/exclusion 的其他基因蓋過（唯讀，引擎管理）。</td></tr>
+      <tr><td><code>pawn</code></td><td>protected 欄位，指向擁有者 Pawn。</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>Tick 要明確開啟</strong>
+      <code>Pawn_GeneTracker</code> 只會 tick 那些 GeneDef 標記 <code>&lt;tickInterval&gt;</code> 或 <code>&lt;canGenerateInGeneSet&gt;</code> 等條件的基因。
+      實務上原版透過 <code>GeneDef.tickInterval</code>（值為 tick 數）控制呼叫頻率——把節流交給引擎，而不是自己在 Tick 裡數 tick。
+      若版本欄位有差異，用 dnSpy 確認 <code>Pawn_GeneTracker.GeneTrackerTick()</code> 如何篩選。
+    </div>
+
+    <h3>範例：夜行基因（白天減益，夜晚增益）</h3>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">Gene_Nocturnal</span> : <span class="ty">Gene</span>
+    {
+        <span class="cm">// 覆寫 Active：僅在「夜晚」回傳 true，引擎據此決定 stat 是否套用</span>
+        <span class="kw">public override bool</span> <span class="nm">Active</span>
+        {
+            <span class="kw">get</span>
+            {
+                <span class="kw">if</span> (!<span class="kw">base</span>.<span class="nm">Active</span>) <span class="kw">return false</span>;          <span class="cm">// 尊重 base（被覆蓋/缺前置時為 false）</span>
+                <span class="kw">if</span> (pawn.<span class="nm">Map</span> == <span class="kw">null</span>) <span class="kw">return true</span>;       <span class="cm">// 在 caravan/世界圖時預設啟用</span>
+                <span class="kw">float</span> hour = <span class="ty">GenLocalDate</span>.<span class="nm">DayPercent</span>(pawn) * <span class="nu">24f</span>;
+                <span class="kw">return</span> hour &lt; <span class="nu">6f</span> || hour &gt; <span class="nu">20f</span>;       <span class="cm">// 20:00–06:00 為夜晚</span>
+            }
+        }
+
+        <span class="kw">public override void</span> <span class="nm">PostAdd</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">PostAdd</span>();                              <span class="cm">// 必須：套用 GeneDef 的靜態效果</span>
+            <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] {pawn.LabelShort} 獲得夜行基因"</span>);
+        }
+
+        <span class="cm">// 由 GeneDef.tickInterval 控制呼叫頻率（不要自己數 tick）</span>
+        <span class="kw">public override void</span> <span class="nm">Tick</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">Tick</span>();
+            <span class="kw">if</span> (!<span class="nm">Active</span>) <span class="kw">return</span>;
+
+            <span class="cm">// 夜晚時緩慢回復一點休息值</span>
+            pawn.<span class="nm">needs</span>?.<span class="nm">rest</span>?.<span class="nm">CurLevel</span> += <span class="nu">0.0005f</span>;
+        }
+    }
+}</pre>
+
+    <p>對應 GeneDef 綁定：</p>
+    <pre><span class="xml-tag">&lt;GeneDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Nocturnal<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>夜行<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;geneClass&gt;</span>MyMod.Gene_Nocturnal<span class="xml-tag">&lt;/geneClass&gt;</span>  <span class="cm">&lt;!-- 命名空間.類別名 --&gt;</span>
+  <span class="xml-tag">&lt;tickInterval&gt;</span><span class="xml-val">250</span><span class="xml-tag">&lt;/tickInterval&gt;</span>          <span class="cm">&lt;!-- 每 250 tick 才呼叫 Tick() --&gt;</span>
+  <span class="xml-tag">&lt;biostatCpx&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/biostatCpx&gt;</span>
+  <span class="xml-tag">&lt;biostatMet&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/biostatMet&gt;</span>
+<span class="xml-tag">&lt;/GeneDef&gt;</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>不要忘記 base 呼叫</strong>
+      漏掉 <code>base.PostAdd()</code> 會導致 GeneDef 的 <code>statFactors</code>、<code>forcedTraits</code>、<code>makeImmuneTo</code> 全部失效——
+      因為這些是 base <code>Gene</code> 在 PostAdd 裡套用的。同理 <code>PostRemove</code> 也要呼叫 base 來還原。
+    </div>
+  </div>
+
+  <!-- ═══ 4. XenotypeDef ═══ -->
+  <div class="section" id="xenotype">
+    <div class="section-title">4 · XenotypeDef — 組合成「物種」</div>
+
+    <p>
+      XenotypeDef 把一組 GeneDef 命名打包，定義一個可在遊戲中生成的異種人類。
+      決定 pawn 出生時帶哪些基因、能不能遺傳、在無派系生成時的權重。
+    </p>
+
+    <pre><span class="cm">&lt;!-- Defs/XenotypeDefs/Xenotypes_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;XenotypeDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Stoneborn<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>石生族<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>皮膚如岩、緩慢而堅韌的人類分支。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;iconPath&gt;</span>UI/Xenotypes/MyMod_Stoneborn<span class="xml-tag">&lt;/iconPath&gt;</span>
+
+    <span class="cm">&lt;!-- 是否可由父母遺傳給後代（true=endogene 路線） --&gt;</span>
+    <span class="xml-tag">&lt;inheritable&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/inheritable&gt;</span>
+
+    <span class="cm">&lt;!-- 在「無派系/隨機」生成時被選中的權重（0=只能透過明確指定取得） --&gt;</span>
+    <span class="xml-tag">&lt;factionlessGenerationWeight&gt;</span><span class="xml-val">0.5</span><span class="xml-tag">&lt;/factionlessGenerationWeight&gt;</span>
+
+    <span class="cm">&lt;!-- 該 xenotype 包含的基因（順序影響 UI 顯示） --&gt;</span>
+    <span class="xml-tag">&lt;genes&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_StoneSkin<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Robust<span class="xml-tag">&lt;/li&gt;</span>            <span class="cm">&lt;!-- 可混用原版基因 --&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Slow_Lazy<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/genes&gt;</span>
+  <span class="xml-tag">&lt;/XenotypeDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>inheritable = true</h3>
+        <p>基因為 <strong>endogene</strong>，會依孟德爾式規則傳給孩子。原版「Hussar / Genie」等屬此類。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>inheritable = false</h3>
+        <p>基因為 <strong>xenogene</strong>，<em>不</em>遺傳——只能靠基因植入術後天獲得（如「Sanguophage 吸血鬼」）。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>factionlessGenerationWeight 的意義</strong>
+      只影響「沒有特定派系背景的隨機 pawn 生成」（如某些事件、難民）。
+      若想讓某派系大量使用你的 xenotype，要在 <code>FactionDef</code> 的 <code>xenotypeSet</code> 裡配置，而非靠此權重。
+    </div>
+  </div>
+
+  <!-- ═══ 5. C# 操作 ═══ -->
+  <div class="section" id="csharp">
+    <div class="section-title">5 · 從 C# 操作基因</div>
+
+    <p>
+      入口是 <code>pawn.genes</code>（型別 <code>Pawn_GeneTracker</code>）。
+      <strong>注意：無 Biotech 時 <code>pawn.genes</code> 為 <code>null</code></strong>——所有存取都要先判空（見 §8）。
+    </p>
+
+    <table>
+      <tr><th>API</th><th>用途</th></tr>
+      <tr><td><code>genes.AddGene(GeneDef, bool xenogene)</code></td><td>加入基因。第二參數決定放入 endogene 還是 xenogene 池。</td></tr>
+      <tr><td><code>genes.AddGene(Gene, bool xenogene)</code></td><td>加入已建立的 Gene instance（保留其狀態）。</td></tr>
+      <tr><td><code>genes.RemoveGene(Gene)</code></td><td>移除指定基因 instance。</td></tr>
+      <tr><td><code>genes.HasGene(GeneDef)</code> / <code>HasActiveGene</code></td><td>是否擁有 / 是否擁有且生效（後者排除被覆蓋的）。</td></tr>
+      <tr><td><code>genes.GetGene(GeneDef)</code></td><td>取得對應 Gene instance（無則 null）。</td></tr>
+      <tr><td><code>genes.GenesListForReading</code></td><td>所有基因（endo + xeno）的唯讀清單。</td></tr>
+      <tr><td><code>genes.Endogenes</code> / <code>genes.Xenogenes</code></td><td>分別列出兩個池。</td></tr>
+      <tr><td><code>genes.SetXenotype(XenotypeDef)</code></td><td>整批套用一個 xenotype（清掉舊的再裝）。</td></tr>
+      <tr><td><code>genes.Xenotype</code></td><td>當前 xenotype（唯讀屬性）。</td></tr>
+    </table>
+
+    <h3>範例：安全地賦予基因</h3>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">GeneOps</span>
+{
+    <span class="cm">/// &lt;summary&gt;為 pawn 加上一個 xenogene（後天植入語意），完整判空。&lt;/summary&gt;</span>
+    <span class="kw">public static bool</span> <span class="nm">TryGiveXenogene</span>(<span class="ty">Pawn</span> pawn, <span class="ty">GeneDef</span> def)
+    {
+        <span class="cm">// Biotech 未啟用時 genes 為 null</span>
+        <span class="kw">if</span> (pawn?.<span class="nm">genes</span> == <span class="kw">null</span> || def == <span class="kw">null</span>) <span class="kw">return false</span>;
+
+        <span class="cm">// 已有同基因就跳過（避免重複）</span>
+        <span class="kw">if</span> (pawn.<span class="nm">genes</span>.<span class="nm">HasGene</span>(def)) <span class="kw">return false</span>;
+
+        <span class="cm">// xenogene: true → 進 xenogene 池，不會遺傳</span>
+        pawn.<span class="nm">genes</span>.<span class="nm">AddGene</span>(def, xenogene: <span class="kw">true</span>);
+        <span class="kw">return true</span>;
+    }
+
+    <span class="cm">/// &lt;summary&gt;統計 pawn 啟用中的基因數量。&lt;/summary&gt;</span>
+    <span class="kw">public static int</span> <span class="nm">ActiveGeneCount</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">if</span> (pawn?.<span class="nm">genes</span> == <span class="kw">null</span>) <span class="kw">return</span> <span class="nu">0</span>;
+
+        <span class="kw">int</span> n = <span class="nu">0</span>;
+        <span class="kw">foreach</span> (<span class="ty">Gene</span> g <span class="kw">in</span> pawn.<span class="nm">genes</span>.<span class="nm">GenesListForReading</span>)
+            <span class="kw">if</span> (g.<span class="nm">Active</span>) n++;
+        <span class="kw">return</span> n;
+    }
+
+    <span class="cm">/// &lt;summary&gt;整批套用一個 xenotype。&lt;/summary&gt;</span>
+    <span class="kw">public static void</span> <span class="nm">ApplyXenotype</span>(<span class="ty">Pawn</span> pawn, <span class="ty">XenotypeDef</span> xeno)
+    {
+        <span class="kw">if</span> (pawn?.<span class="nm">genes</span> == <span class="kw">null</span> || xeno == <span class="kw">null</span>) <span class="kw">return</span>;
+        pawn.<span class="nm">genes</span>.<span class="nm">SetXenotype</span>(xeno); <span class="cm">// 內部會處理舊基因清除與外觀重算</span>
+    }
+}</pre>
+
+    <h3>用 DefOf 取得 GeneDef 參考</h3>
+    <pre><span class="cm">// 避免每次 DefDatabase 查找；用 [DefOf] 在啟動時綁定</span>
+<span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyModGeneDefOf</span>
+{
+    <span class="kw">public static</span> <span class="ty">GeneDef</span> MyMod_StoneSkin;
+    <span class="kw">public static</span> <span class="ty">GeneDef</span> MyMod_Nocturnal;
+
+    <span class="kw">static</span> <span class="ty">MyModGeneDefOf</span>() =&gt; <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyModGeneDefOf</span>));
+}
+
+<span class="cm">// 使用：</span>
+<span class="ty">GeneOps</span>.<span class="nm">TryGiveXenogene</span>(somePawn, <span class="ty">MyModGeneDefOf</span>.MyMod_StoneSkin);</pre>
+
+    <div class="callout callout-warn">
+      <strong>[DefOf] + Biotech 缺席</strong>
+      若 <code>[DefOf]</code> 欄位指向只在 Biotech 才存在的 def（例如原版的某 GeneDef），而玩家沒裝 Biotech，
+      啟動時會在 log 噴「could not resolve」錯誤。把這類欄位標 <code>[MayRequireBiotech]</code>（見 §8）。
+    </div>
+  </div>
+
+  <!-- ═══ 6. Endo vs Xeno ═══ -->
+  <div class="section" id="endo-xeno">
+    <div class="section-title">6 · Endogene vs Xenogene</div>
+
+    <p>
+      同一個 pawn 的基因分屬兩個池。差別只在「來源/遺傳語意」，不影響效果計算本身。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Endogene（內生基因）</h3>
+        <ul>
+          <li>「天生」的基因，定義 pawn 的固有 xenotype。</li>
+          <li><strong>可遺傳</strong>給後代（依 inheritable xenotype）。</li>
+          <li><code>AddGene(def, xenogene: false)</code></li>
+          <li>清單：<code>genes.Endogenes</code></li>
+        </ul>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Xenogene（外生基因）</h3>
+        <ul>
+          <li>後天植入的基因（基因植入術 / germline）。</li>
+          <li><strong>不遺傳</strong>。</li>
+          <li><code>AddGene(def, xenogene: true)</code></li>
+          <li>清單：<code>genes.Xenogenes</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>覆蓋規則（override）</strong>
+      若 endo 與 xeno 池同時有「同一 exclusionTag」或同 displayCategory 的衝突基因，
+      Biotech 用一套優先規則決定哪個 <code>Active</code>、哪個被標 <code>Overridden</code>。
+      一般而言後加入/xenogene 傾向覆蓋 endogene。需要精準判斷時，讀
+      <code>Pawn_GeneTracker.OverrideGenesFromOtherGenes()</code> 的反編譯邏輯，而非靠假設。
+    </div>
+
+    <pre><span class="cm">// 判斷一個基因究竟在哪個池</span>
+<span class="ty">Gene</span> g = pawn.<span class="nm">genes</span>.<span class="nm">GetGene</span>(<span class="ty">MyModGeneDefOf</span>.MyMod_StoneSkin);
+<span class="kw">if</span> (g != <span class="kw">null</span>)
+{
+    <span class="kw">bool</span> isXeno = pawn.<span class="nm">genes</span>.<span class="nm">Xenogenes</span>.<span class="nm">Contains</span>(g);
+    <span class="ty">Log</span>.<span class="nm">Message</span>(isXeno ? <span class="st">"後天植入"</span> : <span class="st">"先天遺傳"</span>);
+}</pre>
+  </div>
+
+  <!-- ═══ 7. GeneTemplate ═══ -->
+  <div class="section" id="template">
+    <div class="section-title">7 · GeneTemplate — 程式化批量生成基因</div>
+
+    <p>
+      原版的膚色、髮色等「系列基因」並非手寫數十個 GeneDef，而是用
+      <code>GeneTemplateDef</code> 搭配一張資料表（如 <code>ColorDef</code> 列表），在載入期動態 <em>生成</em> 一批 GeneDef。
+      這是 RimWorld 的「Def 工廠」模式。
+    </p>
+
+    <h3>運作流程</h3>
+    <ol class="steps">
+      <li>定義一個 <code>GeneTemplateDef</code>，指定 <code>geneClass</code>、biostat、以及要迭代的資料來源（如 <code>skinColorOverride</code> 對應的 colour 清單）。</li>
+      <li>遊戲在 <code>DefGenerator</code> 階段呼叫範本的生成邏輯，對資料表每一項產出一個獨立 <code>GeneDef</code>（defName 帶序號/後綴）。</li>
+      <li>這些生成出的 GeneDef 與手寫的完全等價，可被 xenotype 引用、可被 AddGene。</li>
+    </ol>
+
+    <pre><span class="cm">&lt;!-- 概念性範例：膚色系列範本 --&gt;</span>
+<span class="xml-tag">&lt;GeneTemplateDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_SkinColorTemplate<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>膚色<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;geneClass&gt;</span>Gene_Skin<span class="xml-tag">&lt;/geneClass&gt;</span>          <span class="cm">&lt;!-- 原版處理膚色的 Gene 子類 --&gt;</span>
+  <span class="xml-tag">&lt;displayCategory&gt;</span>Cosmetic<span class="xml-tag">&lt;/displayCategory&gt;</span>
+  <span class="xml-tag">&lt;biostatCpx&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/biostatCpx&gt;</span>          <span class="cm">&lt;!-- 純外觀，不耗複雜度 --&gt;</span>
+  <span class="xml-tag">&lt;exclusionTagPrefix&gt;</span>SkinColor<span class="xml-tag">&lt;/exclusionTagPrefix&gt;</span> <span class="cm">&lt;!-- 同系列彼此互斥 --&gt;</span>
+  <span class="cm">&lt;!-- 引擎據此 + 一張色彩資料表，生成 SkinColor_A、SkinColor_B ... --&gt;</span>
+<span class="xml-tag">&lt;/GeneTemplateDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>何時用 GeneTemplate</strong>
+      當你有一組「結構相同、只差一個變數」的基因（顏色、尺寸級距、元素抗性系列）時。
+      手寫 30 個 XML 既冗長又難維護；範本讓你維護一份定義 + 一張資料表。
+      若各基因效果差異大，仍應手寫獨立 GeneDef。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>版本欄位差異</strong>
+      <code>GeneTemplateDef</code> 的可用欄位（如資料來源綁定方式）在 1.4 → 1.5 有調整。
+      實作前務必用 dnSpy 對照 <code>RimWorld.GeneTemplateDef</code> 與 <code>DefGenerator.GenerateImpliedDefs_PreResolve</code> 中生成基因的段落，
+      以當前版本欄位為準。
+    </div>
+  </div>
+
+  <!-- ═══ 8. MayRequire ═══ -->
+  <div class="section" id="mayrequire">
+    <div class="section-title">8 · MayRequire 與 DLC 優雅降級</div>
+
+    <p>
+      你的 mod 可能同時服務有/無 Biotech 的玩家。目標：<strong>有 Biotech 時啟用基因功能；沒有時不報錯、靜默略過</strong>。
+      分 XML 與 C# 兩條防線。
+    </p>
+
+    <h3>XML 層：MayRequire / MayRequireAnyOf</h3>
+    <p>
+      在<em>引用</em> Biotech 內容的節點上加 <code>MayRequire</code> 屬性。
+      DLC 缺席時，<strong>整個帶此屬性的 li/節點被略過</strong>，而不會因「找不到 def」報紅字。
+    </p>
+    <pre><span class="cm">&lt;!-- 範例：給某個 PawnKindDef 在有 Biotech 時才指定 xenotype --&gt;</span>
+<span class="xml-tag">&lt;PawnKindDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Raider<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- ... 其他欄位 ... --&gt;</span>
+
+  <span class="cm">&lt;!-- 只有載入 Biotech 時，這個 li 才生效 --&gt;</span>
+  <span class="xml-tag">&lt;xenotypeSet</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xenotypeChances&gt;</span>
+      <span class="xml-tag">&lt;MyMod_Stoneborn&gt;</span><span class="xml-val">0.3</span><span class="xml-tag">&lt;/MyMod_Stoneborn&gt;</span>
+    <span class="xml-tag">&lt;/xenotypeChances&gt;</span>
+  <span class="xml-tag">&lt;/xenotypeSet&gt;</span>
+<span class="xml-tag">&lt;/PawnKindDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>放置原則</strong>
+      GeneDef / XenotypeDef <em>本身</em>的檔案不需 MayRequire——它們是你 mod 的新 def，無 Biotech 仍可定義（只是無從使用）。
+      真正需要 <code>MayRequire="Ludeon.RimWorld.Biotech"</code> 的，是你在<strong>原版/其他 def 上引用基因系統</strong>的地方
+      （如 <code>xenotypeSet</code>、<code>geneClass</code> 若指向 Biotech 的 Gene 子類）。
+      多個 DLC 任一即可用 <code>MayRequireAnyOf="A,B"</code>。
+    </div>
+
+    <h3>C# 層：偵測 Biotech 是否啟用</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// 全域旗標：ModsConfig.BiotechActive</span>
+<span class="kw">if</span> (<span class="ty">ModsConfig</span>.<span class="nm">BiotechActive</span>)
+{
+    <span class="cm">// 安全進行基因相關操作</span>
+    pawn.<span class="nm">genes</span>?.<span class="nm">AddGene</span>(<span class="ty">MyModGeneDefOf</span>.MyMod_StoneSkin, xenogene: <span class="kw">true</span>);
+}
+<span class="kw">else</span>
+{
+    <span class="cm">// 降級路徑：用 Hediff 或 trait 提供近似效果，或乾脆不做</span>
+}</pre>
+
+    <h3>[DefOf] 欄位標記</h3>
+    <pre><span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyModGeneDefOf</span>
+{
+    <span class="cm">// 自家 def：無條件</span>
+    <span class="kw">public static</span> <span class="ty">GeneDef</span> MyMod_StoneSkin;
+
+    <span class="cm">// 指向原版 Biotech def：必須標記，否則無 Biotech 時 resolve 失敗報錯</span>
+    <span class="at">[MayRequireBiotech]</span>
+    <span class="kw">public static</span> <span class="ty">GeneDef</span> Robust;
+
+    <span class="kw">static</span> <span class="ty">MyModGeneDefOf</span>() =&gt; <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyModGeneDefOf</span>));
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>About.xml 的取捨</strong>
+      若基因是 mod 的<em>核心</em>且無法降級，直接在 <code>About.xml</code> 宣告
+      <code>&lt;modDependencies&gt;</code> 指向 <code>Ludeon.RimWorld.Biotech</code>，讓玩家在沒裝時收到提示——
+      比執行期半殘更乾淨。只有當基因是<em>選配增強</em>時才走優雅降級路線。
+    </div>
+  </div>
+
+  <!-- ═══ 9. Genepack / GeneAssembler ═══ -->
+  <div class="section" id="genepack">
+    <div class="section-title">9 · 染色體、基因庫與 GeneAssembler</div>
+
+    <p>
+      遊戲內，玩家透過實體建築與物品操作基因。理解這條鏈有助於設定正確的 biostat 與互動。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-cyan">
+        <h3>Genepack（基因組）</h3>
+        <p>承載一組 GeneDef 的物品（<code>ThingClass = Genepack</code>，資料在 <code>GeneSet</code>）。可從 pawn 提取或在事件取得。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Gene bank / processor</h3>
+        <p>儲存 genepack 的建築。<code>GeneAssembler</code>（基因組裝機）是把多個 genepack 合成一個可植入 xenogerm 的核心建築。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Xenogerm</h3>
+        <p>組裝完成的「成品」，可由 pawn 植入（手術），一次賦予整組 xenogene。</p>
+      </div>
+    </div>
+
+    <h3>關鍵型別（C# 端）</h3>
+    <table>
+      <tr><th>型別</th><th>角色</th></tr>
+      <tr><td><code>GeneSet</code></td><td>一組 GeneDef 的集合 + 聚合 biostat（<code>ComplexityTotal</code>、<code>MetabolismTotal</code>、<code>ArchitesTotal</code>）。genepack 與 xenogerm 都內含一個。</td></tr>
+      <tr><td><code>CompGenepackContainer</code></td><td>建築上儲存 genepack 的 comp。</td></tr>
+      <tr><td><code>Building_GeneAssembler</code></td><td>組裝機建築本體；驅動「複雜度需由 archites/算力覆蓋」的檢查。</td></tr>
+      <tr><td><code>GeneUtility</code></td><td>靜態工具：植入、相容性檢查、xenotype 推斷等。</td></tr>
+    </table>
+
+    <pre><span class="cm">// 程式化建立一個 GeneSet 並查其聚合 biostat</span>
+<span class="kw">using</span> RimWorld;
+
+<span class="ty">GeneSet</span> set = <span class="kw">new</span> <span class="ty">GeneSet</span>();
+set.<span class="nm">AddGene</span>(<span class="ty">MyModGeneDefOf</span>.MyMod_StoneSkin);
+set.<span class="nm">AddGene</span>(<span class="ty">MyModGeneDefOf</span>.MyMod_Nocturnal);
+
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"複雜度={set.ComplexityTotal}, 代謝={set.MetabolismTotal}, archite={set.ArchitesTotal}"</span>);
+
+<span class="cm">// 組裝機可承受的複雜度 = 基礎 + 每個 archite capsule 提供的額度</span>
+<span class="cm">// 你的基因若 biostatCpx 過高，玩家需更多 archite 才能組裝——這就是平衡槓桿</span></pre>
+
+    <div class="callout callout-info">
+      <strong>archite 的設計含意</strong>
+      <code>biostatArc &gt; 0</code> 的基因屬「超自然」層級——組裝時<em>每點</em>都需消耗 archite capsule（稀有資源）。
+      把真正破格的能力（瞬移、近乎不死）才設 archite，能天然限制其普及度。
+    </div>
+  </div>
+
+  <!-- ═══ 10. 坑 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">10 · 常見坑</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 1</span> 無 Biotech 時 <code>pawn.genes</code> 為 null</h3>
+      <p>
+        最常見的 NRE 來源。任何 <code>pawn.genes.XXX</code> 在玩家沒裝 Biotech 時都會炸。
+        一律用 <code>pawn.genes?.</code> 或先檢查 <code>ModsConfig.BiotechActive</code>。
+      </p>
+      <pre><span class="cm">// ❌ 沒裝 Biotech → NullReferenceException</span>
+<span class="kw">if</span> (pawn.<span class="nm">genes</span>.<span class="nm">HasGene</span>(someDef)) { }
+
+<span class="cm">// ✅ 判空</span>
+<span class="kw">if</span> (pawn.<span class="nm">genes</span>?.<span class="nm">HasGene</span>(someDef) == <span class="kw">true</span>) { }</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 2</span> biostat 平衡失衡</h3>
+      <p>
+        強效果搭配低 <code>biostatCpx</code> / 正 <code>biostatMet</code> = 玩家能無代價塞滿超強基因。
+        反之全給高 cpx + 大負 met 又會讓基因不堪用（餓死）。
+        對照原版同等級基因的數值，把效果強度與預算成本綁定。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 3</span> 漏呼叫 <code>base.PostAdd()</code> / <code>base.PostRemove()</code></h3>
+      <p>
+        自訂 Gene class 若覆寫這兩個方法卻沒呼叫 base，GeneDef 的 statFactors / forcedTraits / makeImmuneTo
+        將完全失效，且移除時不還原。永遠先 <code>base.XXX()</code> 再寫自己的邏輯。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 4</span> 在 <code>Tick()</code> 裡做重活</h3>
+      <p>
+        <code>Tick()</code> 每秒最多 60 次 × 每個帶此基因的 pawn。用 <code>GeneDef.tickInterval</code> 讓引擎節流，
+        不要自己在 Tick 裡跑昂貴查找（路徑、全地圖掃描）。每 tick 反射存取尤其致命。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 5</span> AddGene 繞過 prerequisites / 互斥</h3>
+      <p>
+        直接 <code>genes.AddGene(def, ...)</code> 不一定會幫你檢查 prerequisites 或自動移除互斥基因
+        （視版本與多載而定）。若需要「合法」的組合，先自行檢查 prerequisites，
+        並確認 exclusionTags 衝突已處理——否則可能得到無效或被永久 Overridden 的基因。
+      </p>
+      <pre><span class="cm">// 加入前自行驗證前置</span>
+<span class="kw">bool</span> prereqOk = def.<span class="nm">prerequisites</span> == <span class="kw">null</span>
+    || def.<span class="nm">prerequisites</span>.<span class="nm">TrueForAll</span>(p =&gt; pawn.<span class="nm">genes</span>.<span class="nm">HasGene</span>(p));
+<span class="kw">if</span> (prereqOk) pawn.<span class="nm">genes</span>.<span class="nm">AddGene</span>(def, xenogene: <span class="kw">false</span>);</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 6</span> [DefOf] 指向 Biotech def 卻沒標 [MayRequireBiotech]</h3>
+      <p>
+        玩家沒裝 Biotech 時，<code>DefOfHelper</code> 在啟動會嘗試 resolve 該欄位、失敗噴紅字。
+        凡指向 Biotech 才有的 def，<code>[MayRequireBiotech]</code> 必加（見 §8）。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 7</span> 改基因後外觀/快取沒更新</h3>
+      <p>
+        某些 stat / 外觀（膚色、體型）有快取。手動增刪基因後，若顯示沒變，
+        可能需要觸發重算（如 <code>pawn.Drawer?.renderer?.SetAllGraphicsDirty()</code> 或
+        <code>genes</code> 提供的 notify 方法）。優先用 <code>SetXenotype</code> / 官方 AddGene，它們會處理通知。
+      </p>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>上線前 Checklist</strong>
+      <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li>關閉 Biotech 啟動一次，確認無紅字、無 NRE。</li>
+        <li>每個自訂 Gene class 都有 <code>base.PostAdd()</code> / <code>base.PostRemove()</code>。</li>
+        <li>每個 GeneDef 的 biostat 與原版同級基因對照過。</li>
+        <li>所有 <code>pawn.genes</code> 存取都判空。</li>
+        <li>引用 Biotech 內容的 XML 節點都有 <code>MayRequire</code>，[DefOf] 都有 <code>[MayRequireBiotech]</code>。</li>
+        <li>開發者模式用「Add gene」測試 prerequisites / 互斥 / 遺傳行為。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 快速參考 -->
+  <div class="section">
+    <div class="section-title">快速參考：該用哪一招</div>
+    <table>
+      <tr>
+        <th>需求</th>
+        <th>做法</th>
+        <th>需 C#？</th>
+      </tr>
+      <tr>
+        <td>改 stat / 護甲 / 免疫 / 傷害抗性</td>
+        <td>GeneDef 靜態欄位（statFactors 等）</td>
+        <td><span class="tag tag-green">否</span></td>
+      </tr>
+      <tr>
+        <td>條件式 / 週期性效果</td>
+        <td>自訂 <code>Gene</code> 子類 + <code>geneClass</code></td>
+        <td><span class="tag tag-orange">是</span></td>
+      </tr>
+      <tr>
+        <td>定義可生成的「物種」</td>
+        <td>XenotypeDef（genes + inheritable）</td>
+        <td><span class="tag tag-green">否</span></td>
+      </tr>
+      <tr>
+        <td>批量同構基因（顏色系列）</td>
+        <td>GeneTemplateDef</td>
+        <td><span class="tag tag-orange">視範本</span></td>
+      </tr>
+      <tr>
+        <td>執行期增刪基因</td>
+        <td><code>pawn.genes.AddGene / RemoveGene</code></td>
+        <td><span class="tag tag-orange">是</span></td>
+      </tr>
+      <tr>
+        <td>無 Biotech 不報錯</td>
+        <td><code>MayRequire</code> + <code>ModsConfig.BiotechActive</code> + 判空</td>
+        <td><span class="tag tag-orange">兩者</span></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 指南 · 基因與異種（Biotech DLC）· 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

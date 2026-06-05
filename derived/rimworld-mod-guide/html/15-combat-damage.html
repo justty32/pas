@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>戰鬥與傷害系統 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html" class="active">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>戰鬥與傷害系統</h1>
+  <p>DamageDef、DamageWorker、Verb、Projectile、護甲計算與命中部位——RimWorld 戰鬥管線的完整剖析。</p>
+  <span class="badge">Chapter 15 · Combat &amp; Damage</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       概覽：戰鬥傷害管線
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">概覽：一次攻擊的完整管線</div>
+
+    <p>在動手改傷害之前，先理清資料如何流動。RimWorld 的戰鬥從「Pawn 決定攻擊」到「血條扣值」要經過數個階段，每個階段對應一組可被 Mod 介入的類別：</p>
+
+    <pre><span class="cm">Verb（動詞 / 攻擊行為）</span>
+   ↓ Verb_Shoot / Verb_MeleeAttackDamage / Verb_LaunchProjectile
+<span class="cm">Projectile（飛行物，遠程才有）</span>
+   ↓ Projectile.Impact()
+<span class="cm">DamageInfo（一次傷害的封裝資料）</span>
+   ↓ Thing.TakeDamage(DamageInfo)
+<span class="cm">DamageWorker（DamageDef.workerClass 指定的執行器）</span>
+   ↓ DamageWorker.Apply()
+<span class="cm">ArmorUtility.GetPostArmorDamage（護甲削減）</span>
+   ↓ 命中部位（BodyPartRecord）
+<span class="cm">Hediff_Injury（最終寫入的傷勢）</span></pre>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>定義層（XML）</h3>
+        <p><code>DamageDef</code>、<code>ThingDef</code>(projectile)、<code>VerbProperties</code>、<code>Tool</code>、<code>BodyPartDef</code> 都是純資料，靠 <code>workerClass</code> / <code>thingClass</code> / <code>verbClass</code> 接到 C#。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>行為層（C#）</h3>
+        <p><code>Verb</code>、<code>Projectile</code>、<code>DamageWorker</code> 是三個可繼承的核心 class，分別負責「如何攻擊」「飛行與命中」「如何套用傷害」。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>結算層（C#）</h3>
+        <p><code>ArmorUtility</code>、<code>BodyPartRecord</code>、<code>Hediff_Injury</code> 負責護甲削減、命中哪個部位、最終傷勢落點。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §1  DamageDef 結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 DamageDef 結構</div>
+
+    <p><code>DamageDef</code> 定義「一種傷害類型」（鈍擊、切割、燒傷、毒……）。它本身不含傷害數值（數值由 <code>DamageInfo.amount</code> 帶入），而是描述這種傷害的<strong>性質與行為</strong>：用哪個 worker 執行、屬於哪類護甲、能不能穿透多層身體部位、致死時的訊息等。</p>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>workerClass</code></td>
+          <td><code>Type</code> (DamageWorker)</td>
+          <td>實際套用傷害的執行器，決定傷害如何擴散到部位、是否造成額外效果</td>
+        </tr>
+        <tr>
+          <td><code>armorCategory</code></td>
+          <td><code>DamageArmorCategoryDef</code></td>
+          <td>對應哪一類護甲評分（<code>Sharp</code> / <code>Blunt</code> / <code>Heat</code>），決定 GetPostArmorDamage 查哪個 stat</td>
+        </tr>
+        <tr>
+          <td><code>harmAllLayersUntilOutside</code></td>
+          <td><code>bool</code></td>
+          <td>true 時傷害會從內層部位一路傷到最外層（穿刺貫穿效果），常見於 bullet</td>
+        </tr>
+        <tr>
+          <td><code>deathMessage</code></td>
+          <td><code>string</code></td>
+          <td>此傷害致死時顯示的訊息模板（含 <code>{0}</code> 受害者名稱）</td>
+        </tr>
+        <tr>
+          <td><code>hediff</code></td>
+          <td><code>HediffDef</code></td>
+          <td>傷害實際寫入的傷勢類型（如 <code>Gunshot</code>、<code>Cut</code>、<code>Bruise</code>）</td>
+        </tr>
+        <tr>
+          <td><code>hediffSkin</code> / <code>hediffSolid</code></td>
+          <td><code>HediffDef</code></td>
+          <td>命中皮膚層 / 固體部位（骨骼）時改用的傷勢，可細分材質反應</td>
+        </tr>
+        <tr>
+          <td><code>defaultDamage</code></td>
+          <td><code>int</code></td>
+          <td>未指定 amount 時的預設傷害值（-1 表示必須由呼叫端提供）</td>
+        </tr>
+        <tr>
+          <td><code>defaultArmorPenetration</code></td>
+          <td><code>float</code></td>
+          <td>未指定 armorPenetration 時的預設穿透值（0~1，1 = 100%）</td>
+        </tr>
+        <tr>
+          <td><code>spreadOut</code></td>
+          <td><code>bool</code></td>
+          <td>傷害是否分散到多個部位（爆炸常為 true，子彈為 false 集中單一部位）</td>
+        </tr>
+        <tr>
+          <td><code>isExplosive</code></td>
+          <td><code>bool</code></td>
+          <td>是否走爆炸結算路徑（範圍、護甲規則不同）</td>
+        </tr>
+        <tr>
+          <td><code>makesBlood</code> / <code>canInterruptJobs</code></td>
+          <td><code>bool</code></td>
+          <td>是否噴血濾鏡 / 是否能打斷正在進行的工作</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>自訂 DamageDef 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/DamageDefs/Damages_AcidSpit.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;DamageDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>AcidSpit<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>acid burn<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="cm">&lt;!-- 走燒傷的 worker，但我們用自訂的擴散規則 --&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>DamageWorker_AddInjury<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;externalViolence&gt;</span>true<span class="xml-tag">&lt;/externalViolence&gt;</span>
+    <span class="cm">&lt;!-- 酸算熱傷害類護甲（防火衣有效，防彈衣無效） --&gt;</span>
+    <span class="xml-tag">&lt;armorCategory&gt;</span>Heat<span class="xml-tag">&lt;/armorCategory&gt;</span>
+    <span class="cm">&lt;!-- 傷勢類型：自訂的 AcidBurn Hediff --&gt;</span>
+    <span class="xml-tag">&lt;hediff&gt;</span>AcidBurn<span class="xml-tag">&lt;/hediff&gt;</span>
+    <span class="xml-tag">&lt;hediffSkin&gt;</span>AcidBurn<span class="xml-tag">&lt;/hediffSkin&gt;</span>
+    <span class="cm">&lt;!-- 不貫穿多層（停在命中那層） --&gt;</span>
+    <span class="xml-tag">&lt;harmAllLayersUntilOutside&gt;</span>false<span class="xml-tag">&lt;/harmAllLayersUntilOutside&gt;</span>
+    <span class="xml-tag">&lt;spreadOut&gt;</span>true<span class="xml-tag">&lt;/spreadOut&gt;</span>
+    <span class="xml-tag">&lt;makesBlood&gt;</span>false<span class="xml-tag">&lt;/makesBlood&gt;</span>
+    <span class="xml-tag">&lt;deathMessage&gt;</span>{0} has been dissolved by acid.<span class="xml-tag">&lt;/deathMessage&gt;</span>
+    <span class="xml-tag">&lt;defaultDamage&gt;</span>8<span class="xml-tag">&lt;/defaultDamage&gt;</span>
+    <span class="xml-tag">&lt;defaultArmorPenetration&gt;</span>0.15<span class="xml-tag">&lt;/defaultArmorPenetration&gt;</span>
+    <span class="xml-tag">&lt;impactSoundType&gt;</span>Crunch<span class="xml-tag">&lt;/impactSoundType&gt;</span>
+  <span class="xml-tag">&lt;/DamageDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>DamageDefOf：在 C# 取用內建 DamageDef</strong>
+      原版常用傷害在 <code>DamageDefOf</code> 有快捷欄位：<code>DamageDefOf.Bullet</code>、<code>DamageDefOf.Cut</code>、<code>DamageDefOf.Blunt</code>、<code>DamageDefOf.Flame</code>、<code>DamageDefOf.Bomb</code>、<code>DamageDefOf.EMP</code>、<code>DamageDefOf.Stun</code> 等。自訂的 DamageDef 可用 <code>[DefOf] public static class MyDamageDefOf { public static DamageDef AcidSpit; }</code> 取得同樣的編譯期安全存取。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  DamageWorker 與 DamageInfo
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 DamageWorker 與 DamageInfo</div>
+
+    <h3>DamageInfo：一次傷害的封裝</h3>
+
+    <p><code>DamageInfo</code> 是 struct，封裝「這次要造成的傷害」的所有參數。它沿著管線一路傳遞，最後交給 DamageWorker。</p>
+
+<pre><span class="kw">public</span> <span class="ty">DamageInfo</span>(
+    <span class="ty">DamageDef</span>       def,                <span class="cm">// 傷害類型</span>
+    <span class="kw">float</span>           amount,             <span class="cm">// 傷害量（未經護甲）</span>
+    <span class="kw">float</span>           armorPenetration = -<span class="nu">1f</span>, <span class="cm">// 護甲穿透 0~1，-1 = 用 def 預設</span>
+    <span class="kw">float</span>           angle = -<span class="nu">1f</span>,         <span class="cm">// 傷害來向角度（決定命中朝向 / 噴血方向）</span>
+    <span class="ty">Thing</span>           instigator = <span class="kw">null</span>,  <span class="cm">// 攻擊者（影響仇恨、聲望）</span>
+    <span class="ty">BodyPartRecord</span>  hitPart = <span class="kw">null</span>,     <span class="cm">// 強制命中部位（null = 隨機抽選）</span>
+    <span class="ty">ThingDef</span>        weapon = <span class="kw">null</span>,      <span class="cm">// 來源武器（用於戰鬥日誌）</span>
+    <span class="ty">SourceCategory</span>  category = <span class="ty">SourceCategory</span>.ThingOrUnknown,
+    <span class="ty">Thing</span>           intendedTarget = <span class="kw">null</span>)</pre>
+
+    <div class="callout callout-warn">
+      <strong>amount 是「護甲前」傷害</strong>
+      你傳給 DamageInfo 的 <code>amount</code> 是<strong>未經護甲削減</strong>的原始值。護甲在更後面的 <code>ArmorUtility.GetPostArmorDamage</code> 才介入（見 §7）。常見錯誤是以為傳進去的就是最終扣血量。
+    </div>
+
+    <h3>DamageWorker 階層</h3>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>DamageWorker_AddInjury</h3>
+        <p>最常用——抽選命中部位、查護甲、寫入 <code>Hediff_Injury</code>。子彈、刀劍、酸液都走它。覆寫 <code>ApplyToPawn</code> / <code>ApplyDamageToPart</code> 可客製命中與部位邏輯。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>DamageWorker_Blunt / Cut / Scratch / Bite / Stab</h3>
+        <p>都是 <code>AddInjury</code> 的子類，差別在傷勢視覺與少量特殊規則（如 Cut 會留疤）。自訂近戰傷害多半繼承其中之一。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>DamageWorker_Bomb / Flame / Extinguish</h3>
+        <p>爆炸 / 燃燒走獨立路徑，會建立 <code>GenExplosion</code> 範圍，護甲規則與單體不同。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>DamageWorker（基底）</h3>
+        <p>抽象基底，定義 <code>Apply(DamageInfo, Thing)</code> 入口與回傳 <code>DamageResult</code>。完全自訂的傷害行為可直接繼承它。</p>
+      </div>
+    </div>
+
+    <h3>自訂 DamageWorker 範例</h3>
+
+<pre><span class="cm">// 自訂 worker：酸液有 30% 機率額外腐蝕一件護甲耐久</span>
+<span class="kw">public class</span> <span class="ty">DamageWorker_Acid</span> : <span class="ty">DamageWorker_AddInjury</span>
+{
+    <span class="kw">public override</span> <span class="ty">DamageResult</span> <span class="nm">Apply</span>(<span class="ty">DamageInfo</span> dinfo, <span class="ty">Thing</span> victim)
+    {
+        <span class="cm">// 先走原本的加傷流程（命中部位、護甲、寫 Hediff）</span>
+        <span class="ty">DamageResult</span> result = <span class="kw">base</span>.<span class="nm">Apply</span>(dinfo, victim);
+
+        <span class="cm">// 額外效果：腐蝕受害者身上的裝備耐久</span>
+        <span class="kw">if</span> (victim <span class="kw">is</span> <span class="ty">Pawn</span> pawn &amp;&amp; pawn.apparel != <span class="kw">null</span>
+            &amp;&amp; <span class="ty">Rand</span>.<span class="nm">Chance</span>(<span class="nu">0.30f</span>))
+        {
+            <span class="kw">var</span> worn = pawn.apparel.WornApparel;
+            <span class="kw">if</span> (worn.<span class="nm">Count</span> &gt; <span class="nu">0</span>)
+            {
+                <span class="ty">Apparel</span> piece = worn.<span class="nm">RandomElement</span>();
+                piece.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class="ty">DamageInfo</span>(
+                    <span class="ty">DamageDefOf</span>.Deterioration, <span class="nu">5f</span>));
+            }
+        }
+        <span class="kw">return</span> result;
+    }
+}</pre>
+
+    <p>在 DamageDef 把 <code>&lt;workerClass&gt;DamageWorker_Acid&lt;/workerClass&gt;</code> 指過去即可生效。</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  從 C# 造成傷害
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 從 C# 主動造成傷害</div>
+
+    <p>任何時候要對 Pawn / Building / 其他 Thing 造成傷害，統一走 <code>Thing.TakeDamage(DamageInfo)</code>。這是傷害的唯一正式入口，會自動跑完護甲、部位、傷勢、死亡判定。</p>
+
+<pre><span class="cm">// 最簡單：對 pawn 造成 10 點切割傷害</span>
+pawn.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class="ty">DamageInfo</span>(<span class="ty">DamageDefOf</span>.Cut, <span class="nu">10f</span>));
+
+<span class="cm">// 完整版：指定攻擊者、穿透、來向、命中胸腔</span>
+<span class="ty">BodyPartRecord</span> torso = pawn.<span class="nm">RaceProps</span>.body.AllParts
+    .<span class="nm">FirstOrDefault</span>(p =&gt; p.def == <span class="ty">BodyPartDefOf</span>.Torso);
+
+<span class="kw">var</span> dinfo = <span class="kw">new</span> <span class="ty">DamageInfo</span>(
+    def:              <span class="ty">DamageDefOf</span>.Bullet,
+    amount:           <span class="nu">18f</span>,
+    armorPenetration: <span class="nu">0.35f</span>,                 <span class="cm">// 穿 35% 護甲</span>
+    angle:            (target.Position - shooter.Position).<span class="nm">AngleFlat</span>(),
+    instigator:       shooter,                  <span class="cm">// 攻擊者 → 影響仇恨</span>
+    hitPart:          torso,                    <span class="cm">// 強制命中胸腔</span>
+    weapon:           shooter.equipment?.Primary?.def);
+
+<span class="ty">DamageWorker.DamageResult</span> result = pawn.<span class="nm">TakeDamage</span>(dinfo);
+
+<span class="cm">// DamageResult 回報實際造成的傷害與是否致死</span>
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"實際造成 {result.totalDamageDealt} 點，致死={result.deflected}"</span>);</pre>
+
+    <div class="callout callout-tip">
+      <strong>SourceCategory 與 externalViolence</strong>
+      若這次傷害應計入「對殖民者的暴力」（影響故事敘述、Raid 仇恨），確保 DamageDef 的 <code>externalViolence</code> 為 true，且 <code>instigator</code> 有正確填入攻擊者。否則遊戲會把它當成環境傷害（跌倒、火災），不觸發報復邏輯。
+    </div>
+
+    <h3>其他常見傷害輔助 API</h3>
+
+    <table>
+      <thead><tr><th>API</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>pawn.health.RemoveHediff(...)</code> / <code>AddHediff(...)</code></td><td>直接增刪傷勢 / 疾病，繞過傷害管線（治療、加 buff 用）</td></tr>
+        <tr><td><code>GenExplosion.DoExplosion(center, map, radius, damType, ...)</code></td><td>產生範圍爆炸（手榴彈、IED）</td></tr>
+        <tr><td><code>pawn.Kill(DamageInfo?)</code></td><td>直接擊殺（傳入 dinfo 影響屍體狀態與死亡訊息）</td></tr>
+        <tr><td><code>pawn.stances.stunner.StunFor(ticks, instigator)</code></td><td>單純暈眩，不造成傷勢</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  Verb 系統
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 Verb 系統（攻擊行為）</div>
+
+    <p><code>Verb</code> 代表「一個可施放的攻擊／能力動作」。武器、種族天生攻擊（爪、咬）、Ability 都透過 Verb 表達。Verb 由 <code>VerbProperties</code>（XML 資料）+ <code>verbClass</code>（C# 行為）組成。</p>
+
+    <h3>VerbProperties 核心欄位</h3>
+
+    <table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>verbClass</code></td><td>行為類別，如 <code>Verb_Shoot</code> / <code>Verb_MeleeAttackDamage</code> / <code>Verb_LaunchProjectile</code></td></tr>
+        <tr><td><code>defaultProjectile</code></td><td>遠程武器發射的 ProjectileDef（ThingDef with projectile）</td></tr>
+        <tr><td><code>range</code> / <code>minRange</code></td><td>最大 / 最小射程（格）</td></tr>
+        <tr><td><code>warmupTime</code></td><td>瞄準前置時間（秒），決定 DPS 與機動性平衡</td></tr>
+        <tr><td><code>burstShotCount</code> / <code>ticksBetweenBurstShots</code></td><td>連射發數 / 連射間隔</td></tr>
+        <tr><td><code>accuracyTouch / Short / Medium / Long</code></td><td>四檔距離的基礎命中率</td></tr>
+        <tr><td><code>forcedMissRadius</code></td><td>強制散布半徑（爆炸武器；&gt;0 時走 AoE 命中模型）</td></tr>
+        <tr><td><code>soundCast</code> / <code>muzzleFlashScale</code></td><td>開火音效 / 槍口閃光</td></tr>
+        <tr><td><code>onlyManualCast</code> / <code>targetParams</code></td><td>是否僅手動施放 / 合法目標過濾</td></tr>
+      </tbody>
+    </table>
+
+    <h3>內建 Verb 類別</h3>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Verb_Shoot</h3>
+        <p>標準射擊 Verb，計算命中率後發射 <code>defaultProjectile</code>。大多數槍械直接用它，不需自訂。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Verb_LaunchProjectile</h3>
+        <p><code>Verb_Shoot</code> 的基底，負責「產生並發射一個 Projectile」。需要非標準發射邏輯（多重彈、曲射）時繼承它。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Verb_MeleeAttack / Damage</h3>
+        <p>近戰攻擊，不發射 Projectile，直接對相鄰目標套 <code>DamageInfo</code>。命中與傷害來自武器的 <code>Tool</code>（見 §9）。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Verb_CastAbility 系列</h3>
+        <p>DLC 能力（心靈、超能）的 Verb，搭配 <code>CompAbilityEffect</code> 產生效果，未必造成傷害。</p>
+      </div>
+    </div>
+
+    <h3>在武器 ThingDef 宣告 Verb</h3>
+
+<pre><span class="cm">&lt;!-- 遠程武器：自訂雷射步槍 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseHumanMakeableGun"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Gun_LaserRifle<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>laser rifle<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;verbs&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;verbClass&gt;</span>Verb_Shoot<span class="xml-tag">&lt;/verbClass&gt;</span>
+      <span class="xml-tag">&lt;hasStandardCommand&gt;</span>true<span class="xml-tag">&lt;/hasStandardCommand&gt;</span>
+      <span class="xml-tag">&lt;defaultProjectile&gt;</span>Proj_LaserBeam<span class="xml-tag">&lt;/defaultProjectile&gt;</span>
+      <span class="xml-tag">&lt;warmupTime&gt;</span>1.3<span class="xml-tag">&lt;/warmupTime&gt;</span>
+      <span class="xml-tag">&lt;range&gt;</span>30<span class="xml-tag">&lt;/range&gt;</span>
+      <span class="xml-tag">&lt;burstShotCount&gt;</span>3<span class="xml-tag">&lt;/burstShotCount&gt;</span>
+      <span class="xml-tag">&lt;ticksBetweenBurstShots&gt;</span>8<span class="xml-tag">&lt;/ticksBetweenBurstShots&gt;</span>
+      <span class="xml-tag">&lt;soundCast&gt;</span>Shot_ChargeRifle<span class="xml-tag">&lt;/soundCast&gt;</span>
+      <span class="xml-tag">&lt;muzzleFlashScale&gt;</span>9<span class="xml-tag">&lt;/muzzleFlashScale&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/verbs&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  自訂 Verb
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 自訂 Verb（覆寫 TryCastShot）</div>
+
+    <p>當內建 Verb 無法表達你的攻擊邏輯（例如：一次射出三道扇形雷射、或命中時對周圍施加 debuff），就繼承對應 Verb 並覆寫 <code>TryCastShot()</code>——它是「實際執行一次施放」的核心方法，回傳 <code>bool</code> 表示是否成功施放。</p>
+
+<pre><span class="cm">// 自訂：一次發射 3 道彈，分別偏移 -15°/0°/+15°（扇形）</span>
+<span class="kw">public class</span> <span class="ty">Verb_ShootFan</span> : <span class="ty">Verb_LaunchProjectile</span>
+{
+    <span class="kw">protected override bool</span> <span class="nm">TryCastShot</span>()
+    {
+        <span class="kw">if</span> (currentTarget.HasThing
+            &amp;&amp; currentTarget.Thing.Map != caster.Map)
+            <span class="kw">return false</span>;
+
+        <span class="ty">ThingDef</span> projDef = verbProps.defaultProjectile;
+        <span class="kw">if</span> (projDef == <span class="kw">null</span>) <span class="kw">return false</span>;
+
+        <span class="kw">var</span> shooter = caster <span class="kw">as</span> <span class="ty">Pawn</span>;
+        <span class="ty">Vector3</span> origin = caster.<span class="nm">DrawPos</span>;
+        <span class="ty">IntVec3</span> targetCell = currentTarget.Cell;
+
+        <span class="cm">// 主方向角度</span>
+        <span class="kw">float</span> baseAngle = (targetCell.ToVector3Shifted() - origin)
+            .<span class="nm">AngleFlat</span>();
+
+        <span class="kw">foreach</span> (<span class="kw">float</span> offset <span class="kw">in</span> <span class="kw">new</span>[] { -<span class="nu">15f</span>, <span class="nu">0f</span>, <span class="nu">15f</span> })
+        {
+            <span class="cm">// 依偏移角算出該道彈的落點</span>
+            <span class="ty">Vector3</span> dir = <span class="ty">Quaternion</span>.<span class="nm">Euler</span>(<span class="nu">0f</span>, baseAngle + offset, <span class="nu">0f</span>)
+                * <span class="ty">Vector3</span>.forward;
+            <span class="ty">IntVec3</span> dest = (origin + dir * verbProps.range).<span class="nm">ToIntVec3</span>();
+
+            <span class="cm">// 產生並發射一道 Projectile</span>
+            <span class="ty">Projectile</span> proj = (<span class="ty">Projectile</span>)<span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(
+                projDef, caster.Position, caster.Map);
+            proj.<span class="nm">Launch</span>(
+                launcher:        caster,
+                origin:          origin,
+                usedTarget:      dest,
+                intendedTarget:  dest,
+                hitFlags:        <span class="ty">ProjectileHitFlags</span>.IntendedTarget,
+                equipment:       <span class="ty">EquipmentSource</span>);
+        }
+
+        <span class="cm">// 播放開火音效 / 後座等（沿用基底）</span>
+        <span class="kw">if</span> (verbProps.soundCast != <span class="kw">null</span>)
+            verbProps.soundCast.<span class="nm">PlayOneShot</span>(
+                <span class="kw">new</span> <span class="ty">TargetInfo</span>(caster.Position, caster.Map));
+
+        <span class="kw">return true</span>;
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>TryCastShot 的返回值很重要</strong>
+      回傳 <code>false</code> 時 Verb 會被視為「施放失敗」，Pawn 不會消耗冷卻、可能重試或改 job，造成卡死或不斷重瞄。確認所有早退分支（目標跨地圖、無彈、地形阻擋）都是真正無法施放的情況才回 false。
+    </div>
+
+    <p>接著在武器 verb 把 <code>&lt;verbClass&gt;Verb_ShootFan&lt;/verbClass&gt;</code> 指過去即可。Ability 自訂則改繼承 <code>Verb_CastAbility</code> 並覆寫 <code>TryCastShot</code>。</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  ProjectileDef 與 Projectile class
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 ProjectileDef 與 Projectile class</div>
+
+    <p>「子彈」在 RimWorld 是一個 <code>ThingDef</code>（category 為 Projectile），其 <code>thingClass</code> 指向繼承 <code>Projectile</code> 的 C# class。飛行物的傷害數值寫在 <code>&lt;projectile&gt;</code> 子節點裡。</p>
+
+    <h3>ProjectileDef（ThingDef）範例</h3>
+
+<pre><span class="cm">&lt;!-- 自訂雷射光束彈 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseBullet"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Proj_LaserBeam<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>laser beam<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="cm">&lt;!-- 自訂 class：命中時額外點燃 --&gt;</span>
+  <span class="xml-tag">&lt;thingClass&gt;</span>Projectile_LaserBeam<span class="xml-tag">&lt;/thingClass&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Projectile/LaserBeam<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+  <span class="xml-tag">&lt;projectile&gt;</span>
+    <span class="cm">&lt;!-- 傷害類型（連到 DamageDef） --&gt;</span>
+    <span class="xml-tag">&lt;damageDef&gt;</span>Burn<span class="xml-tag">&lt;/damageDef&gt;</span>
+    <span class="cm">&lt;!-- 基礎傷害（最終會乘上品質 / 距離修正） --&gt;</span>
+    <span class="xml-tag">&lt;damageAmountBase&gt;</span>16<span class="xml-tag">&lt;/damageAmountBase&gt;</span>
+    <span class="cm">&lt;!-- 護甲穿透 0~1（1.4+ 顯式欄位；省略則由傷害量推算） --&gt;</span>
+    <span class="xml-tag">&lt;armorPenetrationBase&gt;</span>0.40<span class="xml-tag">&lt;/armorPenetrationBase&gt;</span>
+    <span class="xml-tag">&lt;speed&gt;</span>88<span class="xml-tag">&lt;/speed&gt;</span>
+    <span class="xml-tag">&lt;flyOverhead&gt;</span>false<span class="xml-tag">&lt;/flyOverhead&gt;</span>
+    <span class="cm">&lt;!-- 命中後是否停在地上（如箭矢可回收） --&gt;</span>
+    <span class="xml-tag">&lt;stoppingPower&gt;</span>1.5<span class="xml-tag">&lt;/stoppingPower&gt;</span>
+  <span class="xml-tag">&lt;/projectile&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <h3>Projectile class（覆寫 Impact）</h3>
+
+    <p><code>Impact(Thing hitThing, bool blockedByShield)</code> 是飛行物命中時呼叫的核心方法。覆寫它可加入命中特效、AoE、debuff 等。<strong>務必先做你的客製邏輯，最後再呼叫 <code>base.Impact()</code></strong>（base 會套傷害並銷毀自己）。</p>
+
+<pre><span class="kw">public class</span> <span class="ty">Projectile_LaserBeam</span> : <span class="ty">Projectile</span>
+{
+    <span class="kw">protected override void</span> <span class="nm">Impact</span>(<span class="ty">Thing</span> hitThing, <span class="kw">bool</span> blockedByShield)
+    {
+        <span class="ty">Map</span> map = base.Map; <span class="cm">// base.Impact 之後 Map 會變 null，先存</span>
+
+        <span class="cm">// ① 命中前的客製：在命中格留下短暫灼燒火</span>
+        <span class="kw">if</span> (hitThing != <span class="kw">null</span> &amp;&amp; <span class="ty">Rand</span>.<span class="nm">Chance</span>(<span class="nu">0.5f</span>))
+        {
+            <span class="ty">FireUtility</span>.<span class="nm">TryStartFireIn</span>(
+                hitThing.Position, map, <span class="nu">0.3f</span>, launcher);
+        }
+
+        <span class="cm">// ② 命中音效 / 特效</span>
+        <span class="ty">FleckMaker</span>.<span class="nm">Static</span>(<span class="kw">this</span>.Position, map, <span class="ty">FleckDefOf</span>.ExplosionFlash, <span class="nu">1.5f</span>);
+
+        <span class="cm">// ③ 交給基底套用傷害並銷毀彈體</span>
+        <span class="kw">base</span>.<span class="nm">Impact</span>(hitThing, blockedByShield);
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>傷害數值的來源優先序</strong>
+      Projectile 套傷害時，<code>DamageInfo.amount</code> 取自 <code>projectile.GetDamageAmount(weapon, ...)</code>，基底為 <code>damageAmountBase</code>，再乘上武器品質、材質等修正。若 <code>damageAmountBase</code> 留空（或 -1），會嘗試從 <code>damageDef.defaultDamage</code> 推導。穿透同理：<code>armorPenetrationBase</code> 優先，否則由傷害量近似。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  護甲計算
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 護甲計算（armorPenetration 與 GetPostArmorDamage）</div>
+
+    <p>護甲在 <code>DamageWorker_AddInjury</code> 抽選命中部位後、寫入傷勢前介入。核心函式是 <code>ArmorUtility.GetPostArmorDamage(...)</code>，它逐層（衣物 → 皮膚 → 骨骼）計算削減。</p>
+
+    <h3>護甲公式（1.0+ 的「百分比穿透」模型）</h3>
+
+    <p>RimWorld 不是「護甲直接減傷害」，而是「穿透值 vs 護甲值」決定<strong>三種結果</strong>：</p>
+
+    <ol>
+      <li><strong>有效護甲值</strong> = 護甲評分 − 傷害的 armorPenetration（可為負）</li>
+      <li>擲一個 <code>0~1</code> 隨機數 <code>r</code>：
+        <ul>
+          <li><code>r &lt; 有效護甲/2</code> → <strong>完全擋下</strong>（deflect，0 傷害，鈍器可能轉成鈍傷）</li>
+          <li><code>有效護甲/2 ≤ r &lt; 有效護甲</code> → <strong>減半</strong>（傷害 ×0.5，且鋒利傷可能降級為鈍傷）</li>
+          <li><code>r ≥ 有效護甲</code> → <strong>完全命中</strong>（傷害全額）</li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="callout callout-warn">
+      <strong>這是常見誤解之一</strong>
+      armorPenetration 不是「無視 X% 傷害」，而是「從護甲評分裡扣掉 X 個百分點」。例如護甲 0.50、穿透 0.20 → 有效護甲 0.30 → 機率分支用 0.30 與 0.15 當門檻。穿透越高，落入「全擋」「減半」的機率越低。
+    </div>
+
+    <h3>查護甲評分對應的 stat</h3>
+
+    <p><code>DamageDef.armorCategory</code> 決定查哪個 StatDef：</p>
+
+    <table>
+      <thead><tr><th>armorCategory</th><th>對應 StatDef</th><th>典型傷害</th></tr></thead>
+      <tbody>
+        <tr><td><code>Sharp</code></td><td><code>ArmorRating_Sharp</code></td><td>子彈、刀、矛、抓</td></tr>
+        <tr><td><code>Blunt</code></td><td><code>ArmorRating_Blunt</code></td><td>棍棒、拳、爆炸衝擊波</td></tr>
+        <tr><td><code>Heat</code></td><td><code>ArmorRating_Heat</code></td><td>火焰、雷射、酸</td></tr>
+      </tbody>
+    </table>
+
+    <h3>在 C# 直接呼叫 GetPostArmorDamage</h3>
+
+<pre><span class="cm">// 簽章（1.5）：</span>
+<span class="cm">// public static float GetPostArmorDamage(</span>
+<span class="cm">//     Pawn pawn, float amount, float armorPenetration,</span>
+<span class="cm">//     BodyPartRecord part, ref DamageDef damageDef,</span>
+<span class="cm">//     out bool metalArmor, ref float ... )  // 版本間略有差異</span>
+
+<span class="kw">float</span> raw = <span class="nu">20f</span>;
+<span class="kw">float</span> pen = <span class="nu">0.30f</span>;
+<span class="ty">DamageDef</span> dd = <span class="ty">DamageDefOf</span>.Bullet;
+<span class="ty">BodyPartRecord</span> part = pawn.<span class="nm">RaceProps</span>.body.corePart;
+
+<span class="kw">float</span> postArmor = <span class="ty">ArmorUtility</span>.<span class="nm">GetPostArmorDamage</span>(
+    pawn, raw, pen, part, <span class="kw">ref</span> dd, <span class="kw">out bool</span> metalArmor);
+
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"原始 {raw} → 護甲後 {postArmor}，dd 可能被改為 {dd.defName}"</span>);</pre>
+
+    <div class="callout callout-tip">
+      <strong>傷害類型會被「降級」</strong>
+      注意 <code>ref DamageDef damageDef</code>：當 Sharp 傷害被護甲部分擋下，遊戲會把它<strong>改成 Blunt</strong>（鋒利攻擊打在硬甲上變成鈍擊）。所以你看到「穿著鋼甲的人中彈卻只受鈍傷」是正常設計。自訂傷害若不希望被降級，需檢查 DamageDef 是否設定了對應的 fallback。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  BodyPartDef 與命中部位
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 BodyPartDef 與命中部位</div>
+
+    <p>命中哪個部位由 <code>BodyDef</code>（身體藍圖）+ 各部位的 <code>coverage</code> / <code>hitChance</code> 加權隨機決定。<code>BodyPartDef</code> 定義單個部位的屬性，<code>BodyDef</code> 把它們組裝成樹狀結構。</p>
+
+    <h3>三層概念</h3>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>BodyPartDef</h3>
+        <p>單個部位「種類」的定義：<code>Torso</code>、<code>Head</code>、<code>Leg</code>。含 <code>hitPoints</code>（耐久）、<code>permanentInjuryChanceFactor</code>、<code>tags</code>（功能標籤如 BloodPumpingSource）。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>BodyDef</h3>
+        <p>把 BodyPartDef 組成樹（<code>Human</code>、<code>QuadrupedAnimalWithHooves</code>）。每個節點是 <code>BodyPartRecord</code>，帶 <code>coverage</code>（被命中的相對權重）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>BodyPartRecord</h3>
+        <p>執行期的部位實例（樹節點）。<code>height</code>（Bottom/Middle/Top）+ <code>depth</code>（Outside/Inside）影響掩體與貫穿。</p>
+      </div>
+    </div>
+
+    <h3>BodyPartDef 範例</h3>
+
+<pre><span class="xml-tag">&lt;BodyPartDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Heart<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>heart<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;hitPoints&gt;</span>15<span class="xml-tag">&lt;/hitPoints&gt;</span>
+  <span class="cm">&lt;!-- 永久損傷機率倍率（心臟很關鍵） --&gt;</span>
+  <span class="xml-tag">&lt;permanentInjuryChanceFactor&gt;</span>1.0<span class="xml-tag">&lt;/permanentInjuryChanceFactor&gt;</span>
+  <span class="cm">&lt;!-- 功能標籤：供血來源，毀了會迅速失血致死 --&gt;</span>
+  <span class="xml-tag">&lt;tags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>BloodPumpingSource<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/tags&gt;</span>
+<span class="xml-tag">&lt;/BodyPartDef&gt;</span></pre>
+
+    <h3>BodyDef 中的 coverage（命中權重）</h3>
+
+<pre><span class="cm">&lt;!-- 摘自 Human BodyDef：軀幹下的部位樹 --&gt;</span>
+<span class="xml-tag">&lt;li&gt;</span>
+  <span class="xml-tag">&lt;def&gt;</span>Torso<span class="xml-tag">&lt;/def&gt;</span>
+  <span class="cm">&lt;!-- coverage：此部位「對外暴露」被命中的相對權重 --&gt;</span>
+  <span class="xml-tag">&lt;coverage&gt;</span>0.35<span class="xml-tag">&lt;/coverage&gt;</span>
+  <span class="xml-tag">&lt;height&gt;</span>Middle<span class="xml-tag">&lt;/height&gt;</span>
+  <span class="xml-tag">&lt;depth&gt;</span>Outside<span class="xml-tag">&lt;/depth&gt;</span>
+  <span class="xml-tag">&lt;parts&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;def&gt;</span>Heart<span class="xml-tag">&lt;/def&gt;</span>
+      <span class="cm">&lt;!-- 內部器官 coverageAbs：絕對命中機率（很低） --&gt;</span>
+      <span class="xml-tag">&lt;coverageAbs&gt;</span>0.04<span class="xml-tag">&lt;/coverageAbs&gt;</span>
+      <span class="xml-tag">&lt;depth&gt;</span>Inside<span class="xml-tag">&lt;/depth&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/parts&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>coverage vs coverageAbs</strong>
+      <code>coverage</code> 是「相對於同層其他部位」的權重（外層部位用）；<code>coverageAbs</code> 是「絕對命中機率」（內臟用，不隨兄弟節點變動）。<code>harmAllLayersUntilOutside</code>（§1）為 true 的傷害（如子彈）才可能打到 <code>depth=Inside</code> 的內臟——它從命中的內層往外貫穿各層。
+    </div>
+
+    <h3>C# 抽選 / 指定命中部位</h3>
+
+<pre><span class="cm">// 隨機抽一個外層部位（依 coverage 加權）</span>
+<span class="ty">BodyPartRecord</span> randomOuter = pawn.<span class="nm">RaceProps</span>.body
+    .<span class="nm">GetPartsWithDef</span>(<span class="ty">BodyPartDefOf</span>.Torso)
+    .<span class="nm">RandomElement</span>();
+
+<span class="cm">// 用 health 的部位查詢取得當前還存在的部位（已斷的不算）</span>
+<span class="kw">var</span> existingLegs = pawn.health.hediffSet
+    .<span class="nm">GetNotMissingParts</span>()
+    .<span class="nm">Where</span>(p =&gt; p.def == <span class="ty">BodyPartDefOf</span>.Leg);
+
+<span class="cm">// 強制命中頭部（傳給 DamageInfo.hitPart）</span>
+<span class="ty">BodyPartRecord</span> head = pawn.health.hediffSet
+    .<span class="nm">GetNotMissingParts</span>()
+    .<span class="nm">FirstOrDefault</span>(p =&gt; p.def == <span class="ty">BodyPartDefOf</span>.Head);
+pawn.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class="ty">DamageInfo</span>(
+    <span class="ty">DamageDefOf</span>.Cut, <span class="nu">25f</span>, hitPart: head));</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  Tool 與 ToolCapacityDef（近戰）
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 Tool 與 ToolCapacityDef（近戰）</div>
+
+    <p>近戰傷害不靠 Projectile，而是來自武器（或種族肢體）的 <code>tools</code> 列表。每個 <code>Tool</code> 描述「一種攻擊方式」（刀刃、刀柄、拳頭），<code>Verb_MeleeAttackDamage</code> 施放時會依權重抽選一個 Tool 並用它的數值結算。</p>
+
+    <h3>Tool 欄位</h3>
+
+    <table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>label</code></td><td>攻擊名稱（戰鬥日誌顯示，如 "edge" / "handle"）</td></tr>
+        <tr><td><code>capacities</code></td><td><code>List&lt;ToolCapacityDef&gt;</code>——這個 tool 能造成哪些傷害類別（Cut/Blunt/Stab/Poke...）</td></tr>
+        <tr><td><code>power</code></td><td>基礎傷害量</td></tr>
+        <tr><td><code>cooldownTime</code></td><td>該攻擊的冷卻（秒），決定近戰 DPS</td></tr>
+        <tr><td><code>armorPenetration</code></td><td>護甲穿透（1.4+；省略由 power 推算）</td></tr>
+        <tr><td><code>chanceFactor</code></td><td>被抽中的相對權重（多個 tool 時）</td></tr>
+        <tr><td><code>linkedBodyPartsGroup</code></td><td>對應的肢體群組（種族天生攻擊用，如 Teeth、FrontLeftPaw）</td></tr>
+        <tr><td><code>surpriseAttack</code></td><td>偷襲時的額外傷害（如毒牙的 extraMeleeDamages）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>ToolCapacityDef</h3>
+
+    <p><code>ToolCapacityDef</code> 是 tool「能力類別」的標籤，把 Tool 連到對應的 <code>ManeuverDef</code>（決定用哪個 DamageDef 與動畫）。內建有 <code>Cut</code>、<code>Stab</code>、<code>Blunt</code>、<code>Poke</code>、<code>Scratch</code>、<code>Bite</code> 等。自訂時：</p>
+
+<pre><span class="cm">&lt;!-- 自訂能力：酸蝕近戰 --&gt;</span>
+<span class="xml-tag">&lt;ToolCapacityDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>AcidTouch<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>acid touch<span class="xml-tag">&lt;/label&gt;</span>
+<span class="xml-tag">&lt;/ToolCapacityDef&gt;</span>
+
+<span class="cm">&lt;!-- ManeuverDef 把能力連到 DamageDef --&gt;</span>
+<span class="xml-tag">&lt;ManeuverDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Maneuver_AcidTouch<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;requiredCapacity&gt;</span>AcidTouch<span class="xml-tag">&lt;/requiredCapacity&gt;</span>
+  <span class="xml-tag">&lt;verb&gt;</span>
+    <span class="xml-tag">&lt;verbClass&gt;</span>Verb_MeleeAttackDamage<span class="xml-tag">&lt;/verbClass&gt;</span>
+    <span class="xml-tag">&lt;meleeDamageDef&gt;</span>AcidSpit<span class="xml-tag">&lt;/meleeDamageDef&gt;</span>
+  <span class="xml-tag">&lt;/verb&gt;</span>
+  <span class="xml-tag">&lt;logEntryDef&gt;</span>MeleeAttack<span class="xml-tag">&lt;/logEntryDef&gt;</span>
+<span class="xml-tag">&lt;/ManeuverDef&gt;</span></pre>
+
+    <h3>武器 tools 範例（近戰刀）</h3>
+
+<pre><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseMeleeWeapon_Sharp"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MeleeWeapon_AcidBlade<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>acid blade<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;tools&gt;</span>
+    <span class="cm">&lt;!-- 主攻擊：刀刃，造成切割 + 酸蝕 --&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>edge<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;capacities&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Cut<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>AcidTouch<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capacities&gt;</span>
+      <span class="xml-tag">&lt;power&gt;</span>14<span class="xml-tag">&lt;/power&gt;</span>
+      <span class="xml-tag">&lt;cooldownTime&gt;</span>2.0<span class="xml-tag">&lt;/cooldownTime&gt;</span>
+      <span class="xml-tag">&lt;armorPenetration&gt;</span>0.25<span class="xml-tag">&lt;/armorPenetration&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="cm">&lt;!-- 次攻擊：刀柄鈍擊（權重較低） --&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>handle<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;capacities&gt;</span><span class="xml-tag">&lt;li&gt;</span>Blunt<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/capacities&gt;</span>
+      <span class="xml-tag">&lt;power&gt;</span>9<span class="xml-tag">&lt;/power&gt;</span>
+      <span class="xml-tag">&lt;cooldownTime&gt;</span>2.0<span class="xml-tag">&lt;/cooldownTime&gt;</span>
+      <span class="xml-tag">&lt;chanceFactor&gt;</span>0.5<span class="xml-tag">&lt;/chanceFactor&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/tools&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>種族天生近戰：linkedBodyPartsGroup</strong>
+      動物的爪、咬、踢都是定義在種族 <code>&lt;tools&gt;</code> 裡的 Tool，透過 <code>linkedBodyPartsGroup</code>（如 <code>Teeth</code>、<code>FrontLeftPaw</code>）連到肢體。當該肢體被打斷，對應 tool 自動失效——這就是「斷腿的熊咬合力下降」的實作機制。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10  常見坑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 常見坑與排錯</div>
+
+    <h3>坑一：傷害「不生效」（扣了血卻沒效果 / 完全沒扣）</h3>
+
+    <div class="callout callout-danger">
+      <strong>檢查清單</strong>
+      ① <code>DamageDef.workerClass</code> 是否正確（拼錯 class 名會靜默用基底，可能不寫傷勢）。<br>
+      ② <code>externalViolence</code>：對 Pawn 的攻擊若沒設 true，部分結算（仇恨、心情）不觸發。<br>
+      ③ 傳給 <code>DamageInfo</code> 的 <code>amount</code> 太小，過完護甲後歸零（見坑二）。<br>
+      ④ 對 Building 而非 Pawn：很多 worker 只處理 Pawn，命中建築需走另一條路徑。<br>
+      ⑤ 目標已 Destroyed / 未 Spawned：<code>TakeDamage</code> 對死物無效。
+    </div>
+
+    <h3>坑二：護甲穿透公式理解錯誤</h3>
+
+    <p>最常見的是把 <code>armorPenetration</code> 當成「減傷百分比」或「無視護甲百分比」。實際上它是「<strong>從護甲評分扣除的絕對值</strong>」（§7）。症狀：</p>
+
+    <ul>
+      <li><strong>傷害總是被全擋</strong>：穿透設太低（如 0），對上高甲目標幾乎每次落入 deflect 分支。把 <code>armorPenetrationBase</code> 設到接近目標護甲值。</li>
+      <li><strong>傷害類型莫名變鈍傷</strong>：這是<em>正常</em>的「Sharp → Blunt 降級」（§7），不是 bug。若不想降級需改 DamageDef 設計。</li>
+      <li><strong>穿透 &gt; 1 沒額外效果</strong>：有效護甲為負時恆全額命中，穿透超過護甲值後再加沒意義。</li>
+    </ul>
+
+<pre><span class="cm">// 除錯：直接印出護甲前後差異</span>
+<span class="kw">float</span> before = dinfo.Amount;
+<span class="kw">var</span> result = pawn.<span class="nm">TakeDamage</span>(dinfo);
+<span class="ty">Log</span>.<span class="nm">Message</span>(
+    <span class="st">$"[Debug] pen={dinfo.ArmorPenetrationInt} "</span> +
+    <span class="st">$"sharpArmor={pawn.GetStatValue(StatDefOf.ArmorRating_Sharp)} "</span> +
+    <span class="st">$"before={before} dealt={result.totalDamageDealt}"</span>);</pre>
+
+    <h3>坑三：Projectile「不命中」/ 穿過目標</h3>
+
+    <div class="callout callout-danger">
+      <strong>檢查清單</strong>
+      ① <code>Launch()</code> 的 <code>hitFlags</code> 設錯：要打 Pawn 需含 <code>ProjectileHitFlags.IntendedTarget</code>（與 <code>NonTargetPawns</code> / <code>NonTargetWorld</code>）。只給錯誤組合會讓彈體飛過去不結算。<br>
+      ② <code>usedTarget</code> 傳的是格子而非 Thing：對移動目標應傳 <code>LocalTargetInfo(thing)</code>，否則打的是「目標當時站的格」，目標走開就 miss。<br>
+      ③ 覆寫 <code>Impact</code> 時忘了呼叫 <code>base.Impact()</code>：傷害永遠不會套用（彈體命中但沒扣血）。<br>
+      ④ <code>speed</code> 過高 + 短射程：可能在第一個 tick 就越過目標，建議 speed 與 range 搭配測試。<br>
+      ⑤ <code>flyOverhead=true</code>（迫擊砲）走的是落點 AoE 模型，不做直線命中判定，別跟直射混用。
+    </div>
+
+    <h3>坑四：自訂 Verb 卡死 / Pawn 不停瞄準</h3>
+    <p>通常是 <code>TryCastShot</code> 在「其實可以施放」的情況回了 <code>false</code>（§5），導致 Pawn 認為攻擊失敗、反覆重試。用 FileLog 印出每個 return false 分支確認。</p>
+
+    <h3>坑五：DamageDefOf / 自訂 DefOf 為 null</h3>
+    <p>忘了加 <code>[DefOf]</code> 屬性，或 defName 拼錯，static 欄位會是 null，呼叫時 NRE。DefOf 解析在遊戲啟動時一次性完成，啟動日誌會警告找不到的 def。</p>
+
+    <div class="callout callout-info">
+      <strong>萬用除錯工具：Dev Mode 的 "Damage" / "Tools - General"</strong>
+      開發者模式下的 God mode + 「T: Damage to all in screen」「inspect → Hediffs」能即時觀察傷害落點與部位。另可用 <code>Debug actions → Combat → "Spawn projectile"</code> 隔離測試你的 Projectile class，不必真的擺槍開火。
+    </div>
+  </div>
+
+  <!-- 本章重點回顧 -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>傷害管線</h3>
+        <p>Verb → Projectile → DamageInfo → TakeDamage → DamageWorker → 護甲 → 部位 → Hediff</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>三個核心 class</h3>
+        <p>Verb(怎麼打)、Projectile(飛行/Impact)、DamageWorker(怎麼套傷)，各有 XML 對接點</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>護甲模型</h3>
+        <p>穿透是「扣護甲評分」不是減傷；分擋下/減半/全中三檔；Sharp 會降級成 Blunt</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>常見坑</h3>
+        <p>忘 base.Impact、hitFlags 錯、穿透理解錯、TryCastShot 誤回 false、DefOf null</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 15 戰鬥與傷害系統<br>
+  適用 RimWorld 1.4 / 1.5 · Harmony 2.x · 繁體中文
+</footer>
+
+</body>
+</html>

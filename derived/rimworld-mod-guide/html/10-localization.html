@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在地化 Localization — RimWorld Modding</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html" class="active">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>在地化 Localization</h1>
+  <p>Languages/ 資料夾結構、Keyed 翻譯、DefInjected 注入、Strings 清單、.Translate() 與 placeholder、文法解析器 (Grammar Resolver)、複數/性別處理、缺漏偵測與命名規範。</p>
+  <span class="badge">RimWorld 1.5 · Verse.Translator · LanguageDatabase</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. 心智模型 ── -->
+  <div class="section">
+    <div class="section-title">1. 在地化心智模型</div>
+
+    <p>
+      RimWorld 的在地化系統不是傳統的「key → value 平面字典」。它由三條獨立通道組成，各自對應不同的字串來源。
+      理解這三條通道的分工，是寫出可維護翻譯的前提。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Keyed</h3>
+        <p>程式碼裡用字串字面量當 key，呼叫 <code>"Key".Translate()</code> 取回譯文。對應 <code>Languages/X/Keyed/*.xml</code>。<strong>由 C# 主動觸發</strong>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>DefInjected</h3>
+        <p>把 Def 裡的 <code>label</code> / <code>description</code> 等欄位「就地覆寫」成譯文。對應 <code>Languages/X/DefInjected/&lt;DefType&gt;/*.xml</code>。<strong>由引擎自動套用</strong>，程式碼無感。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Strings</h3>
+        <p>純文字清單檔（每行一筆），供名字產生器、隨機訊息、文法規則讀取。對應 <code>Languages/X/Strings/**</code>。<strong>由規則系統消費</strong>。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>核心類別位置</strong>
+      翻譯入口擴充方法 <code>Translate()</code> 定義於 <code>Verse.Translator</code>；語言資料庫為 <code>Verse.LanguageDatabase</code>，
+      目前啟用的語言由 <code>LanguageDatabase.activeLanguage</code> 持有，可透過 <code>Find.ActiveLanguageWorker</code> 取得文法處理器。
+    </div>
+  </div>
+
+  <!-- ── 2. Languages 資料夾結構 ── -->
+  <div class="section">
+    <div class="section-title">2. Languages/ 資料夾結構</div>
+
+    <p>
+      翻譯檔放在 Mod 根目錄下的 <code>Languages/&lt;語言資料夾名&gt;/</code>。語言資料夾名稱必須與遊戲認得的
+      <strong>LanguageFolderName</strong> 完全一致（區分大小寫）。常見對照：
+    </p>
+
+    <table>
+      <tr><th>語言</th><th>資料夾名稱</th><th>原生名稱</th></tr>
+      <tr><td>繁體中文</td><td><code>ChineseTraditional</code></td><td>繁體中文</td></tr>
+      <tr><td>簡體中文</td><td><code>ChineseSimplified</code></td><td>简体中文</td></tr>
+      <tr><td>英文</td><td><code>English</code></td><td>English</td></tr>
+      <tr><td>日文</td><td><code>Japanese</code></td><td>日本語</td></tr>
+      <tr><td>韓文</td><td><code>Korean</code></td><td>한국어</td></tr>
+    </table>
+
+    <h3>典型目錄佈局</h3>
+<pre><span class="cm"># Mods/YourMod/</span>
+Languages/
+├── English/
+│   ├── Keyed/
+│   │   └── YourMod_Messages.xml
+│   ├── DefInjected/
+│   │   ├── ThingDef/
+│   │   │   └── Items_Weapons.xml
+│   │   └── HediffDef/
+│   │       └── Hediffs.xml
+│   └── Strings/
+│       ├── Names/
+│       │   └── Animal/
+│       │       └── Cat.txt
+│       └── WordInfo/
+│           └── Gender/
+│               └── ...
+└── ChineseTraditional/
+    ├── Keyed/
+    │   └── YourMod_Messages.xml
+    ├── DefInjected/
+    │   └── ThingDef/
+    │       └── Items_Weapons.xml
+    └── Strings/
+        └── Names/
+            └── Animal/
+                └── Cat.txt</pre>
+
+    <div class="callout callout-tip">
+      <strong>English 是回退基準 (fallback)</strong>
+      無論玩家用哪種語言，引擎都會先載入 <code>English</code> 作為基底，再以使用者語言覆蓋。
+      因此 <strong>英文翻譯應視為「完整母本」</strong>：所有 Keyed key、所有 DefInjected 欄位都該在 English 裡有定義。
+      其他語言缺漏的條目會自動回退到英文，不會留空。
+    </div>
+
+    <h3>LanguageInfo.xml（選用）</h3>
+    <p>若你發布的是「翻譯包」而非單純功能 Mod，可在語言資料夾根放一份 <code>LanguageInfo.xml</code> 標註譯者資訊與文法設定。</p>
+<pre><span class="xml-tag">&lt;LanguageInfo&gt;</span>
+  <span class="xml-tag">&lt;friendlyNameNative&gt;</span>繁體中文<span class="xml-tag">&lt;/friendlyNameNative&gt;</span>
+  <span class="xml-tag">&lt;friendlyNameEnglish&gt;</span>Chinese (Traditional)<span class="xml-tag">&lt;/friendlyNameEnglish&gt;</span>
+  <span class="xml-tag">&lt;canBeApostropheConjugated&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/canBeApostropheConjugated&gt;</span>
+  <span class="xml-tag">&lt;hasGenders&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/hasGenders&gt;</span>
+<span class="xml-tag">&lt;/LanguageInfo&gt;</span></pre>
+  </div>
+
+  <!-- ── 3. Keyed Translations ── -->
+  <div class="section">
+    <div class="section-title">3. Keyed Translations</div>
+
+    <p>
+      Keyed 翻譯用於<strong>程式碼產生的字串</strong>：訊息、按鈕標籤、letter 內容、tooltip 等任何由 C# 主動顯示的文字。
+      檔案放在 <code>Languages/X/Keyed/</code>，可任意命名（建議帶 Mod 前綴），引擎會載入該資料夾下所有 <code>.xml</code> 並合併。
+    </p>
+
+    <h3>XML 格式</h3>
+<pre><span class="cm">&lt;!-- Languages/English/Keyed/YourMod_Messages.xml --&gt;</span>
+<span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;LanguageData&gt;</span>
+
+  <span class="cm">&lt;!-- 簡單字串 --&gt;</span>
+  <span class="xml-tag">&lt;YourMod_ButtonApply&gt;</span>Apply<span class="xml-tag">&lt;/YourMod_ButtonApply&gt;</span>
+  <span class="xml-tag">&lt;YourMod_DialogTitle&gt;</span>Configuration<span class="xml-tag">&lt;/YourMod_DialogTitle&gt;</span>
+
+  <span class="cm">&lt;!-- 帶 placeholder（{0}、{1} …） --&gt;</span>
+  <span class="xml-tag">&lt;YourMod_RitualComplete&gt;</span>{0} has completed the ritual at {1}.<span class="xml-tag">&lt;/YourMod_RitualComplete&gt;</span>
+
+  <span class="cm">&lt;!-- 帶具名參數（NamedArgument） --&gt;</span>
+  <span class="xml-tag">&lt;YourMod_PawnGreeting&gt;</span>{PAWN_nameDef} greets the colony.<span class="xml-tag">&lt;/YourMod_PawnGreeting&gt;</span>
+
+<span class="xml-tag">&lt;/LanguageData&gt;</span></pre>
+
+<pre><span class="cm">&lt;!-- Languages/ChineseTraditional/Keyed/YourMod_Messages.xml --&gt;</span>
+<span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;LanguageData&gt;</span>
+  <span class="xml-tag">&lt;YourMod_ButtonApply&gt;</span>套用<span class="xml-tag">&lt;/YourMod_ButtonApply&gt;</span>
+  <span class="xml-tag">&lt;YourMod_DialogTitle&gt;</span>設定<span class="xml-tag">&lt;/YourMod_DialogTitle&gt;</span>
+  <span class="xml-tag">&lt;YourMod_RitualComplete&gt;</span>{0} 已於 {1} 完成儀式。<span class="xml-tag">&lt;/YourMod_RitualComplete&gt;</span>
+  <span class="xml-tag">&lt;YourMod_PawnGreeting&gt;</span>{PAWN_nameDef} 向殖民地問候。<span class="xml-tag">&lt;/YourMod_PawnGreeting&gt;</span>
+<span class="xml-tag">&lt;/LanguageData&gt;</span></pre>
+
+    <h3>C# 取用</h3>
+<pre><span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// 最基本：key 字面量 .Translate()，回傳 TaggedString</span>
+<span class="ty">TaggedString</span> title = <span class="st">"YourMod_DialogTitle"</span>.<span class="nm">Translate</span>();
+
+<span class="cm">// 直接當 string 用（TaggedString 有 implicit 轉 string）</span>
+<span class="ty">Widgets</span>.<span class="nm">Label</span>(rect, <span class="st">"YourMod_ButtonApply"</span>.<span class="nm">Translate</span>());
+
+<span class="cm">// 帶位置參數：依序填入 {0} {1} …</span>
+<span class="ty">Messages</span>.<span class="nm">Message</span>(
+    <span class="st">"YourMod_RitualComplete"</span>.<span class="nm">Translate</span>(pawn.LabelShort, location.<span class="nm">GetUniqueLoadID</span>()),
+    <span class="ty">MessageTypeDefOf</span>.PositiveEvent);</pre>
+
+    <div class="callout callout-warn">
+      <strong>TaggedString 不是 string</strong>
+      <code>Translate()</code> 回傳 <code>Verse.TaggedString</code>，內含富文字標記（顏色、連結 hyperlink）。
+      多數情況可隱式轉成 <code>string</code>，但若你要做字串比較或拼接，建議顯式取 <code>.Resolve()</code> 或
+      <code>.RawText</code>，避免標記殘留造成比對失敗。
+    </div>
+  </div>
+
+  <!-- ── 4. DefInjected ── -->
+  <div class="section">
+    <div class="section-title">4. DefInjected — 翻譯 Def 欄位</div>
+
+    <p>
+      Def 的 <code>label</code>、<code>description</code> 等欄位在主 XML（<code>Defs/</code>）裡通常寫英文。
+      DefInjected 讓你<strong>不動原始 Def</strong>，在 <code>Languages/X/DefInjected/&lt;DefType&gt;/</code> 用「Def 名稱 + 欄位路徑」覆寫成譯文。
+      路徑結構：<code>DefInjected/&lt;DefType&gt;/&lt;任意檔名&gt;.xml</code>，子節點名稱為 <code>&lt;defName&gt;.&lt;fieldPath&gt;</code>。
+    </p>
+
+    <h3>原始 Def（不翻譯，維持英文）</h3>
+<pre><span class="cm">&lt;!-- Defs/ThingDefs_Weapons.xml --&gt;</span>
+<span class="xml-tag">&lt;ThingDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>YourMod_PlasmaRifle<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>plasma rifle<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>A rifle that fires superheated plasma bolts.<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Quality"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>plasma core<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <h3>DefInjected 翻譯</h3>
+<pre><span class="cm">&lt;!-- Languages/ChineseTraditional/DefInjected/ThingDef/Items_Weapons.xml --&gt;</span>
+<span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;LanguageData&gt;</span>
+
+  <span class="cm">&lt;!-- &lt;defName&gt;.&lt;欄位&gt; --&gt;</span>
+  <span class="xml-tag">&lt;YourMod_PlasmaRifle.label&gt;</span>電漿步槍<span class="xml-tag">&lt;/YourMod_PlasmaRifle.label&gt;</span>
+  <span class="xml-tag">&lt;YourMod_PlasmaRifle.description&gt;</span>發射過熱電漿彈的步槍。<span class="xml-tag">&lt;/YourMod_PlasmaRifle.description&gt;</span>
+
+  <span class="cm">&lt;!-- 巢狀清單以索引定位：comps.0.label --&gt;</span>
+  <span class="xml-tag">&lt;YourMod_PlasmaRifle.comps.0.label&gt;</span>電漿核心<span class="xml-tag">&lt;/YourMod_PlasmaRifle.comps.0.label&gt;</span>
+
+<span class="xml-tag">&lt;/LanguageData&gt;</span></pre>
+
+    <h3>欄位路徑語法規則</h3>
+    <table>
+      <tr><th>情境</th><th>路徑寫法</th><th>說明</th></tr>
+      <tr><td>頂層欄位</td><td><code>defName.label</code></td><td>最常見</td></tr>
+      <tr><td>巢狀物件欄位</td><td><code>defName.parent.child</code></td><td>用 <code>.</code> 逐層深入</td></tr>
+      <tr><td>清單元素（無 key）</td><td><code>defName.list.0.label</code></td><td>用 <strong>0-based 索引</strong></td></tr>
+      <tr><td>清單元素（有 li 字串）</td><td><code>defName.list.0</code></td><td>純字串清單，直接指到索引本身</td></tr>
+      <tr><td>handle 鎖定的清單元素</td><td><code>defName.list.handleName</code></td><td>節點若有 <code>&lt;li handle="x"&gt;</code> 可用名稱代替索引 <span class="tag tag-green">建議</span></td></tr>
+    </table>
+
+    <div class="callout callout-danger">
+      <strong>索引脆弱性</strong>
+      用數字索引（<code>comps.0.label</code>）定位清單時，一旦你在原始 Def 的清單中間插入新元素，所有後續索引就會錯位、翻譯套到錯的條目。
+      對需要翻譯的清單元素，<strong>在原 Def 加 <code>handle</code> 屬性</strong>（<code>&lt;li handle="plasmaCore" ...&gt;</code>），
+      DefInjected 改用 <code>defName.comps.plasmaCore.label</code>，即可解除對順序的依賴。
+    </div>
+
+    <h3>純字串清單範例（如 rulesStrings、verbs 等）</h3>
+<pre><span class="cm">&lt;!-- 原 Def 片段 --&gt;</span>
+<span class="xml-tag">&lt;tradeTags&gt;</span>
+  <span class="xml-tag">&lt;li&gt;</span>WeaponRanged<span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/tradeTags&gt;</span>
+
+<span class="cm">&lt;!-- 注意：tradeTags 是邏輯標籤，不該翻譯。下面僅示範語法 --&gt;</span>
+<span class="cm">&lt;!-- 一個「該翻譯的純字串清單」如 RulePack 的 rulesStrings： --&gt;</span>
+<span class="xml-tag">&lt;YourMod_SomeRulePack.rulesStrings.0&gt;</span>譯文第一條<span class="xml-tag">&lt;/YourMod_SomeRulePack.rulesStrings.0&gt;</span>
+<span class="xml-tag">&lt;YourMod_SomeRulePack.rulesStrings.1&gt;</span>譯文第二條<span class="xml-tag">&lt;/YourMod_SomeRulePack.rulesStrings.1&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>自動產生 DefInjected 樣板</strong>
+      開發者模式下開啟 <code>Options → Mod options / Translation</code>，使用
+      <em>「Save translation report / 偵錯選單的 Output translation related」</em> 工具，
+      RimWorld 會掃描所有 Def 並產生「應翻譯但尚未翻譯」的條目清單，直接複製成 DefInjected 骨架，省去手動列舉每個欄位路徑。
+    </div>
+  </div>
+
+  <!-- ── 5. Strings 資料夾 ── -->
+  <div class="section">
+    <div class="section-title">5. Strings/ 資料夾</div>
+
+    <p>
+      <code>Strings/</code> 存放<strong>純文字清單</strong>（<code>.txt</code>，每行一筆，<code>#</code> 開頭為註解），
+      由文法/規則系統與名字產生器讀取。最常見用途是動物/人物名字池與訊息變體。
+    </p>
+
+    <h3>動物名字檔</h3>
+<pre><span class="cm"># Languages/ChineseTraditional/Strings/Names/Animal/Cat.txt</span>
+小花
+咪咪
+布丁
+橘子
+<span class="cm"># 以 # 開頭的行會被忽略</span>
+雪球</pre>
+
+    <p>
+      程式端透過 <code>RulePackDef</code> 或 <code>NameBank</code> 引用對應的 Strings 路徑。引擎依當前語言尋找該相對路徑，
+      找不到才回退英文。檔案以 UTF-8（無 BOM）儲存，避免首行出現隱形字元污染第一筆資料。
+    </p>
+
+    <h3>在規則文法中引用 Strings</h3>
+<pre><span class="cm">&lt;!-- 透過 RulePack 從 Strings 檔載入候選字串 --&gt;</span>
+<span class="xml-tag">&lt;RulePackDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>YourMod_GreetingPack<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;rulePack&gt;</span>
+    <span class="xml-tag">&lt;rulesStrings&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>greeting->Hello<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>greeting->Hi there<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/rulesStrings&gt;</span>
+  <span class="xml-tag">&lt;/rulePack&gt;</span>
+<span class="xml-tag">&lt;/RulePackDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>Strings vs Keyed 的界線</strong>
+      固定、單一的 UI 字串 → <strong>Keyed</strong>。需要「從候選池隨機抽一條」或「依文法規則組合」的字串（名字、口號、隨機事件描述）→ <strong>Strings + RulePack</strong>。
+    </div>
+  </div>
+
+  <!-- ── 6. Translate API 全覽 ── -->
+  <div class="section">
+    <div class="section-title">6. .Translate() 與 placeholder 替換</div>
+
+    <p><code>Verse.Translator</code> 提供一組擴充方法。下表為資深工程師最常碰到的幾個：</p>
+
+    <table>
+      <tr><th>方法</th><th>回傳</th><th>用途</th></tr>
+      <tr><td><code>"Key".Translate()</code></td><td><code>TaggedString</code></td><td>標準翻譯；key 缺漏時回傳帶錯誤標記的 key 本身 <span class="tag tag-green">最常用</span></td></tr>
+      <tr><td><code>"Key".Translate(args...)</code></td><td><code>TaggedString</code></td><td>帶參數，填入 <code>{0}</code>/<code>{1}</code> 或具名參數</td></tr>
+      <tr><td><code>"Key".TranslateSimple()</code></td><td><code>string</code></td><td>不做文法解析、不處理參數，純查表回傳。效能略高，適合無參數的純靜態字串</td></tr>
+      <tr><td><code>"Key".CanTranslate()</code></td><td><code>bool</code></td><td>查詢 key 是否存在於當前語言資料庫，用於條件式 fallback</td></tr>
+      <tr><td><code>"Key".TranslateWithBackup("Key2")</code></td><td><code>TaggedString</code></td><td>主 key 缺漏時改用備援 key</td></tr>
+      <tr><td><code>str.Formatted(args...)</code></td><td><code>TaggedString</code></td><td>對「已是譯文的字串」再做參數替換，常與 DefInjected 取回的 label 搭配</td></tr>
+    </table>
+
+    <h3>位置參數替換</h3>
+<pre><span class="cm">// XML: &lt;YourMod_Kills&gt;{0} killed {1} raiders.&lt;/YourMod_Kills&gt;</span>
+<span class="ty">string</span> msg = <span class="st">"YourMod_Kills"</span>.<span class="nm">Translate</span>(pawn.LabelShort, count);
+<span class="cm">// → "Randy killed 5 raiders."</span>
+
+<span class="cm">// 直接對字面字串做 Formatted（少見，但合法）</span>
+<span class="ty">string</span> s = <span class="st">"{0} of {1}"</span>.<span class="nm">Formatted</span>(<span class="nu">3</span>, <span class="nu">10</span>);</pre>
+
+    <h3>CanTranslate 條件式回退</h3>
+<pre><span class="kw">string</span> key = <span class="st">$"YourMod_Stage_{stageIndex}"</span>;
+<span class="ty">string</span> text = key.<span class="nm">CanTranslate</span>()
+    ? key.<span class="nm">Translate</span>()
+    : <span class="st">"YourMod_Stage_Default"</span>.<span class="nm">Translate</span>();</pre>
+
+    <div class="callout callout-warn">
+      <strong>TranslateSimple 的取捨</strong>
+      <code>TranslateSimple()</code> 跳過文法解析與參數插值，所以遇到含 <code>{...}</code> 或文法標記的字串會原樣輸出、不替換。
+      只在你確定該字串是「無參數、無文法」的純靜態文字時使用；其餘一律用 <code>Translate()</code>。
+    </div>
+  </div>
+
+  <!-- ── 7. 帶參數翻譯與文法 ── -->
+  <div class="section">
+    <div class="section-title">7. 帶參數翻譯與文法解析 (Grammar Resolver)</div>
+
+    <p>
+      位置參數 <code>{0}</code> 足以應付簡單句，但碰到「依性別變化的代名詞」「依數量變化的單複數」等情況就需要
+      <strong>文法解析器 (GrammarResolver)</strong> 與<strong>具名參數 (NamedArgument)</strong>。
+      引擎會把參數連同其關聯的文法規則一起交給 <code>GrammarResolver.Resolve</code> 展開。
+    </p>
+
+    <h3>NamedArgument — 具名參數</h3>
+    <p>
+      用 <code>obj.Named("PAWN")</code> 把一個物件綁到名稱 <code>PAWN</code>，譯文裡就能用
+      <code>{PAWN_nameDef}</code>、<code>{PAWN_pronoun}</code>、<code>{PAWN_possessive}</code> 等「子欄位」存取它的文法屬性。
+    </p>
+
+<pre><span class="kw">using</span> <span class="ty">Verse</span>;
+<span class="kw">using</span> <span class="ty">Verse.Grammar</span>;
+
+<span class="cm">// XML:</span>
+<span class="cm">// &lt;YourMod_Heal&gt;{HEALER_nameDef} healed {PATIENT_objective}. {PATIENT_pronoun} is grateful.&lt;/YourMod_Heal&gt;</span>
+
+<span class="ty">string</span> text = <span class="st">"YourMod_Heal"</span>.<span class="nm">Translate</span>(
+    healer.<span class="nm">Named</span>(<span class="st">"HEALER"</span>),
+    patient.<span class="nm">Named</span>(<span class="st">"PATIENT"</span>));
+
+<span class="cm">// 英文輸出："Randy healed her. She is grateful."</span>
+<span class="cm">// pronoun / objective 等由引擎依 patient 的性別自動帶入</span></pre>
+
+    <h3>常見文法子欄位（Pawn 為例）</h3>
+    <table>
+      <tr><th>子欄位</th><th>含義</th><th>英文範例（依性別）</th></tr>
+      <tr><td><code>{X_nameDef}</code></td><td>名字（含 def 解析）</td><td>Randy</td></tr>
+      <tr><td><code>{X_pronoun}</code></td><td>主格代名詞</td><td>he / she / they</td></tr>
+      <tr><td><code>{X_objective}</code></td><td>受格代名詞</td><td>him / her / them</td></tr>
+      <tr><td><code>{X_possessive}</code></td><td>所有格</td><td>his / her / their</td></tr>
+      <tr><td><code>{X_gender}</code></td><td>性別字串</td><td>male / female</td></tr>
+      <tr><td><code>{X_labelShort}</code></td><td>短標籤</td><td>Randy</td></tr>
+    </table>
+
+    <h3>直接使用 GrammarResolver（進階）</h3>
+    <p>當你要組合一段由多條規則動態生成的描述（如事件 letter 內文），可手動建立規則集並呼叫 resolver：</p>
+<pre><span class="kw">using</span> <span class="ty">Verse.Grammar</span>;
+
+<span class="kw">var</span> request = <span class="kw">new</span> <span class="ty">GrammarRequest</span>();
+request.Includes.<span class="nm">Add</span>(<span class="ty">YourMod_DefOf</span>.YourMod_EventTextPack); <span class="cm">// RulePackDef</span>
+request.Rules.<span class="nm">AddRange</span>(<span class="ty">GrammarUtility</span>.<span class="nm">RulesForPawn</span>(<span class="st">"PAWN"</span>, pawn, request.Constants));
+
+<span class="ty">string</span> resolved = <span class="ty">GrammarResolver</span>.<span class="nm">Resolve</span>(
+    <span class="st">"root"</span>,           <span class="cm">// 起始 symbol</span>
+    request,
+    debugLabel: <span class="st">"YourMod event"</span>);</pre>
+
+    <h3>ActiveLanguageWorker — 語言層級的文法操作</h3>
+    <p>
+      <code>Find.ActiveLanguageWorker</code> 回傳目前語言的 <code>LanguageWorker</code>，封裝了該語言特有的文法規則
+      （單複數、所有格 's、序數詞、片語連接等）。需要在程式裡手動套用語言規則時透過它：
+    </p>
+<pre><span class="kw">var</span> worker = <span class="ty">Find</span>.ActiveLanguageWorker;
+
+<span class="cm">// 數字 → 該語言的序數詞（English: "1st", "2nd"…）</span>
+<span class="ty">string</span> ordinal = worker.<span class="nm">OrdinalNumber</span>(rank);
+
+<span class="cm">// 套用所有格（English: "Randy" → "Randy's"）</span>
+<span class="ty">string</span> poss = worker.<span class="nm">PostProcessed</span>(rawText);
+
+<span class="cm">// 以「逗號 + and」連接片語清單，依語言規則</span>
+<span class="ty">string</span> joined = worker.<span class="nm">WithIndefiniteArticle</span>(noun);</pre>
+
+    <div class="callout callout-info">
+      <strong>為何不要在 C# 裡硬拼文法</strong>
+      像 <code>name + "'s sword"</code> 或 <code>"You killed " + n + " raiders"</code> 這種拼接，
+      在中文不需要 's、在某些語言複數規則不同——一旦譯者拿到的是被英文文法綁死的片段就無法正確在地化。
+      把整句交給 <code>Translate()</code> + 具名參數，讓<strong>每個語言的 XML 自己決定詞序與文法</strong>。
+    </div>
+  </div>
+
+  <!-- ── 8. 複數與性別 ── -->
+  <div class="section">
+    <div class="section-title">8. 複數與性別處理</div>
+
+    <h3>性別分歧（pronoun 自動帶入）</h3>
+    <p>
+      只要參數是 <code>Pawn</code> 並以 <code>.Named()</code> 傳入，<code>{X_pronoun}</code> 等子欄位會依該 pawn 性別自動選字，
+      譯者不必手動分岔。但若某語言代名詞無性別差異（如中文口語常不區分），譯文直接寫固定字即可：
+    </p>
+<pre><span class="cm">&lt;!-- English：依性別變化 --&gt;</span>
+<span class="xml-tag">&lt;YourMod_Rest&gt;</span>{PAWN_nameDef} is resting. {PAWN_pronoun} needs recovery.<span class="xml-tag">&lt;/YourMod_Rest&gt;</span>
+
+<span class="cm">&lt;!-- ChineseTraditional：代名詞不分性別，直接寫「他」即可（或省略） --&gt;</span>
+<span class="xml-tag">&lt;YourMod_Rest&gt;</span>{PAWN_nameDef} 正在休息，需要時間恢復。<span class="xml-tag">&lt;/YourMod_Rest&gt;</span></pre>
+
+    <h3>單複數（依數量切換）</h3>
+    <p>
+      RimWorld 文法支援以 <strong>條件規則 / plural 標記</strong> 依數值切換詞形。
+      常見作法是在 RulePack 內用 <code>(p=...)</code> 之類的條件，或在 Keyed 字串中以 NamedArgument 搭配文法子欄位。
+      最務實的跨語言寫法是「把數字與名詞都當參數，讓各語言 XML 自行決定要不要加複數」：
+    </p>
+<pre><span class="cm">// C#</span>
+<span class="ty">string</span> msg = <span class="st">"YourMod_RaidersIncoming"</span>.<span class="nm">Translate</span>(count.<span class="nm">Named</span>(<span class="st">"COUNT"</span>));</pre>
+<pre><span class="cm">&lt;!-- English：用文法 plural 規則（依 COUNT 是否 &gt; 1 切換 raider/raiders） --&gt;</span>
+<span class="xml-tag">&lt;YourMod_RaidersIncoming&gt;</span>{COUNT} {COUNT_pluralRaider}<span class="xml-tag">&lt;/YourMod_RaidersIncoming&gt;</span>
+
+<span class="cm">&lt;!-- ChineseTraditional：中文無單複數變化，直接量詞 --&gt;</span>
+<span class="xml-tag">&lt;YourMod_RaidersIncoming&gt;</span>來襲：{COUNT} 名襲擊者<span class="xml-tag">&lt;/YourMod_RaidersIncoming&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>原則：把「決策權」留給 XML</strong>
+      C# 端只負責提供「原料」（數字、pawn、物件），<strong>絕不在程式碼裡判斷單複數或性別再拼字</strong>。
+      所有形態變化都應該是「某個語言的 XML 文法規則」可覆寫的，這樣新增一種語言時完全不需動 C#。
+    </div>
+
+    <h3>LanguageWorker 的複數鉤子</h3>
+    <p>
+      語言層級的單複數規則由各語言的 <code>LanguageWorker</code> 子類實作（例如英文有 <code>LanguageWorker_English</code>）。
+      若你做的是「新語言翻譯包」且該語言有特殊複數邏輯，可繼承 <code>LanguageWorker</code> 覆寫對應方法；
+      一般功能 Mod 不需碰這層。
+    </p>
+  </div>
+
+  <!-- ── 9. 缺漏偵測 ── -->
+  <div class="section">
+    <div class="section-title">9. 翻譯缺漏偵測</div>
+
+    <p>
+      RimWorld 內建翻譯偵錯工具，開發時務必啟用，確保發布前沒有遺漏的 key 或 DefInjected 欄位。
+    </p>
+
+    <ol class="steps">
+      <li><strong>開啟 Dev Mode</strong>：<code>Options → 一般 → Development mode</code> 打勾，頂部出現偵錯工具列。</li>
+      <li><strong>啟用缺漏記錄</strong>：在偵錯設定中勾選 <em>「Log translation library / Show translation in real time」</em> 相關選項，缺漏的 key 會即時寫入 Log。</li>
+      <li><strong>產生翻譯報告</strong>：偵錯選單 <code>Output → Translation</code> 類別下，執行
+        <em>「Save translation report」</em>，RimWorld 掃描全部 Def 與 Keyed 引用，輸出：
+        <ul>
+          <li>未翻譯的 DefInjected 欄位（含完整路徑，可直接複製成骨架）</li>
+          <li>當前語言缺漏、回退到英文的 Keyed key</li>
+          <li>原始 Def 已不存在、但翻譯檔仍殘留的「孤兒」條目</li>
+          <li>重複定義的 key</li>
+        </ul>
+      </li>
+      <li><strong>檢查啟動 Log</strong>：載入 Mod 時，引擎會對「程式碼呼叫了 <code>.Translate()</code> 但語言庫查無此 key」發出
+        <code>Translation key not found</code> 警告（紅字），逐一補齊。</li>
+    </ol>
+
+    <div class="callout callout-warn">
+      <strong>缺漏 key 的行為</strong>
+      <code>"NoSuchKey".Translate()</code> 不會丟例外，而是回傳<strong>帶錯誤標記的 key 字面量本身</strong>
+      （遊戲內會看到原始 key 字串而非譯文）。這代表缺漏在 UI 上「靜默退化」，唯一可靠的發現途徑就是
+      Dev Mode 的 Log 與翻譯報告——上線前一定要跑一遍。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>EnglishKeyword 對照檢查</strong>
+      翻譯報告也能比對「英文母本有、其他語言沒有」的差集。把英文當完整 source，
+      其餘語言的工作就是消化這份差集，不會有「不知道還缺什麼」的盲區。
+    </div>
+  </div>
+
+  <!-- ── 10. 最佳實踐 ── -->
+  <div class="section">
+    <div class="section-title">10. 最佳實踐</div>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>玩家可見字串一律走 Translate</h3>
+        <p>任何會顯示給玩家的字（按鈕、訊息、letter、tooltip、設定項）都必須是 Keyed 或 DefInjected，
+        <strong>絕不硬編碼字面量</strong>。「之後再翻」幾乎等於永遠不翻。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Key 加命名空間前綴</h3>
+        <p>所有 Keyed key 以 <code>ModName_</code> 開頭（如 <code>YourMod_ButtonApply</code>），
+        避免與基礎遊戲或其他 Mod 撞 key。撞 key 會造成<strong>後載入者覆蓋前者</strong>的隱性 bug。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>英文是完整母本</h3>
+        <p>English 資料夾必須涵蓋全部條目，作為唯一 fallback。其他語言可不完整——缺漏自動回退英文，
+        但英文缺漏就會露出原始 key。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>用具名參數而非位置參數</h3>
+        <p>多參數時 <code>{PAWN_nameDef}</code> 比 <code>{0}</code> 可讀性高、不易因詞序調整而錯位，
+        且能存取文法子欄位。位置參數只留給單參數簡單句。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>DefInjected 用 handle 不用索引</h3>
+        <p>需翻譯的清單元素在原 Def 加 <code>handle</code>，DefInjected 用名稱定位。
+        免除「插入元素導致索引全錯位」的脆弱性。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>文法/形態決策留給 XML</h3>
+        <p>C# 只提供原料（數字、pawn），<strong>不在程式裡判斷單複數或性別拼字</strong>。
+        所有形態變化都該是各語言 XML 可覆寫的，新增語言零改 C#。</p>
+      </div>
+    </div>
+
+    <h3>發布前檢查清單</h3>
+    <table>
+      <tr><th>項目</th><th>檢查方式</th></tr>
+      <tr><td>所有 <code>.Translate()</code> 的 key 都有 English 定義</td><td>啟動 Log 無 <code>key not found</code> 警告</td></tr>
+      <tr><td>所有 Def 的 label/description 都有 DefInjected</td><td>翻譯報告無 missing DefInjected 條目</td></tr>
+      <tr><td>無孤兒/重複 key</td><td>翻譯報告 orphaned / duplicate 區段為空</td></tr>
+      <tr><td>檔案編碼為 UTF-8 無 BOM</td><td>避免首筆資料含隱形字元</td></tr>
+      <tr><td>語言資料夾名稱正確（大小寫）</td><td>遊戲內語言列表能正確套用</td></tr>
+      <tr><td>沒有硬編碼的玩家可見字串</td><td>全文搜尋 C# 中的中英文字串字面量複查</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>遞交給譯者的友善設計</strong>
+      把 Keyed 檔依功能拆分（<code>YourMod_UI.xml</code>、<code>YourMod_Letters.xml</code>…）、為每組 key 加 XML 註解說明出現情境、
+      在含參數的 key 旁註明各參數含義。譯者不必讀你的程式碼就能正確翻譯，回頭修正的成本最低。
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 在地化 Localization · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

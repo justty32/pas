@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XML Def 系統 — RimWorld Mod 指南</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html" class="active">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>XML Def 系統</h1>
+  <p>RimWorld 的資料驅動核心——從反序列化原理到 PatchOperation 跨 mod 修補</p>
+  <span class="badge">Chapter 02</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       §1  Def 是什麼
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1　Def 是什麼</div>
+
+    <p>
+      RimWorld 的幾乎所有遊戲資料——物品、生物、配方、科技、特質——都以 <strong>Def</strong> 為單位定義。
+      每一份 XML 節點對應 C# 端一個繼承自 <code>Verse.Def</code> 的類別；遊戲啟動時透過反射將 XML 反序列化成記憶體中的物件圖。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>反序列化流程</h3>
+        <p>
+          <code>DeepProfiler.Start()</code> → <code>DirectXmlLoader.LoadModXmlFiles()</code>
+          → <code>XmlInheritance.Resolve()</code> → <code>DefGenerator.GenerateImpliedDefs()</code>
+          → <code>DefDatabase&lt;T&gt;.ResolveAllReferences()</code>
+        </p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>欄位對應規則</h3>
+        <p>
+          XML 子元素名稱直接對應 C# 的 <strong>public 欄位</strong>（field）或帶有
+          <code>[LoadAlias]</code> 的屬性名稱。名稱區分大小寫，拼錯只會在 debug log
+          裡警告，<strong>不會拋例外</strong>。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Def 的 defName</h3>
+        <p>
+          <code>&lt;defName&gt;</code> 是全域唯一鍵，跨 mod 衝突時後載入的 mod 會覆蓋先前的定義。
+          命名慣例：<code>ModPrefix_DefName</code>（如 <code>MyCorp_Sword_Plasma</code>）。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>反射細節</strong>
+      <code>DirectXmlToObject.ObjectFromXml&lt;T&gt;()</code> 在內部對每個 XML 子節點呼叫
+      <code>fieldInfo.SetValue()</code>。集合欄位（<code>List&lt;T&gt;</code>）由
+      <code>DirectXmlToObject.ListFromXml()</code> 逐一 <code>Add</code>；若元素有
+      <code>Class</code> attribute，則以 <code>Type.GetType()</code> 解析後再反序列化——這就是多型列表的原理。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2  常用 Def 類型速查表
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2　常用 Def 類型速查表</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Def 類型</th>
+          <th>命名空間</th>
+          <th>XML 根節點</th>
+          <th>代表什麼</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ThingDef</code></td>
+          <td>Verse</td>
+          <td><code>&lt;ThingDef&gt;</code></td>
+          <td>物品、建築、植物、屍體（category 區分）</td>
+        </tr>
+        <tr>
+          <td><code>PawnKindDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;PawnKindDef&gt;</code></td>
+          <td>生物種類（殖民者、野生動物、突襲者族群）</td>
+        </tr>
+        <tr>
+          <td><code>RecipeDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;RecipeDef&gt;</code></td>
+          <td>工作台配方（製作、外科手術）</td>
+        </tr>
+        <tr>
+          <td><code>ResearchProjectDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;ResearchProjectDef&gt;</code></td>
+          <td>科技樹節點</td>
+        </tr>
+        <tr>
+          <td><code>TraitDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;TraitDef&gt;</code></td>
+          <td>殖民者特質（勤勞、暴力狂等）</td>
+        </tr>
+        <tr>
+          <td><code>HediffDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;HediffDef&gt;</code></td>
+          <td>傷勢、疾病、手術後狀態</td>
+        </tr>
+        <tr>
+          <td><code>JobDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;JobDef&gt;</code></td>
+          <td>AI 任務定義（搭配 <code>JobDriver</code> C# 類別）</td>
+        </tr>
+        <tr>
+          <td><code>WorkTypeDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;WorkTypeDef&gt;</code></td>
+          <td>殖民者工作欄位（採礦、種植等）</td>
+        </tr>
+        <tr>
+          <td><code>ThoughtDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;ThoughtDef&gt;</code></td>
+          <td>心情思想（睡好覺了、吃到人肉等）</td>
+        </tr>
+        <tr>
+          <td><code>StatDef</code></td>
+          <td>RimWorld</td>
+          <td><code>&lt;StatDef&gt;</code></td>
+          <td>能力值定義（移動速度、近戰傷害等）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>快速查定義欄位</strong>
+      用 dnSpy / ILSpy 打開 <code>Assembly-CSharp.dll</code>，搜尋對應類別即可看到所有 public 欄位。
+      也可參考 <a href="https://rimworldwiki.com/wiki/Modding_Tutorials/ThingDef" target="_blank">RimWorld Wiki ThingDef 參考</a>。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3  ThingDef 詳細範例
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3　ThingDef 詳細範例——自訂武器</div>
+
+    <p>以下定義一把「電漿劍」，繼承自原版近戰武器父 Def，帶完整欄位說明。</p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/Weapons/MyCorp_Sword_Plasma.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="cm">&lt;!-- ① 抽象父 Def（本檔自定義，也可繼承原版） --&gt;</span>
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">Abstract</span>=<span class="xml-val">"True"</span> <span class="xml-attr">Name</span>=<span class="xml-val">"MyCorp_BasePlasmaBlade"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;thingClass&gt;</span>ThingWithComps<span class="xml-tag">&lt;/thingClass&gt;</span>        <span class="cm">&lt;!-- C# 實體類別 --&gt;</span>
+    <span class="xml-tag">&lt;category&gt;</span>Item<span class="xml-tag">&lt;/category&gt;</span>                        <span class="cm">&lt;!-- ThingCategory enum --&gt;</span>
+    <span class="xml-tag">&lt;drawerType&gt;</span>MapMeshAndRealTime<span class="xml-tag">&lt;/drawerType&gt;</span>
+    <span class="xml-tag">&lt;techLevel&gt;</span>Ultra<span class="xml-tag">&lt;/techLevel&gt;</span>
+    <span class="xml-tag">&lt;alwaysHaulable&gt;</span>true<span class="xml-tag">&lt;/alwaysHaulable&gt;</span>
+    <span class="xml-tag">&lt;rotatable&gt;</span>false<span class="xml-tag">&lt;/rotatable&gt;</span>
+    <span class="xml-tag">&lt;equipmentType&gt;</span>Primary<span class="xml-tag">&lt;/equipmentType&gt;</span>              <span class="cm">&lt;!-- 主武器槽 --&gt;</span>
+    <span class="xml-tag">&lt;weaponTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MeleeWeapon<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/weaponTags&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+  <span class="cm">&lt;!-- ② 具體 Def，ParentName 繼承上方父 Def --&gt;</span>
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"MyCorp_BasePlasmaBlade"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Sword_Plasma<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>電漿劍<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>以電漿束包覆刀刃，切割效率遠超傳統金屬。<span class="xml-tag">&lt;/description&gt;</span>
+
+    <span class="cm">&lt;!-- 圖形設定 --&gt;</span>
+    <span class="xml-tag">&lt;graphicData&gt;</span>
+      <span class="xml-tag">&lt;texPath&gt;</span>Things/Item/Equipment/MyCorp/PlasmaSword<span class="xml-tag">&lt;/texPath&gt;</span>
+      <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+      <span class="xml-tag">&lt;drawSize&gt;</span>1.1<span class="xml-tag">&lt;/drawSize&gt;</span>
+    <span class="xml-tag">&lt;/graphicData&gt;</span>
+
+    <span class="cm">&lt;!-- 基礎能力值——對應 StatDef.defName --&gt;</span>
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;WorkToMake&gt;</span>40000<span class="xml-tag">&lt;/WorkToMake&gt;</span>
+      <span class="xml-tag">&lt;Mass&gt;</span>1.0<span class="xml-tag">&lt;/Mass&gt;</span>
+      <span class="xml-tag">&lt;MarketValue&gt;</span>2500<span class="xml-tag">&lt;/MarketValue&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="cm">&lt;!-- 製作材料 --&gt;</span>
+    <span class="xml-tag">&lt;costList&gt;</span>
+      <span class="xml-tag">&lt;ComponentSpacer&gt;</span>4<span class="xml-tag">&lt;/ComponentSpacer&gt;</span>
+      <span class="xml-tag">&lt;Plasteel&gt;</span>60<span class="xml-tag">&lt;/Plasteel&gt;</span>
+    <span class="xml-tag">&lt;/costList&gt;</span>
+
+    <span class="cm">&lt;!-- 近戰攻擊列表（多型 List&lt;Tool&gt;） --&gt;</span>
+    <span class="xml-tag">&lt;tools&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>劍身<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;capacities&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Cut<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/capacities&gt;</span>
+        <span class="xml-tag">&lt;power&gt;</span>18<span class="xml-tag">&lt;/power&gt;</span>              <span class="cm">&lt;!-- 基礎傷害 --&gt;</span>
+        <span class="xml-tag">&lt;cooldownTime&gt;</span>1.6<span class="xml-tag">&lt;/cooldownTime&gt;</span>   <span class="cm">&lt;!-- 攻擊間隔（秒） --&gt;</span>
+        <span class="xml-tag">&lt;armorPenetration&gt;</span>0.3<span class="xml-tag">&lt;/armorPenetration&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>刀柄<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;capacities&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Blunt<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/capacities&gt;</span>
+        <span class="xml-tag">&lt;power&gt;</span>8<span class="xml-tag">&lt;/power&gt;</span>
+        <span class="xml-tag">&lt;cooldownTime&gt;</span>2.0<span class="xml-tag">&lt;/cooldownTime&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/tools&gt;</span>
+
+    <span class="cm">&lt;!-- CompProperties：掛載組件（多型 List&lt;CompProperties&gt;） --&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Forbiddable"</span><span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+
+    <span class="cm">&lt;!-- 科技前置（需對應 ResearchProjectDef.defName） --&gt;</span>
+    <span class="xml-tag">&lt;recipeMaker&gt;</span>
+      <span class="xml-tag">&lt;researchPrerequisite&gt;</span>MyCorp_PlasmaForging<span class="xml-tag">&lt;/researchPrerequisite&gt;</span>
+      <span class="xml-tag">&lt;skillRequirements&gt;</span>
+        <span class="xml-tag">&lt;Crafting&gt;</span>8<span class="xml-tag">&lt;/Crafting&gt;</span>
+      <span class="xml-tag">&lt;/skillRequirements&gt;</span>
+    <span class="xml-tag">&lt;/recipeMaker&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <div class="g3" style="margin-top: 1.2rem;">
+      <div class="card card-accent-blue">
+        <h3>thingClass</h3>
+        <p>指定遊戲實例化時使用的 C# 類別。預設繼承父 Def；可改成自訂類別（需繼承 <code>ThingWithComps</code> 等）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>equipmentType</h3>
+        <p><code>Primary</code> / <code>Secondary</code>（盾牌）。決定殖民者裝備欄位。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>weaponTags</h3>
+        <p>用於 PawnKindDef 的 <code>weaponMoney</code> 篩選及敵人武器生成邏輯；自訂 tag 可配合 C# 查詢。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4  Def 繼承系統
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4　Def 繼承系統</div>
+
+    <p>RimWorld 以自己的 XML 繼承機制模擬物件繼承，在 <code>XmlInheritance.Resolve()</code> 階段展開，<strong>早於反序列化</strong>。</p>
+
+    <h3>Abstract 父 Def</h3>
+    <pre><code><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">Abstract</span>=<span class="xml-val">"True"</span> <span class="xml-attr">Name</span>=<span class="xml-val">"BaseWeapon"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;category&gt;</span>Item<span class="xml-tag">&lt;/category&gt;</span>
+  <span class="xml-tag">&lt;alwaysHaulable&gt;</span>true<span class="xml-tag">&lt;/alwaysHaulable&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></code></pre>
+
+    <div class="callout callout-warn">
+      <strong>Abstract="True" 不會進入 DefDatabase</strong>
+      設定 <code>Abstract="True"</code> 的 Def 只作為繼承模板，不會被 <code>DefDatabase&lt;T&gt;.GetNamed()</code> 找到，也不會在遊戲中生成任何實例。
+    </div>
+
+    <h3>ParentName 繼承與覆蓋</h3>
+    <pre><code><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseWeapon"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Sword_Iron<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- 未出現的欄位直接繼承父值 --&gt;</span>
+  <span class="cm">&lt;!-- 重複定義的欄位：子 Def 覆蓋父 Def --&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>鐵劍<span class="xml-tag">&lt;/label&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></code></pre>
+
+    <h3>多型列表元素（<code>Class</code> attribute）</h3>
+    <p>當 C# 欄位型別是基底類別（如 <code>List&lt;CompProperties&gt;</code>），XML 的 <code>&lt;li&gt;</code> 需指定具體型別：</p>
+    <pre><code><span class="xml-tag">&lt;comps&gt;</span>
+  <span class="cm">&lt;!-- Class 必須是能從 Assembly 解析的完整型別名或命名空間縮寫 --&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+    <span class="xml-tag">&lt;basePowerConsumption&gt;</span>200<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Flickable"</span><span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;/comps&gt;</span></code></pre>
+
+    <h3>繼承規則摘要</h3>
+    <table>
+      <thead>
+        <tr><th>情況</th><th>行為</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>子 Def 未定義某欄位</td>
+          <td>直接沿用父 Def 的值</td>
+        </tr>
+        <tr>
+          <td>子 Def 重新定義純量欄位（string、int、float）</td>
+          <td>子值覆蓋父值</td>
+        </tr>
+        <tr>
+          <td>子 Def 重新定義集合欄位（List、dict）</td>
+          <td>子集合<strong>完整取代</strong>父集合（非合併）</td>
+        </tr>
+        <tr>
+          <td>多層繼承</td>
+          <td>支援，Name 可跨檔案引用；解析順序由載入順序決定</td>
+        </tr>
+        <tr>
+          <td>跨 mod 繼承</td>
+          <td>可以，但須確保父 mod 在 <code>loadAfter</code> 之前</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5  PatchOperation（XML Patching）
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5　PatchOperation（XML Patching）</div>
+
+    <p>
+      PatchOperation 讓你<strong>不修改原始 Def 檔案</strong>就能變更任何 Def 的內容，是 mod 相容性的關鍵機制。
+      Patch 檔案放在 mod 的 <code>Patches/</code> 資料夾，在所有 Def 載入後、<code>XmlInheritance.Resolve()</code> 前套用。
+    </p>
+
+    <h3>常用操作類型</h3>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>PatchOperationAdd</h3>
+        <p>在 XPath 指向的節點<strong>內部</strong>插入新子節點（預設加在末尾，可用 <code>order</code> 指定 <code>Prepend</code>）。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>PatchOperationRemove</h3>
+        <p>刪除 XPath 指向的節點（含其所有子節點）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>PatchOperationReplace</h3>
+        <p>用 <code>&lt;value&gt;</code> 內的 XML 完整取代 XPath 指向的節點。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>PatchOperationAddOrReplace</h3>
+        <p>目標存在則取代，不存在則新增——最安全的更新方式。</p>
+      </div>
+    </div>
+
+    <h3>XPath 語法速查</h3>
+    <table>
+      <thead>
+        <tr><th>XPath 片段</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Defs/ThingDef[defName="Steel_Sword"]</code></td>
+          <td>選取 defName 為 Steel_Sword 的 ThingDef 節點</td>
+        </tr>
+        <tr>
+          <td><code>.../statBases</code></td>
+          <td>選取 statBases 子節點</td>
+        </tr>
+        <tr>
+          <td><code>.../tools/li[label="blade"]</code></td>
+          <td>選取 tools 下 label 為 blade 的 li</td>
+        </tr>
+        <tr>
+          <td><code>.../comps/li[@Class="CompProperties_Power"]</code></td>
+          <td>選取有特定 Class attribute 的 li</td>
+        </tr>
+        <tr>
+          <td><code>.../weaponTags/li[.="MeleeWeapon"]</code></td>
+          <td>選取文字內容為 MeleeWeapon 的 li</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>完整範例：在鋼鐵劍 statBases 加入自訂屬性</h3>
+    <pre><code><span class="cm">&lt;!-- Patches/MyMod_SteelSword_Patch.xml --&gt;</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+
+  <span class="cm">&lt;!-- 單一操作 --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="Steel_Sword"]/statBases<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="cm">&lt;!-- 新增自訂 StatDef 的值 --&gt;</span>
+      <span class="xml-tag">&lt;MyMod_PlasmaAffinity&gt;</span>0.4<span class="xml-tag">&lt;/MyMod_PlasmaAffinity&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+
+<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+
+    <h3>PatchOperationSequence 批次操作</h3>
+    <pre><code><span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationSequence"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;success&gt;</span>Always<span class="xml-tag">&lt;/success&gt;</span>   <span class="cm">&lt;!-- Always / Normal / Never --&gt;</span>
+    <span class="xml-tag">&lt;operations&gt;</span>
+
+      <span class="cm">&lt;!-- 步驟 1：移除舊市場價 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationRemove"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="Steel_Sword"]/statBases/MarketValue<span class="xml-tag">&lt;/xpath&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+
+      <span class="cm">&lt;!-- 步驟 2：新增修改後的市場價 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="Steel_Sword"]/statBases<span class="xml-tag">&lt;/xpath&gt;</span>
+        <span class="xml-tag">&lt;value&gt;</span>
+          <span class="xml-tag">&lt;MarketValue&gt;</span>350<span class="xml-tag">&lt;/MarketValue&gt;</span>
+        <span class="xml-tag">&lt;/value&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+
+      <span class="cm">&lt;!-- 步驟 3：替換標籤文字 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationReplace"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="Steel_Sword"]/label<span class="xml-tag">&lt;/xpath&gt;</span>
+        <span class="xml-tag">&lt;value&gt;</span>
+          <span class="xml-tag">&lt;label&gt;</span>精鋼劍<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;/value&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+
+    <span class="xml-tag">&lt;/operations&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+
+    <h3>MayRequire 條件修補</h3>
+    <p>當 Patch 依賴其他 mod（或 DLC）時，用 <code>MayRequire</code>/<code>MayRequireAnyOf</code> 包裝，缺少依賴時整個 Operation 會靜默跳過。</p>
+    <pre><code><span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="cm">&lt;!-- 僅在 Royalty DLC 存在時套用 --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationSequence"</span>
+              <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;success&gt;</span>Always<span class="xml-tag">&lt;/success&gt;</span>
+    <span class="xml-tag">&lt;operations&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="MyCorp_Sword_Plasma"]/weaponTags<span class="xml-tag">&lt;/xpath&gt;</span>
+        <span class="xml-tag">&lt;value&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Neurotrainer<span class="xml-tag">&lt;/li&gt;</span>    <span class="cm">&lt;!-- Royalty DLC 特有 tag --&gt;</span>
+        <span class="xml-tag">&lt;/value&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/operations&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+
+  <span class="cm">&lt;!-- 依賴任一 mod 即套用（用 PackageId 逗號分隔） --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span>
+              <span class="xml-attr">MayRequireAnyOf</span>=<span class="xml-val">"OtherMod.PackageId,AnotherMod.PackageId"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/ThingDef[defName="MyCorp_Sword_Plasma"]/comps<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"OtherMod.CompProperties_CustomEffect"</span><span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+
+    <div class="callout callout-danger">
+      <strong>PatchOperationFindMod 已棄用</strong>
+      舊版教學常見的 <code>PatchOperationFindMod</code> 在 1.1 後已不建議使用，應改用 <code>MayRequire</code> attribute，後者語意更清晰且由引擎直接支援。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6  DefOf 與 C# 互動
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6　DefOf 與 C# 互動</div>
+
+    <h3>[DefOf] 自動注入</h3>
+    <p>
+      在 C# 端建立 <code>[DefOf]</code> 靜態類別，引擎會在 <code>DefDatabase</code> 就緒後自動將同名欄位填入對應 Def 實例，
+      免去手動 <code>GetNamed()</code> 呼叫，也讓編譯期有型別檢查。
+    </p>
+    <pre><code><span class="kw">using</span> Verse;
+
+<span class="cm">// 加上 [DefOf] attribute；命名空間內的 static class 即可</span>
+[<span class="ty">DefOf</span>]
+<span class="kw">public static class</span> <span class="ty">MyCorpDefOf</span>
+{
+    <span class="cm">// 欄位名稱必須與 defName 完全一致</span>
+    <span class="kw">public static</span> <span class="ty">ThingDef</span>            <span class="nm">MyCorp_Sword_Plasma</span>;
+    <span class="kw">public static</span> <span class="ty">ResearchProjectDef</span>  <span class="nm">MyCorp_PlasmaForging</span>;
+
+    <span class="cm">// 若依賴 DLC，加 [MayRequireRoyalty] / [MayRequire("PackageId")]</span>
+    [<span class="ty">MayRequireRoyalty</span>]
+    <span class="kw">public static</span> <span class="ty">ThingDef</span> <span class="nm">MyCorp_PsyBlade</span>;
+}</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>注入時機</strong>
+      <code>[DefOf]</code> 欄位在 <code>StaticConstructorOnStartup</code> 之前就已填入，可以安全地在任何遊戲初始化後的上下文使用。
+      但<strong>不能</strong>在 <code>static</code> 建構函式（型別初始化器）裡直接讀取，因為載入順序不保證。
+    </div>
+
+    <h3>DefDatabase&lt;T&gt; 動態查詢</h3>
+    <pre><code><span class="kw">using</span> Verse;
+
+<span class="cm">// 依 defName 查詢（不存在時回傳 null，可選 errorOnFail: true 拋例外）</span>
+<span class="ty">ThingDef</span> swordDef = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyCorp_Sword_Plasma"</span>);
+
+<span class="cm">// 不確定是否存在時用 GetNamedSilentFail</span>
+<span class="ty">ThingDef</span> maybeDef = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">GetNamedSilentFail</span>(<span class="st">"MyCorp_Sword_Plasma"</span>);
+<span class="kw">if</span> (maybeDef != <span class="kw">null</span>) { <span class="cm">/* ... */</span> }
+
+<span class="cm">// 遍歷所有同類 Def</span>
+<span class="kw">foreach</span> (<span class="ty">ThingDef</span> def <span class="kw">in</span> <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">AllDefs</span>)
+{
+    <span class="kw">if</span> (def.IsWeapon &amp;&amp; def.weaponTags?.Contains(<span class="st">"MeleeWeapon"</span>) == <span class="kw">true</span>)
+        Log.<span class="nm">Message</span>(def.defName);
+}</code></pre>
+
+    <h3>ThingMaker.MakeThing() 從 Def 生成實例</h3>
+    <pre><code><span class="kw">using</span> Verse;
+
+<span class="cm">// 生成物品 Thing（不帶材質）</span>
+<span class="ty">Thing</span> sword = <span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(<span class="ty">MyCorpDefOf</span>.<span class="nm">MyCorp_Sword_Plasma</span>);
+
+<span class="cm">// 帶材質（stuff）生成——適用有 stuffCategories 的 ThingDef</span>
+<span class="ty">Thing</span> plastiSword = <span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(
+    <span class="ty">MyCorpDefOf</span>.<span class="nm">MyCorp_Sword_Plasma</span>,
+    <span class="ty">ThingDefOf</span>.<span class="nm">Plasteel</span>       <span class="cm">// stuff ThingDef</span>
+);
+
+<span class="cm">// 設定初始品質（需有 CompQuality）</span>
+<span class="ty">CompQuality</span> comp = plastiSword.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompQuality</span>&gt;();
+comp?.<span class="nm">SetQuality</span>(<span class="ty">QualityCategory</span>.Masterwork, <span class="ty">ArtGenerationContext</span>.Colony);
+
+<span class="cm">// 生成 Pawn（透過 PawnGenerator）</span>
+<span class="ty">Pawn</span> raider = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(
+    <span class="kw">new</span> <span class="ty">PawnGenerationRequest</span>(
+        <span class="ty">PawnKindDefOf</span>.<span class="nm">Mercenary_Fighter</span>,
+        faction: <span class="ty">Faction</span>.<span class="nm">OfPlayer</span>
+    )
+);</code></pre>
+
+    <h3>生成後放置到地圖</h3>
+    <pre><code><span class="cm">// GenSpawn.Spawn 將 Thing 放到指定位置</span>
+<span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(sword, <span class="kw">new</span> <span class="ty">IntVec3</span>(<span class="nu">10</span>, <span class="nu">0</span>, <span class="nu">10</span>), Find.<span class="nm">CurrentMap</span>);
+
+<span class="cm">// 或用 DropPodUtility 從天而降（突襲 / 補給艙）</span>
+<span class="ty">DropPodUtility</span>.<span class="nm">DropThingsNear</span>(
+    Find.<span class="nm">CurrentMap</span>.Center,
+    Find.<span class="nm">CurrentMap</span>,
+    <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; { sword }
+);</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Def vs Instance 的關鍵概念</strong>
+      <code>ThingDef</code>（及所有 Def）是<strong>不可變的資料模板</strong>，整個遊戲只有一份。
+      <code>Thing</code>（及所有遊戲實體）是執行期實例，持有對 Def 的參考（<code>thing.def</code>）。
+      修改 Def 欄位會影響所有現有及未來的實例，因此在執行期改動 Def 是極度危險的反模式。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       底部導覽
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>← 上一章</h3>
+        <p><a href="01-environment.html">環境設定</a> — 建置 RimWorld mod 開發環境</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>下一章 →</h3>
+        <p><a href="03-harmony.html">Harmony Patching</a> — 在執行期注入、前置、後置 C# 方法</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Mod 指南 &mdash; XML Def 系統 &mdash; 繁體中文版
+</footer>
+
+</body>
+</html>

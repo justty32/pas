@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Widgets 速查 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html" class="active">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>UI Widgets 速查</h1>
+  <p>從 Unity IMGUI 的 immediate mode 心智模型，到 Widgets / Listing_Standard / Window / Tooltip 的完整 API 速查與佈局技巧。</p>
+  <span class="badge">Chapter 06 — RimWorld 1.5</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       §1  RimWorld UI 基礎
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 RimWorld UI 基礎：Unity IMGUI 心智模型</div>
+
+    <p>RimWorld 的所有 GUI 都建構在 Unity 的 <strong>IMGUI（Immediate Mode GUI）</strong> 之上。
+    對來自 WPF / WinForms / 任何 retained-mode 框架的工程師而言，這是最需要重新調整的觀念。</p>
+
+    <div class="callout callout-info">
+      <strong>Immediate Mode 的核心：無狀態、每幀重繪</strong>
+      你不會建立「按鈕物件」並保留參考。取而代之，你在<em>每一幀</em>呼叫「畫一個按鈕在這個 Rect」的函式，
+      它<em>同時</em>負責繪製與回傳當幀的互動結果（例如該按鈕本幀是否被點擊）。沒有 widget tree、沒有 event handler 註冊、
+      沒有 retained state。狀態（例如核取方塊是否勾選）由<strong>你自己的欄位</strong>持有，每幀傳 <code>ref</code> 進去。
+    </div>
+
+    <h3>繪製進入點：每幀被呼叫的方法</h3>
+    <p>你的 UI 程式碼會被放在每幀被引擎呼叫的方法裡，例如 <code>Window.DoWindowContents(Rect)</code>、
+    <code>ITab.FillTab()</code>、<code>MainTabWindow.DoWindowContents()</code>，或 Harmony Patch 到引擎的繪製方法中。</p>
+
+    <h3>Rect：一切的座標單位</h3>
+    <p>UnityEngine 的 <code>Rect</code> 是 UI 的基本貨幣，欄位為 <code>(x, y, width, height)</code>，單位是<strong>螢幕像素</strong>，
+    原點 <code>(0,0)</code> 在左上角，y 軸向下增長（與數學慣例相反）。</p>
+    <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// Rect(x, y, width, height) — 左上角為原點，y 向下</span>
+<span class="ty">Rect</span> rect = <span class="kw">new</span> <span class="ty">Rect</span>(<span class="nu">10f</span>, <span class="nu">10f</span>, <span class="nu">200f</span>, <span class="nu">30f</span>);
+
+<span class="cm">// 常用屬性（皆為 float / Vector2）</span>
+<span class="kw">float</span> right  = rect.xMax;        <span class="cm">// = x + width  = 210</span>
+<span class="kw">float</span> bottom = rect.yMax;        <span class="cm">// = y + height = 40</span>
+<span class="ty">Vector2</span> center = rect.center;     <span class="cm">// 中心點</span>
+<span class="kw">bool</span> hit = rect.<span class="nm">Contains</span>(<span class="ty">Event</span>.current.mousePosition); <span class="cm">// 游標命中測試</span></pre>
+
+    <h3>GUI.BeginGroup / EndGroup：建立局部座標系</h3>
+    <p>呼叫 <code>GUI.BeginGroup(rect)</code> 後，內部所有繪製的座標都<strong>相對於 group 的左上角</strong>（亦即 group 內 <code>(0,0)</code> 等於 group 在螢幕上的左上角），且超出 group 邊界的內容會被裁切。務必成對呼叫 <code>EndGroup()</code>。</p>
+    <pre><span class="cm">// 把一塊區域變成局部座標系，內部以 (0,0) 起算</span>
+<span class="ty">GUI</span>.<span class="nm">BeginGroup</span>(outerRect);
+{
+    <span class="cm">// 此處 (0,0) = outerRect 的左上角；超出 outerRect 會被裁切</span>
+    <span class="ty">Widgets</span>.<span class="nm">Label</span>(<span class="kw">new</span> <span class="ty">Rect</span>(<span class="nu">0f</span>, <span class="nu">0f</span>, outerRect.width, <span class="nu">24f</span>), <span class="st">"標題"</span>);
+}
+<span class="ty">GUI</span>.<span class="nm">EndGroup</span>(); <span class="cm">// 必須成對，否則後續繪製座標全亂</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>⚠ BeginGroup / EndGroup 必須嚴格配對</strong>
+      若中間拋出例外導致 <code>EndGroup()</code> 未被呼叫，整個遊戲的 UI 座標系會錯位，畫面全花。
+      高風險區塊建議用 <code>try/finally</code> 確保 <code>EndGroup()</code> 一定執行。
+    </div>
+
+    <h3>Text 全域狀態：Font 與 Anchor</h3>
+    <p>RimWorld 的 <code>Verse.Text</code> 是一組<strong>全域可變狀態</strong>，控制接下來繪製文字的字級與對齊。
+    因為是全域的，修改後<strong>務必還原</strong>，否則會污染同幀內後續所有人的文字繪製。</p>
+    <pre><span class="cm">// GameFont 有三級：Tiny / Small / Medium</span>
+<span class="ty">Text</span>.Font   = <span class="ty">GameFont</span>.Medium;   <span class="cm">// Tiny(最小) / Small(預設) / Medium(最大，常用於標題)</span>
+<span class="ty">Text</span>.Anchor = <span class="ty">TextAnchor</span>.MiddleCenter; <span class="cm">// 對齊：九宮格 Upper/Middle/Lower × Left/Center/Right</span>
+
+<span class="ty">Widgets</span>.<span class="nm">Label</span>(headerRect, <span class="st">"我的 Mod 設定"</span>);
+
+<span class="cm">// ★ 還原全域狀態，否則污染後續所有文字繪製</span>
+<span class="ty">Text</span>.Font   = <span class="ty">GameFont</span>.Small;
+<span class="ty">Text</span>.Anchor = <span class="ty">TextAnchor</span>.UpperLeft;</pre>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>GameFont.Tiny</h3>
+        <p>最小字級。資訊密集的數值疊圖、tooltip 細節、狀態列文字。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>GameFont.Small</h3>
+        <p>預設字級，絕大多數內文、按鈕、標籤都用這個。也是離開繪製前應還原成的值。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>GameFont.Medium</h3>
+        <p>最大字級，用於視窗標題、區段標頭。RimWorld 沒有比 Medium 更大的內建字級。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>💡 把 Text 狀態當成 OpenGL 那種「全域機器狀態」看待</strong>
+      設定 → 繪製 → 還原，是 IMGUI 的標準節奏。養成「改了什麼就在同一個方法結尾還原什麼」的肌肉記憶，
+      能避開絕大多數「為什麼別的 UI 文字突然置中／變大」的詭異 bug。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2  Widgets 速查表
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 Widgets 類別速查表</div>
+
+    <p><code>Verse.Widgets</code> 是一組 static 方法集合，是 RimWorld UI 的瑞士刀。
+    多數方法吃一個 <code>Rect</code>（繪製位置），互動型的會回傳當幀結果或透過 <code>ref</code> 改值。</p>
+
+    <table>
+      <thead>
+        <tr><th>方法簽名</th><th>用途</th><th>注意</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Widgets.Label(Rect rect, string label)</code></td>
+          <td>繪製文字（自動換行、受 <code>Text.Font</code>/<code>Anchor</code> 影響）</td>
+          <td>受全域 <code>Text</code> 狀態影響；不負責回傳互動。文字過長會在 rect 內換行</td>
+        </tr>
+        <tr>
+          <td><code>bool Widgets.ButtonText(Rect rect, string label)</code></td>
+          <td>標準文字按鈕</td>
+          <td>回傳 <code>true</code> 表示<strong>本幀</strong>被點擊，包在 <code>if</code> 中執行動作</td>
+        </tr>
+        <tr>
+          <td><code>bool Widgets.ButtonImage(Rect rect, Texture2D tex)</code></td>
+          <td>圖示按鈕（無背景，純貼圖）</td>
+          <td>tex 需先載入；回傳 <code>true</code> 表示被點擊。有 overload 可傳 hover 顏色</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.Checkbox(Vector2 topLeft, ref bool checkOn, ...)</code></td>
+          <td>核取方塊（純方塊，不含旁邊文字）</td>
+          <td>第一參數是 <code>Vector2</code>（左上角）非 Rect；狀態由你的 <code>ref bool</code> 持有</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.TextFieldNumeric&lt;T&gt;(Rect rect, ref T val, ref string buffer, float min, float max)</code></td>
+          <td>數值輸入框（泛型，限定數值型別）</td>
+          <td>需額外維護一個 <code>string buffer</code>（暫存使用者輸入中的文字）；自動 clamp 到 min/max</td>
+        </tr>
+        <tr>
+          <td><code>string Widgets.TextField(Rect rect, string text)</code></td>
+          <td>純文字輸入框</td>
+          <td>回傳新字串，需自行賦值回欄位：<code>x = Widgets.TextField(r, x);</code></td>
+        </tr>
+        <tr>
+          <td><code>float Widgets.HorizontalSlider(Rect rect, float value, float min, float max, ...)</code></td>
+          <td>水平拉桿</td>
+          <td>回傳新值（需賦回）；overload 可帶 label、roundTo（吸附整數）</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.DrawTexture(Rect rect, Texture texture)</code></td>
+          <td>繪製任意貼圖（拉伸填滿 rect）</td>
+          <td>純繪製無互動；用 <code>GUI.color</code> 可染色，記得還原</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.DrawLine(Vector2 start, Vector2 end, Color color, float width)</code></td>
+          <td>畫線（分隔線、連線）</td>
+          <td>座標為螢幕像素；<code>Widgets.DrawLineHorizontal/Vertical</code> 對純橫/豎線更方便</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.DrawBoxSolid(Rect rect, Color color)</code></td>
+          <td>填滿純色矩形（背景區塊、色塊）</td>
+          <td>無邊框；要只畫邊框用 <code>Widgets.DrawBox</code></td>
+        </tr>
+        <tr>
+          <td><code>Widgets.DrawHighlightIfMouseover(Rect rect)</code></td>
+          <td>游標懸停時自動畫高亮底色</td>
+          <td>列表項目互動回饋的標配；放在繪製內容前呼叫</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.InfoCardButton(float x, float y, Thing/Def thing)</code></td>
+          <td>「ⓘ」資訊卡按鈕，點擊開啟該物件的 Info Card</td>
+          <td>傳入 <code>Thing</code>、<code>ThingDef</code>、<code>Hediff</code> 等多種 overload；自帶點擊行為</td>
+        </tr>
+        <tr>
+          <td><code>Widgets.BeginScrollView(Rect outRect, ref Vector2 scrollPos, Rect viewRect)</code></td>
+          <td>開始一個可捲動區域</td>
+          <td>必須配對 <code>EndScrollView()</code>；<code>viewRect</code> 是內容總高度（需自行算）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>互動型 Widget 的標準用法</h3>
+    <pre><span class="cm">// 1) 按鈕：回傳值即「本幀是否被點擊」</span>
+<span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonText</span>(buttonRect, <span class="st">"套用設定"</span>))
+{
+    <span class="nm">ApplySettings</span>(); <span class="cm">// 只在被點擊的那一幀執行</span>
+}
+
+<span class="cm">// 2) 圖示按鈕</span>
+<span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonImage</span>(iconRect, <span class="ty">TexButton</span>.Delete))
+{
+    <span class="nm">DeleteEntry</span>(entry);
+}
+
+<span class="cm">// 3) 核取方塊：注意第一參數是 Vector2（左上角），狀態由你的欄位持有</span>
+<span class="ty">Widgets</span>.<span class="nm">Checkbox</span>(<span class="kw">new</span> <span class="ty">Vector2</span>(rect.x, rect.y), <span class="kw">ref</span> myFlag);
+
+<span class="cm">// 4) 拉桿：回傳新值，務必賦回</span>
+myVolume = <span class="ty">Widgets</span>.<span class="nm">HorizontalSlider</span>(sliderRect, myVolume, <span class="nu">0f</span>, <span class="nu">1f</span>, label: <span class="st">"音量"</span>);
+
+<span class="cm">// 5) 純文字輸入：回傳新字串，務必賦回</span>
+myName = <span class="ty">Widgets</span>.<span class="nm">TextField</span>(fieldRect, myName);</pre>
+
+    <h3>TextFieldNumeric：需要 string buffer 的數值輸入</h3>
+    <p>數值輸入框的特殊之處在於：使用者打字過程中可能出現「不完整的數字」（例如剛打了個負號 <code>-</code>），
+    因此需要一個額外的 <code>string buffer</code> 暫存「正在輸入中的原始文字」，待輸入合法時才同步回數值欄位。</p>
+    <pre><span class="cm">// 欄位：數值本體 + 字串緩衝（兩者都要當成持久狀態保存）</span>
+<span class="kw">private int</span> maxCount = <span class="nu">50</span>;
+<span class="kw">private string</span> maxCountBuffer;   <span class="cm">// 第一次繪製時為 null，Widgets 會自動初始化</span>
+
+<span class="kw">void</span> <span class="nm">DrawNumericField</span>(<span class="ty">Rect</span> rect)
+{
+    <span class="cm">// 泛型參數 T 限定為數值型別（int / float / ...）</span>
+    <span class="ty">Widgets</span>.<span class="nm">TextFieldNumeric</span>&lt;<span class="kw">int</span>&gt;(
+        rect,
+        <span class="kw">ref</span> maxCount,         <span class="cm">// 解析成功時寫回此處</span>
+        <span class="kw">ref</span> maxCountBuffer,   <span class="cm">// 輸入中的原始文字</span>
+        min: <span class="nu">0f</span>,
+        max: <span class="nu">999f</span>);          <span class="cm">// 自動 clamp 到 [min, max]</span>
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>⚠ buffer 必須是持久欄位，不可每幀 new</strong>
+      <code>TextFieldNumeric</code> 的 <code>ref string buffer</code> 必須是跨幀保存的欄位。若你每幀傳一個 <code>null</code> 或新字串，
+      使用者打到一半的輸入會被清掉，造成「無法輸入」的詭異現象。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3  Listing_Standard
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 Listing_Standard：垂直自動排版器</div>
+
+    <p>手動算每個 widget 的 y 座標很快會讓人崩潰。<code>Listing_Standard</code> 是 RimWorld 提供的<strong>垂直流式佈局器</strong>：
+    你只管「依序加入元素」，它自動往下推進 y 游標。這是 ModSettings 與大部分 Dialog 內容的主力工具。</p>
+
+    <h3>生命週期：Begin → 加元素 → End</h3>
+    <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="kw">private bool</span> enableFeature = <span class="kw">true</span>;
+<span class="kw">private float</span> spawnRate = <span class="nu">1.0f</span>;
+
+<span class="kw">public void</span> <span class="nm">DoSettingsWindowContents</span>(<span class="ty">Rect</span> inRect)
+{
+    <span class="ty">Listing_Standard</span> listing = <span class="kw">new</span> <span class="ty">Listing_Standard</span>();
+    listing.<span class="nm">Begin</span>(inRect);   <span class="cm">// 綁定可用區域，內部 y 游標歸零</span>
+
+    <span class="cm">// 純文字一行</span>
+    listing.<span class="nm">Label</span>(<span class="st">"通用設定"</span>);
+
+    <span class="cm">// 帶文字的核取方塊（label 在左，方塊在右；最後參數是 tooltip）</span>
+    listing.<span class="nm">CheckboxLabeled</span>(<span class="st">"啟用本功能"</span>, <span class="kw">ref</span> enableFeature, <span class="st">"關閉後本 mod 不會生成任何內容"</span>);
+
+    <span class="cm">// 帶 label 的拉桿（回傳新值，需賦回）</span>
+    spawnRate = listing.<span class="nm">SliderLabeled</span>(
+        $<span class="st">"生成倍率: {spawnRate:0.0}x"</span>, spawnRate, <span class="nu">0.1f</span>, <span class="nu">5f</span>);
+
+    <span class="cm">// 垂直間距（不傳值用預設高度）</span>
+    listing.<span class="nm">Gap</span>();
+    listing.<span class="nm">Gap</span>(<span class="nu">4f</span>); <span class="cm">// 自訂 4px 間距</span>
+
+    <span class="cm">// 一條橫向分隔線</span>
+    listing.<span class="nm">GapLine</span>();
+
+    listing.<span class="nm">Label</span>(<span class="st">"進階設定"</span>);
+    <span class="kw">if</span> (listing.<span class="nm">ButtonText</span>(<span class="st">"重設為預設值"</span>))
+    {
+        <span class="nm">ResetToDefaults</span>();
+    }
+
+    listing.<span class="nm">End</span>(); <span class="cm">// ★ 必須呼叫，結束佈局</span>
+}</pre>
+
+    <h3>常用方法一覽</h3>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>內容類</h3>
+        <ul style="font-size:0.85rem;margin-bottom:0;">
+          <li><code>Label(string)</code> — 一行文字</li>
+          <li><code>CheckboxLabeled(label, ref bool, tooltip)</code> — 帶字核取方塊</li>
+          <li><code>SliderLabeled(label, val, min, max)</code> — 帶字拉桿（回傳新值）</li>
+          <li><code>TextEntryLabeled(label, text)</code> — 帶字文字輸入</li>
+          <li><code>ButtonText(label)</code> — 整行寬按鈕（回傳 bool）</li>
+          <li><code>RadioButton(label, active)</code> — 單選</li>
+        </ul>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>佈局類</h3>
+        <ul style="font-size:0.85rem;margin-bottom:0;">
+          <li><code>Gap(float height)</code> — 垂直間距</li>
+          <li><code>GapLine()</code> — 間距 + 分隔線</li>
+          <li><code>GetRect(float height)</code> — 取得下一塊指定高度的 Rect，自行繪製任意內容</li>
+          <li><code>Begin(Rect)</code> / <code>End()</code> — 生命週期</li>
+          <li><code>ColumnWidth</code> — 設定欄寬（可做多欄）</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>💡 需要塞自訂 widget 時用 GetRect()</strong>
+      Listing 沒有現成方法的元素（例如自訂的雙欄佈局、一張貼圖），呼叫 <code>listing.GetRect(height)</code>
+      取得 Listing 幫你算好 y 的那塊 Rect，再用 <code>Widgets.*</code> 在上面自由繪製，就能無縫融入流式佈局。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4  Dialog / Window 系統
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 Dialog 系統：自訂視窗</div>
+
+    <p>所有彈出視窗（對話框、自訂面板）都繼承 <code>Verse.Window</code>，覆寫 <code>DoWindowContents(Rect inRect)</code>
+    在裡面畫內容，再用 <code>Find.WindowStack.Add(...)</code> 推上視窗堆疊顯示。</p>
+
+    <h3>自訂 Window 骨架</h3>
+    <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">Dialog_MyPanel</span> : <span class="ty">Window</span>
+{
+    <span class="cm">// 視窗預設尺寸（WindowStack 會據此置中）</span>
+    <span class="kw">public override</span> <span class="ty">Vector2</span> InitialSize =&gt; <span class="kw">new</span> <span class="ty">Vector2</span>(<span class="nu">500f</span>, <span class="nu">400f</span>);
+
+    <span class="kw">public</span> <span class="nm">Dialog_MyPanel</span>()
+    {
+        forcePause            = <span class="kw">true</span>;  <span class="cm">// 開啟時暫停遊戲</span>
+        doCloseX              = <span class="kw">true</span>;  <span class="cm">// 右上角顯示 X 關閉鈕</span>
+        closeOnClickedOutside = <span class="kw">true</span>;  <span class="cm">// 點視窗外即關閉</span>
+        absorbInputAroundWindow = <span class="kw">true</span>; <span class="cm">// 吸收視窗外的點擊（不誤觸地圖）</span>
+        doCloseButton         = <span class="kw">false</span>; <span class="cm">// 底部「Close」大按鈕（這裡關掉自己畫）</span>
+    }
+
+    <span class="kw">public override void</span> <span class="nm">DoWindowContents</span>(<span class="ty">Rect</span> inRect)
+    {
+        <span class="cm">// inRect 是視窗內容區（已扣掉邊框與標題列）</span>
+        <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Medium;
+        <span class="ty">Widgets</span>.<span class="nm">Label</span>(inRect.<span class="nm">TopPartPixels</span>(<span class="nu">35f</span>), <span class="st">"我的面板"</span>);
+        <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Small;
+
+        <span class="cm">// 扣掉標題列後的剩餘區域用 Listing 排版</span>
+        <span class="ty">Rect</span> body = inRect;
+        body.yMin += <span class="nu">40f</span>;
+
+        <span class="ty">Listing_Standard</span> listing = <span class="kw">new</span> <span class="ty">Listing_Standard</span>();
+        listing.<span class="nm">Begin</span>(body);
+        listing.<span class="nm">Label</span>(<span class="st">"這是視窗內容。"</span>);
+        <span class="kw">if</span> (listing.<span class="nm">ButtonText</span>(<span class="st">"確定"</span>))
+        {
+            <span class="ty">Close</span>(); <span class="cm">// Window 內建方法，關閉自己</span>
+        }
+        listing.<span class="nm">End</span>();
+    }
+}
+
+<span class="cm">// 顯示：推上視窗堆疊</span>
+<span class="ty">Find</span>.WindowStack.<span class="nm">Add</span>(<span class="kw">new</span> <span class="ty">Dialog_MyPanel</span>());</pre>
+
+    <h3>關鍵旗標速查</h3>
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>作用</th><th>典型情境</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>forcePause</code></td>
+          <td>視窗開啟期間強制暫停遊戲</td>
+          <td>需要玩家專心決策的對話框（確認、設定）</td>
+        </tr>
+        <tr>
+          <td><code>doCloseX</code></td>
+          <td>右上角顯示「X」關閉按鈕</td>
+          <td>幾乎所有可手動關閉的視窗都開</td>
+        </tr>
+        <tr>
+          <td><code>closeOnClickedOutside</code></td>
+          <td>點擊視窗外的區域即關閉</td>
+          <td>輕量浮動面板、快選選單；重要確認框建議<strong>關閉</strong>避免誤關</td>
+        </tr>
+        <tr>
+          <td><code>absorbInputAroundWindow</code></td>
+          <td>吸收視窗外的滑鼠輸入（不會穿透到地圖）</td>
+          <td>模態對話框，避免點 OK 時誤對地圖下指令</td>
+        </tr>
+        <tr>
+          <td><code>doCloseButton</code></td>
+          <td>視窗底部顯示一個大「Close」按鈕</td>
+          <td>純資訊展示視窗</td>
+        </tr>
+        <tr>
+          <td><code>draggable</code></td>
+          <td>允許拖曳標題列移動視窗</td>
+          <td>需與地圖並存對照的長駐面板</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>確認對話框：直接用內建 Dialog_MessageBox</h3>
+    <p>最常見的「確定要這麼做嗎？」其實不必自己寫 Window，RimWorld 內建了 <code>Dialog_MessageBox</code>：</p>
+    <pre><span class="cm">// 標準雙鈕確認框（確定 / 取消）</span>
+<span class="ty">Find</span>.WindowStack.<span class="nm">Add</span>(<span class="ty">Dialog_MessageBox</span>.<span class="nm">CreateConfirmation</span>(
+    text: <span class="st">"確定要刪除這筆設定嗎？此操作無法復原。"</span>,
+    confirmedAct: () =&gt;
+    {
+        <span class="nm">DeleteEntry</span>();           <span class="cm">// 按「確定」才執行</span>
+        <span class="ty">Messages</span>.<span class="nm">Message</span>(<span class="st">"已刪除"</span>, <span class="ty">MessageTypeDefOf</span>.TaskCompletion, <span class="kw">false</span>);
+    },
+    destructive: <span class="kw">true</span>));      <span class="cm">// 確定鈕標紅，提示為破壞性操作</span>
+
+<span class="cm">// 純資訊單鈕（只有 OK）</span>
+<span class="ty">Find</span>.WindowStack.<span class="nm">Add</span>(<span class="kw">new</span> <span class="ty">Dialog_MessageBox</span>(<span class="st">"操作已完成。"</span>));</pre>
+
+    <div class="callout callout-info">
+      <strong>WindowStack 是一個堆疊</strong>
+      <code>Find.WindowStack</code> 管理所有開啟中的視窗，後加入的疊在上層。可用 <code>Find.WindowStack.TryRemove(typeof(Dialog_MyPanel))</code>
+      關閉特定視窗，或 <code>WindowStack.IsOpen(typeof(...))</code> 檢查是否已開啟（避免重複開啟）。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5  貼圖載入
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 貼圖載入：ContentFinder 與預載</div>
+
+    <p>UI 用的圖示是 <code>Texture2D</code>，透過 <code>ContentFinder&lt;Texture2D&gt;.Get("相對路徑")</code> 取得。
+    路徑<strong>相對於 mod 的 <code>Textures/</code> 資料夾</strong>，且<strong>不含副檔名</strong>。</p>
+
+    <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// 檔案實際位置：YourMod/Textures/UI/Icons/MyButton.png</span>
+<span class="cm">// → 路徑相對 Textures/，省略副檔名，大小寫需一致</span>
+<span class="ty">Texture2D</span> tex = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Icons/MyButton"</span>);
+
+<span class="cm">// 第二參數 reportFailure: false → 找不到時回傳 null 而非報錯</span>
+<span class="ty">Texture2D</span> optional = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Icons/Maybe"</span>, reportFailure: <span class="kw">false</span>);</pre>
+
+    <h3>用 [StaticConstructorOnStartup] 預載快取</h3>
+    <p>不要在 <code>DoWindowContents</code>（每幀）裡呼叫 <code>ContentFinder.Get</code>——那等於每幀做一次查表。
+    標準做法是在標了 <code>[StaticConstructorOnStartup]</code> 的類別中，於遊戲啟動時一次性載入並快取成 static 欄位。</p>
+    <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// 此 Attribute 確保 static 建構子在遊戲啟動（所有 Def 載入完）時被呼叫一次</span>
+<span class="at">[StaticConstructorOnStartup]</span>
+<span class="kw">public static class</span> <span class="ty">MyTextures</span>
+{
+    <span class="cm">// 啟動時各載入一次，之後直接引用，零每幀成本</span>
+    <span class="kw">public static readonly</span> <span class="ty">Texture2D</span> ApplyIcon  =
+        <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Icons/Apply"</span>);
+
+    <span class="kw">public static readonly</span> <span class="ty">Texture2D</span> DeleteIcon =
+        <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Icons/Delete"</span>);
+
+    <span class="cm">// 也可重用引擎內建貼圖（不需自備檔案）</span>
+    <span class="kw">public static readonly</span> <span class="ty">Texture2D</span> InfoIcon  = <span class="ty">TexButton</span>.Info;
+}
+
+<span class="cm">// 使用端：每幀直接引用快取，不再查表</span>
+<span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonImage</span>(iconRect, <span class="ty">MyTextures</span>.ApplyIcon))
+{
+    <span class="nm">Apply</span>();
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>⚠ ContentFinder 只能在 main thread 且 Def 載入後呼叫</strong>
+      在 mod 建構子過早、或在背景執行緒呼叫 <code>ContentFinder.Get</code> 會失敗或回 null。
+      <code>[StaticConstructorOnStartup]</code> 保證時機正確（所有資源已就緒、在 main thread）。
+      另外路徑<strong>大小寫敏感</strong>（Linux 玩家會踩雷），請與實際檔名完全一致。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6  TooltipHandler
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 TooltipHandler：滑鼠懸停提示</div>
+
+    <p>要替任一塊 Rect 加上懸停提示，呼叫 <code>TooltipHandler.TipRegion(Rect, string)</code>。
+    它每幀檢查游標是否在該 Rect 內，是的話延遲顯示 tooltip。一樣是 immediate mode——<strong>每幀都要呼叫</strong>，不是註冊一次。</p>
+
+    <pre><span class="kw">using</span> Verse;
+
+<span class="kw">void</span> <span class="nm">DrawRow</span>(<span class="ty">Rect</span> rowRect)
+{
+    <span class="ty">Widgets</span>.<span class="nm">Label</span>(rowRect, <span class="st">"生成倍率"</span>);
+
+    <span class="cm">// 最簡形式：直接傳字串（每幀呼叫）</span>
+    <span class="ty">TooltipHandler</span>.<span class="nm">TipRegion</span>(rowRect, <span class="st">"控制本 mod 內容的生成頻率，數值越高出現越頻繁。"</span>);
+}</pre>
+
+    <h3>TipSignal：帶 key 的 tooltip（可快取、可優先序）</h3>
+    <p>字串 overload 內部其實會建立 <code>TipSignal</code>。當提示文字需要<strong>動態計算</strong>（昂貴的字串組裝）或需要<strong>穩定身分</strong>（避免每幀重建、控制顯示優先序）時，直接用 <code>TipSignal</code>：</p>
+    <pre><span class="cm">// TipSignal(text, uniqueId) — uniqueId 給同一塊提示穩定身分</span>
+<span class="cm">// priority 較高者在多個 tooltip 重疊時優先顯示</span>
+<span class="ty">TooltipHandler</span>.<span class="nm">TipRegion</span>(rowRect, <span class="kw">new</span> <span class="ty">TipSignal</span>(
+    text: <span class="nm">BuildExpensiveTooltipText</span>(),  <span class="cm">// 你的動態文字</span>
+    uniqueId: rowRect.<span class="nm">GetHashCode</span>()));    <span class="cm">// 穩定 id（常用 rect / def 的 hash）</span>
+
+<span class="cm">// 延遲求值版本：傳 Func&lt;string&gt;，只有真的要顯示時才計算文字</span>
+<span class="ty">TooltipHandler</span>.<span class="nm">TipRegion</span>(rowRect, () =&gt; <span class="nm">BuildExpensiveTooltipText</span>(), uniqueId: <span class="nu">9001</span>);</pre>
+
+    <div class="callout callout-tip">
+      <strong>💡 動態 tooltip 用 Func overload 省效能</strong>
+      若 tooltip 文字計算昂貴（例如組裝整段統計報表），用 <code>Func&lt;string&gt;</code> 的 overload。
+      這樣只有在游標<em>真的</em>停在該 Rect 上、tooltip 即將顯示時才會執行你的計算，平時不浪費。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §7  佈局技巧
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 常見 UI 佈局技巧</div>
+
+    <p>RimWorld 在 <code>Rect</code> 上提供了一組擴充方法（<code>Verse.GenUI</code> / Rect 擴充），
+    讓你用「切割」的思維組合佈局，而非手算每個座標。這是寫出乾淨 UI 程式碼的關鍵。</p>
+
+    <h3>Rect 切割擴充方法</h3>
+    <table>
+      <thead>
+        <tr><th>方法</th><th>回傳</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>rect.TopPartPixels(float h)</code></td>
+          <td>頂部高 h 的 Rect</td>
+          <td>切出標題列高度</td>
+        </tr>
+        <tr>
+          <td><code>rect.BottomPartPixels(float h)</code></td>
+          <td>底部高 h 的 Rect</td>
+          <td>切出底部按鈕列</td>
+        </tr>
+        <tr>
+          <td><code>rect.LeftPart(float pct)</code> / <code>RightPart(float pct)</code></td>
+          <td>左/右佔比例 pct 的 Rect</td>
+          <td>label 在左、控制項在右的雙欄</td>
+        </tr>
+        <tr>
+          <td><code>rect.LeftPartPixels(float w)</code> / <code>RightPartPixels(float w)</code></td>
+          <td>左/右固定寬 w 的 Rect</td>
+          <td>固定寬度的圖示欄</td>
+        </tr>
+        <tr>
+          <td><code>rect.ContractedBy(float margin)</code></td>
+          <td>四邊各內縮 margin 的 Rect</td>
+          <td>留出內距 padding</td>
+        </tr>
+        <tr>
+          <td><code>rect.ExpandedBy(float m)</code></td>
+          <td>四邊各外擴 m 的 Rect</td>
+          <td>高亮框比內容大一圈</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>SplitVertically：把一塊切成左右兩塊</h3>
+    <pre><span class="kw">using</span> Verse;
+
+<span class="kw">void</span> <span class="nm">DrawRow</span>(<span class="ty">Rect</span> rowRect)
+{
+    <span class="cm">// 在 x = 200 處垂直切割，得到 left / right 兩塊</span>
+    rowRect.<span class="nm">SplitVertically</span>(<span class="nu">200f</span>, <span class="kw">out</span> <span class="ty">Rect</span> left, <span class="kw">out</span> <span class="ty">Rect</span> right);
+
+    <span class="ty">Widgets</span>.<span class="nm">Label</span>(left, <span class="st">"設定名稱"</span>);
+    val = <span class="ty">Widgets</span>.<span class="nm">TextField</span>(right, val);
+}</pre>
+
+    <h3>切割式佈局實戰：標題 + 內容 + 底部按鈕</h3>
+    <pre><span class="kw">public override void</span> <span class="nm">DoWindowContents</span>(<span class="ty">Rect</span> inRect)
+{
+    <span class="cm">// 1) 頂部 35px 當標題</span>
+    <span class="ty">Rect</span> titleRect = inRect.<span class="nm">TopPartPixels</span>(<span class="nu">35f</span>);
+    <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Medium;
+    <span class="ty">Widgets</span>.<span class="nm">Label</span>(titleRect, <span class="st">"標題"</span>);
+    <span class="ty">Text</span>.Font = <span class="ty">GameFont</span>.Small;
+
+    <span class="cm">// 2) 底部 40px 當按鈕列</span>
+    <span class="ty">Rect</span> footerRect = inRect.<span class="nm">BottomPartPixels</span>(<span class="nu">40f</span>);
+    <span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonText</span>(footerRect.<span class="nm">RightPartPixels</span>(<span class="nu">120f</span>), <span class="st">"確定"</span>))
+        <span class="ty">Close</span>();
+
+    <span class="cm">// 3) 中間剩餘區當內容（手動扣掉上下兩塊）</span>
+    <span class="ty">Rect</span> contentRect = inRect;
+    contentRect.yMin += <span class="nu">40f</span>;   <span class="cm">// 扣標題</span>
+    contentRect.yMax -= <span class="nu">45f</span>;   <span class="cm">// 扣按鈕列</span>
+    <span class="nm">DrawContent</span>(contentRect.<span class="nm">ContractedBy</span>(<span class="nu">4f</span>)); <span class="cm">// 內縮留 padding</span>
+}</pre>
+
+    <h3>捲動列表：BeginScrollView + 內容高度計算</h3>
+    <p>當內容可能超出可視範圍（例如一長串設定列），用 <code>BeginScrollView</code> 包起來。
+    關鍵是 <code>viewRect</code> 必須是<strong>內容的真實總高度</strong>——你得自己累加每列高度算出來。
+    若 <code>viewRect.height &gt; outRect.height</code>，捲軸才會出現。</p>
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="kw">private</span> <span class="ty">Vector2</span> scrollPos = <span class="ty">Vector2</span>.zero;  <span class="cm">// 捲動位置（持久欄位）</span>
+<span class="kw">private const float</span> RowHeight = <span class="nu">28f</span>;
+
+<span class="kw">void</span> <span class="nm">DrawScrollList</span>(<span class="ty">Rect</span> outRect, <span class="ty">List</span>&lt;<span class="ty">MyEntry</span>&gt; entries)
+{
+    <span class="cm">// 1) 算出內容總高（每列固定高 × 列數）</span>
+    <span class="kw">float</span> totalHeight = entries.Count * RowHeight;
+
+    <span class="cm">// 2) viewRect 寬度扣捲軸寬(約16px)避免水平捲軸；高度為內容總高</span>
+    <span class="ty">Rect</span> viewRect = <span class="kw">new</span> <span class="ty">Rect</span>(<span class="nu">0f</span>, <span class="nu">0f</span>, outRect.width - <span class="nu">16f</span>, totalHeight);
+
+    <span class="ty">Widgets</span>.<span class="nm">BeginScrollView</span>(outRect, <span class="kw">ref</span> scrollPos, viewRect);
+    {
+        <span class="kw">float</span> y = <span class="nu">0f</span>;
+        <span class="kw">foreach</span> (<span class="ty">MyEntry</span> e <span class="kw">in</span> entries)
+        {
+            <span class="cm">// 注意：此處座標相對 viewRect（捲動視圖內部）</span>
+            <span class="ty">Rect</span> rowRect = <span class="kw">new</span> <span class="ty">Rect</span>(<span class="nu">0f</span>, y, viewRect.width, RowHeight);
+
+            <span class="ty">Widgets</span>.<span class="nm">DrawHighlightIfMouseover</span>(rowRect); <span class="cm">// 懸停高亮</span>
+            <span class="ty">Widgets</span>.<span class="nm">Label</span>(rowRect.<span class="nm">LeftPart</span>(<span class="nu">0.7f</span>), e.label);
+            <span class="kw">if</span> (<span class="ty">Widgets</span>.<span class="nm">ButtonText</span>(rowRect.<span class="nm">RightPart</span>(<span class="nu">0.3f</span>), <span class="st">"選擇"</span>))
+                <span class="nm">Select</span>(e);
+
+            y += RowHeight;
+        }
+    }
+    <span class="ty">Widgets</span>.<span class="nm">EndScrollView</span>(); <span class="cm">// ★ 必須配對</span>
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>🚨 ScrollView 內的座標系陷阱</strong>
+      <code>BeginScrollView</code> 內部隱含一次 <code>BeginGroup</code>，因此區塊內所有 Rect 的座標<strong>相對於 <code>viewRect</code></strong>（從 0 起算），
+      不是螢幕座標。常見錯誤是把外層的 y 偏移又加進去，導致內容跑掉。記住：進到 ScrollView 後，y 從 0 開始累加即可。
+    </div>
+
+    <h3>佈局思維總覽</h3>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <h3>切割優於硬算</h3>
+        <p>用 <code>TopPartPixels</code> / <code>LeftPart</code> / <code>SplitVertically</code> 把大 Rect 逐步切小，
+        比手算每個 <code>(x,y,w,h)</code> 可讀、可維護得多。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>流式交給 Listing</h3>
+        <p>純垂直堆疊的內容直接用 <code>Listing_Standard</code>，需要自訂元素時用 <code>GetRect()</code> 取格再自畫。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>留白用 ContractedBy</h3>
+        <p>每個內容區進一步 <code>ContractedBy(n)</code> 留 padding，畫面立刻從「擠」變「呼吸感」。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>狀態自己存</h3>
+        <p>scrollPos、TextField buffer、checkbox bool 全是<strong>你的持久欄位</strong>。IMGUI 不幫你記任何狀態。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>Begin/End 嚴格配對</h3>
+        <p><code>Group</code> / <code>ScrollView</code> / <code>Listing</code> 都必須成對結束，否則座標系崩壞。高風險處用 try/finally。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>全域狀態收尾還原</h3>
+        <p><code>Text.Font</code> / <code>Text.Anchor</code> / <code>GUI.color</code> 改完即還原，避免污染同幀其他繪製。</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 — Chapter 06：UI Widgets 速查 ／ 目標讀者：資深 C# 工程師 ／ RimWorld 1.5
+</footer>
+
+</body>
+</html>

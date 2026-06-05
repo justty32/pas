@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>植物與動物 — RimWorld Mod 指南</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html" class="active">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>植物與動物</h1>
+  <p>從 plant 區塊到 RaceProperties、PawnKindDef 成長階段、訓練與生態分布——RimWorld 生命系統全解</p>
+  <span class="badge">Chapter 19</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       導讀
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">本章地圖</div>
+    <p>
+      RimWorld 的「活物」分兩大類：<strong>植物</strong>是一種特殊 <code>ThingDef</code>（帶 <code>&lt;plant&gt;</code> 區塊，
+      C# 端 <code>thingClass</code> 繼承 <code>Verse.Plant</code>）；<strong>動物</strong>則由
+      <code>ThingDef</code>（含 <code>&lt;race&gt;</code> → <code>RaceProperties</code>）<strong>加上</strong>
+      <code>PawnKindDef</code>（生成參數、生命階段貼圖）共同描述。兩者最後都靠 <code>BiomeDef</code> 的權重表決定野外分布。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <h3>植物</h3>
+        <p>ThingDef + <code>&lt;plant&gt;</code>。生長、收成、播種標籤、壽命。自訂行為繼承 <code>Plant</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>動物</h3>
+        <p>ThingDef + <code>RaceProperties</code> + <code>PawnKindDef</code>。野性、可訓練度、食性、生命階段。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>生態與互動</h3>
+        <p>BiomeDef 分布權重、訓練系統、產出 Comp、馴服與野化。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>對應的 C# 類別位置</strong>
+      <code>Verse.Plant</code>、<code>Verse.PlantProperties</code>、<code>RimWorld.RaceProperties</code>、
+      <code>Verse.PawnKindDef</code>、<code>RimWorld.TrainableDef</code>、<code>RimWorld.CompMilkable</code>
+      皆在 <code>Assembly-CSharp.dll</code>，可用 dnSpy/ILSpy 反編譯對照欄位。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §1 植物 ThingDef
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1　植物 ThingDef（&lt;plant&gt; 區塊）</div>
+
+    <p>
+      植物是 <code>category = Plant</code> 的 ThingDef。所有植物特有欄位集中在 <code>&lt;plant&gt;</code> 節點，
+      對應 C# 的 <code>Verse.PlantProperties</code>（即 <code>thingDef.plant</code>）。下面定義一種可種植的藥草。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Plants/MyMod_Plants.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"PlantBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Plant_Soothil<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>舒草<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>耐寒的藥用作物，收成後可提煉成鎮靜藥劑。<span class="xml-tag">&lt;/description&gt;</span>
+
+    <span class="xml-tag">&lt;graphicData&gt;</span>
+      <span class="xml-tag">&lt;texPath&gt;</span>Things/Plant/MyMod/Soothil<span class="xml-tag">&lt;/texPath&gt;</span>
+      <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Random<span class="xml-tag">&lt;/graphicClass&gt;</span>   <span class="cm">&lt;!-- 多張隨機貼圖 --&gt;</span>
+    <span class="xml-tag">&lt;/graphicData&gt;</span>
+
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MaxHitPoints&gt;</span>85<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+      <span class="xml-tag">&lt;Nutrition&gt;</span>0.30<span class="xml-tag">&lt;/Nutrition&gt;</span>     <span class="cm">&lt;!-- 被動物啃食時的營養 --&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="xml-tag">&lt;plant&gt;</span>
+      <span class="cm">&lt;!-- 從播種到完全成熟需要的「生長日」（遊戲日） --&gt;</span>
+      <span class="xml-tag">&lt;growDays&gt;</span>7.5<span class="xml-tag">&lt;/growDays&gt;</span>
+
+      <span class="cm">&lt;!-- 成熟後收成產出的 ThingDef.defName 與數量 --&gt;</span>
+      <span class="xml-tag">&lt;harvestedThingDef&gt;</span>MyMod_RawSoothil<span class="xml-tag">&lt;/harvestedThingDef&gt;</span>
+      <span class="xml-tag">&lt;harvestYield&gt;</span>8<span class="xml-tag">&lt;/harvestYield&gt;</span>
+
+      <span class="cm">&lt;!-- 能存活的最低土壤肥力（沙地≈0.55，一般土≈1.0，肥沃土≈1.4） --&gt;</span>
+      <span class="xml-tag">&lt;fertilityMin&gt;</span>0.5<span class="xml-tag">&lt;/fertilityMin&gt;</span>
+      <span class="xml-tag">&lt;fertilitySensitivity&gt;</span>0.5<span class="xml-tag">&lt;/fertilitySensitivity&gt;</span>
+
+      <span class="cm">&lt;!-- 玩家能在哪些區塊播種：Ground=農地、Decorative、Hydroponics... --&gt;</span>
+      <span class="xml-tag">&lt;sowTags&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Ground<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Hydroponics<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/sowTags&gt;</span>
+      <span class="xml-tag">&lt;sowMinSkill&gt;</span>3<span class="xml-tag">&lt;/sowMinSkill&gt;</span>     <span class="cm">&lt;!-- 種植所需的最低種植技能 --&gt;</span>
+
+      <span class="cm">&lt;!-- 完全成熟後再過多久枯萎死亡（&lt;0 表示不會老死，如多數作物砍掉重種） --&gt;</span>
+      <span class="xml-tag">&lt;lifespanDaysPerGrowDays&gt;</span>8<span class="xml-tag">&lt;/lifespanDaysPerGrowDays&gt;</span>
+      <span class="cm">&lt;!-- 或直接指定絕對壽命（樹木常用） --&gt;</span>
+      <span class="xml-tag">&lt;lifespanDays&gt;</span>60<span class="xml-tag">&lt;/lifespanDays&gt;</span>
+
+      <span class="xml-tag">&lt;harvestTag&gt;</span>Standard<span class="xml-tag">&lt;/harvestTag&gt;</span>
+      <span class="xml-tag">&lt;topWindExposure&gt;</span>0.3<span class="xml-tag">&lt;/topWindExposure&gt;</span>
+      <span class="xml-tag">&lt;visualSizeRange&gt;</span>0.4~0.9<span class="xml-tag">&lt;/visualSizeRange&gt;</span>
+      <span class="xml-tag">&lt;maxMeshCount&gt;</span>9<span class="xml-tag">&lt;/maxMeshCount&gt;</span>      <span class="cm">&lt;!-- 單格內貼圖叢數，越大越「茂密」 --&gt;</span>
+      <span class="xml-tag">&lt;growMinGlow&gt;</span>0.51<span class="xml-tag">&lt;/growMinGlow&gt;</span>     <span class="cm">&lt;!-- 生長所需最低光照 --&gt;</span>
+      <span class="xml-tag">&lt;dieIfLeafless&gt;</span>false<span class="xml-tag">&lt;/dieIfLeafless&gt;</span>
+    <span class="xml-tag">&lt;/plant&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>growDays</code></td><td>float</td><td>0% → 100% 成熟所需的遊戲日（受土壤肥力、光照、溫度調節實際速度）</td></tr>
+        <tr><td><code>harvestedThingDef</code></td><td>ThingDef</td><td>收成產出的物品 defName；不填則植物純裝飾／飼料</td></tr>
+        <tr><td><code>harvestYield</code></td><td>float</td><td>滿熟時的基礎產量（受採收者技能修正）</td></tr>
+        <tr><td><code>fertilityMin</code></td><td>float</td><td>能存活的最低土壤肥力；低於此值無法種植或會枯死</td></tr>
+        <tr><td><code>sowTags</code></td><td>List&lt;string&gt;</td><td>可播種的環境標籤；空清單 = 玩家不可種（野生植物）</td></tr>
+        <tr><td><code>lifespanDays</code></td><td>float</td><td>絕對壽命；或用 <code>lifespanDaysPerGrowDays</code> 以 growDays 倍數推算</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>野生 vs 可種植</strong>
+      若 <code>&lt;sowTags&gt;</code> 為空，玩家無法在種植區指定它；它只會透過 BiomeDef 的 <code>wildPlants</code>（§8）自然生成。
+      想讓玩家種，至少要有一個 <code>Ground</code> 或 <code>Hydroponics</code> tag。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2 自訂 Plant class
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2　自訂 Plant class（繼承 Verse.Plant）</div>
+
+    <p>
+      預設 <code>thingClass</code> 即 <code>Verse.Plant</code>。要加入特殊行為（如成熟時釋放孢子、夜間發光、收成觸發事件），
+      繼承 <code>Plant</code> 並覆寫對應虛方法，再在 ThingDef 指定 <code>&lt;thingClass&gt;</code>。
+    </p>
+
+    <pre><code><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="cm">// 成熟後夜間會微微發光，並在收成時噴出孢子粒子的藥草</span>
+    <span class="kw">public class</span> <span class="ty">Plant_Soothil</span> : <span class="ty">Plant</span>
+    {
+        <span class="cm">// 每 tick 都會被呼叫；植物用 rare tick 較省效能</span>
+        <span class="kw">public override void</span> <span class="nm">TickLong</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">TickLong</span>();
+
+            <span class="cm">// Growth 是 0~1 的成熟度（Verse.Plant 內建欄位）</span>
+            <span class="kw">if</span> (<span class="kw">this</span>.Growth &gt;= <span class="nu">1f</span> &amp;&amp; <span class="kw">this</span>.Spawned)
+            {
+                <span class="cm">// LightingTracker / glower 等可在此掛載自訂發光邏輯</span>
+                <span class="kw">if</span> (GenLocalDate.<span class="nm">HourInteger</span>(<span class="kw">this</span>) &gt; <span class="nu">20</span>)
+                    FleckMaker.<span class="nm">ThrowMetaIcon</span>(<span class="kw">this</span>.Position, <span class="kw">this</span>.Map, FleckDefOf.Heart);
+            }
+        }
+
+        <span class="cm">// 覆寫收成產量計算：滿月時雙倍產出</span>
+        <span class="kw">public override</span> <span class="ty">int</span> <span class="nm">YieldNow</span>()
+        {
+            <span class="ty">int</span> baseYield = <span class="kw">base</span>.<span class="nm">YieldNow</span>();
+            <span class="kw">return</span> IsFullMoon() ? baseYield * <span class="nu">2</span> : baseYield;
+        }
+
+        <span class="cm">// 被砍除/收成完成時的鉤子</span>
+        <span class="kw">public override void</span> <span class="nm">PlantCollected</span>(<span class="ty">Pawn</span> by, <span class="ty">PlantDestructionMode</span> mode)
+        {
+            <span class="kw">base</span>.<span class="nm">PlantCollected</span>(by, mode);
+            <span class="cm">// 噴 5 顆孢子 fleck</span>
+            <span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">0</span>; i &lt; <span class="nu">5</span>; i++)
+                FleckMaker.<span class="nm">ThrowDustPuffThick</span>(<span class="kw">this</span>.DrawPos, <span class="kw">this</span>.Map, <span class="nu">1.5f</span>, Color.green);
+        }
+
+        <span class="kw">private</span> <span class="ty">bool</span> <span class="nm">IsFullMoon</span>() =&gt; <span class="kw">false</span>; <span class="cm">// 示意</span>
+    }
+}</code></pre>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>常用覆寫點</h3>
+        <p><code>TickLong()</code>／<code>TickRare()</code>（週期行為）、<code>YieldNow()</code>（產量）、
+          <code>PlantCollected()</code>（採收事件）、<code>SpecialDisplayStats()</code>（資訊面板）、<code>Graphic</code>（動態貼圖）。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>內建可讀狀態</h3>
+        <p><code>Growth</code>（0~1 成熟度）、<code>LifeStage</code>（<code>PlantLifeStage</code> enum：Sowing/Growing/Mature）、
+          <code>HarvestableNow</code>、<code>Blighted</code>。</p>
+      </div>
+    </div>
+
+    <p>在 ThingDef 指定：</p>
+    <pre><code><span class="xml-tag">&lt;thingClass&gt;</span>MyMod.Plant_Soothil<span class="xml-tag">&lt;/thingClass&gt;</span></code></pre>
+    <div class="callout callout-tip">
+      <strong>命名空間要寫全</strong>
+      <code>thingClass</code> 需用完整型別名（<code>命名空間.類別名</code>）。引擎以 <code>GenTypes.GetTypeInAnyAssembly()</code> 跨組件解析，找不到只會在 log 警告並退回基底類別。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3 動物 ThingDef + RaceProperties
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3　動物 ThingDef + RaceProperties（&lt;race&gt;）</div>
+
+    <p>
+      動物的「物種定義」在 ThingDef 的 <code>&lt;race&gt;</code> 區塊（對應 <code>RimWorld.RaceProperties</code>，即 <code>thingDef.race</code>）。
+      它描述這個物種的生物學特性；個體生成參數則在 PawnKindDef（§4）。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Races/MyMod_Animals.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"AnimalThingBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Frostfox<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>霜狐<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>適應極寒的中型犬科動物，可被馴養為農場守衛。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MoveSpeed&gt;</span>5.2<span class="xml-tag">&lt;/MoveSpeed&gt;</span>
+      <span class="xml-tag">&lt;MarketValue&gt;</span>250<span class="xml-tag">&lt;/MarketValue&gt;</span>
+      <span class="xml-tag">&lt;ComfyTemperatureMin&gt;</span>-60<span class="xml-tag">&lt;/ComfyTemperatureMin&gt;</span>
+      <span class="xml-tag">&lt;ComfyTemperatureMax&gt;</span>30<span class="xml-tag">&lt;/ComfyTemperatureMax&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="xml-tag">&lt;race&gt;</span>
+      <span class="cm">&lt;!-- 體型（影響食量、攜帶量、撞擊傷害）：兔≈0.4 人≈1 牛≈2 --&gt;</span>
+      <span class="xml-tag">&lt;baseBodySize&gt;</span>0.85<span class="xml-tag">&lt;/baseBodySize&gt;</span>
+      <span class="xml-tag">&lt;baseHealthScale&gt;</span>1.0<span class="xml-tag">&lt;/baseHealthScale&gt;</span>
+      <span class="xml-tag">&lt;baseHungerRate&gt;</span>0.45<span class="xml-tag">&lt;/baseHungerRate&gt;</span>
+      <span class="xml-tag">&lt;foodType&gt;</span>OmnivoreAnimal, CarnivoreAnimal<span class="xml-tag">&lt;/foodType&gt;</span>
+      <span class="xml-tag">&lt;leatherDef&gt;</span>Leather_Fox<span class="xml-tag">&lt;/leatherDef&gt;</span>
+
+      <span class="cm">&lt;!-- 野性：0=天生溫馴(易馴) 1=極兇野(難馴)。影響馴服/逃跑機率 --&gt;</span>
+      <span class="xml-tag">&lt;wildness&gt;</span>0.45<span class="xml-tag">&lt;/wildness&gt;</span>
+
+      <span class="cm">&lt;!-- 可訓練等級：None / Simple / Intermediate / Advanced --&gt;</span>
+      <span class="xml-tag">&lt;trainability&gt;</span>Intermediate<span class="xml-tag">&lt;/trainability&gt;</span>
+
+      <span class="cm">&lt;!-- 萌度/親人度：影響成為寵物、提供心情加成的傾向 --&gt;</span>
+      <span class="xml-tag">&lt;petness&gt;</span>0.4<span class="xml-tag">&lt;/petness&gt;</span>
+
+      <span class="cm">&lt;!-- 平均多久遊蕩出地圖一次（馴養動物未圈養時的走失風險） --&gt;</span>
+      <span class="xml-tag">&lt;roamMtbDays&gt;</span>2<span class="xml-tag">&lt;/roamMtbDays&gt;</span>
+
+      <span class="cm">&lt;!-- 生命階段：每個 li 對應一張貼圖集 + 年齡門檻（見 §4/§5） --&gt;</span>
+      <span class="xml-tag">&lt;lifeStageAges&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;def&gt;</span>AnimalBaby<span class="xml-tag">&lt;/def&gt;</span>
+          <span class="xml-tag">&lt;minAge&gt;</span>0<span class="xml-tag">&lt;/minAge&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;def&gt;</span>AnimalJuvenile<span class="xml-tag">&lt;/def&gt;</span>
+          <span class="xml-tag">&lt;minAge&gt;</span>0.25<span class="xml-tag">&lt;/minAge&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;def&gt;</span>AnimalAdult<span class="xml-tag">&lt;/def&gt;</span>
+          <span class="xml-tag">&lt;minAge&gt;</span>0.5<span class="xml-tag">&lt;/minAge&gt;</span>
+          <span class="xml-tag">&lt;soundWounded&gt;</span>Pawn_Fox_Wounded<span class="xml-tag">&lt;/soundWounded&gt;</span>
+          <span class="xml-tag">&lt;soundDeath&gt;</span>Pawn_Fox_Death<span class="xml-tag">&lt;/soundDeath&gt;</span>
+          <span class="xml-tag">&lt;soundCall&gt;</span>Pawn_Fox_Call<span class="xml-tag">&lt;/soundCall&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/lifeStageAges&gt;</span>
+
+      <span class="xml-tag">&lt;gestationPeriodDays&gt;</span>21<span class="xml-tag">&lt;/gestationPeriodDays&gt;</span>
+      <span class="xml-tag">&lt;litterSizeCurve&gt;</span>
+        <span class="xml-tag">&lt;points&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>(1, 0)<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>(2, 1)<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>(4, 0.3)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/points&gt;</span>
+      <span class="xml-tag">&lt;/litterSizeCurve&gt;</span>
+
+      <span class="xml-tag">&lt;lifeExpectancy&gt;</span>12<span class="xml-tag">&lt;/lifeExpectancy&gt;</span>
+      <span class="xml-tag">&lt;manhunterOnDamageChance&gt;</span>0.25<span class="xml-tag">&lt;/manhunterOnDamageChance&gt;</span>
+      <span class="xml-tag">&lt;manhunterOnTameFailChance&gt;</span>0.05<span class="xml-tag">&lt;/manhunterOnTameFailChance&gt;</span>
+      <span class="xml-tag">&lt;body&gt;</span>QuadrupedAnimalWithPawsAndTail<span class="xml-tag">&lt;/body&gt;</span>
+      <span class="xml-tag">&lt;soundMeleeHitPawn&gt;</span>Pawn_Melee_BigBite_HitPawn<span class="xml-tag">&lt;/soundMeleeHitPawn&gt;</span>
+    <span class="xml-tag">&lt;/race&gt;</span>
+
+    <span class="cm">&lt;!-- 動物的近戰攻擊也用 tools（咬、抓） --&gt;</span>
+    <span class="xml-tag">&lt;tools&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>牙<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;capacities&gt;&lt;li&gt;</span>Bite<span class="xml-tag">&lt;/li&gt;&lt;/capacities&gt;</span>
+        <span class="xml-tag">&lt;power&gt;</span>9<span class="xml-tag">&lt;/power&gt;</span>
+        <span class="xml-tag">&lt;cooldownTime&gt;</span>2<span class="xml-tag">&lt;/cooldownTime&gt;</span>
+        <span class="xml-tag">&lt;linkedBodyPartsGroup&gt;</span>Teeth<span class="xml-tag">&lt;/linkedBodyPartsGroup&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/tools&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <table>
+      <thead>
+        <tr><th>RaceProperties 欄位</th><th>範圍/型別</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>wildness</code></td><td>0~1</td><td>越高越難馴服、越易在馴服失敗時翻臉或日後野化</td></tr>
+        <tr><td><code>trainability</code></td><td>enum</td><td><code>None</code>/<code>Simple</code>/<code>Intermediate</code>/<code>Advanced</code>，決定可解鎖哪些訓練（§6）</td></tr>
+        <tr><td><code>petness</code></td><td>0~1</td><td>成為「寵物」並黏人、提供心情加成的傾向</td></tr>
+        <tr><td><code>roamMtbDays</code></td><td>float</td><td>未圈養的馴養動物平均多少日遊蕩走失一次（MTB＝平均間隔天數）</td></tr>
+        <tr><td><code>foodType</code></td><td>FoodTypeFlags</td><td>可吃的食物類別（旗標，逗號分隔）；設錯會餓死，是最常見坑（§10）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>foodType 常用旗標</strong>
+      <code>VegetarianAnimal</code>（草食）、<code>CarnivoreAnimal</code>（肉食/含屍體）、<code>OmnivoreAnimal</code>（雜食）、
+      <code>DendrovorousAnimal</code>（吃樹）、<code>OmnivoreRoughAnimal</code>（雜食含乾草）、<code>Hay</code>、<code>Kibble</code>、<code>Plant</code>、<code>Meat</code>、<code>Corpse</code>。
+      多個旗標用逗號串接，引擎以位元 OR 合併。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4 PawnKindDef
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4　動物 PawnKindDef（生成參數）</div>
+
+    <p>
+      <code>ThingDef</code> 定義物種；<code>PawnKindDef</code> 定義「怎麼把個體生出來」——年齡分佈、各生命階段用哪組貼圖、
+      戰鬥力評分、生成數量範圍。野外動物與市場交易都靠它。<code>race</code> 欄位回指上面的動物 ThingDef。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/PawnKindDefs/MyMod_AnimalKinds.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;PawnKindDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"AnimalKindBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Frostfox<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>霜狐<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;race&gt;</span>MyMod_Frostfox<span class="xml-tag">&lt;/race&gt;</span>   <span class="cm">&lt;!-- 指回 §3 的 ThingDef --&gt;</span>
+    <span class="xml-tag">&lt;combatPower&gt;</span>80<span class="xml-tag">&lt;/combatPower&gt;</span>      <span class="cm">&lt;!-- 用於突襲點數/狩獵威脅評估 --&gt;</span>
+    <span class="xml-tag">&lt;ecoSystemWeight&gt;</span>0.6<span class="xml-tag">&lt;/ecoSystemWeight&gt;</span>
+
+    <span class="cm">&lt;!-- 各生命階段對應的貼圖集；順序與 race.lifeStageAges 完全對齊（§5/§10） --&gt;</span>
+    <span class="xml-tag">&lt;lifeStages&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>  <span class="cm">&lt;!-- [0] Baby --&gt;</span>
+        <span class="xml-tag">&lt;bodyGraphicData&gt;</span>
+          <span class="xml-tag">&lt;texPath&gt;</span>Things/Pawn/Animal/Frostfox/Frostfox_Baby<span class="xml-tag">&lt;/texPath&gt;</span>
+          <span class="xml-tag">&lt;drawSize&gt;</span>0.8<span class="xml-tag">&lt;/drawSize&gt;</span>
+          <span class="xml-tag">&lt;shaderType&gt;</span>CutoutComplex<span class="xml-tag">&lt;/shaderType&gt;</span>
+        <span class="xml-tag">&lt;/bodyGraphicData&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>  <span class="cm">&lt;!-- [1] Juvenile --&gt;</span>
+        <span class="xml-tag">&lt;bodyGraphicData&gt;</span>
+          <span class="xml-tag">&lt;texPath&gt;</span>Things/Pawn/Animal/Frostfox/Frostfox_Juvenile<span class="xml-tag">&lt;/texPath&gt;</span>
+          <span class="xml-tag">&lt;drawSize&gt;</span>1.2<span class="xml-tag">&lt;/drawSize&gt;</span>
+        <span class="xml-tag">&lt;/bodyGraphicData&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>  <span class="cm">&lt;!-- [2] Adult --&gt;</span>
+        <span class="xml-tag">&lt;bodyGraphicData&gt;</span>
+          <span class="xml-tag">&lt;texPath&gt;</span>Things/Pawn/Animal/Frostfox/Frostfox_Adult<span class="xml-tag">&lt;/texPath&gt;</span>
+          <span class="xml-tag">&lt;drawSize&gt;</span>1.6<span class="xml-tag">&lt;/drawSize&gt;</span>
+        <span class="xml-tag">&lt;/bodyGraphicData&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/lifeStages&gt;</span>
+
+    <span class="cm">&lt;!-- 生成時的年齡機率分佈（X=年齡(年)、Y=權重）；引擎依曲線抽樣 --&gt;</span>
+    <span class="xml-tag">&lt;ageGenerationCurve&gt;</span>
+      <span class="xml-tag">&lt;points&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(0,    0)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(0.1,  1)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(0.5,  1)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(3,    0.6)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(8,    0.2)<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>(12,   0)<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/points&gt;</span>
+    <span class="xml-tag">&lt;/ageGenerationCurve&gt;</span>
+
+    <span class="cm">&lt;!-- 一次自然生成的群體數量（如野外湧現、馬幫商隊販售） --&gt;</span>
+    <span class="xml-tag">&lt;wildGroupSize&gt;</span>2~4<span class="xml-tag">&lt;/wildGroupSize&gt;</span>
+  <span class="xml-tag">&lt;/PawnKindDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <div class="callout callout-danger">
+      <strong>數量必須一致</strong>
+      <code>PawnKindDef.lifeStages</code> 的 <code>&lt;li&gt;</code> 數量，必須等於 <code>RaceProperties.lifeStageAges</code> 的數量。
+      兩者一對一索引；少一個就會在該階段抓不到貼圖丟例外或顯示紫色方塊（§10）。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5 lifeStageAges 與成長
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5　lifeStageAges 與成長階段貼圖</div>
+
+    <p>成長系統由三處協作，索引必須一一對齊：</p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>① LifeStageDef</h3>
+        <p>定義「階段本身」的共通屬性（體型乘數、可否繁殖、移動速度因子等）。原版內建 <code>AnimalBaby</code> /
+          <code>AnimalJuvenile</code> / <code>AnimalAdult</code>，多數情況直接沿用。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>② race.lifeStageAges</h3>
+        <p>把 LifeStageDef 綁到「年齡門檻」（<code>minAge</code>，單位：年）與每階段的音效。決定何時切換階段。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>③ pawnKind.lifeStages</h3>
+        <p>每階段用哪組貼圖（<code>bodyGraphicData</code> / <code>dessicatedBodyGraphicData</code> / <code>femaleGraphicData</code>）。</p>
+      </div>
+    </div>
+
+    <p>索引對齊示意：</p>
+    <table>
+      <thead>
+        <tr><th>索引</th><th>race.lifeStageAges[i].def</th><th>race.lifeStageAges[i].minAge</th><th>pawnKind.lifeStages[i]</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>AnimalBaby</td><td>0 年</td><td>Baby 貼圖（drawSize 0.8）</td></tr>
+        <tr><td>1</td><td>AnimalJuvenile</td><td>0.25 年（≈ 第 15 天）</td><td>Juvenile 貼圖（1.2）</td></tr>
+        <tr><td>2</td><td>AnimalAdult</td><td>0.5 年（≈ 第 30 天）</td><td>Adult 貼圖（1.6）</td></tr>
+      </tbody>
+    </table>
+
+    <p>自訂 LifeStageDef（需要特殊體型曲線時）：</p>
+    <pre><code><span class="cm">&lt;!-- Defs/LifeStageDefs/MyMod_LifeStages.xml --&gt;</span>
+<span class="xml-tag">&lt;LifeStageDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_FoxKit<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>幼狐<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;reproductive&gt;</span>false<span class="xml-tag">&lt;/reproductive&gt;</span>      <span class="cm">&lt;!-- 不能交配 --&gt;</span>
+  <span class="xml-tag">&lt;milkable&gt;</span>false<span class="xml-tag">&lt;/milkable&gt;</span>
+  <span class="xml-tag">&lt;shearable&gt;</span>false<span class="xml-tag">&lt;/shearable&gt;</span>
+  <span class="xml-tag">&lt;bodySizeFactor&gt;</span>0.3<span class="xml-tag">&lt;/bodySizeFactor&gt;</span>    <span class="cm">&lt;!-- 此階段的體型 = baseBodySize × 0.3 --&gt;</span>
+  <span class="xml-tag">&lt;healthScaleFactor&gt;</span>0.3<span class="xml-tag">&lt;/healthScaleFactor&gt;</span>
+  <span class="xml-tag">&lt;hungerRateFactor&gt;</span>0.6<span class="xml-tag">&lt;/hungerRateFactor&gt;</span>
+  <span class="xml-tag">&lt;foodMaxFactor&gt;</span>0.6<span class="xml-tag">&lt;/foodMaxFactor&gt;</span>
+<span class="xml-tag">&lt;/LifeStageDef&gt;</span></code></pre>
+
+    <div class="callout callout-tip">
+      <strong>貼圖隨體型自動縮放</strong>
+      實際繪製尺寸 = <code>lifeStages[i].bodyGraphicData.drawSize</code>。動物會在年齡跨越 <code>minAge</code> 時由
+      <code>Pawn_AgeTracker.RecalculateLifeStageIndex()</code> 切換 <code>CurKindLifeStage</code>，貼圖隨之更換。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6 訓練
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6　訓練系統（TrainableDef）</div>
+
+    <p>
+      可訓練技能由 <code>RimWorld.TrainableDef</code> 描述。原版內建 <code>Tameness</code>（馴服度，所有可訓練動物的根節點）、
+      <code>Obedience</code>、<code>Release</code>（攻擊放出）、<code>Rescue</code>、<code>Haul</code>。
+      動物能學哪些，由 <code>race.trainability</code> 等級與技能自身的 <code>requiredTrainability</code> 共同決定。
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>TrainableDef</th><th>requiredTrainability</th><th>前置技能</th><th>效果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Tameness</code></td><td>None</td><td>—</td><td>維持馴服；衰退到 0 會野化</td></tr>
+        <tr><td><code>Obedience</code></td><td>Simple</td><td>Tameness</td><td>可指派主人、跟隨、待命</td></tr>
+        <tr><td><code>Release</code></td><td>Intermediate</td><td>Obedience</td><td>戰鬥中放出攻擊敵人</td></tr>
+        <tr><td><code>Rescue</code></td><td>Advanced</td><td>Obedience</td><td>把倒地殖民者拖回床</td></tr>
+        <tr><td><code>Haul</code></td><td>Advanced</td><td>Obedience</td><td>搬運物資</td></tr>
+      </tbody>
+    </table>
+
+    <p>自訂一個進階技能（例：採集漿果）：</p>
+    <pre><code><span class="xml-tag">&lt;TrainableDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Forage<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>採集<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;requiredTrainability&gt;</span>Advanced<span class="xml-tag">&lt;/requiredTrainability&gt;</span>
+  <span class="xml-tag">&lt;prerequisites&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Obedience<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/prerequisites&gt;</span>
+  <span class="xml-tag">&lt;steps&gt;</span>4<span class="xml-tag">&lt;/steps&gt;</span>            <span class="cm">&lt;!-- 需訓練成功幾次才完全學會 --&gt;</span>
+  <span class="xml-tag">&lt;listPriority&gt;</span>150<span class="xml-tag">&lt;/listPriority&gt;</span>
+  <span class="xml-tag">&lt;defaultTrainable&gt;</span>true<span class="xml-tag">&lt;/defaultTrainable&gt;</span>
+<span class="xml-tag">&lt;/TrainableDef&gt;</span></code></pre>
+
+    <p>C# 端查詢與設定訓練狀態：</p>
+    <pre><code><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="ty">Pawn</span> animal = ...;
+<span class="ty">Pawn_TrainingTracker</span> training = animal.training;
+
+<span class="cm">// 該技能是否已完全學會</span>
+<span class="ty">bool</span> canRelease = training.<span class="nm">HasLearned</span>(TrainableDefOf.Release);
+
+<span class="cm">// 是否被勾選為「要訓練」</span>
+<span class="ty">bool</span> wanted = training.<span class="nm">GetWanted</span>(TrainableDefOf.Obedience);
+training.<span class="nm">SetWantedRecursive</span>(TrainableDefOf.Obedience, <span class="kw">true</span>); <span class="cm">// 連同前置一起勾</span>
+
+<span class="cm">// 直接灌滿某技能（例如生成已訓練好的動物）</span>
+training.<span class="nm">Train</span>(TrainableDefOf.Tameness, trainer: <span class="kw">null</span>, complete: <span class="kw">true</span>);
+
+<span class="cm">// 馴服度是否在衰退邊緣（決定是否野化）</span>
+<span class="ty">bool</span> canBeUntamed = animal.RaceProps.<span class="nm">Animal</span> &amp;&amp; !training.<span class="nm">HasLearned</span>(TrainableDefOf.Tameness);</code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §7 動物產出 Comps
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7　動物產出（CompMilkable / CompShearable / CompEggLayer）</div>
+
+    <p>產出能力以 ThingComp 掛載在動物 ThingDef 的 <code>&lt;comps&gt;</code>。三者結構相似：間隔、產物、數量。</p>
+
+    <pre><code><span class="xml-tag">&lt;comps&gt;</span>
+
+  <span class="cm">&lt;!-- 擠奶：每 intervalDays 累積到滿可擠一次 --&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Milkable"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;milkDef&gt;</span>Milk<span class="xml-tag">&lt;/milkDef&gt;</span>
+    <span class="xml-tag">&lt;milkIntervalDays&gt;</span>2<span class="xml-tag">&lt;/milkIntervalDays&gt;</span>
+    <span class="xml-tag">&lt;milkAmount&gt;</span>14<span class="xml-tag">&lt;/milkAmount&gt;</span>
+    <span class="xml-tag">&lt;milkFemaleOnly&gt;</span>true<span class="xml-tag">&lt;/milkFemaleOnly&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+
+  <span class="cm">&lt;!-- 剪毛 --&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Shearable"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;woolDef&gt;</span>MyMod_Frostfur<span class="xml-tag">&lt;/woolDef&gt;</span>
+    <span class="xml-tag">&lt;shearIntervalDays&gt;</span>10<span class="xml-tag">&lt;/shearIntervalDays&gt;</span>
+    <span class="xml-tag">&lt;woolAmount&gt;</span>40<span class="xml-tag">&lt;/woolAmount&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+
+  <span class="cm">&lt;!-- 下蛋：受精蛋會孵化成幼體 --&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_EggLayer"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;eggUnfertilizedDef&gt;</span>EggChickenUnfertilized<span class="xml-tag">&lt;/eggUnfertilizedDef&gt;</span>
+    <span class="xml-tag">&lt;eggFertilizedDef&gt;</span>MyMod_EggFrostfoxFertilized<span class="xml-tag">&lt;/eggFertilizedDef&gt;</span>
+    <span class="xml-tag">&lt;eggLayIntervalDays&gt;</span>1.6<span class="xml-tag">&lt;/eggLayIntervalDays&gt;</span>
+    <span class="xml-tag">&lt;eggCountRange&gt;</span>1~2<span class="xml-tag">&lt;/eggCountRange&gt;</span>
+    <span class="xml-tag">&lt;eggFertilizationCountMax&gt;</span>8<span class="xml-tag">&lt;/eggFertilizationCountMax&gt;</span>
+    <span class="xml-tag">&lt;eggProgressUnfertilizedMax&gt;</span>1<span class="xml-tag">&lt;/eggProgressUnfertilizedMax&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+
+<span class="xml-tag">&lt;/comps&gt;</span></code></pre>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>C# 端共通介面</h3>
+        <p>三者都繼承 <code>CompHasGatherableBodyResource</code>，公開 <code>Fullness</code>（0~1 累積度）與
+          <code>ActiveAndFull</code>。採集工作 <code>JobDriver_GatherAnimalBodyResources</code> 完成後呼叫
+          <code>Gathered()</code> 重置。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>性別與生命階段限制</h3>
+        <p><code>milkFemaleOnly</code> 與 LifeStageDef 的 <code>milkable</code>/<code>shearable</code> 共同決定當下能否採集；幼體階段通常關閉。</p>
+      </div>
+    </div>
+
+    <pre><code><span class="cm">// 讀取累積度（例如做自訂顯示或自動化）</span>
+<span class="kw">var</span> comp = animal.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompMilkable</span>&gt;();
+<span class="kw">if</span> (comp != <span class="kw">null</span> &amp;&amp; comp.<span class="nm">ActiveAndFull</span>)
+    Log.<span class="nm">Message</span>($<span class="st">"{animal.LabelShort} 可擠奶，滿度 {comp.Fullness:P0}"</span>);</code></pre>
+
+    <div class="callout callout-warn">
+      <strong>下蛋需要受精</strong>
+      <code>CompEggLayer</code> 產的蛋預設未受精（食材）。有公母交配後才會 <code>eggFertilizedDef</code>，孵化成幼體。
+      想自繁殖的蛋系動物，務必同地圖有可繁殖的雙性個體。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §8 生態分布
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8　生態分布（BiomeDef 的 wildPlants / wildAnimals）</div>
+
+    <p>
+      物種出現在哪個生態系、密度多高，由 <code>BiomeDef</code> 的 <code>wildPlants</code>（植物）與
+      <code>wildAnimals</code>（動物）權重表決定。新 mod 通常不改原版 BiomeDef，而用 <strong>PatchOperationAdd</strong>
+      把自己的物種「加進」現有生態系。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Patches/MyMod_BiomeInjection.xml --&gt;</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+
+  <span class="cm">&lt;!-- 把霜狐加進寒帶森林動物表 --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/BiomeDef[defName="BorealForest"]/wildAnimals<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="xml-tag">&lt;MyMod_Frostfox&gt;</span>0.35<span class="xml-tag">&lt;/MyMod_Frostfox&gt;</span>   <span class="cm">&lt;!-- 鍵=PawnKindDef，值=相對權重 --&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+
+  <span class="cm">&lt;!-- 把舒草加進該生態的野生植物表 --&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>Defs/BiomeDef[defName="BorealForest"]/wildPlants<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;value&gt;</span>
+      <span class="xml-tag">&lt;MyMod_Plant_Soothil&gt;</span>1.2<span class="xml-tag">&lt;/MyMod_Plant_Soothil&gt;</span>  <span class="cm">&lt;!-- 鍵=植物 ThingDef --&gt;</span>
+    <span class="xml-tag">&lt;/value&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+
+<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+
+    <div class="callout callout-info">
+      <strong>權重 vs 絕對密度</strong>
+      <code>wildPlants</code>/<code>wildAnimals</code> 的數值是<strong>相對權重</strong>，不是絕對數量。
+      整張地圖的植物總量由 BiomeDef 的 <code>plantDensity</code>、動物總量由 <code>animalDensity</code> 控制；
+      權重只決定「這個物種在該生態裡佔多少比例」。
+    </div>
+
+    <p>C# 端查某生態的動物候選（除錯用）：</p>
+    <pre><code><span class="ty">BiomeDef</span> biome = DefDatabase&lt;<span class="ty">BiomeDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"BorealForest"</span>);
+<span class="kw">foreach</span> (<span class="ty">PawnKindDef</span> k <span class="kw">in</span> biome.<span class="nm">AllWildAnimals</span>)
+    Log.<span class="nm">Message</span>($<span class="st">"{k.defName} 權重 {biome.CommonalityOfAnimal(k)}"</span>);</code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §9 馴服與野化
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9　馴服與野化</div>
+
+    <p>
+      馴服是把野生動物的 <code>Faction</code> 設為玩家、並透過 <code>pawn.training</code> 灌入 <code>Tameness</code> 的過程；
+      野化（roaming / reverting to wild）則是馴服度衰退到 0 後脫離玩家陣營。兩者的成敗機率與
+      <code>race.wildness</code>、馴獸技能、<code>manhunterOnTameFailChance</code> 相關。
+    </p>
+
+    <pre><code><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// ── 程式化馴服一隻野生動物 ──</span>
+<span class="kw">if</span> (animal.Faction == <span class="kw">null</span> &amp;&amp; animal.RaceProps.<span class="nm">Animal</span>)
+{
+    animal.<span class="nm">SetFaction</span>(Faction.OfPlayer);
+    animal.training.<span class="nm">Train</span>(TrainableDefOf.Tameness, tamer, complete: <span class="kw">true</span>);
+    <span class="cm">// 建立飼主羈絆與心情思想</span>
+    <span class="kw">if</span> (animal.RaceProps.<span class="nm">IsFlesh</span>)
+        animal.relations?.<span class="nm">AddDirectRelation</span>(PawnRelationDefOf.Bond, tamer);
+}
+
+<span class="cm">// ── 計算馴服成功率（引擎內部公式封裝在 TrainableUtility / Pawn） ──</span>
+<span class="ty">float</span> chance = animal.RaceProps.<span class="nm">wildness</span>;          <span class="cm">// 野性越高越難</span>
+<span class="ty">float</span> tamerSkill = tamer.skills.<span class="nm">GetSkill</span>(SkillDefOf.Animals).Level;
+
+<span class="cm">// ── 強制野化：脫離玩家陣營 ──</span>
+animal.<span class="nm">SetFaction</span>(<span class="kw">null</span>);</code></pre>
+
+    <p>動物暴走（manhunter）概念——當狩獵失誤、馴服失敗或被攻擊時，可能整群轉為「獵殺人類」狀態：</p>
+    <pre><code><span class="cm">// ManhunterPackIncidentUtility：手動觸發一場暴走動物群事件</span>
+<span class="kw">if</span> (ManhunterPackIncidentUtility.<span class="nm">TryFindManhunterAnimalKind</span>(
+        points: <span class="nu">800f</span>, tile: map.Tile, <span class="kw">out</span> <span class="ty">PawnKindDef</span> kind))
+{
+    <span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt; pack = ManhunterPackIncidentUtility.<span class="nm">GenerateAnimals</span>(
+        kind, map.Tile, points: <span class="nu">800f</span>);
+
+    <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> pack)
+    {
+        GenSpawn.<span class="nm">Spawn</span>(p, map.<span class="nm">Center</span>, map);
+        <span class="cm">// 設定 manhunter 心智狀態</span>
+        p.mindState.mentalStateHandler.<span class="nm">TryStartMentalState</span>(
+            MentalStateDefOf.ManhunterPermanent);
+    }
+}</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>單隻翻臉 vs 整群暴走</strong>
+      單隻馴服/狩獵失敗的翻臉走 <code>manhunterOnTameFailChance</code> / <code>manhunterOnDamageChance</code>（race 欄位）；
+      整群空降事件走 <code>ManhunterPack</code> IncidentDef + <code>ManhunterPackIncidentUtility</code>。前者由動物自身機率觸發，後者是天災級事件。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §10 常見坑
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10　常見坑（Gotchas）</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>① lifeStages 數量不匹配 <span class="tag tag-red">最高頻</span></h3>
+        <p><code>pawnKind.lifeStages</code> 與 <code>race.lifeStageAges</code> 的 <code>&lt;li&gt;</code> 數量不同 →
+          切到沒貼圖的階段時丟 <code>IndexOutOfRange</code> 或顯示紫色方塊。<strong>務必一一對齊</strong>。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>② foodType 設錯 → 餓死</h3>
+        <p>草食動物給了 <code>CarnivoreAnimal</code> 卻無肉源，或反之；旗標拼錯整個欄位失效。
+          測試時觀察「飢餓」alert 與健康面板的營養條。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>③ 貼圖路徑大小寫</h3>
+        <p><code>texPath</code> 相對 <code>Textures/</code>，<strong>不含副檔名</strong>且區分大小寫（Linux/打包後尤甚）。
+          Graphic_Random 需 <code>名稱a</code>/<code>名稱b</code>… 後綴。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>④ trainability 與技能衝突</h3>
+        <p>race 設 <code>Simple</code> 卻期望學 <code>Release</code>（需 Intermediate）→ 永遠學不會也不報錯。
+          想要可作戰，至少 <code>Intermediate</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>⑤ 植物 sowTags 空 = 不可種</h3>
+        <p>忘了給 <code>Ground</code>，玩家在種植區選單裡找不到你的作物——它只會野生長。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>⑥ harvestedThingDef 不存在</h3>
+        <p>指向不存在的 ThingDef → <code>ResolveReferences</code> 階段報紅，收成時無產物。先確認產物 Def 已定義。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>⑦ 缺對應 PawnKindDef</h3>
+        <p>只寫了動物 ThingDef 沒寫 PawnKindDef → 無法在野外/交易生成，也無生命階段貼圖綁定。兩者缺一不可。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>⑧ roamMtbDays 太小</h3>
+        <p>值過小（如 0.5）→ 馴養動物頻繁走失。需要時用圍欄（Fence）或指派區域避免亂跑。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>⑨ EggLayer 不下蛋</h3>
+        <p>幼體階段或無公母交配。檢查 LifeStageDef 是否 <code>reproductive</code>，以及地圖是否有可繁殖雙性個體。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>⑩ ageGenerationCurve 端點為 0</h3>
+        <p>曲線首尾權重應為 0，否則可能生成負齡或超齡個體；中段才是有效抽樣區。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>除錯第一步：開 Dev Mode</strong>
+      用 <code>Options → Development mode</code>，配合 <code>Spawn pawn</code> / <code>Try place near</code> 直接生成你的動植物驗證貼圖與階段切換；
+      <code>Debug log</code> 會列出所有 ResolveReferences 錯誤——99% 的「東西沒出現」都能在這裡找到紅字。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       底部導覽
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>← 回到</h3>
+        <p><a href="index.html">總覽</a> — 所有章節索引</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>延伸閱讀</h3>
+        <p><a href="02-xml-defs.html">XML Def 系統</a> 與 <a href="03-harmony.html">Harmony Patching</a> — 本章的 Def 與 Comp 基礎</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Mod 指南 &mdash; 植物與動物 &mdash; 繁體中文版
+</footer>
+
+</body>
+</html>

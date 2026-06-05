@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>實用程式碼速查 (Code Cookbook) — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .anchor { scroll-margin-top: 5rem; }
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.3rem 1.5rem;
+  }
+  .toc a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 0.2rem 0;
+    display: block;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent3); }
+  .toc-title {
+    grid-column: 1 / -1;
+    font-weight: 700;
+    color: var(--accent2);
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  /* 小食譜卡片：說明 + pre */
+  .recipe {
+    margin-bottom: 1.4rem;
+  }
+  .recipe-desc {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+  }
+  .recipe-desc b { color: var(--accent3); font-weight: 600; }
+  pre { margin: 0.3rem 0 0.4rem; }
+  /* 雙欄食譜排版 */
+  .cook2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.4rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 820px) { .cook2 { grid-template-columns: 1fr; } }
+  table code { font-size: 0.8em; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html" class="active">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>實用程式碼速查 (Code Cookbook)</h1>
+  <p>即查即用的 C# 片段大全——每段 3–10 行，複製貼上就能跑。</p>
+  <span class="badge">9 大分類 · 60+ snippet · RimWorld 1.5 / Verse + RimWorld 命名空間</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">本頁索引</div>
+    <a href="#get">A. 取得常用物件</a>
+    <a href="#spawn">B. 生成與移除</a>
+    <a href="#pawn">C. Pawn 操作</a>
+    <a href="#find">D. 尋找與查詢</a>
+    <a href="#msg">E. 通知與訊息</a>
+    <a href="#time">F. 時間與排程</a>
+    <a href="#scribe">G. 存檔 (Scribe)</a>
+    <a href="#reflect">H. 反射捷徑</a>
+    <a href="#math">I. 數學與隨機</a>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>使用前提</strong>
+    多數片段假設已 <code>using Verse;</code>、<code>using RimWorld;</code>、<code>using Verse.AI;</code>、<code>using UnityEngine;</code>。靜態入口幾乎都掛在 <code>Find</code>（執行期狀態）與 <code>Current</code>（遊戲/世界容器）之下。<code>Find.CurrentMap</code> 在世界地圖檢視時可能為 <code>null</code>，存取前請判空。
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- A. 取得常用物件 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="get">
+    <div class="section-title">A. 取得常用物件</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>當前地圖</b>（玩家正在看的那張，世界檢視時為 null）</div>
+<pre><span class="ty">Map</span> map = <span class="ty">Find</span>.CurrentMap;
+<span class="cm">// 所有已載入的地圖</span>
+<span class="ty">List</span>&lt;<span class="ty">Map</span>&gt; maps = <span class="ty">Find</span>.Maps;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>所有自由殖民者</b>（含當前地圖 / 全派系）</div>
+<pre><span class="cm">// 當前地圖的自由殖民者</span>
+<span class="kw">var</span> colonists = map.mapPawns.FreeColonists;
+<span class="cm">// 跨地圖：所有玩家陣營的殖民者</span>
+<span class="kw">var</span> all = <span class="ty">PawnsFinder</span>.AllMaps_FreeColonists;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>目前選取的物件</b>（單選 / 多選）</div>
+<pre><span class="ty">Thing</span> sel = <span class="ty">Find</span>.Selector.SingleSelectedThing;
+<span class="kw">var</span> objs = <span class="ty">Find</span>.Selector.SelectedObjects;   <span class="cm">// List&lt;object&gt;</span>
+<span class="kw">var</span> things = <span class="ty">Find</span>.Selector.SelectedObjectsListForReading;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>滑鼠所在格</b>（地圖座標 IntVec3）</div>
+<pre><span class="ty">IntVec3</span> cell = <span class="ty">UI</span>.MouseCell();
+<span class="cm">// 是否在地圖範圍內</span>
+<span class="kw">bool</span> valid = cell.InBounds(<span class="ty">Find</span>.CurrentMap);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>當前派系 / 遊戲容器</b></div>
+<pre><span class="ty">Faction</span> player = <span class="ty">Faction</span>.OfPlayer;
+<span class="ty">Game</span> game = <span class="ty">Current</span>.Game;
+<span class="ty">World</span> world = <span class="ty">Find</span>.World;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>由 defName 取 Def</b>（找不到回 null / 報錯）</div>
+<pre><span class="kw">var</span> def = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.GetNamed(<span class="st">"Steel"</span>);
+<span class="kw">var</span> safe = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;
+    .GetNamedSilentFail(<span class="st">"Steel"</span>);  <span class="cm">// 找不到回 null</span></pre>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>偏好 DefOf 而非字串查找</strong>
+      頻繁用到的 Def，宣告一個 <code>[DefOf] public static class MyDefOf</code> 讓框架在啟動時注入靜態欄位，比每次 <code>GetNamed</code> 快且型別安全。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- B. 生成與移除 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="spawn">
+    <div class="section-title">B. 生成與移除</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>生成物品到地圖某格</b>（含堆疊數量）</div>
+<pre><span class="ty">Thing</span> steel = <span class="ty">ThingMaker</span>.MakeThing(<span class="ty">ThingDefOf</span>.Steel);
+steel.stackCount = <span class="nu">75</span>;
+<span class="ty">GenSpawn</span>.Spawn(steel, cell, map);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>生成帶材質的物品</b>（如鋼製短刀）</div>
+<pre><span class="ty">Thing</span> knife = <span class="ty">ThingMaker</span>.MakeThing(
+    knifeDef, <span class="ty">ThingDefOf</span>.Steel);  <span class="cm">// 第二參數 = stuff</span>
+<span class="ty">GenSpawn</span>.Spawn(knife, cell, map);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>生成一名 Pawn</b>（指定種族 + 派系）</div>
+<pre><span class="kw">var</span> req = <span class="kw">new</span> <span class="ty">PawnGenerationRequest</span>(
+    <span class="ty">PawnKindDefOf</span>.Colonist, <span class="ty">Faction</span>.OfPlayer);
+<span class="ty">Pawn</span> pawn = <span class="ty">PawnGenerator</span>.GeneratePawn(req);
+<span class="ty">GenSpawn</span>.Spawn(pawn, cell, map);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>刪除 / 摧毀一個 Thing</b></div>
+<pre>thing.Destroy(<span class="ty">DestroyMode</span>.Vanish);  <span class="cm">// 無殘骸</span>
+thing.Destroy(<span class="ty">DestroyMode</span>.KillFinalize);  <span class="cm">// 走死亡流程</span>
+<span class="cm">// 僅從地圖移除但保留物件</span>
+<span class="kw">if</span> (thing.Spawned) thing.DeSpawn();</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>掉落物品到附近</b>（找鄰近可放格）</div>
+<pre><span class="ty">GenPlace</span>.TryPlaceThing(
+    thing, cell, map, <span class="ty">ThingPlaceMode</span>.Near);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>讓 Pawn 從身上掉落物品</b>（含轉成 unforbidden）</div>
+<pre>pawn.inventory.innerContainer.TryDrop(
+    item, pawn.Position, map,
+    <span class="ty">ThingPlaceMode</span>.Near, <span class="kw">out</span> <span class="ty">Thing</span> dropped);</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>生成後別忘記 Spawned 狀態</strong>
+      <code>ThingMaker.MakeThing</code> 只是建立物件、尚未在地圖上。沒呼叫 <code>GenSpawn.Spawn</code> 前 <code>thing.Spawned</code> 為 false，存取 <code>thing.Map</code> / <code>thing.Position</code> 會出錯。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- C. Pawn 操作 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="pawn">
+    <div class="section-title">C. Pawn 操作</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>給 / 移除 Hediff</b></div>
+<pre><span class="cm">// 加（可選 body part，不填 = 全身）</span>
+pawn.health.AddHediff(hediffDef);
+<span class="cm">// 移除既有的</span>
+<span class="kw">var</span> h = pawn.health.hediffSet
+    .GetFirstHediffOfDef(hediffDef);
+<span class="kw">if</span> (h != <span class="kw">null</span>) pawn.health.RemoveHediff(h);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>套用設定好 severity 的 Hediff</b></div>
+<pre><span class="kw">var</span> h = <span class="ty">HediffMaker</span>.MakeHediff(hediffDef, pawn);
+h.Severity = <span class="nu">0.5f</span>;
+pawn.health.AddHediff(h);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>改變心情</b>（套用一個 ThoughtDef memory）</div>
+<pre>pawn.needs.mood.thoughts.memories
+    .TryGainMemory(thoughtDef);
+<span class="cm">// 直接讀心情值 (0~1)</span>
+<span class="kw">float</span> mood = pawn.needs.mood.CurLevelPercentage;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>強制執行一個 Job</b>（中斷現有工作）</div>
+<pre><span class="ty">Job</span> job = <span class="ty">JobMaker</span>.MakeJob(jobDef, targetThing);
+pawn.jobs.StartJob(job, <span class="ty">JobCondition</span>.InterruptForced);
+<span class="cm">// 或加入佇列：pawn.jobs.TryTakeOrderedJob(job);</span></pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>傳送 Pawn 到某格</b>（瞬移）</div>
+<pre>pawn.Position = cell;
+pawn.Notify_Teleported(<span class="kw">false</span>, <span class="kw">true</span>);
+pawn.pather.StopDead();  <span class="cm">// 取消正在走的路徑</span></pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>改變派系</b>（招募 / 變敵對）</div>
+<pre>pawn.SetFaction(<span class="ty">Faction</span>.OfPlayer);
+<span class="cm">// 完整招募流程（含 thought / 訊息）</span>
+<span class="ty">InteractionWorker_RecruitAttempt</span>
+    .DoRecruit(recruiter, pawn);</pre>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>需求</th><th>呼叫</th></tr>
+      <tr><td>讓 Pawn 倒地</td><td><code>HealthUtility.DamageUntilDowned(pawn)</code></td></tr>
+      <tr><td>直接殺死</td><td><code>pawn.Kill(null)</code> 或 <code>pawn.Kill(dinfo)</code></td></tr>
+      <tr><td>讀取技能等級</td><td><code>pawn.skills.GetSkill(SkillDefOf.Mining).Level</code></td></tr>
+      <tr><td>檢查能力</td><td><code>pawn.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation)</code></td></tr>
+      <tr><td>加好感 / 關係</td><td><code>pawn.relations.AddDirectRelation(def, otherPawn)</code></td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- D. 尋找與查詢 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="find">
+    <div class="section-title">D. 尋找與查詢</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>最近的某類物件</b>（GenClosest 萬用查找）</div>
+<pre><span class="ty">Thing</span> nearest = <span class="ty">GenClosest</span>.ClosestThingReachable(
+    pawn.Position, map,
+    <span class="ty">ThingRequest</span>.ForDef(<span class="ty">ThingDefOf</span>.Steel),
+    <span class="ty">PathEndMode</span>.ClosestTouch,
+    <span class="ty">TraverseParms</span>.For(pawn));</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>半徑內所有 Pawn</b>（GenRadial 掃格）</div>
+<pre><span class="kw">var</span> hits = <span class="ty">GenRadial</span>.RadialDistinctThingsAround(
+    center, map, radius: <span class="nu">5f</span>, useCenter: <span class="kw">true</span>)
+    .OfType&lt;<span class="ty">Pawn</span>&gt;();</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>某格上的所有東西 / 第一個建築</b></div>
+<pre><span class="kw">var</span> things = cell.GetThingList(map);   <span class="cm">// List&lt;Thing&gt;</span>
+<span class="ty">Building</span> edifice = cell.GetEdifice(map);
+<span class="ty">Plant</span> plant = cell.GetPlant(map);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>可行走 / 可站立判斷</b></div>
+<pre><span class="kw">bool</span> walkable = cell.Walkable(map);
+<span class="kw">bool</span> standable = cell.Standable(map);  <span class="cm">// 無阻擋物</span>
+<span class="kw">bool</span> reachable = pawn.CanReach(
+    cell, <span class="ty">PathEndMode</span>.OnCell, <span class="ty">Danger</span>.Deadly);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>全地圖某 Def 的物件清單</b>（最快路徑）</div>
+<pre><span class="kw">var</span> list = map.listerThings
+    .ThingsOfDef(<span class="ty">ThingDefOf</span>.Steel);
+<span class="cm">// 依群組（如所有建築）</span>
+<span class="kw">var</span> blds = map.listerBuildings.allBuildingsColonist;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>找一個落腳/可放置的格</b></div>
+<pre><span class="ty">CellFinder</span>.TryFindRandomCellNear(
+    center, map, radius: <span class="nu">4</span>,
+    c =&gt; c.Standable(map),
+    <span class="kw">out</span> <span class="ty">IntVec3</span> result);</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>效能：能用 lister 就別自己掃整張地圖</strong>
+      <code>map.listerThings</code> / <code>map.listerBuildings</code> 維護現成索引；對全圖 <code>foreach</code> 每格是 O(area)，在大地圖或 tick 迴圈裡會卡。需要可達性過濾時優先用 <code>GenClosest</code>（內建 BFS 早停）。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- E. 通知與訊息 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="msg">
+    <div class="section-title">E. 通知與訊息</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>左上角飄一條訊息</b>（最常用）</div>
+<pre><span class="ty">Messages</span>.Message(
+    <span class="st">"任務完成！"</span>,
+    lookTarget,                       <span class="cm">// 點訊息會跳鏡頭過去</span>
+    <span class="ty">MessageTypeDefOf</span>.PositiveEvent);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>無目標的純文字訊息</b></div>
+<pre><span class="ty">Messages</span>.Message(
+    <span class="st">"設定已套用。"</span>,
+    <span class="ty">MessageTypeDefOf</span>.NeutralEvent,
+    historical: <span class="kw">false</span>);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>右側信件 (Letter)</b>——重要事件，會留存記錄</div>
+<pre><span class="ty">Find</span>.LetterStack.ReceiveLetter(
+    <span class="st">"標題"</span>, <span class="st">"詳細內文……"</span>,
+    <span class="ty">LetterDefOf</span>.PositiveEvent,
+    lookTarget);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>選擇式信件 (ChoiceLetter)</b>——含確認按鈕</div>
+<pre><span class="ty">ChoiceLetter</span> letter = <span class="ty">LetterMaker</span>.MakeLetter(
+    <span class="st">"標題"</span>, <span class="st">"內文"</span>,
+    <span class="ty">LetterDefOf</span>.ThreatBig, lookTarget);
+<span class="ty">Find</span>.LetterStack.ReceiveLetter(letter);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>地圖上的浮動文字 (Mote)</b>——傷害數字風格</div>
+<pre><span class="ty">MoteMaker</span>.ThrowText(
+    cell.ToVector3Shifted(), map,
+    <span class="st">"+5"</span>, <span class="ty">Color</span>.green);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>地圖特效 Mote</b>（煙霧 / 火花圖示）</div>
+<pre><span class="ty">MoteMaker</span>.MakeStaticMote(
+    cell.ToVector3Shifted(), map,
+    <span class="ty">ThingDefOf</span>.Mote_Stun, scale: <span class="nu">1.5f</span>);</pre>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>類型</th><th>MessageTypeDefOf 常用值</th></tr>
+      <tr><td>正面</td><td><code>PositiveEvent</code></td></tr>
+      <tr><td>負面</td><td><code>NegativeEvent</code> / <code>NegativeHealthEvent</code></td></tr>
+      <tr><td>中性</td><td><code>NeutralEvent</code> / <code>SilentInput</code></td></tr>
+      <tr><td>警告（紅）</td><td><code>ThreatBig</code> / <code>ThreatSmall</code></td></tr>
+      <tr><td>拒絕操作</td><td><code>RejectInput</code>（含「叮」音效）</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- F. 時間與排程 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="time">
+    <div class="section-title">F. 時間與排程</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>當前 tick</b>（遊戲時鐘，每秒約 60 tick）</div>
+<pre><span class="kw">int</span> now = <span class="ty">Find</span>.TickManager.TicksGame;
+<span class="cm">// 絕對 tick（無視暫停，自開檔起算）</span>
+<span class="kw">int</span> abs = <span class="ty">Find</span>.TickManager.TicksAbs;</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>常用時間常數</b>（GenDate）</div>
+<pre><span class="kw">int</span> day  = <span class="ty">GenDate</span>.TicksPerDay;     <span class="cm">// 60000</span>
+<span class="kw">int</span> hour = <span class="ty">GenDate</span>.TicksPerHour;    <span class="cm">// 2500</span>
+<span class="kw">int</span> qtr  = <span class="ty">GenDate</span>.TicksPerQuadrum; <span class="cm">// 一季</span></pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>延遲執行</b>（N tick 後跑一段程式）</div>
+<pre><span class="kw">long</span> fireAt = <span class="ty">Find</span>.TickManager.TicksGame + <span class="nu">300</span>;
+<span class="ty">Find</span>.TickManager.later.ScheduleCallback(
+    () =&gt; <span class="ty">Log</span>.Message(<span class="st">"5 秒後執行"</span>), <span class="nu">300</span>);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>tick 迴圈內的週期判斷</b>（每 N tick 一次）</div>
+<pre><span class="cm">// 放在 CompTick / TickRare 裡</span>
+<span class="kw">if</span> (now.IsHashIntervalTick(<span class="nu">250</span>)) {
+    <span class="cm">// 每 250 tick 觸發一次（已自動錯開負載）</span>
+}</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>每日 / 每季判斷</b></div>
+<pre><span class="kw">if</span> (now % <span class="ty">GenDate</span>.TicksPerDay == <span class="nu">0</span>) { <span class="cm">/* 每日 0 點 */</span> }
+<span class="kw">int</span> dayOfQuadrum = <span class="ty">GenLocalDate</span>.DayOfQuadrum(map);
+<span class="ty">Season</span> season = <span class="ty">GenLocalDate</span>.Season(map);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>把 tick 數轉成可讀字串</b></div>
+<pre><span class="kw">string</span> s = <span class="nu">90000</span>.ToStringTicksToPeriod();  <span class="cm">// "1.5 天"</span>
+<span class="kw">string</span> ago = (now - past).ToStringTicksToDays();</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>用 IsHashIntervalTick 自動分散負載</strong>
+      <code>thing.IsHashIntervalTick(N)</code>（Thing 的擴充）會依物件 hash 錯開觸發幀，避免所有物件在同一 tick 一起跑造成卡頓。比手寫 <code>tick % N == 0</code> 更好。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- G. 存檔 (Scribe) -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="scribe">
+    <div class="section-title">G. 存檔 (Scribe 速查)</div>
+
+    <p class="recipe-desc">所有 <code>ExposeData()</code> / <code>PostExposeData()</code> 內都用 <code>Scribe_*</code>。同一段程式碼同時負責「存」與「讀」，框架依 <code>Scribe.mode</code> 決定方向。</p>
+
+    <table>
+      <tr><th>資料型別</th><th>呼叫</th></tr>
+      <tr><td>基本值 (int/float/bool/string/enum)</td><td><code>Scribe_Values.Look(ref x, "x", defaultVal);</code></td></tr>
+      <tr><td>指向已存在的 Thing/Pawn（存 ID）</td><td><code>Scribe_References.Look(ref pawn, "pawn");</code></td></tr>
+      <tr><td>擁有的子物件（深度序列化）</td><td><code>Scribe_Deep.Look(ref comp, "comp");</code></td></tr>
+      <tr><td>Def 參照</td><td><code>Scribe_Defs.Look(ref myDef, "myDef");</code></td></tr>
+      <tr><td>IntVec3 / 自訂 struct</td><td><code>Scribe_Values.Look(ref pos, "pos");</code></td></tr>
+      <tr><td>List&lt;基本值&gt;</td><td><code>Scribe_Collections.Look(ref list, "list", LookMode.Value);</code></td></tr>
+      <tr><td>List&lt;Thing 參照&gt;</td><td><code>Scribe_Collections.Look(ref things, "things", LookMode.Reference);</code></td></tr>
+      <tr><td>List&lt;深度物件&gt;</td><td><code>Scribe_Collections.Look(ref deeps, "deeps", LookMode.Deep);</code></td></tr>
+      <tr><td>Dictionary&lt;K,V&gt;</td><td><code>Scribe_Collections.Look(ref dict, "dict", LookMode.Value, LookMode.Value);</code></td></tr>
+    </table>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>標準 ExposeData 樣板</b></div>
+<pre><span class="kw">public override void</span> <span class="nm">ExposeData</span>() {
+    <span class="kw">base</span>.ExposeData();
+    <span class="ty">Scribe_Values</span>.Look(<span class="kw">ref</span> count, <span class="st">"count"</span>, <span class="nu">0</span>);
+    <span class="ty">Scribe_References</span>.Look(<span class="kw">ref</span> owner, <span class="st">"owner"</span>);
+}</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>讀檔後修補</b>（防 null、重建快取）</div>
+<pre><span class="kw">if</span> (<span class="ty">Scribe</span>.mode == <span class="ty">LoadSaveMode</span>.PostLoadInit) {
+    list ??= <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt;();
+    RebuildCache();
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>References vs Deep 不能搞錯</strong>
+      <code>Scribe_References</code> 用於「地圖/存檔已有的 Thing」（只存 loadID，讀檔後重連）；<code>Scribe_Deep</code> 用於「完全由你擁有的子物件」（連同欄位整包存）。把已 spawn 的 Thing 用 Deep 存會造成存檔損壞或物件重複。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- H. 反射捷徑 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="reflect">
+    <div class="section-title">H. 反射捷徑（Harmony AccessTools / Traverse）</div>
+
+    <p class="recipe-desc">需要存取私有成員時用 Harmony 的工具，比手刻 <code>BindingFlags</code> 簡潔。需 <code>using HarmonyLib;</code>。</p>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>快取一個私有欄位的 FieldInfo</b>（高效，建議靜態快取）</div>
+<pre><span class="kw">static readonly</span> <span class="ty">FieldInfo</span> f_jobs =
+    <span class="ty">AccessTools</span>.Field(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"jobs"</span>);
+<span class="cm">// 讀值</span>
+<span class="kw">var</span> jobs = (<span class="ty">Pawn_JobTracker</span>)f_jobs.GetValue(pawn);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>取私有方法並呼叫</b></div>
+<pre><span class="kw">var</span> m = <span class="ty">AccessTools</span>.Method(
+    <span class="kw">typeof</span>(<span class="ty">SomeClass</span>), <span class="st">"DoPrivate"</span>,
+    <span class="kw">new</span>[] { <span class="kw">typeof</span>(<span class="kw">int</span>) });
+m.Invoke(instance, <span class="kw">new object</span>[] { <span class="nu">42</span> });</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>Traverse 鏈式存取</b>（一次性、可讀性高）</div>
+<pre><span class="kw">int</span> val = <span class="ty">Traverse</span>.Create(obj)
+    .Field(<span class="st">"_inner"</span>)
+    .Property(<span class="st">"Count"</span>)
+    .GetValue&lt;<span class="kw">int</span>&gt;();</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>Traverse 寫私有欄位 / 呼叫私有方法</b></div>
+<pre><span class="ty">Traverse</span>.Create(pawn)
+    .Field(<span class="st">"mindState"</span>)
+    .SetValue(newMindState);
+<span class="ty">Traverse</span>.Create(obj)
+    .Method(<span class="st">"Recalc"</span>, args).GetValue();</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>Traverse 慢、AccessTools 快</strong>
+      <code>Traverse</code> 每次呼叫都做反射查找，適合冷路徑或一次性操作。tick 迴圈等熱路徑請改用快取的 <code>AccessTools.Field/Method</code>，或用 <code>AccessTools.FieldRefAccess&lt;T,F&gt;</code> 取得近乎原生速度的 getter/setter。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- I. 數學與隨機 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section anchor" id="math">
+    <div class="section-title">I. 數學與隨機</div>
+
+    <div class="cook2">
+      <div class="recipe">
+        <div class="recipe-desc"><b>隨機數值</b>（Rand，受存檔 seed 控制可重現）</div>
+<pre><span class="kw">int</span> i = <span class="ty">Rand</span>.Range(<span class="nu">1</span>, <span class="nu">10</span>);     <span class="cm">// [1,10) int</span>
+<span class="kw">int</span> ii = <span class="ty">Rand</span>.RangeInclusive(<span class="nu">1</span>, <span class="nu">6</span>); <span class="cm">// [1,6] 含上界</span>
+<span class="kw">float</span> f = <span class="ty">Rand</span>.Range(<span class="nu">0f</span>, <span class="nu">1f</span>);   <span class="cm">// [0,1] float</span></pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>機率判定與隨機挑選</b></div>
+<pre><span class="kw">if</span> (<span class="ty">Rand</span>.Chance(<span class="nu">0.3f</span>)) { <span class="cm">/* 30% 機率 */</span> }
+<span class="kw">var</span> pick = list.RandomElement();
+<span class="kw">var</span> w = list.RandomElementByWeight(x =&gt; x.weight);</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>IntVec3 四 / 八鄰格</b></div>
+<pre><span class="kw">foreach</span> (<span class="ty">IntVec3</span> adj <span class="kw">in</span> <span class="ty">GenAdj</span>.CardinalDirections)
+    { <span class="kw">var</span> c = cell + adj; }   <span class="cm">// 上下左右</span>
+<span class="cm">// 含對角的 8 格</span>
+<span class="kw">foreach</span> (<span class="ty">IntVec3</span> adj <span class="kw">in</span> <span class="ty">GenAdj</span>.AdjacentCells)
+    { <span class="kw">var</span> c = cell + adj; }</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>半徑內所有格（GenRadial）</b></div>
+<pre><span class="kw">foreach</span> (<span class="ty">IntVec3</span> c <span class="kw">in</span>
+    <span class="ty">GenRadial</span>.RadialCellsAround(center, <span class="nu">3.5f</span>, <span class="kw">true</span>))
+{
+    <span class="kw">if</span> (c.InBounds(map)) { <span class="cm">/* ... */</span> }
+}</pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>距離計算</b></div>
+<pre><span class="kw">float</span> d  = a.DistanceTo(b);          <span class="cm">// 歐氏距離</span>
+<span class="kw">int</span> d2  = a.DistanceToSquared(b);     <span class="cm">// 平方（比大小用，免開根）</span>
+<span class="kw">bool</span> near = a.InHorDistOf(b, <span class="nu">5f</span>);   <span class="cm">// 水平距離內</span></pre>
+      </div>
+
+      <div class="recipe">
+        <div class="recipe-desc"><b>數值夾擠 / 插值</b>（Unity Mathf + GenMath）</div>
+<pre><span class="kw">float</span> c = <span class="ty">Mathf</span>.Clamp(v, <span class="nu">0f</span>, <span class="nu">1f</span>);
+<span class="kw">float</span> l = <span class="ty">Mathf</span>.Lerp(a, b, t);
+<span class="kw">float</span> r = <span class="ty">GenMath</span>.RoundTo(v, <span class="nu">0.5f</span>);  <span class="cm">// 取最近 0.5 倍數</span></pre>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>需要可重現的隨機？</strong>
+      多人/驗證時用 <code>Rand.PushState(seed)</code> … <code>Rand.PopState()</code> 包住一段，確保同 seed 產生同結果且不污染全域隨機流。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · 實用程式碼速查 · 對應 RimWorld 1.5（Verse / RimWorld / Verse.AI / HarmonyLib）
+</footer>
+
+</body>
+</html>

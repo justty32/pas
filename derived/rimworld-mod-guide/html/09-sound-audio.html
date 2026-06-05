@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音效系統 — RimWorld Modding</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html" class="active">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>音效系統</h1>
+  <p>SoundDef 結構與 grains、C# 播放路徑（PlayOneShot / SoundStarter）、SoundInfo 與 SoundContext、持續音 Sustainer、UI 事件音掛載、音檔格式與資料夾結構，以及常見坑。</p>
+  <span class="badge">RimWorld 1.5 · Verse.Sound · FMOD-free 自製音訊層</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. 心智模型 ── -->
+  <div class="section">
+    <div class="section-title">1. 音效系統心智模型</div>
+
+    <p>
+      RimWorld 的音訊層不是 Unity 的 <code>AudioSource</code> 直接暴露給 modder，而是透過
+      <code>Verse.Sound</code> 命名空間下一整套以 <strong>Def 驅動</strong> 的封裝。
+      你幾乎不會碰到 <code>AudioClip</code>，而是宣告一個 <code>SoundDef</code>，再從 C# 以 def 為單位播放。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>SoundDef</h3>
+        <p>一個「音效事件」的定義。內含一或多個 <code>subSounds</code>，描述音量、pitch、3D/2D、空間衰減等。是 XML 與 C# 之間的唯一介面。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>OneShot vs Sustainer</h3>
+        <p>OneShot 是「打一下就結束」的瞬發音（槍聲、UI 點擊）。Sustainer 是「持續維持、需手動結束」的循環音（機器運轉、火焰）。兩者 API 不同。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>grain 隨機池</h3>
+        <p>每個 subSound 的 <code>grains</code> 是一組候選音檔。每次播放隨機抽一個，配合 pitch/volume range 達到「同一事件聲音不重複」的自然感。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>命名空間</strong>
+      核心型別都在 <code>Verse.Sound</code>：<code>SoundDef</code>、<code>SoundStarter</code>（擴充方法）、<code>SoundInfo</code>、<code>Sustainer</code>、<code>SubSoundDef</code>、<code>AudioGrain</code>。
+      <code>SoundDefOf</code> 在 <code>RimWorld</code> 命名空間，集中存放遊戲內建音效的快取參照。
+    </div>
+
+    <h3>層級關係</h3>
+<pre><span class="cm">SoundDef                  ← 一個音效事件（你宣告的單位）</span>
+<span class="cm"> └─ subSounds[]           ← 同時並行播放的子音（多數情況只有一個）</span>
+<span class="cm">     ├─ grains[]          ← 隨機抽選的音檔候選池</span>
+<span class="cm">     │   └─ AudioGrain_Clip   ← 指向單一 .wav/.ogg</span>
+<span class="cm">     │   └─ AudioGrain_Folder ← 指向整個資料夾（全部當候選）</span>
+<span class="cm">     ├─ volumeRange       ← 隨機音量範圍</span>
+<span class="cm">     ├─ pitchRange        ← 隨機音高範圍</span>
+<span class="cm">     └─ distRange / 3D 衰減參數</span></pre>
+  </div>
+
+  <!-- ── 2. SoundDef 結構 ── -->
+  <div class="section">
+    <div class="section-title">2. SoundDef 結構欄位</div>
+
+    <h3>SoundDef 頂層欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>defName</code></td><td>string</td><td>唯一識別名，C# 端以此參照</td></tr>
+      <tr><td><code>context</code></td><td>SoundContext</td><td><code>Any</code> / <code>MapOnly</code> / <code>MapOnly_AllowOnWorldRendered</code>，決定何種畫面狀態下可播放 <span class="tag tag-orange">易踩</span></td></tr>
+      <tr><td><code>maxSimultaneous</code></td><td>int</td><td>同一 def 同時最多並存幾個實例，超過會被丟棄（避免疊音爆音）</td></tr>
+      <tr><td><code>maxVoices</code></td><td>int</td><td>此 def 佔用的最大語音通道數</td></tr>
+      <tr><td><code>sustain</code></td><td>bool</td><td><code>true</code> 表示這是持續音（Sustainer），需手動 <code>End()</code></td></tr>
+      <tr><td><code>priorityMode</code></td><td>VoicePriorityMode</td><td>通道不足時的淘汰策略（<code>PrioritizeNewest</code> 等）</td></tr>
+      <tr><td><code>subSounds</code></td><td>List&lt;SubSoundDef&gt;</td><td>子音清單，核心內容都在這裡</td></tr>
+    </table>
+
+    <h3>SubSoundDef 欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>grains</code></td><td>List&lt;AudioGrain&gt;</td><td>候選音檔池，每次播放隨機抽一個 <span class="tag tag-green">必填</span></td></tr>
+      <tr><td><code>volumeRange</code></td><td>FloatRange</td><td>音量隨機範圍（0~100，內部映射為分貝感）</td></tr>
+      <tr><td><code>pitchRange</code></td><td>FloatRange</td><td>音高倍率隨機範圍（1 = 原速，&lt;1 較低沉，&gt;1 較尖）</td></tr>
+      <tr><td><code>distRange</code></td><td>FloatRange</td><td>3D 音的可聽距離（min 內全音量，max 外靜音）</td></tr>
+      <tr><td><code>repeatMode</code></td><td>RepeatSelectMode</td><td><code>NeverLastHalf</code> 等，避免連續抽到同一 grain</td></tr>
+      <tr><td><code>sustainLoop</code></td><td>bool</td><td>Sustainer 用：grain 是否循環</td></tr>
+      <tr><td><code>sustainAttack / sustainRelease</code></td><td>float</td><td>持續音的淡入 / 淡出秒數</td></tr>
+    </table>
+
+    <h3>AudioGrain 兩種型別</h3>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>AudioGrain_Clip</h3>
+        <p>指向單一音檔，路徑相對 <code>Sounds/</code>、<strong>不含副檔名</strong>。多個 <code>li Class="AudioGrain_Clip"</code> 並列即組成隨機池。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>AudioGrain_Folder</h3>
+        <p>指向一整個資料夾，夾內所有音檔自動成為候選池。新增變體只要丟檔案進資料夾，不必改 XML，維護成本最低。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. 完整 XML 範例 ── -->
+  <div class="section">
+    <div class="section-title">3. SoundDef 完整 XML 範例</div>
+
+    <h3>範例 A：瞬發武器音（多 grain 隨機池 + 3D 衰減）</h3>
+<pre>&lt;<span class="xml-tag">Defs</span>&gt;
+  &lt;<span class="xml-tag">SoundDef</span>&gt;
+    &lt;<span class="xml-tag">defName</span>&gt;MyMod_Shot_PlasmaRifle&lt;/<span class="xml-tag">defName</span>&gt;
+    &lt;<span class="xml-tag">context</span>&gt;MapOnly&lt;/<span class="xml-tag">context</span>&gt;
+    &lt;<span class="xml-tag">maxSimultaneous</span>&gt;3&lt;/<span class="xml-tag">maxSimultaneous</span>&gt;
+    &lt;<span class="xml-tag">subSounds</span>&gt;
+      &lt;<span class="xml-tag">li</span>&gt;
+        &lt;<span class="xml-tag">grains</span>&gt;
+          <span class="cm">&lt;!-- 三個變體組成隨機池，每次開火隨機挑一個 --&gt;</span>
+          &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Clip"</span>&gt;
+            &lt;<span class="xml-tag">clipPath</span>&gt;Weapons/PlasmaRifle/Shot_a&lt;/<span class="xml-tag">clipPath</span>&gt;
+          &lt;/<span class="xml-tag">li</span>&gt;
+          &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Clip"</span>&gt;
+            &lt;<span class="xml-tag">clipPath</span>&gt;Weapons/PlasmaRifle/Shot_b&lt;/<span class="xml-tag">clipPath</span>&gt;
+          &lt;/<span class="xml-tag">li</span>&gt;
+          &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Clip"</span>&gt;
+            &lt;<span class="xml-tag">clipPath</span>&gt;Weapons/PlasmaRifle/Shot_c&lt;/<span class="xml-tag">clipPath</span>&gt;
+          &lt;/<span class="xml-tag">li</span>&gt;
+        &lt;/<span class="xml-tag">grains</span>&gt;
+        <span class="cm">&lt;!-- 每次播放在此範圍內隨機 --&gt;</span>
+        &lt;<span class="xml-tag">volumeRange</span>&gt;38~46&lt;/<span class="xml-tag">volumeRange</span>&gt;
+        &lt;<span class="xml-tag">pitchRange</span>&gt;0.93~1.07&lt;/<span class="xml-tag">pitchRange</span>&gt;
+        <span class="cm">&lt;!-- 3D 空間音：1.5 格內全音量，30 格外聽不到 --&gt;</span>
+        &lt;<span class="xml-tag">distRange</span>&gt;1.5~30&lt;/<span class="xml-tag">distRange</span>&gt;
+        &lt;<span class="xml-tag">repeatMode</span>&gt;NeverLastHalf&lt;/<span class="xml-tag">repeatMode</span>&gt;
+      &lt;/<span class="xml-tag">li</span>&gt;
+    &lt;/<span class="xml-tag">subSounds</span>&gt;
+  &lt;/<span class="xml-tag">SoundDef</span>&gt;
+&lt;/<span class="xml-tag">Defs</span>&gt;</pre>
+
+    <h3>範例 B：用 AudioGrain_Folder 簡化變體管理</h3>
+<pre>&lt;<span class="xml-tag">SoundDef</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_Footstep_Metal&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">context</span>&gt;MapOnly&lt;/<span class="xml-tag">context</span>&gt;
+  &lt;<span class="xml-tag">subSounds</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;
+      &lt;<span class="xml-tag">grains</span>&gt;
+        <span class="cm">&lt;!-- 整個資料夾的所有檔都當候選，新增 .wav 不必改 XML --&gt;</span>
+        &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Folder"</span>&gt;
+          &lt;<span class="xml-tag">clipFolderPath</span>&gt;Footsteps/Metal&lt;/<span class="xml-tag">clipFolderPath</span>&gt;
+        &lt;/<span class="xml-tag">li</span>&gt;
+      &lt;/<span class="xml-tag">grains</span>&gt;
+      &lt;<span class="xml-tag">volumeRange</span>&gt;10~16&lt;/<span class="xml-tag">volumeRange</span>&gt;
+      &lt;<span class="xml-tag">pitchRange</span>&gt;0.9~1.1&lt;/<span class="xml-tag">pitchRange</span>&gt;
+      &lt;<span class="xml-tag">distRange</span>&gt;5~25&lt;/<span class="xml-tag">distRange</span>&gt;
+    &lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">subSounds</span>&gt;
+&lt;/<span class="xml-tag">SoundDef</span>&gt;</pre>
+
+    <h3>範例 C：持續音（建築運轉嗡嗡聲）</h3>
+<pre>&lt;<span class="xml-tag">SoundDef</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_Ambient_ReactorHum&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">context</span>&gt;MapOnly&lt;/<span class="xml-tag">context</span>&gt;
+  <span class="cm">&lt;!-- 關鍵：sustain = true，會回傳 Sustainer 需手動 End() --&gt;</span>
+  &lt;<span class="xml-tag">sustain</span>&gt;true&lt;/<span class="xml-tag">sustain</span>&gt;
+  &lt;<span class="xml-tag">subSounds</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;
+      &lt;<span class="xml-tag">grains</span>&gt;
+        &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Clip"</span>&gt;
+          &lt;<span class="xml-tag">clipPath</span>&gt;Buildings/Reactor/Hum_loop&lt;/<span class="xml-tag">clipPath</span>&gt;
+        &lt;/<span class="xml-tag">li</span>&gt;
+      &lt;/<span class="xml-tag">grains</span>&gt;
+      &lt;<span class="xml-tag">sustainLoop</span>&gt;true&lt;/<span class="xml-tag">sustainLoop</span>&gt;
+      &lt;<span class="xml-tag">sustainAttack</span>&gt;0.5&lt;/<span class="xml-tag">sustainAttack</span>&gt;   <span class="cm">&lt;!-- 淡入秒數 --&gt;</span>
+      &lt;<span class="xml-tag">sustainRelease</span>&gt;0.8&lt;/<span class="xml-tag">sustainRelease</span>&gt; <span class="cm">&lt;!-- 淡出秒數 --&gt;</span>
+      &lt;<span class="xml-tag">volumeRange</span>&gt;22~22&lt;/<span class="xml-tag">volumeRange</span>&gt;
+      &lt;<span class="xml-tag">pitchRange</span>&gt;1~1&lt;/<span class="xml-tag">pitchRange</span>&gt;
+      &lt;<span class="xml-tag">distRange</span>&gt;3~18&lt;/<span class="xml-tag">distRange</span>&gt;
+    &lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">subSounds</span>&gt;
+&lt;/<span class="xml-tag">SoundDef</span>&gt;</pre>
+
+    <div class="callout callout-tip">
+      <strong>FloatRange 寫法</strong>
+      <code>volumeRange</code>、<code>pitchRange</code>、<code>distRange</code> 都是 <code>FloatRange</code>，XML 用 <code>min~max</code>。
+      若不想隨機，把兩端寫成相同值（如 <code>1~1</code>）即可固定。
+    </div>
+  </div>
+
+  <!-- ── 4. C# 播放 ── -->
+  <div class="section">
+    <div class="section-title">4. 從 C# 播放音效</div>
+
+    <p>
+      取得 <code>SoundDef</code> 後，播放方式有三個層級的 API。最常用的是 <code>SoundStarter</code> 擴充方法，
+      它讓你能寫成 <code>def.PlayOneShot(info)</code> 的流暢語法。
+    </p>
+
+    <h3>取得 SoundDef 參照</h3>
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.Sound;
+<span class="kw">using</span> RimWorld;
+
+<span class="cm">// 方式一：內建音效用 SoundDefOf 快取（最快，編譯期檢查）</span>
+<span class="ty">SoundDefOf</span>.Click.<span class="nm">PlayOneShotOnCamera</span>();
+
+<span class="cm">// 方式二：自訂 def 用 DefDatabase 查（建議快取進靜態欄位）</span>
+<span class="ty">SoundDef</span> shotDef = <span class="ty">SoundDef</span>.<span class="nm">Named</span>(<span class="st">"MyMod_Shot_PlasmaRifle"</span>);
+
+<span class="cm">// 方式三：自己宣告 [DefOf] 類別（最推薦，見下）</span></pre>
+
+    <h3>用 [DefOf] 集中參照（推薦）</h3>
+<pre><span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyModSoundDefOf</span>
+{
+    <span class="cm">// 欄位名必須與 defName 完全一致</span>
+    <span class="kw">public static</span> <span class="ty">SoundDef</span> MyMod_Shot_PlasmaRifle;
+    <span class="kw">public static</span> <span class="ty">SoundDef</span> MyMod_Ambient_ReactorHum;
+
+    <span class="kw">static</span> <span class="nm">MyModSoundDefOf</span>()
+    {
+        <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitialized</span>(<span class="kw">typeof</span>(<span class="ty">MyModSoundDefOf</span>));
+    }
+}</pre>
+
+    <h3>三種播放入口</h3>
+    <table>
+      <tr><th>方法</th><th>定位來源</th><th>用途</th></tr>
+      <tr><td><code>def.PlayOneShot(SoundInfo)</code></td><td>SoundStarter 擴充</td><td>瞬發音，需傳 <code>SoundInfo</code> 指定 2D/3D 與來源 <span class="tag tag-green">主力</span></td></tr>
+      <tr><td><code>def.PlayOneShotOnCamera(Map map=null)</code></td><td>SoundStarter 擴充</td><td>固定在相機位置播放的 2D 音（UI、全域提示），不隨地圖位置衰減</td></tr>
+      <tr><td><code>def.TrySpawnSustainer(SoundInfo)</code></td><td>SoundStarter 擴充</td><td>啟動持續音，回傳 <code>Sustainer</code>，需自己保管並 <code>End()</code></td></tr>
+    </table>
+
+    <h3>瞬發音：在地圖某座標播放（3D）</h3>
+<pre><span class="cm">// 在某 Thing 的位置播放開火音，會隨鏡頭距離自動衰減 / 立體聲定位</span>
+<span class="ty">Thing</span> shooter = ...;
+
+<span class="cm">// SoundInfo.InMap(target, context) 產生帶地圖座標的資訊</span>
+<span class="ty">MyModSoundDefOf</span>.MyMod_Shot_PlasmaRifle.<span class="nm">PlayOneShot</span>(
+    <span class="ty">SoundInfo</span>.<span class="nm">InMap</span>(<span class="kw">new</span> <span class="ty">TargetInfo</span>(shooter.Position, shooter.Map))
+);</pre>
+
+    <h3>瞬發音：UI / 全域提示（2D，相機位置）</h3>
+<pre><span class="cm">// 不關心地圖座標，直接在相機處播 2D 音</span>
+<span class="ty">SoundDefOf</span>.Tick_High.<span class="nm">PlayOneShotOnCamera</span>();
+
+<span class="cm">// 等價於 PlayOneShot(SoundInfo.OnCamera())</span>
+<span class="ty">MyModSoundDefOf</span>.MyMod_Shot_PlasmaRifle.<span class="nm">PlayOneShot</span>(<span class="ty">SoundInfo</span>.<span class="nm">OnCamera</span>());</pre>
+
+    <div class="callout callout-warn">
+      <strong>3D 音必須有 Map 來源，否則無聲</strong>
+      若 SoundDef 的 <code>context</code> 是 <code>MapOnly</code> 卻用 <code>OnCamera()</code> 播，或在沒有有效 <code>Map</code> 的情況下播 3D 音，
+      遊戲會默默丟棄這次播放、不報錯。除錯時先確認 context 與 SoundInfo 的來源類型相符。
+    </div>
+  </div>
+
+  <!-- ── 5. SoundInfo / SoundContext ── -->
+  <div class="section">
+    <div class="section-title">5. SoundInfo 與 SoundContext</div>
+
+    <p>
+      <code>SoundInfo</code> 是「這一次播放」的執行期上下文：它告訴系統聲音來自相機還是地圖某點、是否與某個維護中的循環關聯、以及外部傳入的動態參數。
+    </p>
+
+    <h3>SoundInfo 工廠方法</h3>
+    <table>
+      <tr><th>建構方式</th><th>產生的音</th><th>典型用途</th></tr>
+      <tr><td><code>SoundInfo.OnCamera(MaintenanceType=None)</code></td><td>2D，相機位置</td><td>UI、全域事件提示音</td></tr>
+      <tr><td><code>SoundInfo.InMap(TargetInfo, MaintenanceType=None)</code></td><td>3D，地圖座標</td><td>武器、爆炸、腳步、建築音</td></tr>
+    </table>
+
+    <h3>SoundContext（定義在 SoundDef 上的播放條件）</h3>
+    <table>
+      <tr><th>值</th><th>含意</th></tr>
+      <tr><td><code>Any</code></td><td>任何畫面狀態都可播（含主選單、世界地圖）</td></tr>
+      <tr><td><code>MapOnly</code></td><td>只在地圖檢視時可播；切到世界地圖或主選單即靜音 <span class="tag tag-green">最常用</span></td></tr>
+      <tr><td><code>MapOnly_AllowOnWorldRendered</code></td><td>地圖音，但世界地圖疊加在地圖上時仍允許</td></tr>
+    </table>
+
+    <h3>傳入動態參數（驅動 SoundParameter）</h3>
+    <p>持續音常需要依遊戲狀態即時改變音量或 pitch（例如機器轉速、火勢大小）。透過 <code>SoundParams</code> 把外部數值餵給 SoundDef 中設定的 mapping curve。</p>
+<pre><span class="ty">SoundInfo</span> info = <span class="ty">SoundInfo</span>.<span class="nm">InMap</span>(
+    <span class="kw">new</span> <span class="ty">TargetInfo</span>(building.Position, building.Map),
+    <span class="ty">MaintenanceType</span>.PerTick   <span class="cm">// 持續音須宣告維護方式</span>
+);
+<span class="cm">// 設定一個外部參數，名稱需與 SoundDef 內 mapping 的 paramName 對應</span>
+info.<span class="nm">SetParameter</span>(<span class="st">"LoadFactor"</span>, building.CurrentLoad);  <span class="cm">// 0~1</span></pre>
+
+    <div class="callout callout-info">
+      <strong>MaintenanceType</strong>
+      OneShot 用 <code>None</code>。Sustainer 必須宣告維護方式：<code>PerTick</code>（每 tick 呼叫 <code>Maintain()</code>）或
+      <code>PerFrame</code>。漏維護會讓持續音在數十 tick 後被系統判定「無人看管」而自動淡出停止。
+    </div>
+  </div>
+
+  <!-- ── 6. 音量 / pitch / 隨機化 ── -->
+  <div class="section">
+    <div class="section-title">6. 音量、Pitch 與隨機化</div>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>volumeRange</h3>
+        <p>數值約落在 0~100 區間（非 0~1）。每次播放在 min~max 間隨機。多個 subSound 同時播會疊加，注意總音量別爆。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>pitchRange</h3>
+        <p>倍率制：<code>1</code> = 原速原調。<code>0.9~1.1</code> 是自然抖動的甜蜜點；範圍過大會明顯失真、聽起來像 bug。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>repeatMode</h3>
+        <p>控制 grain 抽選策略。<code>NeverLastHalf</code> 避免最近播過的一半進入候選，連續觸發時不會聽到同一段。</p>
+      </div>
+    </div>
+
+    <h3>用 grain + 三段隨機達到「自然不重複」</h3>
+    <p>真實感來自三個維度同時隨機：<strong>抽哪個 grain</strong>（音色變體）、<strong>volumeRange</strong>（強弱）、<strong>pitchRange</strong>（音高）。三者組合讓有限的音檔聽起來像無限變化。</p>
+
+    <div class="callout callout-tip">
+      <strong>節省音檔的實戰配方</strong>
+      準備 3~5 個短變體 grain，加上 <code>pitchRange 0.92~1.08</code> 與 <code>volumeRange</code> 約 ±15%，
+      已足以讓重複觸發（如連射、群體腳步）不出戲，遠比準備 20 個音檔划算。
+    </div>
+  </div>
+
+  <!-- ── 7. eventNames：UI 事件音掛載 ── -->
+  <div class="section">
+    <div class="section-title">7. eventNames — UI 事件音掛載</div>
+
+    <p>
+      RimWorld 允許把 SoundDef 直接「掛」到某些內建 UI 事件上，無需寫 C#。
+      在 SoundDef 加 <code>&lt;eventNames&gt;</code>，遊戲在對應事件發生時自動播放。
+    </p>
+
+<pre>&lt;<span class="xml-tag">SoundDef</span>&gt;
+  &lt;<span class="xml-tag">defName</span>&gt;MyMod_UI_TabOpen&lt;/<span class="xml-tag">defName</span>&gt;
+  &lt;<span class="xml-tag">context</span>&gt;Any&lt;/<span class="xml-tag">context</span>&gt;   <span class="cm">&lt;!-- UI 音通常用 Any --&gt;</span>
+  &lt;<span class="xml-tag">eventNames</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;TabOpen&lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">eventNames</span>&gt;
+  &lt;<span class="xml-tag">subSounds</span>&gt;
+    &lt;<span class="xml-tag">li</span>&gt;
+      &lt;<span class="xml-tag">grains</span>&gt;
+        &lt;<span class="xml-tag">li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"AudioGrain_Clip"</span>&gt;
+          &lt;<span class="xml-tag">clipPath</span>&gt;UI/TabOpen&lt;/<span class="xml-tag">clipPath</span>&gt;
+        &lt;/<span class="xml-tag">li</span>&gt;
+      &lt;/<span class="xml-tag">grains</span>&gt;
+      &lt;<span class="xml-tag">volumeRange</span>&gt;25~25&lt;/<span class="xml-tag">volumeRange</span>&gt;
+      &lt;<span class="xml-tag">onCamera</span>&gt;true&lt;/<span class="xml-tag">onCamera</span>&gt;  <span class="cm">&lt;!-- 2D 播放 --&gt;</span>
+    &lt;/<span class="xml-tag">li</span>&gt;
+  &lt;/<span class="xml-tag">subSounds</span>&gt;
+&lt;/<span class="xml-tag">SoundDef</span>&gt;</pre>
+
+    <div class="callout callout-warn">
+      <strong>eventNames 僅綁定遊戲已知的內建事件</strong>
+      你不能憑空發明事件名讓它生效；只有遊戲在程式碼中 <code>fire</code> 的事件（如分頁開關、按鈕類別音）才會被掛載觸發。
+      自訂互動仍須在你的 C# 裡顯式呼叫 <code>PlayOneShotOnCamera()</code>。
+    </div>
+  </div>
+
+  <!-- ── 8. SustainerManager / 持續音 ── -->
+  <div class="section">
+    <div class="section-title">8. SustainerManager 與持續音</div>
+
+    <p>
+      持續音（建築運轉、火焰、風扇）由 <code>Sustainer</code> 物件代表，全域由 <code>Find.SoundRoot.sustainerManager</code> 管理。
+      它的生命週期完全由你掌控：<strong>啟動 → 每 tick 維護 → 條件不滿足時 End()</strong>。漏掉維護或漏掉結束都是常見 bug。
+    </p>
+
+    <h3>標準生命週期（建築運轉音）</h3>
+<pre><span class="kw">public class</span> <span class="ty">Building_NoisyReactor</span> : <span class="ty">Building</span>
+{
+    <span class="kw">private</span> <span class="ty">Sustainer</span> _hum;
+
+    <span class="kw">public override void</span> <span class="nm">Tick</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">Tick</span>();
+
+        <span class="kw">bool</span> shouldRun = this.<span class="nm">IsHashIntervalTick</span>(<span class="nu">1</span>) &amp;&amp; <span class="nm">PowerOn</span>;
+
+        <span class="kw">if</span> (shouldRun)
+        {
+            <span class="cm">// 尚未啟動 → 建立 Sustainer</span>
+            <span class="kw">if</span> (_hum == <span class="kw">null</span> || _hum.Ended)
+            {
+                <span class="ty">SoundInfo</span> info = <span class="ty">SoundInfo</span>.<span class="nm">InMap</span>(
+                    <span class="kw">new</span> <span class="ty">TargetInfo</span>(<span class="ty">Position</span>, <span class="ty">Map</span>),
+                    <span class="ty">MaintenanceType</span>.PerTick);
+                _hum = <span class="ty">MyModSoundDefOf</span>.MyMod_Ambient_ReactorHum
+                          .<span class="nm">TrySpawnSustainer</span>(info);
+            }
+            <span class="kw">else</span>
+            {
+                <span class="cm">// 已啟動 → 每 tick 維護，否則會被自動回收</span>
+                _hum.<span class="nm">Maintain</span>();
+            }
+        }
+        <span class="kw">else</span> <span class="kw">if</span> (_hum != <span class="kw">null</span> &amp;&amp; !_hum.Ended)
+        {
+            <span class="cm">// 條件不再滿足 → 淡出結束（觸發 sustainRelease）</span>
+            _hum.<span class="nm">End</span>();
+            _hum = <span class="kw">null</span>;
+        }
+    }
+
+    <span class="kw">public override void</span> <span class="nm">DeSpawn</span>(<span class="ty">DestroyMode</span> mode = <span class="ty">DestroyMode</span>.Vanish)
+    {
+        <span class="cm">// 重要：建築移除 / 拆除時務必收尾，避免殘留無主循環音</span>
+        _hum?.<span class="nm">End</span>();
+        _hum = <span class="kw">null</span>;
+        <span class="kw">base</span>.<span class="nm">DeSpawn</span>(mode);
+    }
+}</pre>
+
+    <h3>Sustainer 關鍵成員</h3>
+    <table>
+      <tr><th>成員</th><th>說明</th></tr>
+      <tr><td><code>Maintain()</code></td><td>每 tick / frame 呼叫一次，告訴系統「我還活著」</td></tr>
+      <tr><td><code>End()</code></td><td>結束循環，套用 <code>sustainRelease</code> 淡出</td></tr>
+      <tr><td><code>Ended</code></td><td>bool，是否已結束（重啟前先檢查）</td></tr>
+      <tr><td><code>info.SetParameter(name, val)</code></td><td>透過保存的 SoundInfo 即時改參數（轉速、火勢）</td></tr>
+    </table>
+
+    <div class="callout callout-danger">
+      <strong>持續音洩漏是 RimWorld mod 最典型的音訊 bug</strong>
+      只要建築被拆、被埋、被儲存載入後實例換新，舊 Sustainer 若沒 <code>End()</code> 就會變成「無主循環音」，
+      整張地圖殘留嗡嗡聲且永遠不消失。守則：<strong>每個 TrySpawnSustainer 都要有對應的 End()，且 DeSpawn/Destroy 一定收尾</strong>。
+      存檔不會保存 Sustainer，載入後須由 Tick 邏輯重新建立。
+    </div>
+  </div>
+
+  <!-- ── 9. 音檔格式與資料夾 ── -->
+  <div class="section">
+    <div class="section-title">9. 音檔格式與 Sounds/ 資料夾結構</div>
+
+    <h3>支援格式</h3>
+    <table>
+      <tr><th>格式</th><th>適用</th><th>建議</th></tr>
+      <tr><td><code>.wav</code></td><td>短瞬發音（槍聲、UI、撞擊）</td><td>無壓縮、低延遲，瞬發音首選 <span class="tag tag-green">推薦</span></td></tr>
+      <tr><td><code>.ogg</code></td><td>較長 / 循環音（環境、持續音、音樂）</td><td>壓縮率好、品質佳，長音首選 <span class="tag tag-green">推薦</span></td></tr>
+      <tr><td><code>.mp3</code></td><td>可用但不建議</td><td>解碼有延遲、循環接點易有間隙 <span class="tag tag-red">避免</span></td></tr>
+    </table>
+
+    <h3>資料夾結構（相對 Mod 根目錄）</h3>
+<pre>MyMod/
+├── About/
+├── Defs/
+│   └── SoundDefs/
+│       └── Sounds_Weapons.xml      <span class="cm"># SoundDef 定義</span>
+├── Sounds/                          <span class="cm"># 所有音檔根目錄</span>
+│   ├── Weapons/
+│   │   └── PlasmaRifle/
+│   │       ├── Shot_a.wav
+│   │       ├── Shot_b.wav
+│   │       └── Shot_c.wav
+│   ├── Footsteps/
+│   │   └── Metal/                   <span class="cm"># AudioGrain_Folder 指向這裡</span>
+│   │       ├── step1.wav
+│   │       └── step2.wav
+│   ├── Buildings/
+│   │   └── Reactor/
+│   │       └── Hum_loop.ogg
+│   └── UI/
+│       └── TabOpen.wav
+└── Assemblies/</pre>
+
+    <div class="callout callout-info">
+      <strong>clipPath 規則</strong>
+      <code>clipPath</code> 一律相對於 <code>Sounds/</code>、<strong>不含副檔名</strong>。
+      例如檔案在 <code>Sounds/Weapons/PlasmaRifle/Shot_a.wav</code>，clipPath 寫 <code>Weapons/PlasmaRifle/Shot_a</code>。
+      路徑分隔一律用 <code>/</code>，大小寫在某些平台敏感，建議與實體檔名完全一致。
+    </div>
+  </div>
+
+  <!-- ── 10. 常見坑 ── -->
+  <div class="section">
+    <div class="section-title">10. 常見坑與排查清單</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>音檔太大 / 過長</h3>
+        <p>瞬發音用未壓縮 <code>.wav</code> 沒問題，但若放入數 MB 的長 wav 當瞬發音，會吃記憶體又拖載入。長音請改 <code>.ogg</code>，並裁掉前後靜音。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>3D vs 2D 弄反</h3>
+        <p>UI 音用了 3D（MapOnly + InMap）會隨鏡頭位置忽大忽小甚至靜音；環境音用了 OnCamera 則失去空間定位。確認 context 與 SoundInfo 來源一致。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>SoundDef 沒被載入</h3>
+        <p>XML 放錯資料夾、defName 拼錯、<code>Class="AudioGrain_Clip"</code> 漏寫，都會讓 def 無聲。開 dev mode 看啟動 log 是否有 SoundDef 解析錯誤。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>clipPath 含副檔名</h3>
+        <p>寫成 <code>Weapons/Shot_a.wav</code> 會找不到檔。一律去掉 <code>.wav/.ogg</code>。這是最高頻的「明明有檔卻沒聲」原因。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>Sustainer 沒 End</h3>
+        <p>持續音建立後忘了在條件結束或 DeSpawn 時 <code>End()</code>，導致無主循環音殘留。見上節 danger callout。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>maxSimultaneous 太低</h3>
+        <p>連射武器若 <code>maxSimultaneous</code> 設 1，第二發以後會被丟棄聽起來「吃音」。瞬發密集音建議設 3~5。</p>
+      </div>
+    </div>
+
+    <h3>無聲問題排查步驟</h3>
+    <div class="steps">
+      <ol>
+        <li>開 dev mode，看遊戲啟動 log 是否有此 SoundDef 的解析錯誤或 grain 找不到警告。</li>
+        <li>確認 <code>clipPath</code> 不含副檔名、相對 <code>Sounds/</code> 正確、大小寫一致。</li>
+        <li>確認 <code>context</code> 與播放時的 SoundInfo 來源相符（MapOnly ↔ InMap，Any/UI ↔ OnCamera）。</li>
+        <li>確認播放當下有有效 <code>Map</code>（3D 音）且鏡頭在 <code>distRange</code> 內。</li>
+        <li>用 <code>SoundDefOf.Click.PlayOneShotOnCamera()</code> 確認音訊輸出本身正常，排除系統 / 音量問題。</li>
+        <li>持續音檢查是否每 tick <code>Maintain()</code>、是否 <code>Ended</code> 後未重建。</li>
+      </ol>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>快速自測一行</strong>
+      在任意可執行的 dev 動作裡呼叫 <code>SoundDef.Named("你的defName").PlayOneShotOnCamera();</code>
+      若這樣能出聲，問題多半出在原本的 SoundInfo / context；若仍無聲，問題在 def 本身或音檔路徑。
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 音效系統 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

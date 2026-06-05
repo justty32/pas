@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任務系統 (Quests) — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+  .api-table td:first-child { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html" class="active">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>任務系統 (Quests)</h1>
+  <p>由 XML 腳本驅動、以 signal 串接的狀態機——RimWorld 1.x 動態事件的核心引擎。</p>
+  <span class="badge">QuestScriptDef · QuestGen · Slate · RimWorld 1.5</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#concept">QuestScriptDef 與 quest 腳本系統</a></li>
+      <li><a href="#questnode">QuestNode — 腳本節點樹</a></li>
+      <li><a href="#questpart">QuestPart — 任務的執行單元</a></li>
+      <li><a href="#slate">Slate 與 SlateRef — 變數傳遞</a></li>
+      <li><a href="#generate">從 C# 生成 quest</a></li>
+      <li><a href="#questgen">QuestGen 與生成流程</a></li>
+      <li><a href="#rewards">獎勵系統</a></li>
+      <li><a href="#customquestpart">自訂 QuestPart</a></li>
+      <li><a href="#signal">Signal 驅動的狀態機</a></li>
+      <li><a href="#pitfalls">常見坑</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念總覽 -->
+  <div class="section">
+    <div class="section-title">心智模型：兩個世界</div>
+    <p>
+      RimWorld 的任務系統有兩層需要清楚分離。<strong>生成期 (generation-time)</strong> 由 <code>QuestScriptDef</code> 的
+      <code>QuestNode</code> 樹負責——它讀取一個叫 <code>Slate</code> 的變數袋，產出一個具體的 <code>Quest</code> 實例，
+      實例由一群 <code>QuestPart</code> 組成。<strong>執行期 (runtime)</strong> 則完全由 <code>QuestPart</code> 接收
+      <code>signal</code>（字串訊號）來推進——QuestNode 此時早已退場。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>QuestNode（生成期）</h3>
+        <p>XML 腳本的節點，決定「這次任務要長什麼樣」。執行 <code>RunInt(Slate)</code> 往 Quest 塞入 QuestPart。產出後即丟棄。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>QuestPart（執行期）</h3>
+        <p>序列化進存檔的執行單元。透過 <code>Notify_QuestSignalReceived</code> 對 signal 反應，是任務真正的狀態機。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Slate（橋樑）</h3>
+        <p>生成期的變數容器（<code>Dictionary&lt;string, object&gt;</code> 的包裝）。QuestNode 之間靠它傳值，生成結束後不存在。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>關鍵分界</strong>
+      Slate 與 QuestNode 是 <em>暫時的</em>，不進存檔；Quest 與 QuestPart 是 <em>持久的</em>，會被 <code>IExposable</code>
+      序列化。任何要在任務存活期間使用的資料，必須在生成期從 Slate「烘焙」進 QuestPart 的欄位。
+    </div>
+  </div>
+
+  <!-- ═══ 1. QuestScriptDef ═══ -->
+  <div class="section" id="concept">
+    <div class="section-title">1 · QuestScriptDef 與 quest 腳本系統</div>
+
+    <p>
+      <code>QuestScriptDef</code>（繼承自 <code>Def</code>）是一個任務的「模板」。它的核心是一棵 <code>&lt;root&gt;</code> 節點樹，
+      外加 <code>QuestGen</code> 相關的篩選與權重欄位。RimWorld 的 <code>QuestManager</code> 與 <code>Storyteller</code>
+      會週期性地挑選符合條件的 QuestScriptDef 來生成任務。
+    </p>
+
+    <h3>最小可用的 QuestScriptDef XML</h3>
+    <pre><span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;QuestScriptDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_RescueColonist<span class="xml-tag">&lt;/defName&gt;</span>
+
+    <span class="cm">&lt;!-- 是否能被 storyteller 自然觸發（false = 只能由 incident/C# 觸發） --&gt;</span>
+    <span class="xml-tag">&lt;rootSelectionWeight&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/rootSelectionWeight&gt;</span>
+    <span class="xml-tag">&lt;rootMinPoints&gt;</span><span class="xml-val">400</span><span class="xml-tag">&lt;/rootMinPoints&gt;</span>
+
+    <span class="cm">&lt;!-- 任務金額（points）→ 獎勵價值的曲線 --&gt;</span>
+    <span class="xml-tag">&lt;rootMinProgressScore&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/rootMinProgressScore&gt;</span>
+
+    <span class="cm">&lt;!-- root：整個任務的節點樹入口 --&gt;</span>
+    <span class="xml-tag">&lt;root</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_Sequence"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;nodes&gt;</span>
+
+        <span class="cm">&lt;!-- 1. 取得一個目標據點 --&gt;</span>
+        <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_GetSiteTile"</span><span class="xml-tag">&gt;</span>
+          <span class="xml-tag">&lt;storeAs&gt;</span>siteTile<span class="xml-tag">&lt;/storeAs&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+
+        <span class="cm">&lt;!-- 2. 設定任務說明文字 --&gt;</span>
+        <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_SetQuestNameAndDescription"</span><span class="xml-tag">&gt;</span>
+          <span class="xml-tag">&lt;name&gt;</span>救援殖民者<span class="xml-tag">&lt;/name&gt;</span>
+          <span class="xml-tag">&lt;description&gt;</span>有人受困於 [siteTile_factionName]…<span class="xml-tag">&lt;/description&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+
+      <span class="xml-tag">&lt;/nodes&gt;</span>
+    <span class="xml-tag">&lt;/root&gt;</span>
+  <span class="xml-tag">&lt;/QuestScriptDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>學習捷徑：抄官方腳本</strong>
+      RimWorld 本體把所有任務腳本放在
+      <code>Data/Core/Defs/QuestScriptDefs/</code> 與
+      <code>Data/Royalty|Ideology|Biotech/Defs/QuestScriptDefs/</code>。
+      <code>OpportunitySite_ItemStash.xml</code> 與 <code>Hospitality_*</code> 是極佳的範本。
+      用 dnSpy 反編譯 <code>RimWorld</code> assembly 對照各 <code>QuestNode_*</code> 的實作。
+    </div>
+  </div>
+
+  <!-- ═══ 2. QuestNode ═══ -->
+  <div class="section" id="questnode">
+    <div class="section-title">2 · QuestNode — 腳本節點樹</div>
+
+    <p>
+      <code>QuestNode</code> 是抽象基底，每個節點代表生成期的一個動作。核心契約是兩個方法：
+      <code>TestRunInt(Slate)</code>（試跑，回傳 bool 判斷此腳本在當前條件下能否生成）與
+      <code>RunInt(Slate)</code>（實跑，真正對 Quest 塞入 QuestPart 或對 Slate 寫值）。
+    </p>
+
+    <pre><span class="cm">// RimWorld 內部的 QuestNode 抽象（簡化示意）</span>
+<span class="kw">public abstract class</span> <span class="ty">QuestNode</span>
+{
+    <span class="cm">// 試跑：判斷能否生成（不可有副作用，但可寫 Slate 的試算值）</span>
+    <span class="kw">protected abstract bool</span> <span class="nm">TestRunInt</span>(<span class="ty">Slate</span> slate);
+
+    <span class="cm">// 實跑：真正執行生成邏輯</span>
+    <span class="kw">protected abstract void</span> <span class="nm">RunInt</span>();
+
+    <span class="cm">// 對外入口（內部會設定 QuestGen.slate 後呼叫上面兩個）</span>
+    <span class="kw">public bool</span> <span class="nm">TestRun</span>(<span class="ty">Slate</span> slate) { <span class="cm">/* ... */</span> }
+    <span class="kw">public void</span> <span class="nm">Run</span>() { <span class="cm">/* ... */</span> }
+}</pre>
+
+    <h3>三類常見節點</h3>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>QuestNode_Sequence</h3>
+        <p>容器節點。依序執行 <code>&lt;nodes&gt;</code> 內的子節點。<strong>任一子節點 TestRun 失敗，整個序列失敗。</strong></p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>QuestNode_Root_*</h3>
+        <p><code>root</code> 通常是 Sequence，但官方常用 <code>QuestNode_Root_*</code> 這類專屬根節點封裝一整套生成邏輯（如 <code>QuestNode_Root_ItemStash</code>）。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>條件節點</h3>
+        <p><code>QuestNode_Chance</code>、<code>QuestNode_RandomNode</code>、<code>QuestNode_If</code>、<code>QuestNode_GetFaction</code> 等，控制分支與篩選。</p>
+      </div>
+    </div>
+
+    <h3>條件分支範例：QuestNode_If 與 QuestNode_Chance</h3>
+    <pre><span class="xml-tag">&lt;root</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_Sequence"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;nodes&gt;</span>
+
+    <span class="cm">&lt;!-- 取一個敵對派系，存到 Slate 的 enemyFaction --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_GetFaction"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;storeAs&gt;</span>enemyFaction<span class="xml-tag">&lt;/storeAs&gt;</span>
+      <span class="xml-tag">&lt;allowEnemy&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/allowEnemy&gt;</span>
+      <span class="xml-tag">&lt;allowAlly&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/allowAlly&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+
+    <span class="cm">&lt;!-- 50% 機率加碼一個額外的威脅 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_Chance"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;chance&gt;</span><span class="xml-val">0.5</span><span class="xml-tag">&lt;/chance&gt;</span>
+      <span class="xml-tag">&lt;node</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_Sequence"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;nodes&gt;</span>
+          <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_Raid"</span><span class="xml-tag">&gt;</span>
+            <span class="xml-tag">&lt;faction&gt;</span>$enemyFaction<span class="xml-tag">&lt;/faction&gt;</span>
+            <span class="xml-tag">&lt;points&gt;</span>$points<span class="xml-tag">&lt;/points&gt;</span>
+          <span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/nodes&gt;</span>
+      <span class="xml-tag">&lt;/node&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+
+  <span class="xml-tag">&lt;/nodes&gt;</span>
+<span class="xml-tag">&lt;/root&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong><code>$變數</code> vs <code>[變數]</code></strong>
+      在 XML 中，<code>$slateName</code> 是把 Slate 變數整顆物件注入欄位（SlateRef 解析，見第 4 節）；
+      <code>[slateName]</code> 是描述文字裡的字串內插（會呼叫 <code>ToString</code> / grammar resolver）。兩者用途不同，別混用。
+    </div>
+  </div>
+
+  <!-- ═══ 3. QuestPart ═══ -->
+  <div class="section" id="questpart">
+    <div class="section-title">3 · QuestPart — 任務的執行單元</div>
+
+    <p>
+      <code>QuestPart</code> 是任務在執行期的最小單位，會被序列化進存檔。一個 Quest 就是
+      <code>List&lt;QuestPart&gt;</code>。生成期由 QuestNode 把 QuestPart <code>Add</code> 到 Quest 上；
+      執行期所有 QuestPart 都會收到任務廣播的每一個 signal。
+    </p>
+
+    <h3>QuestPart 基底重點成員</h3>
+    <table class="api-table">
+      <tr><th>成員</th><th>說明</th></tr>
+      <tr><td>quest</td><td>反向引用所屬的 <code>Quest</code></td></tr>
+      <tr><td>InSignal*</td><td>觸發此 part 行動的 signal（如 <code>inSignal</code>）</td></tr>
+      <tr><td>Notify_QuestSignalReceived(Signal)</td><td><strong>核心</strong>：收到 signal 時被呼叫，是行為入口</td></tr>
+      <tr><td>QuestPartStateChanged / Enable / Disable</td><td>part 的啟用狀態管理</td></tr>
+      <tr><td>ExposeData()</td><td><code>IExposable</code>：序列化自己的欄位</td></tr>
+      <tr><td>QuestObjectsToTexts / questLookTargets</td><td>UI 顯示用的相關物件與描述</td></tr>
+    </table>
+
+    <h3>三個必懂的內建 QuestPart</h3>
+    <div class="g3">
+      <div class="card card-accent-orange">
+        <h3>QuestPart_Choice</h3>
+        <p>玩家在任務接受時的「選項」。每個 choice 帶一組獎勵 (<code>Reward</code>)，玩家選一個。內含 <code>QuestPart_Choice.Choice</code> 子物件。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>QuestPart_GiveRewards</h3>
+        <p>收到指定 signal 時實際發放獎勵。底層委派給 <code>RewardsGenerator</code> 產出的 <code>Reward</code> 清單。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>QuestPart_*Signal</h3>
+        <p><code>QuestPart_PassOutInterval</code>、<code>QuestPart_Filter</code>、<code>QuestPart_Delay</code> 等——signal 的轉接、過濾與計時器。</p>
+      </div>
+    </div>
+
+    <h3>QuestPart 的生命週期（執行期）</h3>
+    <pre><span class="cm">// 概念示意：Quest 廣播 signal 給所有 part</span>
+<span class="kw">public class</span> <span class="ty">Quest</span> : <span class="ty">IExposable</span>
+{
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">QuestPart</span>&gt; parts = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">QuestPart</span>&gt;();
+
+    <span class="kw">public void</span> <span class="nm">Notify_SignalReceived</span>(<span class="ty">Signal</span> signal)
+    {
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; parts.Count; i++)
+        {
+            <span class="kw">if</span> (parts[i].<span class="nm">State</span> == <span class="ty">QuestPartState</span>.Enabled)
+                parts[i].<span class="nm">Notify_QuestSignalReceived</span>(signal);
+        }
+    }
+}</pre>
+  </div>
+
+  <!-- ═══ 4. Slate ═══ -->
+  <div class="section" id="slate">
+    <div class="section-title">4 · Slate 與 SlateRef — 變數傳遞</div>
+
+    <p>
+      <code>Slate</code> 是生成期的鍵值容器（內部是 <code>Dictionary&lt;string, object&gt;</code>）。
+      QuestNode 之間透過 Slate 共享資料：上游節點 <code>Set("siteTile", tile)</code>，下游節點 <code>Get&lt;int&gt;("siteTile")</code>。
+      呼叫方在生成前通常會預先塞入 <code>points</code>、<code>map</code> 等共同變數。
+    </p>
+
+    <h3>Slate 常用 API</h3>
+    <pre><span class="cm">// 寫入</span>
+slate.<span class="nm">Set</span>(<span class="st">"enemyFaction"</span>, faction);
+slate.<span class="nm">Set</span>(<span class="st">"points"</span>, <span class="nu">1500f</span>);
+
+<span class="cm">// 讀取（強型別；找不到回 default 或丟例外，看多載）</span>
+<span class="ty">Faction</span> f      = slate.<span class="nm">Get</span>&lt;<span class="ty">Faction</span>&gt;(<span class="st">"enemyFaction"</span>);
+<span class="kw">float</span>   points  = slate.<span class="nm">Get</span>&lt;<span class="kw">float</span>&gt;(<span class="st">"points"</span>, <span class="nu">0f</span>);   <span class="cm">// 第二參數為預設值</span>
+
+<span class="cm">// 存在性檢查（TestRun 中極常用）</span>
+<span class="kw">if</span> (!slate.<span class="nm">Exists</span>(<span class="st">"map"</span>)) <span class="kw">return false</span>;
+
+<span class="cm">// TryGet 模式</span>
+<span class="kw">if</span> (slate.<span class="nm">TryGet</span>&lt;<span class="ty">Map</span>&gt;(<span class="st">"map"</span>, <span class="kw">out var</span> map)) { <span class="cm">/* ... */</span> }</pre>
+
+    <h3>SlateRef&lt;T&gt; — 讓 QuestNode 欄位接受 XML 變數或字面值</h3>
+    <p>
+      <code>SlateRef&lt;T&gt;</code> 是 QuestNode 欄位的型別包裝。它讓同一個欄位能接受兩種寫法：
+      直接寫字面值（<code>&lt;chance&gt;0.5&lt;/chance&gt;</code>），或寫 <code>$變數</code> 引用 Slate
+      （<code>&lt;faction&gt;$enemyFaction&lt;/faction&gt;</code>）。在 C# 中用 <code>.GetValue(slate)</code> 解析。
+    </p>
+    <pre><span class="kw">using</span> RimWorld.QuestGen;
+
+<span class="kw">public class</span> <span class="ty">QuestNode_MyThreat</span> : <span class="ty">QuestNode</span>
+{
+    <span class="cm">// XML: &lt;faction&gt;$enemyFaction&lt;/faction&gt; 或 &lt;faction&gt;Pirate&lt;/faction&gt;</span>
+    <span class="kw">public</span> <span class="ty">SlateRef</span>&lt;<span class="ty">Faction</span>&gt; faction;
+
+    <span class="cm">// XML: &lt;points&gt;$points&lt;/points&gt;</span>
+    <span class="kw">public</span> <span class="ty">SlateRef</span>&lt;<span class="kw">float</span>&gt; points;
+
+    <span class="cm">// 把生成結果寫回哪個 Slate key</span>
+    <span class="kw">public</span> <span class="ty">SlateRef</span>&lt;<span class="kw">string</span>&gt; storeAs;
+
+    <span class="kw">protected override bool</span> <span class="nm">TestRunInt</span>(<span class="ty">Slate</span> slate)
+    {
+        <span class="cm">// 解析 SlateRef：傳入 slate 取得實際值</span>
+        <span class="kw">return</span> faction.<span class="nm">GetValue</span>(slate) != <span class="kw">null</span>
+            &amp;&amp; points.<span class="nm">GetValue</span>(slate) &gt; <span class="nu">0f</span>;
+    }
+
+    <span class="kw">protected override void</span> <span class="nm">RunInt</span>()
+    {
+        <span class="ty">Slate</span> slate = <span class="ty">QuestGen</span>.slate;
+        <span class="ty">Faction</span> f = faction.<span class="nm">GetValue</span>(slate);
+        <span class="kw">float</span> pts = points.<span class="nm">GetValue</span>(slate);
+
+        <span class="cm">// ...產生 QuestPart 並 Add 到 QuestGen.quest...</span>
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>TestRunInt 不能有真副作用</strong>
+      <code>TestRunInt</code> 可能被呼叫多次（storyteller 評估多個候選腳本），只能讀 Slate 或寫「試算用」的值。
+      真正建立 QuestPart、消耗資源、產生地圖物件，一律放 <code>RunInt</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 5. 從 C# 生成 quest ═══ -->
+  <div class="section" id="generate">
+    <div class="section-title">5 · 從 C# 生成 quest</div>
+
+    <p>
+      不想透過 storyteller 隨機觸發，而要由你的 mod 程式碼主動發任務時，
+      最直接的入口是 <code>QuestUtility.GenerateQuestAndMakeAvailable</code>。它一步到位：跑生成流程、把任務加入
+      <code>Find.QuestManager</code>、並（依參數）發出可接受通知。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> RimWorld.QuestGen;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">MyQuestSpawner</span>
+{
+    <span class="kw">public static</span> <span class="ty">Quest</span> <span class="nm">FireRescueQuest</span>(<span class="kw">float</span> points)
+    {
+        <span class="cm">// 1. 取得腳本 def</span>
+        <span class="ty">QuestScriptDef</span> script = <span class="ty">DefDatabase</span>&lt;<span class="ty">QuestScriptDef</span>&gt;
+            .<span class="nm">GetNamed</span>(<span class="st">"MyMod_RescueColonist"</span>);
+
+        <span class="cm">// 2. 準備 Slate：放入生成期需要的共同變數</span>
+        <span class="ty">Slate</span> slate = <span class="kw">new</span> <span class="ty">Slate</span>();
+        slate.<span class="nm">Set</span>(<span class="st">"points"</span>, points);
+        slate.<span class="nm">Set</span>(<span class="st">"map"</span>, <span class="ty">Find</span>.CurrentMap);
+
+        <span class="cm">// 3. 生成並掛上（一步完成）</span>
+        <span class="ty">Quest</span> quest = <span class="ty">QuestUtility</span>
+            .<span class="nm">GenerateQuestAndMakeAvailable</span>(script, slate);
+
+        <span class="cm">// 4. （選用）跳出可接受通知信</span>
+        <span class="kw">if</span> (!quest.<span class="nm">hidden</span>)
+        {
+            <span class="ty">QuestUtility</span>.<span class="nm">SendLetterQuestAvailable</span>(quest);
+        }
+
+        <span class="kw">return</span> quest;
+    }
+}</pre>
+
+    <h3>更底層：手動跑 QuestGen.Generate</h3>
+    <p>
+      若你需要在掛上 QuestManager 之前先檢查生成結果，可以直接呼叫 <code>QuestGen.Generate</code>，
+      再自己決定要不要 <code>Find.QuestManager.Add(quest)</code>。
+    </p>
+    <pre><span class="ty">QuestScriptDef</span> script = <span class="cm">/* ... */</span>;
+<span class="ty">Slate</span> slate = <span class="kw">new</span> <span class="ty">Slate</span>();
+slate.<span class="nm">Set</span>(<span class="st">"points"</span>, <span class="nu">1200f</span>);
+
+<span class="cm">// 只生成，不掛上 QuestManager</span>
+<span class="ty">Quest</span> quest = <span class="ty">QuestGen</span>.<span class="nm">Generate</span>(script, slate);
+
+<span class="cm">// 自行檢視 / 決定</span>
+<span class="kw">if</span> (quest.parts.Count &gt; <span class="nu">0</span>)
+{
+    <span class="ty">Find</span>.QuestManager.<span class="nm">Add</span>(quest);
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>必須先驗證 CanRun</strong>
+      在生成前用 <code>script.CanRun(slate, map)</code>（或自己跑一次 <code>TestRun</code>）確認腳本在當前 Slate 條件下可生成。
+      直接對不滿足前提的腳本呼叫 Generate，可能產出殘缺任務（缺 QuestPart）或在中途丟例外。
+    </div>
+  </div>
+
+  <!-- ═══ 6. QuestGen ═══ -->
+  <div class="section" id="questgen">
+    <div class="section-title">6 · QuestGen 與生成流程</div>
+
+    <p>
+      <code>QuestGen</code> 是生成期的靜態上下文。當一個任務正在生成時，
+      <code>QuestGen.quest</code>（正在組裝的 Quest）與 <code>QuestGen.slate</code>（當前 Slate）
+      都是執行緒區域的「環境變數」，所有 QuestNode 的 <code>RunInt</code> 都靠它們存取共享狀態。
+    </p>
+
+    <h3>生成流程（時序）</h3>
+    <ol class="steps">
+      <li>呼叫端準備 <code>Slate</code>（塞入 points / map 等），呼叫 <code>QuestGen.Generate(script, slate)</code>。</li>
+      <li>QuestGen 建立空白 <code>Quest</code>，設定 <code>QuestGen.quest</code> 與 <code>QuestGen.slate</code>。</li>
+      <li>對 <code>script.root</code> 先 <code>TestRun</code>（試跑全樹），任一節點失敗則整體生成失敗。</li>
+      <li>試跑通過後 <code>Run</code>（實跑），各 QuestNode 在 <code>RunInt</code> 中往 <code>QuestGen.quest.AddPart(...)</code> 加入 QuestPart。</li>
+      <li>解析所有描述文字的 <code>[變數]</code> 內插、計算 reward、產生 <code>initiateSignal</code> 等。</li>
+      <li>回傳組裝完成的 <code>Quest</code>；清空 QuestGen 的環境變數。</li>
+    </ol>
+
+    <h3>在 QuestNode 中加入 QuestPart</h3>
+    <pre><span class="kw">protected override void</span> <span class="nm">RunInt</span>()
+{
+    <span class="ty">Quest</span> quest = <span class="ty">QuestGen</span>.quest;
+    <span class="ty">Slate</span> slate = <span class="ty">QuestGen</span>.slate;
+
+    <span class="cm">// 產生唯一 signal 名稱（避免和其他 part 撞名）</span>
+    <span class="kw">string</span> completeSignal = <span class="ty">QuestGen</span>.<span class="nm">GenerateNewSignal</span>(<span class="st">"RescueComplete"</span>);
+
+    <span class="cm">// 建立自訂 QuestPart 並掛上</span>
+    <span class="kw">var</span> part = <span class="kw">new</span> <span class="ty">QuestPart_TrackRescue</span>
+    {
+        inSignalEnable = slate.<span class="nm">Get</span>&lt;<span class="kw">string</span>&gt;(<span class="st">"inSignal"</span>),
+        outSignalComplete = completeSignal,
+        targetPawn = slate.<span class="nm">Get</span>&lt;<span class="ty">Pawn</span>&gt;(<span class="st">"victim"</span>)
+    };
+    quest.<span class="nm">AddPart</span>(part);
+
+    <span class="cm">// 把產出的 signal 寫回 Slate，供後續節點接續</span>
+    slate.<span class="nm">Set</span>(<span class="st">"rescueCompleteSignal"</span>, completeSignal);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>永遠用 QuestGen.GenerateNewSignal</strong>
+      手寫 signal 字串常數會在同一任務有多個同類 part 時撞名。
+      <code>QuestGen.GenerateNewSignal("Prefix")</code> 會回傳帶唯一序號的字串（如 <code>"Quest42.Prefix"</code>），保證不衝突。
+    </div>
+  </div>
+
+  <!-- ═══ 7. 獎勵系統 ═══ -->
+  <div class="section" id="rewards">
+    <div class="section-title">7 · 獎勵系統</div>
+
+    <p>
+      獎勵的核心是 <code>RewardsGenerator</code>：給它一個 <code>RewardsGeneratorParams</code>（含
+      <code>rewardValue</code>、<code>giverFaction</code> 等），它回傳一組 <code>Reward</code> 物件。
+      每個 <code>Reward</code> 能產出對應的 <code>QuestPart</code>（透過 <code>GenerateQuestParts</code>），
+      把「發放動作」掛進任務。
+    </p>
+
+    <h3>Reward 類型一覽</h3>
+    <table>
+      <tr><th>類型</th><th>內容</th><th>底層 QuestPart</th></tr>
+      <tr><td><code>Reward_Items</code></td><td>一批物品（武器、材料、藝術品…）</td><td>QuestPart_DropPods / GiveItems</td></tr>
+      <tr><td><code>Reward_Pawn</code></td><td>加入殖民地的 pawn（俘虜、難民、動物）</td><td>QuestPart_Give...（依情境）</td></tr>
+      <tr><td><code>Reward_Goodwill</code></td><td>派系好感度變化</td><td>QuestPart_FactionGoodwillChange</td></tr>
+      <tr><td><code>Reward_RoyalFavor</code></td><td>帝國榮譽（Royalty）</td><td>QuestPart_GiveRoyalFavor</td></tr>
+      <tr><td><code>Reward_VomitInfo</code></td><td>純資訊獎勵（地圖情報等）</td><td>對應 info part</td></tr>
+    </table>
+
+    <h3>在 C# 中產生獎勵並掛上任務</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> RimWorld.QuestGen;
+
+<span class="kw">protected override void</span> <span class="nm">RunInt</span>()
+{
+    <span class="ty">Quest</span> quest = <span class="ty">QuestGen</span>.quest;
+    <span class="ty">Slate</span> slate = <span class="ty">QuestGen</span>.slate;
+
+    <span class="cm">// 1. 設定獎勵參數</span>
+    <span class="kw">var</span> parms = <span class="kw">new</span> <span class="ty">RewardsGeneratorParams</span>
+    {
+        rewardValue   = slate.<span class="nm">Get</span>&lt;<span class="kw">float</span>&gt;(<span class="st">"points"</span>) * <span class="nu">0.7f</span>,
+        giverFaction  = slate.<span class="nm">Get</span>&lt;<span class="ty">Faction</span>&gt;(<span class="st">"enemyFaction"</span>),
+        chosenPawnSignal = <span class="kw">null</span>
+    };
+
+    <span class="cm">// 2. 產生 reward 清單</span>
+    <span class="ty">List</span>&lt;<span class="ty">Reward</span>&gt; rewards =
+        <span class="kw">new</span> <span class="ty">RewardsGenerator</span>().<span class="nm">Generate</span>(parms).<span class="nm">ToList</span>();
+
+    <span class="cm">// 3. 用 QuestPart_Choice 包成「玩家選一個」</span>
+    <span class="kw">var</span> choicePart = <span class="kw">new</span> <span class="ty">QuestPart_Choice</span>
+    {
+        inSignalChoiceUsed = slate.<span class="nm">Get</span>&lt;<span class="kw">string</span>&gt;(<span class="st">"inSignal"</span>)
+    };
+
+    <span class="kw">var</span> choice = <span class="kw">new</span> <span class="ty">QuestPart_Choice.Choice</span>();
+    <span class="kw">foreach</span> (<span class="ty">Reward</span> r <span class="kw">in</span> rewards)
+    {
+        choice.rewards.<span class="nm">Add</span>(r);
+        <span class="cm">// 每個 reward 把自己的發放 QuestPart 掛到 quest</span>
+        choice.questParts.<span class="nm">AddRange</span>(
+            r.<span class="nm">GenerateQuestParts</span>(<span class="nu">0</span>, parms,
+                <span class="cm">/* customLetterLabel */</span> <span class="kw">null</span>,
+                <span class="cm">/* customLetterText  */</span> <span class="kw">null</span>,
+                <span class="cm">/* chosenPawnSignal  */</span> <span class="kw">null</span>,
+                <span class="cm">/* useChosenPawnsForRef */</span> <span class="kw">null</span>));
+    }
+    choicePart.choices.<span class="nm">Add</span>(choice);
+
+    quest.<span class="nm">AddPart</span>(choicePart);
+}</pre>
+
+    <h3>XML 端的等價寫法（更常用）</h3>
+    <p>多數情況不必手寫 C#，官方提供現成 QuestNode 包好整套獎勵流程。</p>
+    <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_GiveRewards"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;parms&gt;</span>
+    <span class="xml-tag">&lt;rewardValue&gt;</span>$rewardValue<span class="xml-tag">&lt;/rewardValue&gt;</span>
+  <span class="xml-tag">&lt;/parms&gt;</span>
+  <span class="xml-tag">&lt;inSignal&gt;</span>$questCompleteSignal<span class="xml-tag">&lt;/inSignal&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+  </div>
+
+  <!-- ═══ 8. 自訂 QuestPart ═══ -->
+  <div class="section" id="customquestpart">
+    <div class="section-title">8 · 自訂 QuestPart</div>
+
+    <p>
+      要表達內建 QuestPart 無法涵蓋的任務行為，就繼承 <code>QuestPart</code>，覆寫
+      <code>Notify_QuestSignalReceived</code>，並務必正確實作 <code>ExposeData</code>（否則讀檔崩潰）。
+      下面是一個完整、可直接套用的範例：追蹤目標 pawn 是否被救回殖民地。
+    </p>
+
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> RimWorld.QuestGen;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">QuestPart_TrackRescue</span> : <span class="ty">QuestPart</span>
+{
+    <span class="cm">// ── 由 QuestNode 在生成期填入的欄位 ──</span>
+    <span class="kw">public</span> <span class="kw">string</span> inSignalEnable;     <span class="cm">// 收到此 signal 才啟用追蹤</span>
+    <span class="kw">public</span> <span class="kw">string</span> inSignalRescued;    <span class="cm">// pawn 被救回時觸發</span>
+    <span class="kw">public</span> <span class="kw">string</span> inSignalVictimDied;  <span class="cm">// pawn 死亡時觸發</span>
+    <span class="kw">public</span> <span class="kw">string</span> outSignalComplete;   <span class="cm">// 任務成功時對外廣播</span>
+    <span class="kw">public</span> <span class="kw">string</span> outSignalFailed;     <span class="cm">// 任務失敗時對外廣播</span>
+    <span class="kw">public</span> <span class="ty">Pawn</span>   targetPawn;
+
+    <span class="kw">private bool</span> active;             <span class="cm">// 是否已啟用追蹤（會存檔）</span>
+
+    <span class="cm">// 讓這些 signal 在 part 啟用狀態下也能被接收</span>
+    <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">GlobalTargetInfo</span>&gt; <span class="nm">QuestLookTargets</span>
+    {
+        <span class="kw">get</span>
+        {
+            <span class="kw">if</span> (targetPawn != <span class="kw">null</span>)
+                <span class="kw">yield return</span> targetPawn;
+        }
+    }
+
+    <span class="kw">public override void</span> <span class="nm">Notify_QuestSignalReceived</span>(<span class="ty">Signal</span> signal)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_QuestSignalReceived</span>(signal);
+
+        <span class="cm">// 1. 啟用追蹤</span>
+        <span class="kw">if</span> (signal.tag == inSignalEnable)
+        {
+            active = <span class="kw">true</span>;
+            <span class="kw">return</span>;
+        }
+
+        <span class="kw">if</span> (!active) <span class="kw">return</span>;
+
+        <span class="cm">// 2. 成功：對外廣播 complete signal（其他 part 接力發獎）</span>
+        <span class="kw">if</span> (signal.tag == inSignalRescued)
+        {
+            <span class="ty">Find</span>.SignalManager.<span class="nm">SendSignal</span>(
+                <span class="kw">new</span> <span class="ty">Signal</span>(outSignalComplete, signal.args));
+            active = <span class="kw">false</span>;
+        }
+        <span class="cm">// 3. 失敗</span>
+        <span class="kw">else if</span> (signal.tag == inSignalVictimDied)
+        {
+            <span class="ty">Find</span>.SignalManager.<span class="nm">SendSignal</span>(
+                <span class="kw">new</span> <span class="ty">Signal</span>(outSignalFailed, signal.args));
+            active = <span class="kw">false</span>;
+        }
+    }
+
+    <span class="cm">// ── 序列化：每個欄位都要 Look，否則讀檔後變 null ──</span>
+    <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">ExposeData</span>();
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> inSignalEnable,    <span class="st">"inSignalEnable"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> inSignalRescued,   <span class="st">"inSignalRescued"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> inSignalVictimDied,<span class="st">"inSignalVictimDied"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> outSignalComplete, <span class="st">"outSignalComplete"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> outSignalFailed,   <span class="st">"outSignalFailed"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> active,            <span class="st">"active"</span>, <span class="kw">false</span>);
+
+        <span class="cm">// 引用遊戲物件：用 Scribe_References（存的是 loadID）</span>
+        <span class="ty">Scribe_References</span>.<span class="nm">Look</span>(<span class="kw">ref</span> targetPawn, <span class="st">"targetPawn"</span>);
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>ExposeData 是讀檔崩潰的頭號來源</strong>
+      漏掉任一欄位的 <code>Scribe_*.Look</code>，讀檔後該欄位為 <code>null</code>，
+      <code>Notify_QuestSignalReceived</code> 比對 signal tag 時就 silent fail，任務永遠卡住。
+      引用 <code>Thing</code> / <code>Pawn</code> / <code>Faction</code> 一律用 <code>Scribe_References</code>（存 loadID），
+      <strong>不要</strong>用 <code>Scribe_Deep</code>（會把整個物件複製進存檔）。
+    </div>
+  </div>
+
+  <!-- ═══ 9. Signal 狀態機 ═══ -->
+  <div class="section" id="signal">
+    <div class="section-title">9 · Signal 驅動的任務狀態機</div>
+
+    <p>
+      任務執行期沒有中央「腳本直譯器」。整個任務就是一群 QuestPart，靠
+      <code>Signal</code>（一個 <code>tag</code> 字串 + <code>SignalArgs</code> 參數）互相串接成的事件驅動狀態機。
+      一個 part 的 <strong>out-signal</strong> 是另一個 part 的 <strong>in-signal</strong>，如此鏈式推進。
+    </p>
+
+    <h3>Signal 流向（典型救援任務）</h3>
+    <pre class="mermaid-fallback"><span class="cm">// 用文字描述 signal 鏈（→ 表示 out-signal 觸發 in-signal）</span>
+
+quest.<span class="nm">Initiate</span>
+   └─→ <span class="ty">QuestPart_Choice</span>           <span class="cm">// 玩家接受任務、選獎勵</span>
+          └─→ inSignalEnable
+                 └─→ <span class="ty">QuestPart_TrackRescue</span> (active=true)
+                        ├─ pawn.Rescued  ─→ outSignalComplete
+                        │                       └─→ <span class="ty">QuestPart_GiveRewards</span>
+                        │                       └─→ <span class="ty">QuestPart_End</span> (Success)
+                        └─ pawn.Died     ─→ outSignalFailed
+                                                └─→ <span class="ty">QuestPart_End</span> (Failed)</pre>
+
+    <h3>發出與接收 signal</h3>
+    <pre><span class="cm">// 發出 signal（任何地方）</span>
+<span class="ty">Find</span>.SignalManager.<span class="nm">SendSignal</span>(<span class="kw">new</span> <span class="ty">Signal</span>(<span class="st">"MyMod.CustomEvent"</span>));
+
+<span class="cm">// 帶參數的 signal（傳遞上下文給下游 part）</span>
+<span class="kw">var</span> args = <span class="kw">new</span> <span class="ty">SignalArgs</span>(
+    <span class="kw">new</span> <span class="ty">NamedArgument</span>(rescuedPawn, <span class="st">"SUBJECT"</span>));
+<span class="ty">Find</span>.SignalManager.<span class="nm">SendSignal</span>(<span class="kw">new</span> <span class="ty">Signal</span>(outSignalComplete, args));
+
+<span class="cm">// Quest 也提供便利方法（會自動加 quest 前綴）</span>
+quest.<span class="nm">End</span>(<span class="ty">QuestEndOutcome</span>.Success);</pre>
+
+    <h3>內建的 signal 轉接 part</h3>
+    <table>
+      <tr><th>QuestPart</th><th>作用</th></tr>
+      <tr><td><code>QuestPart_Delay</code></td><td>收到 in-signal 後延遲 N tick，再發 out-signal（任務倒數計時）</td></tr>
+      <tr><td><code>QuestPart_Filter</code></td><td>條件過濾：滿足才轉發 signal（用來做 if 分支）</td></tr>
+      <tr><td><code>QuestPart_PassAll / PassAny</code></td><td>多個 in-signal 全到 / 任一到，才發 out-signal（AND / OR 邏輯閘）</td></tr>
+      <tr><td><code>QuestPart_SignalPassWithFaction</code></td><td>轉發 signal 並夾帶 faction 參數</td></tr>
+      <tr><td><code>QuestPartActivable</code></td><td>有 enable/disable 狀態的 part 基底（你的自訂 part 常繼承這個而非裸 QuestPart）</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>QuestPartActivable vs QuestPart</strong>
+      若你的 part 需要「先被啟用、之後才反應某些 signal」的狀態（如上例的 <code>active</code>），
+      直接繼承 <code>QuestPartActivable</code> 可省去自己管理啟用旗標——它內建
+      <code>inSignalEnable</code> / <code>inSignalDisable</code> 與 <code>Enable()</code> / <code>Disable()</code> 流程。
+    </div>
+  </div>
+
+  <!-- ═══ 10. 常見坑 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">10 · 常見坑</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 1</span> Quest 根本不出現</h3>
+      <p>storyteller 沒選中你的腳本，幾乎都是篩選條件沒過。逐項排查：</p>
+      <ul>
+        <li><code>rootSelectionWeight</code> 為 0 或缺失 → 永遠不會被自然挑中（這類腳本只能由 C# / incident 觸發）。</li>
+        <li><code>rootMinPoints</code> 高於當前 storyteller 給的 points → 跳過。</li>
+        <li><code>root</code> 樹中任一節點 <code>TestRun</code> 回 false（如找不到合適 faction / site）→ 整個腳本作廢。</li>
+        <li>用 dev mode 的 <strong>「Execute quest...」</strong> 或 <strong>「Make quest」</strong> debug action 強制生成，能立刻分辨是「篩選沒過」還是「生成出錯」。</li>
+      </ul>
+      <pre><span class="cm">// 在 C# 中診斷：自己跑一次 TestRun 看哪個節點擋下</span>
+<span class="kw">bool</span> ok = script.root.<span class="nm">TestRun</span>(slate);
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] {script.defName} TestRun = {ok}, "</span>
+    + <span class="st">$"slate has map={slate.Exists("map")}, points={slate.Exists("points")}"</span>);</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 2</span> Signal 名稱對不上 → 任務卡死</h3>
+      <p>
+        in-signal 與 out-signal 是純字串比對，差一個字、大小寫不符，或忘了加 quest 前綴，signal 就永遠送不到目標 part，
+        任務停在某狀態不動，也不報錯。
+      </p>
+      <ul>
+        <li>一律用 <code>QuestGen.GenerateNewSignal("Name")</code> 產生 signal，把結果存進 Slate 傳給下游 part，<strong>不要</strong>兩端各自硬寫字串常數。</li>
+        <li>內建事件 signal（如 pawn 被俘、死亡）名稱要從官方 QuestPart 反編譯確認，例如 <code>QuestPart_RequirementsToAcceptThingCount</code> 等。</li>
+        <li>Debug：在 <code>Notify_QuestSignalReceived</code> 開頭 <code>Log.Message($"recv {signal.tag}")</code>，對照你期望的 tag。</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 3</span> Slate 變數缺失 → 生成期 NRE</h3>
+      <p>
+        下游節點 <code>slate.Get&lt;T&gt;("foo")</code> 取一個上游沒設定的 key，依多載不同會回 default（<code>null</code>）或丟例外，
+        接著就是一連串 NullReference。
+      </p>
+      <ul>
+        <li>節點開頭先 <code>if (!slate.Exists("foo")) return false;</code>（在 TestRunInt 中守門）。</li>
+        <li>呼叫端生成前，務必塞齊腳本要求的共同變數（最常漏 <code>map</code> 與 <code>points</code>）。</li>
+        <li>用有預設值的多載 <code>slate.Get&lt;float&gt;("points", 0f)</code> 降低硬崩潰風險，但別用它掩蓋真正的設定遺漏。</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 4</span> 描述文字 <code>[變數]</code> 顯示成原始字串</h3>
+      <p>
+        任務描述裡寫了 <code>[siteTile_factionName]</code> 但畫面照原樣顯示中括號，代表該 Slate 變數在生成期沒被設定，
+        或變數名拼錯。文字內插在生成期一次性解析——生成後才設定的值不會反映到描述上。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 5</span> 讀檔後自訂 QuestPart 行為消失</h3>
+      <p>
+        通常是 <code>ExposeData</code> 漏 Look 某欄位（見第 8 節）。signal 字串欄位變 <code>null</code> 後，
+        比對永遠不成立，part 形同失效。存檔讀回後任務「卡住不前進」是這個坑的典型症狀。
+      </p>
+      <div class="callout callout-tip">
+        <strong>自我檢查清單</strong>
+        <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+          <li>每個 instance 欄位都有對應的 <code>Scribe_*.Look</code>？</li>
+          <li>遊戲物件用 <code>Scribe_References</code>（非 <code>Scribe_Deep</code>）？</li>
+          <li><code>base.ExposeData()</code> 有呼叫？</li>
+          <li>存檔 → 讀檔 → 觸發 signal，確認行為仍在？</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速參考 -->
+  <div class="section">
+    <div class="section-title">快速參考：生成期 vs 執行期</div>
+    <table>
+      <tr><th>面向</th><th>生成期 (Generation)</th><th>執行期 (Runtime)</th></tr>
+      <tr><td>主角</td><td>QuestNode（XML 腳本樹）</td><td>QuestPart（List on Quest）</td></tr>
+      <tr><td>變數容器</td><td>Slate（不存檔）</td><td>QuestPart 欄位（存檔）</td></tr>
+      <tr><td>上下文</td><td>QuestGen.quest / .slate</td><td>Find.SignalManager / Find.QuestManager</td></tr>
+      <tr><td>驅動方式</td><td>TestRun → Run 一次性</td><td>Signal 事件驅動，持續到任務結束</td></tr>
+      <tr><td>變數解析</td><td>SlateRef.GetValue(slate)</td><td>signal.tag 字串比對</td></tr>
+      <tr><td>持久化</td><td>不序列化</td><td>IExposable / ExposeData</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 指南 · 任務系統 (Quests) · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

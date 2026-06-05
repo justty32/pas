@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>除錯與發布 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html" class="active">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>除錯與發布</h1>
+  <p>Dev Mode 深度解析、Log 閱讀術、dnSpy Attach、常見錯誤速查，到 Steam Workshop 正式上架的完整流程。</p>
+  <span class="badge">Chapter 05 — RimWorld 1.5</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       §1  Dev Mode
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 Dev Mode 開啟與核心功能</div>
+
+    <p>Dev Mode 是 RimWorld 官方內建的除錯環境，開啟後右上角出現一排工具圖示，並在畫面四角顯示額外資訊。
+    對 mod 開發者而言，這是唯一可信賴的即時回饋管道。</p>
+
+    <h3>開啟方式</h3>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>啟動參數（推薦）</h3>
+        <p>在 Steam 遊戲屬性 → 啟動選項加入 <code>-dev</code>，或在捷徑目標末加入參數：</p>
+        <pre><span class="cm"># Steam 啟動選項欄位</span>
+-dev</pre>
+        <p style="font-size:0.82rem;color:var(--text-dim);">每次啟動都自動進入 Dev Mode，不需手動設定。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Prefs.xml 持久化</h3>
+        <p>直接編輯 Preferences 設定檔：</p>
+        <pre><span class="cm"># 路徑（Windows）</span>
+%APPDATA%\..\LocalLow\Ludeon Studios\
+  RimWorld by Ludeon Studios\Config\Prefs.xml
+
+<span class="xml-tag">&lt;DevMode&gt;</span><span class="xml-val">True</span><span class="xml-tag">&lt;/DevMode&gt;</span>
+<span class="xml-tag">&lt;LogVerbose&gt;</span><span class="xml-val">True</span><span class="xml-tag">&lt;/LogVerbose&gt;</span></pre>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>💡 建議同時開啟 LogVerbose</strong>
+      <code>LogVerbose = True</code> 會讓 RimWorld 輸出更細緻的框架日誌，包含 Def 載入進度、Harmony patch 套用結果等，是追蹤初始化期問題的利器。
+    </div>
+
+    <h3>Debug Action Menu（右上角工具列）</h3>
+    <p>進入 Dev Mode 後，畫面右上角出現四個小圖示，由左至右：</p>
+    <div class="g4">
+      <div class="card card-accent-purple">
+        <h3>⚙ Dev Actions</h3>
+        <p>主選單，包含生成 Pawn / Item / Event、刷新地圖等數百個操作。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>🔍 Inspector</h3>
+        <p>點擊地圖上的任何物件即可查看其所有欄位值，相當於 Unity Inspector 的 readonly 版本。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>📋 Log</h3>
+        <p>開啟內建 Log 視窗，顯示 Message / Warning / Error，可篩選與清除。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>🐛 Package Mode</h3>
+        <p>顯示所有已載入 mod 的 packageId，用於確認 mod 清單與載入順序。</p>
+      </div>
+    </div>
+
+    <h3>常用快捷操作</h3>
+    <table>
+      <thead>
+        <tr><th>操作</th><th>路徑 / 快捷</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>生成 Pawn</td>
+          <td>Dev Actions → Spawn pawn…</td>
+          <td>快速在游標位置生成敵友 Pawn，測試 AI 行為</td>
+        </tr>
+        <tr>
+          <td>生成 Item</td>
+          <td>Dev Actions → Spawn thing…</td>
+          <td>輸入 defName，立刻取得任何物品</td>
+        </tr>
+        <tr>
+          <td>觸發 Incident</td>
+          <td>Dev Actions → Execute incident…</td>
+          <td>強制觸發突襲、疾病、飼育等任何事件</td>
+        </tr>
+        <tr>
+          <td>強制 Tick</td>
+          <td>Dev Actions → Do tick（或按 <code>T</code>）</td>
+          <td>手動推進一個遊戲 tick，測試定時邏輯</td>
+        </tr>
+        <tr>
+          <td>季節跳躍</td>
+          <td>Dev Actions → Set season → …</td>
+          <td>瞬間切換春夏秋冬，測試溫度 / 作物邏輯</td>
+        </tr>
+        <tr>
+          <td>地圖填充</td>
+          <td>Dev Actions → Fill with…</td>
+          <td>整張地圖鋪滿指定地形或物品，壓力測試用</td>
+        </tr>
+        <tr>
+          <td>God Mode</td>
+          <td>Dev Actions → Toggle god mode</td>
+          <td>無限資源、無需材料建造，快速搭建測試場景</td>
+        </tr>
+        <tr>
+          <td>重載 Defs</td>
+          <td>Dev Actions → Reload all mods</td>
+          <td>熱重載 XML Def（不需重啟遊戲）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>⚠ Reload all mods 的限制</strong>
+      熱重載只重新解析 XML Def，不會重新載入 C# Assembly DLL。修改 C# 程式碼後仍需完整重啟遊戲。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2  Log 位置與閱讀
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 Log 檔案位置與閱讀技巧</div>
+
+    <h3>Player.log 位置</h3>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Windows</h3>
+        <pre><span class="cm"># 完整路徑（將 %APPDATA% 貼入 Explorer 即可）</span>
+%APPDATA%\..\LocalLow\Ludeon Studios\
+  RimWorld by Ludeon Studios\Player.log</pre>
+        <p style="font-size:0.82rem;color:var(--text-dim);">每次啟動遊戲都會覆蓋此檔案，需在遊戲關閉前複製備份。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>macOS / Linux</h3>
+        <pre><span class="cm"># macOS</span>
+~/Library/Logs/Unity/Player.log
+
+<span class="cm"># Linux</span>
+~/.config/unity3d/Ludeon Studios/
+  RimWorld by Ludeon Studios/Player.log</pre>
+      </div>
+    </div>
+
+    <h3>訊息等級識別</h3>
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3><span class="tag tag-red">ERROR</span> 紅色</h3>
+        <p>必須修。通常伴隨 stack trace，遊戲可能繼續但行為已損壞。是 mod 除錯的首要目標。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3><span class="tag tag-orange">WARN</span> 黃色</h3>
+        <p>潛在問題。常見如 Def 欄位缺失、Patch 未命中等，不一定會 crash 但需要確認。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3><span class="tag tag-green">LOG</span> 白色</h3>
+        <p>一般資訊。<code>Log.Message()</code> 輸出至此。用於追蹤執行流程，不代表錯誤。</p>
+      </div>
+    </div>
+
+    <h3>閱讀 Stack Trace 的要點</h3>
+    <pre><span class="cm">// 典型錯誤輸出結構</span>
+Exception in RimWorld.StatWorker.GetValueAbstract: NullReferenceException: ...
+  at Verse.ThingDef.get_IsStuff ()     <span class="cm">&lt;-- 最接近根因的框架位置</span>
+  at RimWorld.StatWorker.GetValueAbstract (...)
+  at YourMod.MyPatch.Prefix (...)      <span class="cm">&lt;-- 你的 Patch 呼叫點</span>
+  at (wrapper dynamic-method) ...Harmony_Patch...</pre>
+
+    <p>讀 trace 的方向：<strong>從下往上</strong> 找第一個屬於你的 mod namespace 的 frame，那通常是你的程式碼觸發問題的位置。</p>
+
+    <h3>Harmony 相關錯誤特徵</h3>
+    <table>
+      <thead>
+        <tr><th>錯誤訊息特徵</th><th>意義</th><th>排查方向</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>HarmonyException: method not found</code></td>
+          <td>目標方法不存在或簽名不符</td>
+          <td>用 dnSpy 確認方法名稱與參數型別</td>
+        </tr>
+        <tr>
+          <td><code>InvalidProgramException</code> in IL</td>
+          <td>Transpiler 產生的 IL 非法</td>
+          <td>用 <code>HarmonyLib.PatchClassProcessor</code> 的 debug 模式輸出 IL</td>
+        </tr>
+        <tr>
+          <td><code>Ambiguous match found</code></td>
+          <td>方法多載衝突，Harmony 無法決定目標</td>
+          <td>在 <code>[HarmonyPatch]</code> Attribute 中明確指定參數型別</td>
+        </tr>
+        <tr>
+          <td><code>No annotations found</code></td>
+          <td>Patch class 沒有正確的 Attribute</td>
+          <td>確認 <code>[HarmonyPatch(typeof(X), "MethodName")]</code> 放在 class 上</td>
+        </tr>
+        <tr>
+          <td>Patch 套用後無反應</td>
+          <td>目標組件可能在 patch 前就已 JIT</td>
+          <td>確認 <code>harmony.PatchAll()</code> 在 <code>[StaticConstructorOnStartup]</code> 或 <code>Mod</code> 建構子中呼叫</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>使用 HugsLib Log Window</h3>
+    <p><a href="https://github.com/UnlimitedHugs/RimWorld-HugsLib" target="_blank">HugsLib</a> 提供一個遠比內建 Log 更好用的 in-game Log viewer，按 <code>Ctrl+F12</code> 呼出：</p>
+    <ul>
+      <li>可搜尋關鍵字篩選訊息</li>
+      <li>一鍵複製全部 Log 到剪貼簿（回報 bug 時非常有用）</li>
+      <li>顯示 mod 載入清單與版本資訊</li>
+      <li>持久保留跨 map 的訊息（內建視窗每次開關地圖會清空）</li>
+    </ul>
+    <div class="callout callout-info">
+      <strong>HugsLib 相依性說明</strong>
+      若你的 mod 已相依 HugsLib，可繼承 <code>ModBase</code> 並用 <code>Logger.Message()</code> 系列 API，自動加上 mod 前綴避免和其他 mod 的 log 混淆。若不想引入相依，用原生 <code>Log.Message()</code> 加上明確的 mod 名稱前綴即可。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3  Log API
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 C# Log API 與自訂 Dev 選單</div>
+
+    <h3>基本 Log 方法</h3>
+    <pre><span class="kw">using</span> Verse;
+
+<span class="cm">// 一般訊息 → Player.log 白色</span>
+Log.<span class="nm">Message</span>(<span class="st">"[YourMod] 目前 pawn 數量: "</span> + pawns.Count);
+
+<span class="cm">// 警告 → 黃色</span>
+Log.<span class="nm">Warning</span>(<span class="st">"[YourMod] graphicData 為 null，使用預設值"</span>);
+
+<span class="cm">// 錯誤 → 紅色 + stack trace</span>
+Log.<span class="nm">Error</span>(<span class="st">"[YourMod] 無法找到 ThingDef: "</span> + defName);
+
+<span class="cm">// 防洗版：相同 key 只輸出一次（整個遊戲 session）</span>
+Log.<span class="nm">ErrorOnce</span>(<span class="st">"[YourMod] 組態錯誤，請檢查 modSettings"</span>, <span class="nu">0xDEAD</span>);
+
+<span class="cm">// 條件式 verbose（只在 DevMode 下輸出，避免正式版洗版）</span>
+<span class="kw">if</span> (Prefs.DevMode)
+    Log.<span class="nm">Message</span>(<span class="st">"[YourMod] Transpiler IL offset = "</span> + offset);</pre>
+
+    <div class="callout callout-warn">
+      <strong>⚠ 正式發布前清除或保護 Log 呼叫</strong>
+      高頻率執行的方法（<code>Tick()</code>、<code>Draw()</code>）如果有 <code>Log.Message()</code>，每秒可能輸出數百行，嚴重拖慢效能並讓其他玩家的 log 難以閱讀。發布前用 <code>Prefs.DevMode</code> 包覆，或改用 <code>Log.ErrorOnce()</code>。
+    </div>
+
+    <h3>物件狀態快照輔助</h3>
+    <pre><span class="cm">// 輸出 Pawn 的完整標籤樹（Scribe_Deep 序列化結果）</span>
+<span class="kw">var</span> sb = <span class="kw">new</span> <span class="ty">System.Text.StringBuilder</span>();
+Scribe.<span class="nm">saver</span>.InitSaving(<span class="ty">ScribeMetaHeaderUtility</span>.<span class="nm">ScribeHeaderMode</span>.Map);
+<span class="cm">// 或用反射逐欄位輸出：</span>
+<span class="kw">foreach</span> (<span class="kw">var</span> fi <span class="kw">in</span> pawn.GetType().<span class="nm">GetFields</span>(
+    System.Reflection.BindingFlags.Public |
+    System.Reflection.BindingFlags.NonPublic |
+    System.Reflection.BindingFlags.Instance))
+{
+    sb.<span class="nm">AppendLine</span>($<span class="st">"{fi.Name} = {fi.GetValue(pawn)}"</span>);
+}
+Log.<span class="nm">Message</span>(sb.<span class="nm">ToString</span>());</pre>
+
+    <h3>自訂 Dev Action 選單項目（DebugActionsModMenu）</h3>
+    <p>RimWorld 1.5 引入了 <code>[DebugAction]</code> Attribute，讓 mod 可以在 Dev Actions 選單中加入自訂按鈕，無需繼承任何基底類別：</p>
+    <pre><span class="kw">using</span> Verse;
+
+<span class="at">[DebugAction(</span>
+    <span class="st">"YourMod"</span>,            <span class="cm">// 分類名稱（會在選單中作為子選單標題）</span>
+    <span class="st">"強制觸發自訂事件"</span>,    <span class="cm">// 按鈕顯示文字</span>
+    actionType = DebugActionType.Action,
+    allowedGameStates = AllowedGameStates.PlayingOnMap
+<span class="at">)]</span>
+<span class="kw">private static void</span> <span class="nm">DebugForceMyEvent</span>()
+{
+    <span class="ty">IncidentDef</span> def = <span class="ty">DefDatabase</span>&lt;<span class="ty">IncidentDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_MyIncident"</span>);
+    <span class="ty">IncidentParms</span> parms = <span class="ty">StorytellerUtility</span>.<span class="nm">DefaultParmsNow</span>(
+        def.category, <span class="ty">Find</span>.CurrentMap);
+    def.Worker.<span class="nm">TryExecute</span>(parms);
+    Log.<span class="nm">Message</span>(<span class="st">"[YourMod] 事件已觸發"</span>);
+}
+
+<span class="cm">// 帶選項的 Dev Action（使用 FloatMenuOption 讓使用者選擇）</span>
+<span class="at">[DebugAction(</span><span class="st">"YourMod"</span>, <span class="st">"給玩家 Pawn 加 Hediff"</span>,
+    actionType = DebugActionType.ToolMapForPawns<span class="at">)]</span>
+<span class="kw">private static void</span> <span class="nm">DebugAddHediff</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="ty">HediffDef</span> def = <span class="ty">DefDatabase</span>&lt;<span class="ty">HediffDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_MyHediff"</span>);
+    pawn.health.AddHediff(def);
+    Log.<span class="nm">Message</span>($<span class="st">"[YourMod] 已對 {pawn.LabelShort} 加入 {def.defName}"</span>);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>💡 DebugActionType 種類</strong>
+      <code>Action</code>（直接執行）、<code>ToolMapForPawns</code>（點擊地圖上的 Pawn）、<code>ToolMapForThings</code>（點擊 Thing）、<code>ToolMap</code>（點擊地圖任意格）是最常用的四種。選擇適當的 type 能讓開發選單更直觀。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4  dnSpy
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 dnSpy Attach to Process 即時除錯</div>
+
+    <p>dnSpy 是 .NET IL 的反編譯器兼除錯器，可附加至正在執行的 Unity Mono 進程設置中斷點，
+    是深度追蹤 RimWorld 框架行為最強力的工具。</p>
+
+    <div class="callout callout-info">
+      <strong>前置需求</strong>
+      下載 <a href="https://github.com/dnSpy/dnSpy" target="_blank">dnSpy</a>（建議 x64 版）。
+      RimWorld 使用 Unity Mono 執行時，dnSpy 支援直接在反編譯的 IL 上設置中斷點，不需要原始 PDB。
+    </div>
+
+    <h3>附加步驟</h3>
+    <ol class="steps">
+      <li>
+        <strong>啟動 RimWorld（含 Dev Mode）</strong>，確認遊戲已進入主選單或地圖（Mono 執行時完全初始化後才能附加）。
+      </li>
+      <li>
+        <strong>開啟 dnSpy</strong>，點選選單 <code>Debug → Attach to Process…</code>（或 <code>Ctrl+Alt+P</code>）。
+      </li>
+      <li>
+        <strong>在清單中找到 RimWorld</strong>（進程名稱通常是 <code>RimWorldWin64.exe</code> 或 <code>RimWorldLinux</code>），
+        確認 Runtime 欄顯示 <code>Unity（Mono）</code>，點選 <code>Attach</code>。
+      </li>
+      <li>
+        <strong>載入你的 DLL</strong>：File → Open → 選取 <code>YourMod.dll</code>（或 <code>Assembly-CSharp.dll</code>），
+        dnSpy 會反編譯並顯示原始碼。
+      </li>
+      <li>
+        <strong>設置中斷點</strong>：在反編譯的方法行號旁點擊即可設置（紅點），或按 <code>F9</code>。
+      </li>
+      <li>
+        <strong>切回 RimWorld 觸發路徑</strong>，例如建造物件、移動 Pawn 等；dnSpy 會在中斷點暫停，
+        此時可查看 locals、call stack、即時執行運算式（Immediate Window <code>Ctrl+G</code>）。
+      </li>
+    </ol>
+
+    <h3>Unity Mono 的限制</h3>
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>部分中斷點無效</h3>
+        <p>已被 JIT 編譯為原生碼的路徑有時無法中斷。解決方法：在方法進入前加入 <code>Thread.Sleep(1)</code>（讓 JIT 重新計算），或在 Debug → Options 啟用 <em>Break on Module Load</em>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Harmony Patch 的 IL 追蹤</h3>
+        <p>Harmony 動態生成的方法 wrapper 有時在 dnSpy 中顯示為 <code>&lt;dynamic method&gt;</code>，
+        無法直接設中斷點。此時改用 <code>Log.Message</code> 二分法，或在你的 Prefix/Postfix 方法自身設中斷點。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Edit-and-Continue 不支援</h3>
+        <p>Unity Mono 不支援 Edit-and-Continue。修改 C# 後必須：停止附加 → 重新編譯 → 重啟遊戲 → 再次附加。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>自備 PDB 加速定位</h3>
+        <p>在 csproj 中設定 <code>&lt;DebugType&gt;full&lt;/DebugType&gt;</code> 並將產出的 <code>.pdb</code> 與 <code>.dll</code> 放在同目錄，dnSpy 會優先讀取 PDB，中斷點命中率顯著提升。</p>
+      </div>
+    </div>
+
+    <h3>快速除錯替代方案：條件式 Log 二分法</h3>
+    <pre><span class="cm">// 當 dnSpy 中斷點不可靠時，用靜態旗標縮小問題範圍</span>
+<span class="kw">public static bool</span> DebugVerbose = <span class="kw">false</span>;
+
+<span class="kw">public override void</span> <span class="nm">Tick</span>()
+{
+    <span class="kw">base</span>.<span class="nm">Tick</span>();
+    <span class="kw">if</span> (DebugVerbose &amp;&amp; Prefs.DevMode)
+        Log.<span class="nm">Message</span>($<span class="st">"[MyComp] Tick #{Find.TickManager.TicksGame}, owner={parent?.Label}"</span>);
+
+    <span class="cm">// 懷疑問題出在這裡 → 用 DebugAction 動態開啟 DebugVerbose</span>
+}</pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5  常見錯誤速查
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 常見錯誤速查表</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>錯誤訊息（關鍵字）</th>
+          <th>症狀 / 等級</th>
+          <th>根因</th>
+          <th>修復方向</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>NullReferenceException</code><br>in <code>Verse.ThingDef.get_IsStuff</code></td>
+          <td><span class="tag tag-red">ERROR</span> 啟動時</td>
+          <td><code>graphicData</code> 欄位缺失或 texPath 路徑錯誤，導致 Def 初始化失敗</td>
+          <td>確認 <code>&lt;graphicData&gt;&lt;texPath&gt;</code> 存在且路徑相對於 <code>Textures/</code>；用 Dev Mode Inspector 確認 ThingDef 是否正常載入</td>
+        </tr>
+        <tr>
+          <td><code>Could not find type named XXX</code></td>
+          <td><span class="tag tag-red">ERROR</span> 啟動時</td>
+          <td>DLL 未載入、命名空間錯誤、或 XML 中 <code>Class="..."</code> 拼寫有誤</td>
+          <td>確認 <code>Assemblies/YourMod.dll</code> 存在；核對 XML 中的完整型別名 <code>Namespace.ClassName</code>；檢查 csproj 的 Assembly 名稱</td>
+        </tr>
+        <tr>
+          <td><code>XML parse exception</code></td>
+          <td><span class="tag tag-red">ERROR</span> 載入 Def</td>
+          <td>Def XML 格式錯誤：標籤未關閉、屬性值格式不符、非法字元</td>
+          <td>用 VS Code XML extension 開啟，確認格式正確；注意 <code>&amp;</code> 需寫成 <code>&amp;amp;</code>；確認 encoding 為 UTF-8 without BOM</td>
+        </tr>
+        <tr>
+          <td><code>HarmonyException: method not found</code><br>(<code>for patch</code>)</td>
+          <td><span class="tag tag-red">ERROR</span> 啟動時</td>
+          <td>Harmony Patch 的目標方法不存在，可能因 RimWorld 版本更新而改名或簽名改變</td>
+          <td>用 dnSpy 開啟 <code>Assembly-CSharp.dll</code> 確認方法名稱與參數；若參數有多載，在 <code>[HarmonyPatch]</code> 補上 <code>new Type[]{...}</code> 指定</td>
+        </tr>
+        <tr>
+          <td><code>Duplicate def name: XXX</code></td>
+          <td><span class="tag tag-orange">WARN</span> 啟動時</td>
+          <td>兩個 mod 定義了相同 <code>defName</code>，或同一 mod 重複定義</td>
+          <td>加入 mod 名稱前綴（如 <code>YourMod_Riflegun</code>）；若是 Override 其他 mod 的 Def，改用 PatchOperations</td>
+        </tr>
+        <tr>
+          <td><code>InvalidCastException</code><br>in Scribe</td>
+          <td><span class="tag tag-red">ERROR</span> 讀存檔</td>
+          <td>存檔中的欄位型別與目前代碼不符（通常是改了欄位型別但未處理舊存檔）</td>
+          <td>實作 <code>ExposeData</code> 版本遷移邏輯，或在 <code>Scribe_Values.Look</code> 使用 <code>forceSave: false</code> 並提供預設值</td>
+        </tr>
+        <tr>
+          <td><code>Exception in Verse.Root.Update</code></td>
+          <td><span class="tag tag-red">ERROR</span> 遊戲中循環</td>
+          <td>Update loop 中有未捕捉例外，通常來自自訂 <code>GameComponent</code> 或 UI overlay</td>
+          <td>在 <code>GameComponentUtility.GameComponentUpdate</code> 的 Postfix 加 try/catch；或在自己的 Component 中捕捉</td>
+        </tr>
+        <tr>
+          <td><code>Stack overflow</code></td>
+          <td><span class="tag tag-red">CRASH</span></td>
+          <td>Harmony Prefix 無限回呼（通常是 Prefix 呼叫了被 patch 的方法本身）</td>
+          <td>Prefix 內部避免呼叫同一方法；若需要，用 <code>Harmony.Unpatch</code> 暫時移除再呼叫原方法</td>
+        </tr>
+        <tr>
+          <td><code>No call to base method</code> warning</td>
+          <td><span class="tag tag-orange">WARN</span> Harmony</td>
+          <td>Prefix 返回 <code>false</code> 跳過原方法，但原方法有副作用被省略導致後續邏輯出錯</td>
+          <td>仔細閱讀原方法 IL，確認跳過安全；或改用 Postfix 而非完全跳過</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6  Steam Workshop 發布
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 Steam Workshop 發布流程</div>
+
+    <h3>發布前準備</h3>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>About/About.xml 完整性</h3>
+        <pre style="font-size:0.78rem;"><span class="xml-tag">&lt;ModMetaData&gt;</span>
+  <span class="xml-tag">&lt;name&gt;</span><span class="xml-val">Your Mod Name</span><span class="xml-tag">&lt;/name&gt;</span>
+  <span class="xml-tag">&lt;author&gt;</span><span class="xml-val">YourSteamName</span><span class="xml-tag">&lt;/author&gt;</span>
+  <span class="xml-tag">&lt;packageId&gt;</span><span class="xml-val">Author.ModName</span><span class="xml-tag">&lt;/packageId&gt;</span>
+  <span class="xml-tag">&lt;supportedVersions&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span><span class="xml-val">1.5</span><span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/supportedVersions&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span><span class="xml-val">…</span><span class="xml-tag">&lt;/description&gt;</span>
+<span class="xml-tag">&lt;/ModMetaData&gt;</span></pre>
+        <p style="font-size:0.82rem;color:var(--text-dim);"><code>packageId</code> 是全域唯一識別碼，格式 <code>Author.ModName</code>，一旦發布後不可更改（更改等同於新 mod）。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>About/Preview.png</h3>
+        <p>Steam Workshop 封面圖規格：</p>
+        <ul style="font-size:0.85rem;">
+          <li>建議解析度：<strong>320 × 240 px</strong>（4:3 比例）</li>
+          <li>格式：PNG 或 JPG</li>
+          <li>上限：1 MB</li>
+          <li>Workshop 頁面顯示時會裁切為 268 × 268，建議把主視覺放在中央安全區</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>使用 RimWorld 內建上傳介面</h3>
+    <ol class="steps">
+      <li>
+        <strong>在本地測試通過</strong>：將 mod 資料夾直接放在 <code>RimWorld/Mods/YourModName/</code>，
+        在遊戲 Mod Manager 啟用並完整測試。
+      </li>
+      <li>
+        <strong>進入 Dev Mode</strong>，開啟 Mod Manager（主選單 → Mods），找到你的 mod，
+        點選右下角的 <code>…</code> 選單 → <strong>Upload to Steam Workshop</strong>。
+      </li>
+      <li>
+        <strong>設定 Visibility</strong>（第一次上傳建議選 <em>Friends Only</em> 先做最終測試），
+        確認後點 <strong>Upload</strong>。
+      </li>
+      <li>
+        上傳完成後，遊戲會在 mod 資料夾產生 <code>About/PublishedFileId.txt</code>，
+        內含 Workshop Item ID。<strong>保留此檔案</strong>，後續更新時用同一介面上傳會覆蓋同一條目。
+      </li>
+      <li>
+        <strong>在 Steam Workshop 頁面</strong>補充說明文字、標籤、截圖，改為 Public 可見度。
+      </li>
+    </ol>
+
+    <div class="callout callout-warn">
+      <strong>⚠ PublishedFileId.txt 遺失問題</strong>
+      若此檔案遺失或意外刪除，下次上傳時會建立<em>新的</em> Workshop 條目而非更新舊的。
+      解決方法：手動建立 <code>About/PublishedFileId.txt</code>，內容只需一行 Workshop Item ID（純數字）。
+      Item ID 可在 Workshop 頁面 URL 中找到：<code>steamcommunity.com/sharedfiles/filedetails/?id=<strong>1234567890</strong></code>。
+    </div>
+
+    <h3>版本號管理與 Changelog</h3>
+    <p>RimWorld 本身不強制語意化版本，但建議建立一致的版本策略：</p>
+    <pre><span class="xml-tag">&lt;ModMetaData&gt;</span>
+  <span class="cm">&lt;!-- About.xml 中沒有官方的 version 欄位，但可自訂 --&gt;</span>
+  <span class="xml-tag">&lt;version&gt;</span><span class="xml-val">1.3.0</span><span class="xml-tag">&lt;/version&gt;</span>  <span class="cm">&lt;!-- 部分框架（HugsLib）會讀取此欄位 --&gt;</span>
+<span class="xml-tag">&lt;/ModMetaData&gt;</span></pre>
+    <p>Changelog 通常附在 Workshop 描述的末尾，或放在 <code>About/ChangeNotes.txt</code>（部分工具會讀取）。
+    建議格式：</p>
+    <pre><span class="cm">## v1.3.0 (2025-06-01)</span>
+- 新增：XXX 功能
+- 修正：YYY 造成的 NRE
+- 相容：支援 RimWorld 1.5.4185</pre>
+
+    <h3>本地 Mods/ 資料夾測試</h3>
+    <p>不透過 Steam Workshop 也能測試，直接將 mod 資料夾放入 RimWorld 的 <code>Mods/</code> 目錄：</p>
+    <pre><span class="cm"># 路徑（Windows，Steam 版）</span>
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\YourModName\
+
+<span class="cm"># 或使用符號連結避免複製（PowerShell 管理員模式）</span>
+New-Item -ItemType Junction `
+  -Path "C:\...\RimWorld\Mods\YourModName" `
+  -Target "C:\dev\YourModName"</pre>
+    <div class="callout callout-tip">
+      <strong>💡 Junction vs SymLink</strong>
+      Windows 上建議用 Junction（<code>mklink /J</code> 或 PowerShell <code>Junction</code> type），
+      不需管理員權限且對 Unity 檔案系統透明。這樣修改 <code>C:\dev\YourModName</code> 後，
+      遊戲 Dev Mode 的「Reload all mods」即可熱重載 XML 變更，無需複製檔案。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §7  Mod 相容性
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 Mod 相容性最佳實踐</div>
+
+    <h3>MayRequire 條件 Def Patch</h3>
+    <p>當你的 mod 需要與另一個 mod 整合時，使用 PatchOperations 而非硬依賴：</p>
+    <pre><span class="cm">&lt;!-- Patches/patch_integration_somemod.xml --&gt;</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="xml-tag">&lt;Operation Class=</span><span class="xml-val">"PatchOperationFindMod"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;mods&gt;&lt;li&gt;</span><span class="xml-val">Author.SomeMod</span><span class="xml-tag">&lt;/li&gt;&lt;/mods&gt;</span>
+    <span class="xml-tag">&lt;match Class=</span><span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;xpath&gt;</span><span class="xml-val">Defs/ThingDef[defName="SomeMod_Widget"]/comps</span><span class="xml-tag">&lt;/xpath&gt;</span>
+      <span class="xml-tag">&lt;value&gt;</span>
+        <span class="xml-tag">&lt;li Class=</span><span class="xml-val">"YourMod.CompMyFeature"</span><span class="xml-tag">/&gt;</span>
+      <span class="xml-tag">&lt;/value&gt;</span>
+    <span class="xml-tag">&lt;/match&gt;</span>
+    <span class="cm">&lt;!-- nomatch 可省略，表示找不到 mod 時靜默忽略 --&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></pre>
+
+    <p>或在單一 Def 的 XML 中用 <code>MayRequire</code>：</p>
+    <pre><span class="xml-tag">&lt;li MayRequire=</span><span class="xml-val">"Author.SomeMod"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;filter&gt;&lt;thingDefs&gt;&lt;li&gt;</span><span class="xml-val">SomeMod_Resource</span><span class="xml-tag">&lt;/li&gt;&lt;/thingDefs&gt;&lt;/filter&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <h3>Harmony Patch 加 try/catch 保護</h3>
+    <p>線上環境中，一個 Patch 崩潰可能導致連鎖失敗。在可能出錯的 Patch 中加入防護：</p>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">JobDriver_Ingest</span><span class="at">), "</span><span class="nm">MakeNewToils</span><span class="at">")]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_JobDriver_Ingest_MakeNewToils</span>
+{
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="ty">JobDriver_Ingest</span> __instance, <span class="kw">ref</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Toil</span>&gt; __result)
+    {
+        <span class="kw">try</span>
+        {
+            __result = <span class="nm">AddCustomToils</span>(__instance, __result);
+        }
+        <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+        {
+            Log.<span class="nm">ErrorOnce</span>(
+                <span class="st">"[YourMod] Patch_JobDriver_Ingest_MakeNewToils 失敗，已停用本 Patch: "</span>
+                + ex.<span class="nm">ToString</span>(), <span class="nu">0xABC1</span>);
+            <span class="cm">// 不重拋例外，讓原方法的結果照常使用</span>
+        }
+    }
+}</pre>
+
+    <h3>動態偵測其他 Mod</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// 在 Mod 建構子或 [StaticConstructorOnStartup] 中一次性偵測</span>
+<span class="kw">public static bool</span> HasCombatExtended;
+<span class="kw">public static bool</span> HasVanillaExpanded;
+
+<span class="kw">static</span> <span class="nm">YourModMain</span>()
+{
+    HasCombatExtended  = <span class="ty">ModLister</span>.<span class="nm">HasActiveModWithName</span>(<span class="st">"Combat Extended"</span>);
+    HasVanillaExpanded = <span class="ty">ModLister</span>.<span class="nm">GetActiveModWithIdentifier</span>(
+        <span class="st">"vanillaexpanded.vfe.core"</span>) != <span class="kw">null</span>;
+
+    <span class="kw">if</span> (HasCombatExtended)
+        Log.<span class="nm">Message</span>(<span class="st">"[YourMod] 偵測到 Combat Extended，啟用相容模式"</span>);
+}
+
+<span class="cm">// 在邏輯中根據旗標走不同路徑</span>
+<span class="kw">public static float</span> <span class="nm">GetDamage</span>(<span class="ty">Thing</span> weapon)
+{
+    <span class="kw">if</span> (HasCombatExtended)
+        <span class="kw">return</span> <span class="nm">GetDamageCE</span>(weapon);   <span class="cm">// 呼叫 CE 的 API</span>
+    <span class="kw">return</span> weapon.GetStatValue(<span class="ty">StatDefOf</span>.RangedWeapon_DamageMultiplier);
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>⚠ 用 packageId 而非顯示名稱偵測</strong>
+      <code>HasActiveModWithName()</code> 比對的是顯示名稱，可能因玩家更改 About.xml 或翻譯而不符。
+      建議改用 <code>GetActiveModWithIdentifier("author.modname")</code>，比對的是不可變的 <code>packageId</code>，更可靠。
+    </div>
+
+    <h3>避免 Static Field 殘留狀態</h3>
+    <p>RimWorld 的「返回主選單」不會重啟進程，所有 static field 的值會保留到下一局。
+    這在 Harmony Patch 中特別危險：</p>
+    <pre><span class="cm">// ❌ 危險：靜態快取在跨局時不清空</span>
+<span class="kw">public static class</span> <span class="ty">BadPatch</span>
+{
+    <span class="kw">private static</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Pawn</span>, <span class="ty">MyData</span>&gt; cache = <span class="kw">new</span>();
+
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="ty">Pawn</span> __instance) { <span class="cm">/* 使用 cache */</span> }
+}
+
+<span class="cm">// ✅ 正確：在 GameComponent 中管理，隨地圖生命週期清空</span>
+<span class="kw">public class</span> <span class="ty">MyGameComp</span> : <span class="ty">GameComponent</span>
+{
+    <span class="kw">private</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Pawn</span>, <span class="ty">MyData</span>&gt; cache = <span class="kw">new</span>();
+
+    <span class="kw">public</span> <span class="nm">MyGameComp</span>(<span class="ty">Game</span> game) { } <span class="cm">// 每局開始時重新建構</span>
+}
+
+<span class="cm">// ✅ 或在 NewGame/LoadedGame 時重置</span>
+<span class="kw">public class</span> <span class="ty">MyMod</span> : <span class="ty">Mod</span>
+{
+    <span class="kw">public override void</span> <span class="nm">WriteSettings</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">WriteSettings</span>();
+        BadPatch.cache?.<span class="nm">Clear</span>(); <span class="cm">// 設定改變時清快取</span>
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>🚨 Harmony Patch 中的靜態旗標尤其危險</strong>
+      若你在 Prefix 中用靜態 bool 做「once-per-execution」防止重入，而這個 bool 在例外發生後沒有被重置，
+      整個遊戲 session 中該 Patch 可能永遠不會再執行。務必在 <code>finally</code> 區塊中重置此類旗標。
+    </div>
+
+    <h3>相容性最佳實踐總覽</h3>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <h3>Def 層隔離</h3>
+        <p>所有 defName 加 mod 前綴；跨 mod 整合用 PatchOperations 而非硬寫 defName；可選依賴用 <code>MayRequire</code>。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Patch 防禦性設計</h3>
+        <p>高風險 Patch 包 try/catch；Prefix 返回 false 前確認副作用；避免 Transpiler 除非絕對必要（維護成本高）。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>狀態生命週期</h3>
+        <p>遊戲資料用 <code>GameComponent</code> / <code>MapComponent</code> 持有，確保跨局乾淨重置；不在 Patch class 持有遊戲狀態。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>依賴聲明</h3>
+        <p><code>About.xml</code> 中用 <code>&lt;modDependencies&gt;</code> 列出硬依賴；可選相依只做執行時偵測，不設載入順序強制。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>版本保護</h3>
+        <p>在 <code>supportedVersions</code> 只列出測試過的版本；新版 RimWorld 釋出後用空白存檔完整跑過再更新版本號。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>Log 禮儀</h3>
+        <p>正式版不在熱路徑輸出 Log；使用 <code>ErrorOnce</code> 防洗版；所有輸出加 <code>[YourMod]</code> 前綴方便玩家過濾。</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 — Chapter 05：除錯與發布 ／ 目標讀者：資深 C# 工程師 ／ RimWorld 1.5
+</footer>
+
+</body>
+</html>

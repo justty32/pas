@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harmony 修補 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .param-table td:first-child { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+  .param-table td:nth-child(2) { color: var(--purple); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; }
+  .il-row td:first-child { color: var(--orange); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html" class="active">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>Harmony 修補</h1>
+  <p>在不修改原始碼的前提下，外科手術式地改變遊戲行為。</p>
+  <span class="badge">Harmony 2.x · RimWorld 1.5</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#init">Harmony 初始化</a></li>
+      <li><a href="#prefix">Prefix — 攔截前置</a></li>
+      <li><a href="#postfix">Postfix — 後置修改</a></li>
+      <li><a href="#transpiler">Transpiler — IL 層修改</a></li>
+      <li><a href="#targetmethod">TargetMethod — 動態指定目標</a></li>
+      <li><a href="#accesstools">AccessTools — 反射助手</a></li>
+      <li><a href="#priority">HarmonyPriority — 執行順序</a></li>
+      <li><a href="#pitfalls">常見陷阱</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念卡片 -->
+  <div class="section">
+    <div class="section-title">Harmony 是什麼</div>
+    <p>
+      Harmony 是 Andreas Pardeike 開發的 .NET 方法修補框架（<a href="https://github.com/pardeike/Harmony" target="_blank">GitHub</a>），
+      核心機制是在 JIT 編譯後、執行時期動態修改方法的 IL 指令流，插入你自己的邏輯。
+      RimWorld 遊戲本體已內建 <code>0Harmony.dll</code>，所有 mod 共享同一個 Harmony 實例池。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Prefix</h3>
+        <p>在目標方法<strong>執行前</strong>插入。可存取參數、可選擇中止原方法（回傳 false）。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Postfix</h3>
+        <p>在目標方法<strong>執行後</strong>插入。可讀取並修改回傳值（<code>ref __result</code>）。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>Transpiler</h3>
+        <p>直接操作 <strong>IL 指令序列</strong>。最強大、最危險——能做到另外兩種無法做到的事。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 1. 初始化 ═══ -->
+  <div class="section" id="init">
+    <div class="section-title">1 · Harmony 初始化</div>
+
+    <p>
+      Harmony patch 必須在遊戲載入期間、Assembly 被注入後盡早執行。
+      RimWorld 提供 <code>[StaticConstructorOnStartup]</code> attribute——標記這個 class 後，
+      遊戲在所有 Def 載入完畢、第一次進入主選單前會自動呼叫其靜態建構子。
+    </p>
+
+    <pre><span class="kw">using</span> HarmonyLib;
+<span class="kw">using</span> Verse;
+
+<span class="at">[StaticConstructorOnStartup]</span>
+<span class="kw">public static class</span> <span class="ty">MyModInit</span>
+{
+    <span class="kw">static</span> <span class="ty">MyModInit</span>()
+    {
+        <span class="cm">// "com.yourname.yourmod" 必須全局唯一，建議反向域名格式</span>
+        <span class="kw">var</span> harmony = <span class="kw">new</span> <span class="ty">Harmony</span>(<span class="st">"com.yourname.yourmod"</span>);
+
+        <span class="cm">// PatchAll 掃描當前 Assembly 中所有帶 [HarmonyPatch] attribute 的 class</span>
+        harmony.<span class="nm">PatchAll</span>();
+
+        <span class="cm">// 或只掃描特定 Assembly：</span>
+        <span class="cm">// harmony.PatchAll(Assembly.GetExecutingAssembly());</span>
+
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">"[MyMod] Harmony patches applied."</span>);
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>為何不在 <code>Mod</code> 建構子裡初始化？</strong>
+      <code>Mod</code> 子類別的建構子在 Def 載入<em>之前</em>就被呼叫（用來讀取 ModSettings）。
+      此時許多 RimWorld 類別尚未初始化，貿然 patch 可能命中未就緒的靜態欄位，引發難以追蹤的 NRE。
+      把 Harmony 初始化放在 <code>[StaticConstructorOnStartup]</code> 靜態建構子是社群標準做法。
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>手動 Patch（不用 PatchAll）</strong>
+      若你想精細控制每個 patch 的時機，可以用 <code>harmony.Patch(original, prefix, postfix)</code> 手動逐一套用。
+      這在條件式啟用某些 patch 時很有用（例如偵測到特定 mod 才啟用）。
+    </div>
+  </div>
+
+  <!-- ═══ 2. Prefix ═══ -->
+  <div class="section" id="prefix">
+    <div class="section-title">2 · Prefix — 攔截前置</div>
+
+    <p>
+      Prefix 在目標方法的「入口」插入你的程式碼。
+      回傳 <code>bool</code> 時，<code>false</code> 代表「跳過原始方法（及後續同優先級的 Prefix）」；
+      <code>true</code> 或回傳 <code>void</code> 代表繼續執行。
+    </p>
+
+    <h3>特殊參數名稱</h3>
+    <table class="param-table">
+      <tr><th>參數名稱</th><th>型別</th><th>說明</th></tr>
+      <tr><td>__instance</td><td>目標類別型別</td><td>目標物件的 <code>this</code>（靜態方法無此參數）</td></tr>
+      <tr><td>__result</td><td>回傳值型別（ref）</td><td>搭配 return false 提前設定回傳值</td></tr>
+      <tr><td>__state</td><td>任意型別（ref）</td><td>在 Prefix 與 Postfix 間傳遞自訂狀態</td></tr>
+      <tr><td>__originalMethod</td><td>MethodBase</td><td>目標方法的 MethodInfo 本身</td></tr>
+      <tr><td>___fieldName</td><td>對應型別（ref）</td><td>三底線前綴：存取目標物件的私有欄位</td></tr>
+      <tr><td>（原方法參數名）</td><td>原型別（可加 ref）</td><td>直接按名稱對應；加 ref 可修改傳入值</td></tr>
+    </table>
+
+    <h3>完整範例：攔截 <code>Pawn_HealthTracker.MakeDowned</code></h3>
+    <p>
+      目標：當某個 pawn 擁有特定 Hediff 時，完全阻止其被擊倒（直接傳回，原方法不執行）。
+    </p>
+    <pre><span class="kw">using</span> HarmonyLib;
+<span class="kw">using</span> Verse;
+
+<span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn_HealthTracker</span><span class="at">), nameof(</span><span class="ty">Pawn_HealthTracker</span><span class="at">.MakeDowned))]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_MakeDowned</span>
+{
+    <span class="cm">/// &lt;summary&gt;
+    /// 回傳 false → 跳過原始 MakeDowned，pawn 不會進入倒地狀態。
+    /// 回傳 true  → 繼續執行原始方法。
+    /// &lt;/summary&gt;</span>
+    <span class="kw">static bool</span> <span class="nm">Prefix</span>(
+        <span class="ty">Pawn_HealthTracker</span> __instance,   <span class="cm">// this</span>
+        <span class="ty">DamageInfo</span>?        dinfo,          <span class="cm">// 原方法第一個參數（按名稱對應）</span>
+        <span class="ty">HediffDef</span>          hediffDef)      <span class="cm">// 原方法第二個參數</span>
+    {
+        <span class="cm">// Pawn_HealthTracker.pawn 是 internal，用 Traverse 或 ___pawn（三底線）存取</span>
+        <span class="ty">Pawn</span> pawn = __instance.<span class="nm">GetField</span><<span class="ty">Pawn</span>>(<span class="st">"pawn"</span>); <span class="cm">// 說明用；見 AccessTools 節</span>
+
+        <span class="cm">// 若 pawn 具有「免疫倒地」的自訂 Hediff，阻止原方法</span>
+        <span class="kw">if</span> (pawn.<span class="nm">health</span>.<span class="nm">hediffSet</span>.<span class="nm">HasHediff</span>(<span class="ty">MyHediffDefOf</span>.ImmuneToDown))
+            <span class="kw">return false</span>; <span class="cm">// 跳過原始 MakeDowned</span>
+
+        <span class="kw">return true</span>; <span class="cm">// 其他情況正常執行</span>
+    }
+}</pre>
+
+    <h3>使用 <code>ref</code> 修改參數</h3>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">StatWorker</span><span class="at">), nameof(</span><span class="ty">StatWorker</span><span class="at">.GetValue), new[] { typeof(</span><span class="ty">StatRequest</span><span class="at">), typeof(bool) })]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_StatWorker_GetValue_Pre</span>
+{
+    <span class="kw">static void</span> <span class="nm">Prefix</span>(<span class="kw">ref</span> <span class="ty">StatRequest</span> req)
+    {
+        <span class="cm">// ref 參數：直接修改傳入的 StatRequest 副本</span>
+        <span class="cm">// 注意：StatRequest 是 struct，不加 ref 則修改無效</span>
+        <span class="kw">if</span> (req.<span class="nm">HasThing</span> &amp;&amp; req.<span class="nm">Thing</span> <span class="kw">is</span> <span class="ty">Pawn</span> pawn)
+        {
+            <span class="cm">// 自訂邏輯 ...</span>
+        }
+    }
+}</pre>
+
+    <h3>提前設定回傳值（搭配 return false）</h3>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">FoodUtility</span><span class="at">), nameof(</span><span class="ty">FoodUtility</span><span class="at">.WillIngestFromInventoryNow))]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_WillIngest</span>
+{
+    <span class="kw">static bool</span> <span class="nm">Prefix</span>(<span class="ty">Pawn</span> pawn, <span class="kw">ref bool</span> __result)
+    {
+        <span class="kw">if</span> (pawn.<span class="nm">def</span>.<span class="nm">defName</span> == <span class="st">"MyCustomPawnDef"</span>)
+        {
+            __result = <span class="kw">false</span>; <span class="cm">// 設定回傳值</span>
+            <span class="kw">return false</span>;     <span class="cm">// 跳過原方法，直接回傳 __result</span>
+        }
+        <span class="kw">return true</span>;
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>多個 Prefix 的「跳過」語意</strong>
+      return false 只跳過「原始方法」，不會阻止其他 mod 的 Prefix 執行（除非它們的優先權更低）。
+      若要控制跳過範圍，需搭配 <code>HarmonyPriority</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 3. Postfix ═══ -->
+  <div class="section" id="postfix">
+    <div class="section-title">3 · Postfix — 後置修改</div>
+
+    <p>
+      Postfix 在目標方法（以及所有 Prefix）執行完畢後才執行。
+      它是修改回傳值、追加副作用的最安全位置——不需要了解原方法的完整邏輯。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>適合 Postfix 的場景</h3>
+        <ul>
+          <li>修改／包裝原方法的回傳值</li>
+          <li>在原方法行為後附加副作用</li>
+          <li>記錄／Debug 原方法的輸出</li>
+          <li>讀取原方法結束後的物件狀態</li>
+        </ul>
+      </div>
+      <div class="card card-accent-red">
+        <h3>注意</h3>
+        <ul>
+          <li>若原方法拋出例外，Postfix <strong>不會</strong>執行</li>
+          <li>不能阻止原方法執行（那是 Prefix 的職責）</li>
+          <li><code>ref __result</code> 型別必須完全匹配回傳型別</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>完整範例：修改 <code>StatWorker.GetValue</code> 回傳值</h3>
+    <p>
+      目標：對特定 pawn 的某個 stat 值套用乘數。
+    </p>
+    <pre><span class="kw">using</span> HarmonyLib;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="at">[HarmonyPatch(typeof(</span><span class="ty">StatWorker</span><span class="at">), nameof(</span><span class="ty">StatWorker</span><span class="at">.GetValue),
+    new[] { typeof(</span><span class="ty">StatRequest</span><span class="at">), typeof(bool) })]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_StatWorker_GetValue</span>
+{
+    <span class="cm">/// &lt;summary&gt;
+    /// Postfix 的簽章：第一個參數仍可寫 __instance、原方法參數，
+    /// 然後加上 ref __result 取得（並修改）回傳值。
+    /// &lt;/summary&gt;</span>
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(
+        <span class="ty">StatWorker</span>   __instance,
+        <span class="ty">StatRequest</span>  req,
+        <span class="kw">ref float</span>    __result)   <span class="cm">// GetValue 回傳 float</span>
+    {
+        <span class="cm">// 只對 MoveSpeed 這個 stat 有效</span>
+        <span class="kw">if</span> (__instance.<span class="nm">stat</span> != <span class="ty">StatDefOf</span>.MoveSpeed) <span class="kw">return</span>;
+        <span class="kw">if</span> (!req.<span class="nm">HasThing</span> || req.<span class="nm">Thing</span> <span class="kw">is not</span> <span class="ty">Pawn</span> pawn) <span class="kw">return</span>;
+
+        <span class="cm">// pawn 有特定 trait 時，移動速度 +20%</span>
+        <span class="kw">if</span> (pawn.<span class="nm">story</span>?.<span class="nm">traits</span>.<span class="nm">HasTrait</span>(<span class="ty">MyTraitDefOf</span>.Speedster) == <span class="kw">true</span>)
+        {
+            __result *= <span class="nu">1.2f</span>;
+        }
+    }
+}</pre>
+
+    <h3>同時使用 <code>__state</code>（Prefix ↔ Postfix 通訊）</h3>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">JobDriver_Ingest</span><span class="at">), <span class="st">"MakeNewToils"</span>)]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_Ingest_Timing</span>
+{
+    <span class="cm">// __state 型別由你決定；Prefix 設值，Postfix 讀值</span>
+    <span class="kw">static void</span> <span class="nm">Prefix</span>(<span class="kw">ref long</span> __state)
+    {
+        __state = <span class="ty">System.Diagnostics.Stopwatch</span>.<span class="nm">GetTimestamp</span>();
+    }
+
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="kw">long</span> __state)
+    {
+        <span class="kw">long</span> elapsed = <span class="ty">System.Diagnostics.Stopwatch</span>.<span class="nm">GetTimestamp</span>() - __state;
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"MakeNewToils 耗時：{elapsed} ticks"</span>);
+    }
+}</pre>
+  </div>
+
+  <!-- ═══ 4. Transpiler ═══ -->
+  <div class="section" id="transpiler">
+    <div class="section-title">4 · Transpiler — IL 層修改 <span class="tag tag-red">最後手段</span></div>
+
+    <div class="callout callout-danger">
+      <strong>先嘗試 Prefix / Postfix</strong>
+      Transpiler 直接修改 IL 指令序列，每次遊戲更新都可能讓 patch 失效，且 debug 難度極高。
+      只有當 Prefix/Postfix 無法表達你的意圖時，才使用 Transpiler。
+    </div>
+
+    <p>
+      Transpiler 接收目標方法的 <code>IEnumerable&lt;CodeInstruction&gt;</code>，回傳修改後的序列。
+      你可以插入、刪除、替換任意 IL 指令。
+    </p>
+
+    <h3>必要引用</h3>
+    <pre><span class="kw">using</span> HarmonyLib;
+<span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> System.Reflection;
+<span class="kw">using</span> System.Reflection.Emit; <span class="cm">// OpCodes 在這裡</span></pre>
+
+    <h3>Transpiler 簽章</h3>
+    <pre><span class="kw">static</span> <span class="ty">IEnumerable</span><<span class="ty">CodeInstruction</span>> <span class="nm">Transpiler</span>(
+    <span class="ty">IEnumerable</span><<span class="ty">CodeInstruction</span>> instructions,
+    <span class="ty">ILGenerator</span>                    il,       <span class="cm">// 選用：建立新 label/local</span>
+    <span class="ty">MethodBase</span>                     original) <span class="cm">// 選用：目標方法 MethodInfo</span></pre>
+
+    <h3>完整範例：在條件判斷前插入額外判斷</h3>
+    <p>
+      假設原始方法有一段 <code>if (pawn.Dead) return;</code>，
+      我們想在這條 return 之前，額外檢查另一個條件——如果自訂狀態為真也提前 return。
+    </p>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn_JobTracker</span><span class="at">), <span class="st">"TryFindAndStartJob"</span>)]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_TryFindAndStartJob</span>
+{
+    <span class="kw">static</span> <span class="ty">IEnumerable</span><<span class="ty">CodeInstruction</span>> <span class="nm">Transpiler</span>(
+        <span class="ty">IEnumerable</span><<span class="ty">CodeInstruction</span>> instructions,
+        <span class="ty">ILGenerator</span> il)
+    {
+        <span class="kw">var</span> codes = <span class="kw">new</span> <span class="ty">List</span><<span class="ty">CodeInstruction</span>>(instructions);
+
+        <span class="cm">// 找目標：ldfld Pawn::Dead 之後緊跟著 brfalse（if !Dead skip）</span>
+        <span class="kw">var</span> deadField = <span class="ty">AccessTools</span>.<span class="nm">Field</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"Dead"</span>);
+        <span class="kw">var</span> myHelper = <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">Patch_TryFindAndStartJob</span>), <span class="nm">nameof</span>(<span class="nm">ShouldSkipJob</span>));
+
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i < codes.<span class="nm">Count</span> - <span class="nu">1</span>; i++)
+        {
+            <span class="cm">// 辨識模式：ldarg.0（this） → ldfld pawn → ldfld Dead → brtrue/brfalse</span>
+            <span class="kw">if</span> (codes[i].<span class="nm">LoadsField</span>(deadField))
+            {
+                <span class="cm">// 在這條指令之前插入：ldarg.0（this）、call ShouldSkipJob、brtrue earlyReturn</span>
+                <span class="kw">var</span> earlyReturn = il.<span class="nm">DefineLabel</span>();
+
+                <span class="cm">// 在原有 ldfld Dead 之前注入</span>
+                codes.<span class="nm">InsertRange</span>(i, <span class="kw">new</span>[]
+                {
+                    <span class="kw">new</span> <span class="ty">CodeInstruction</span>(<span class="ty">OpCodes</span>.Ldarg_0),          <span class="cm">// this (Pawn_JobTracker)</span>
+                    <span class="kw">new</span> <span class="ty">CodeInstruction</span>(<span class="ty">OpCodes</span>.Call, myHelper),   <span class="cm">// call ShouldSkipJob</span>
+                    <span class="kw">new</span> <span class="ty">CodeInstruction</span>(<span class="ty">OpCodes</span>.Brtrue, earlyReturn) <span class="cm">// if true → jump</span>
+                });
+
+                <span class="cm">// earlyReturn label 掛在原來 Dead 分支的 return 指令上</span>
+                <span class="cm">// （這裡簡化：找下一個 ret 指令打上 label）</span>
+                <span class="kw">for</span> (<span class="kw">int</span> j = i + <span class="nu">3</span>; j < codes.<span class="nm">Count</span>; j++)
+                {
+                    <span class="kw">if</span> (codes[j].<span class="nm">opcode</span> == <span class="ty">OpCodes</span>.Ret)
+                    {
+                        codes[j].<span class="nm">labels</span>.<span class="nm">Add</span>(earlyReturn);
+                        <span class="kw">break</span>;
+                    }
+                }
+                <span class="kw">break</span>; <span class="cm">// 只插一次</span>
+            }
+        }
+
+        <span class="kw">return</span> codes;
+    }
+
+    <span class="cm">// Transpiler 呼叫的靜態輔助方法——必須是靜態的</span>
+    <span class="kw">static bool</span> <span class="nm">ShouldSkipJob</span>(<span class="ty">Pawn_JobTracker</span> tracker)
+    {
+        <span class="cm">// 取得 pawn（私有欄位）</span>
+        <span class="ty">Pawn</span> pawn = <span class="ty">Traverse</span>.<span class="nm">Create</span>(tracker).<span class="nm">Field</span><<span class="ty">Pawn</span>>(<span class="st">"pawn"</span>).<span class="nm">Value</span>;
+        <span class="kw">return</span> pawn?.<span class="nm">health</span>?.<span class="nm">hediffSet</span>?.<span class="nm">HasHediff</span>(<span class="ty">MyHediffDefOf</span>.Paralyzed) ?? <span class="kw">false</span>;
+    }
+}</pre>
+
+    <h3>常用 CodeInstruction 查找方法</h3>
+    <table>
+      <tr><th>方法</th><th>說明</th></tr>
+      <tr><td><code>ci.LoadsField(FieldInfo)</code></td><td>是否為 ldfld / ldsfld 指定欄位</td></tr>
+      <tr><td><code>ci.StoresField(FieldInfo)</code></td><td>是否為 stfld / stsfld 指定欄位</td></tr>
+      <tr><td><code>ci.Calls(MethodInfo)</code></td><td>是否呼叫指定方法</td></tr>
+      <tr><td><code>ci.opcode == OpCodes.Ret</code></td><td>是否為 return 指令</td></tr>
+      <tr><td><code>ci.Is(OpCode, object)</code></td><td>比對 opcode + operand 組合</td></tr>
+      <tr><td><code>CodeInstruction.Call(type, "Method")</code></td><td>建立 call 指令的便利工廠</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>除錯技巧</strong>
+      在 Transpiler 最後加上 <code>foreach (var c in codes) Log.Message(c.ToString());</code>
+      可在遊戲 log 中印出整段 IL，方便和 dnSpy 反編譯結果比對。完成後記得移除。
+    </div>
+  </div>
+
+  <!-- ═══ 5. TargetMethod ═══ -->
+  <div class="section" id="targetmethod">
+    <div class="section-title">5 · TargetMethod — 動態指定目標</div>
+
+    <p>
+      <code>[HarmonyPatch]</code> attribute 只能在編譯期靜態指定目標。
+      當目標是泛型方法、屬性存取子、建構子，或你需要在執行期決定目標時，
+      改用 <code>[HarmonyTargetMethod]</code> 靜態方法動態回傳 <code>MethodBase</code>。
+    </p>
+
+    <h3>Attribute 層級宣告（不指定目標）</h3>
+    <pre><span class="at">[HarmonyPatch]</span> <span class="cm">// 不填任何參數，交給 TargetMethod 決定</span>
+<span class="kw">public static class</span> <span class="ty">Patch_DynamicTarget</span>
+{
+    <span class="at">[HarmonyTargetMethod]</span>
+    <span class="kw">static</span> <span class="ty">MethodBase</span> <span class="nm">TargetMethod</span>()
+    {
+        <span class="cm">// 範例一：屬性 getter</span>
+        <span class="kw">return</span> <span class="ty">AccessTools</span>.<span class="nm">PropertyGetter</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"BodySize"</span>);
+    }
+}
+
+<span class="at">[HarmonyPatch]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_Setter</span>
+{
+    <span class="at">[HarmonyTargetMethod]</span>
+    <span class="kw">static</span> <span class="ty">MethodBase</span> <span class="nm">TargetMethod</span>() =>
+        <span class="ty">AccessTools</span>.<span class="nm">PropertySetter</span>(<span class="kw">typeof</span>(<span class="ty">Building_Bed</span>), <span class="st">"Medical"</span>);
+}
+
+<span class="at">[HarmonyPatch]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_Ctor</span>
+{
+    <span class="at">[HarmonyTargetMethod]</span>
+    <span class="kw">static</span> <span class="ty">MethodBase</span> <span class="nm">TargetMethod</span>() =>
+        <span class="ty">AccessTools</span>.<span class="nm">Constructor</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>));
+}</pre>
+
+    <h3>多目標：<code>[HarmonyTargetMethods]</code>（複數）</h3>
+    <pre><span class="at">[HarmonyPatch]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_MultiTarget</span>
+{
+    <span class="at">[HarmonyTargetMethods]</span>
+    <span class="kw">static</span> <span class="ty">IEnumerable</span><<span class="ty">MethodBase</span>> <span class="nm">TargetMethods</span>()
+    {
+        <span class="cm">// 同時 patch 多個方法（共用同一個 Prefix/Postfix）</span>
+        <span class="kw">yield return</span> <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"Kill"</span>);
+        <span class="kw">yield return</span> <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"Destroy"</span>);
+    }
+
+    <span class="kw">static void</span> <span class="nm">Prefix</span>(<span class="ty">Pawn</span> __instance)
+    {
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] Pawn {__instance.Name} is being removed."</span>);
+    }
+}</pre>
+
+    <h3>泛型方法</h3>
+    <pre><span class="cm">// 泛型方法必須先 MakeGenericMethod 才能 patch</span>
+<span class="at">[HarmonyPatch]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_GenericMethod</span>
+{
+    <span class="at">[HarmonyTargetMethod]</span>
+    <span class="kw">static</span> <span class="ty">MethodBase</span> <span class="nm">TargetMethod</span>()
+    {
+        <span class="kw">return</span> <span class="ty">AccessTools</span>
+            .<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">SomeClass</span>), <span class="st">"GenericMethod"</span>)
+            .<span class="nm">MakeGenericMethod</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>)); <span class="cm">// 指定型別參數</span>
+    }
+}</pre>
+  </div>
+
+  <!-- ═══ 6. AccessTools ═══ -->
+  <div class="section" id="accesstools">
+    <div class="section-title">6 · AccessTools — 反射助手</div>
+
+    <p>
+      <code>AccessTools</code> 是 Harmony 提供的反射工具集，自動繞過 <code>private</code> / <code>protected</code> 限制，
+      省去手寫 <code>BindingFlags.NonPublic | BindingFlags.Instance</code> 的麻煩。
+    </p>
+
+    <h3>欄位、方法、屬性查找</h3>
+    <pre><span class="kw">using</span> HarmonyLib;
+
+<span class="cm">// ── 欄位 ──────────────────────────────────────────────────</span>
+<span class="ty">FieldInfo</span>  fi = <span class="ty">AccessTools</span>.<span class="nm">Field</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"ageTracker"</span>);
+<span class="ty">FieldInfo</span>  fs = <span class="ty">AccessTools</span>.<span class="nm">Field</span>(<span class="kw">typeof</span>(<span class="ty">StaticClass</span>), <span class="st">"someStaticField"</span>);
+
+<span class="cm">// 強型別的 ref delegate（效能較佳，適合高頻呼叫）</span>
+<span class="kw">var</span> getAgeTracker = <span class="ty">AccessTools</span>.<span class="nm">FieldRefAccess</span><<span class="ty">Pawn</span>, <span class="ty">Pawn_AgeTracker</span>>(<span class="st">"ageTracker"</span>);
+<span class="ty">Pawn_AgeTracker</span> tracker = getAgeTracker(pawn); <span class="cm">// 直接讀取，不用 Invoke</span>
+
+<span class="cm">// ── 方法 ──────────────────────────────────────────────────</span>
+<span class="ty">MethodInfo</span> mi = <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"CheckAcceptArrest"</span>);
+<span class="cm">// 方法多載：指定參數型別陣列</span>
+<span class="ty">MethodInfo</span> mo = <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">StatWorker</span>), <span class="st">"GetValue"</span>,
+    <span class="kw">new</span>[] { <span class="kw">typeof</span>(<span class="ty">StatRequest</span>), <span class="kw">typeof</span>(<span class="ty">bool</span>) });
+
+<span class="cm">// DeclaredMethod：只在宣告型別查找，不往父類別走（避免繼承歧義）</span>
+<span class="ty">MethodInfo</span> dm = <span class="ty">AccessTools</span>.<span class="nm">DeclaredMethod</span>(<span class="kw">typeof</span>(<span class="ty">Building_Bed</span>), <span class="st">"GetInspectString"</span>);
+
+<span class="cm">// ── 屬性存取子 ────────────────────────────────────────────</span>
+<span class="ty">MethodInfo</span> getter = <span class="ty">AccessTools</span>.<span class="nm">PropertyGetter</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>), <span class="st">"BodySize"</span>);
+<span class="ty">MethodInfo</span> setter = <span class="ty">AccessTools</span>.<span class="nm">PropertySetter</span>(<span class="kw">typeof</span>(<span class="ty">Building_Bed</span>), <span class="st">"Medical"</span>);
+
+<span class="cm">// ── 建構子 ────────────────────────────────────────────────</span>
+<span class="ty">ConstructorInfo</span> ci = <span class="ty">AccessTools</span>.<span class="nm">Constructor</span>(<span class="kw">typeof</span>(<span class="ty">Pawn</span>));
+<span class="ty">ConstructorInfo</span> cs = <span class="ty">AccessTools</span>.<span class="nm">Constructor</span>(<span class="kw">typeof</span>(<span class="ty">SomeClass</span>),
+    <span class="kw">new</span>[] { <span class="kw">typeof</span>(<span class="ty">int</span>), <span class="kw">typeof</span>(<span class="ty">string</span>) });</pre>
+
+    <h3>Traverse — 鏈式反射存取</h3>
+    <p>
+      <code>Traverse</code> 提供 fluent API，用來讀寫深層私有欄位或呼叫私有方法，
+      不需要自己管理 <code>FieldInfo</code>。
+    </p>
+    <pre><span class="kw">using</span> HarmonyLib;
+
+<span class="cm">// 讀取私有欄位</span>
+<span class="ty">Pawn_AgeTracker</span> tracker =
+    <span class="ty">Traverse</span>.<span class="nm">Create</span>(pawn)
+             .<span class="nm">Field</span><<span class="ty">Pawn_AgeTracker</span>>(<span class="st">"ageTracker"</span>)
+             .<span class="nm">Value</span>;
+
+<span class="cm">// 寫入私有欄位</span>
+<span class="ty">Traverse</span>.<span class="nm">Create</span>(pawn)
+         .<span class="nm">Field</span>(<span class="st">"ageTracker"</span>)
+         .<span class="nm">SetValue</span>(newTracker);
+
+<span class="cm">// 呼叫私有方法（有回傳值）</span>
+<span class="ty">string</span> result =
+    <span class="ty">Traverse</span>.<span class="nm">Create</span>(pawn)
+             .<span class="nm">Method</span>(<span class="st">"GetLabel"</span>, <span class="st">"arg1"</span>, <span class="nu">42</span>)
+             .<span class="nm">GetValue</span><<span class="ty">string</span>>();
+
+<span class="cm">// 存取靜態型別</span>
+<span class="kw">float</span> val =
+    <span class="ty">Traverse</span>.<span class="nm">Create</span>(<span class="kw">typeof</span>(<span class="ty">StaticClass</span>))
+             .<span class="nm">Field</span><<span class="ty">float</span>>(<span class="st">"cachedValue"</span>)
+             .<span class="nm">Value</span>;
+
+<span class="cm">// 多層鏈式（nested private fields）</span>
+<span class="kw">int</span> deep =
+    <span class="ty">Traverse</span>.<span class="nm">Create</span>(pawn)
+             .<span class="nm">Field</span>(<span class="st">"health"</span>)
+             .<span class="nm">Field</span>(<span class="st">"hediffSet"</span>)
+             .<span class="nm">Field</span><<span class="ty">int</span>>(<span class="st">"internalCounter"</span>)
+             .<span class="nm">Value</span>;</pre>
+
+    <div class="callout callout-warn">
+      <strong>效能注意</strong>
+      <code>Traverse</code> 每次呼叫都有反射開銷。在每 tick 都執行的路徑（如 <code>Tick()</code>），
+      改用 <code>AccessTools.FieldRefAccess</code> 建立快取 delegate，或直接快取 <code>FieldInfo</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 7. Priority ═══ -->
+  <div class="section" id="priority">
+    <div class="section-title">7 · HarmonyPriority — 執行順序</div>
+
+    <p>
+      多個 mod 可以 patch 同一個方法。Harmony 依優先值決定執行順序，
+      預設值為 <code>Priority.Normal</code>（= 400）。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <h3>Prefix 執行順序</h3>
+        <p>Priority 值<strong>由高到低</strong>執行。<br><code>High(600) → Normal(400) → Low(200)</code></p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Postfix 執行順序</h3>
+        <p>Priority 值<strong>由低到高</strong>執行（即與 Prefix 相反）。<br><code>Low(200) → Normal(400) → High(600)</code></p>
+      </div>
+    </div>
+
+    <h3>宣告方式</h3>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">StatWorker</span><span class="at">), nameof(</span><span class="ty">StatWorker</span><span class="at">.GetValue),
+    new[] { typeof(</span><span class="ty">StatRequest</span><span class="at">), typeof(bool) })]</span>
+<span class="at">[HarmonyPriority(Priority.High)]</span>        <span class="cm">// 整個 class 套用</span>
+<span class="kw">public static class</span> <span class="ty">Patch_HighPriority</span>
+{
+    <span class="at">[HarmonyPriority(Priority.VeryHigh)]</span> <span class="cm">// 也可單獨標在方法上覆寫 class 層級</span>
+    <span class="kw">static void</span> <span class="nm">Prefix</span>() { }
+
+    <span class="kw">static void</span> <span class="nm">Postfix</span>() { } <span class="cm">// 沿用 class 層級 Priority.High</span>
+}</pre>
+
+    <h3>預定義優先值</h3>
+    <table>
+      <tr><th>常數</th><th>值</th><th>建議用途</th></tr>
+      <tr><td><code>Priority.VeryHigh</code></td><td>800</td><td>確保在所有 mod 之前執行（慎用）</td></tr>
+      <tr><td><code>Priority.High</code></td><td>600</td><td>需要優先設定初始狀態</td></tr>
+      <tr><td><code>Priority.Normal</code></td><td>400</td><td>預設值，一般情況</td></tr>
+      <tr><td><code>Priority.Low</code></td><td>200</td><td>需要在其他 mod 修改後再調整</td></tr>
+      <tr><td><code>Priority.VeryLow</code></td><td>100</td><td>最後執行的兜底邏輯</td></tr>
+      <tr><td><code>Priority.Last</code></td><td>0</td><td>絕對最後（比 VeryLow 更低）</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>跨 mod 協調的實務</strong>
+      RimWorld 的 mod 載入順序（在 modlist 中的位置）也影響 Harmony 的 patch 順序——
+      priority 相同時，後載入的 mod 的 Prefix 先執行，Postfix 後執行。
+      若你的 mod 和另一個 mod 有衝突，可在 <code>About.xml</code> 的 <code>&lt;loadAfter&gt;</code> 宣告相依性。
+    </div>
+  </div>
+
+  <!-- ═══ 8. 陷阱 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">8 · 常見陷阱</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">陷阱 1</span> 靜態方法沒有 <code>__instance</code></h3>
+      <p>
+        <code>__instance</code> 只對實例方法有效。若目標是 <code>static</code> 方法，
+        Harmony 不會注入 <code>__instance</code>——宣告了也永遠是 <code>null</code>，
+        且有時會導致 patch 無法套用。
+      </p>
+      <pre><span class="cm">// ❌ 錯誤：FoodUtility.GetManhunterOnDamageChance 是靜態方法</span>
+<span class="kw">static void</span> <span class="nm">Prefix</span>(<span class="ty">FoodUtility</span> __instance) { } <span class="cm">// __instance 永遠是 null！</span>
+
+<span class="cm">// ✅ 正確：直接使用原方法參數</span>
+<span class="kw">static void</span> <span class="nm">Prefix</span>(<span class="ty">ThingDef</span> def, <span class="ty">Pawn</span> attacker) { }</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">陷阱 2</span> <code>ref</code> 參數型別必須完全匹配</h3>
+      <p>
+        <code>ref __result</code> 的型別必須和目標方法的回傳型別<em>完全一致</em>，包含可空（nullable）。
+        型別不符時 patch 會 silent fail（不套用、不報錯）。
+      </p>
+      <pre><span class="cm">// 目標方法：float GetValue(...)</span>
+<span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="kw">ref double</span> __result) { } <span class="cm">// ❌ double ≠ float，不會套用</span>
+<span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="kw">ref float</span>  __result) { } <span class="cm">// ✅</span></pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">陷阱 3</span> <code>[HarmonyPatch]</code> 放在錯誤的層級</h3>
+      <p>
+        Harmony 支援把 patch 參數拆成多個 attribute，但所有指定目標的 attribute 必須放在 <em>class 層級</em>，
+        不能放在方法上（除了少數特殊 attribute 如 <code>[HarmonyPriority]</code>）。
+      </p>
+      <pre><span class="cm">// ❌ 錯誤：[HarmonyPatch] 放在方法上</span>
+<span class="kw">public static class</span> <span class="ty">MyPatch</span>
+{
+    <span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn</span><span class="at">), "Kill")]</span>
+    <span class="kw">static void</span> <span class="nm">Prefix</span>() { } <span class="cm">// PatchAll 找不到這個</span>
+}
+
+<span class="cm">// ✅ 正確：[HarmonyPatch] 在 class 上</span>
+<span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn</span><span class="at">), "Kill")]</span>
+<span class="kw">public static class</span> <span class="ty">MyPatch</span>
+{
+    <span class="kw">static void</span> <span class="nm">Prefix</span>() { }
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">陷阱 4</span> <code>PatchAll</code> 找不到方法時的 Silent Fail</h3>
+      <p>
+        若 <code>[HarmonyPatch]</code> 指定的方法名稱打錯，或目標方法不存在，
+        Harmony 預設<em>靜默略過</em>這個 patch，不拋例外，遊戲照常執行但你的 patch 完全無效。
+      </p>
+      <pre><span class="cm">// 開發期間：手動驗證 patch 是否生效</span>
+<span class="kw">var</span> harmony = <span class="kw">new</span> <span class="ty">Harmony</span>(<span class="st">"com.yourname.yourmod"</span>);
+harmony.<span class="nm">PatchAll</span>();
+
+<span class="cm">// 印出所有已套用的 patch（包含 owner）</span>
+<span class="kw">foreach</span> (<span class="kw">var</span> method <span class="kw">in</span> harmony.<span class="nm">GetPatchedMethods</span>())
+{
+    <span class="kw">var</span> info = <span class="ty">Harmony</span>.<span class="nm">GetPatchInfo</span>(method);
+    <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"Patched: {method.DeclaringType?.Name}.{method.Name} — "</span>
+        + <span class="st">$"Prefix:{info.Prefixes.Count} Postfix:{info.Postfixes.Count}"</span>);
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">陷阱 5</span> 多次 Patch 同一個方法</h3>
+      <p>
+        若你的 <code>Harmony</code> 實例（相同 ID）對同一個方法呼叫多次 <code>Patch</code>（非 <code>PatchAll</code>），
+        Harmony 2.x 會疊加——每次呼叫都新增一個 patch，導致你的邏輯執行多次。
+      </p>
+      <ul>
+        <li>熱重載或重複初始化時特別容易發生。</li>
+        <li>使用 <code>PatchAll</code> 通常沒問題，因為靜態建構子只執行一次。</li>
+        <li>手動 patch 時，先呼叫 <code>harmony.UnpatchAll("com.yourname.yourmod")</code> 再重新 patch。</li>
+      </ul>
+      <pre><span class="cm">// 安全的手動 patch 模式（避免重複疊加）</span>
+<span class="kw">var</span> harmony = <span class="kw">new</span> <span class="ty">Harmony</span>(<span class="st">"com.yourname.yourmod"</span>);
+harmony.<span class="nm">UnpatchAll</span>(<span class="st">"com.yourname.yourmod"</span>); <span class="cm">// 清掉舊的（如有）</span>
+harmony.<span class="nm">PatchAll</span>();                          <span class="cm">// 重新套用</span></pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">陷阱 6</span> 方法名稱使用字串 vs <code>nameof</code></h3>
+      <p>
+        公開方法建議用 <code>nameof()</code>，讓 IDE 能夠重構追蹤。
+        私有方法只能用字串——拼錯時靜默失效，要特別小心。
+      </p>
+      <pre><span class="cm">// 公開方法：用 nameof（重構安全）</span>
+<span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn_HealthTracker</span><span class="at">), nameof(</span><span class="ty">Pawn_HealthTracker</span><span class="at">.MakeDowned))]</span>
+
+<span class="cm">// 私有方法：只能用字串（小心拼錯）</span>
+<span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn_HealthTracker</span><span class="at">), "CheckForStateChange")]</span>
+<span class="cm">// 用 dnSpy 確認方法名稱大小寫，再複製貼上</span></pre>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>快速除錯 Checklist</strong>
+      <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li>用 <code>harmony.GetPatchedMethods()</code> 確認 patch 有套用</li>
+        <li>在 Prefix/Postfix 最開頭加 <code>Log.Message("hit")</code> 確認有被呼叫</li>
+        <li>用 dnSpy 確認目標方法的完整簽章（參數型別、名稱）</li>
+        <li>確認 <code>[StaticConstructorOnStartup]</code> 靜態建構子確實被執行（可加 Log）</li>
+        <li>確認 DLL 有正確放入 <code>Assemblies/</code> 並在 About.xml 列出</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 快速參考表 -->
+  <div class="section">
+    <div class="section-title">快速參考：三種 Patch 比較</div>
+    <table>
+      <tr>
+        <th>類型</th>
+        <th>執行時機</th>
+        <th>可阻止原方法</th>
+        <th>可改回傳值</th>
+        <th>複雜度</th>
+        <th>建議優先度</th>
+      </tr>
+      <tr>
+        <td><strong>Prefix</strong></td>
+        <td>原方法之前</td>
+        <td>✓（return false）</td>
+        <td>✓（搭配 return false）</td>
+        <td>低</td>
+        <td><span class="tag tag-green">首選</span></td>
+      </tr>
+      <tr>
+        <td><strong>Postfix</strong></td>
+        <td>原方法之後</td>
+        <td>✗</td>
+        <td>✓（ref __result）</td>
+        <td>低</td>
+        <td><span class="tag tag-green">首選</span></td>
+      </tr>
+      <tr>
+        <td><strong>Transpiler</strong></td>
+        <td>IL 層（取代原方法）</td>
+        <td>✓（完全控制）</td>
+        <td>✓（完全控制）</td>
+        <td>高</td>
+        <td><span class="tag tag-red">最後手段</span></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

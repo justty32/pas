@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>服裝與裝備 — RimWorld Mod 指南</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html" class="active">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>服裝與裝備 (Apparel &amp; Equipment)</h1>
+  <p>從 Apparel ThingDef、ApparelLayerDef 圖層系統到 PawnRenderer 穿著圖形、防護 StatBases、武器持有與自訂 Comp</p>
+  <span class="badge">Chapter 17</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       §0  概念地圖
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§0　概念地圖</div>
+
+    <p>
+      RimWorld 的「穿在身上」與「拿在手上」是兩套<strong>互相獨立</strong>的系統，常被新手混淆：
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Apparel（服裝）</h3>
+        <p>
+          C# 類別 <code>RimWorld.Apparel</code>（繼承 <code>ThingWithComps</code>），由 <code>pawn.apparel</code>
+          (<code>Pawn_ApparelTracker</code>) 管理。同時可穿多件，受<strong>圖層 (layer)</strong> 與
+          <strong>身體部位群組 (bodyPartGroups)</strong> 雙重約束。提供防護與保溫。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Equipment（裝備 / 武器）</h3>
+        <p>
+          泛指持握物（武器、盾牌）。由 <code>pawn.equipment</code> (<code>Pawn_EquipmentTracker</code>) 管理。
+          受 <code>equipmentType</code> 約束：<code>Primary</code> 槽<strong>僅能持一件</strong>，
+          <code>None</code> 不可裝備。沒有「圖層」概念。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>沒有 ApparelDef 或 EquipmentDef 這種 Def 類別</strong>
+      兩者都是 <code>ThingDef</code>。差別在於：服裝帶 <code>&lt;apparel&gt;</code> 區塊（對應
+      <code>ThingDef.apparel</code>，型別 <code>ApparelProperties</code>）；武器帶 <code>&lt;equipmentType&gt;</code>
+      與 <code>&lt;tools&gt;</code>/<code>&lt;verbs&gt;</code>。本章標題沿用社群慣稱「EquipmentDef」，實際指的是「帶
+      <code>equipmentType</code> 的 ThingDef」。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §1  Apparel ThingDef
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1　Apparel ThingDef</div>
+
+    <p>
+      服裝是帶 <code>&lt;apparel&gt;</code> 區塊的 <code>ThingDef</code>。原版提供抽象父 Def
+      <code>ApparelMakeableBase</code>（可製作）與 <code>ArmorMakeableBase</code> 供繼承。以下定義一件「複合纖維外套」。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/Apparel/MyCorp_Apparel_FiberCoat.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ApparelMakeableBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Apparel_FiberCoat<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>複合纖維外套<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>多層纖維編織，兼顧保暖與切割防護。<span class="xml-tag">&lt;/description&gt;</span>
+
+    <span class="cm">&lt;!-- ① 物品本體圖形（地上 / 物品欄縮圖） --&gt;</span>
+    <span class="xml-tag">&lt;graphicData&gt;</span>
+      <span class="xml-tag">&lt;texPath&gt;</span>Things/Apparel/MyCorp/FiberCoat<span class="xml-tag">&lt;/texPath&gt;</span>
+      <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+    <span class="xml-tag">&lt;/graphicData&gt;</span>
+
+    <span class="cm">&lt;!-- ② 製作材料分類 --&gt;</span>
+    <span class="xml-tag">&lt;stuffCategories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Fabric<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Leathery<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/stuffCategories&gt;</span>
+    <span class="xml-tag">&lt;costStuffCount&gt;</span>80<span class="xml-tag">&lt;/costStuffCount&gt;</span>
+
+    <span class="cm">&lt;!-- ③ 防護與保溫 statBases（詳見 §4） --&gt;</span>
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MaxHitPoints&gt;</span>200<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+      <span class="xml-tag">&lt;WorkToMake&gt;</span>9000<span class="xml-tag">&lt;/WorkToMake&gt;</span>
+      <span class="xml-tag">&lt;Mass&gt;</span>2.0<span class="xml-tag">&lt;/Mass&gt;</span>
+      <span class="xml-tag">&lt;StuffEffectMultiplierArmor&gt;</span>1.0<span class="xml-tag">&lt;/StuffEffectMultiplierArmor&gt;</span>
+      <span class="xml-tag">&lt;StuffEffectMultiplierInsulation_Cold&gt;</span>1.0<span class="xml-tag">&lt;/StuffEffectMultiplierInsulation_Cold&gt;</span>
+      <span class="xml-tag">&lt;ArmorRating_Sharp&gt;</span>0.30<span class="xml-tag">&lt;/ArmorRating_Sharp&gt;</span>
+      <span class="xml-tag">&lt;ArmorRating_Blunt&gt;</span>0.10<span class="xml-tag">&lt;/ArmorRating_Blunt&gt;</span>
+      <span class="xml-tag">&lt;Insulation_Cold&gt;</span>28<span class="xml-tag">&lt;/Insulation_Cold&gt;</span>
+      <span class="xml-tag">&lt;Insulation_Heat&gt;</span>2<span class="xml-tag">&lt;/Insulation_Heat&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="cm">&lt;!-- ④ 核心：apparel 區塊（對應 ThingDef.apparel） --&gt;</span>
+    <span class="xml-tag">&lt;apparel&gt;</span>
+      <span class="cm">&lt;!-- (a) 佔用的圖層：ApparelLayerDef.defName --&gt;</span>
+      <span class="xml-tag">&lt;layers&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Shell<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/layers&gt;</span>
+
+      <span class="cm">&lt;!-- (b) 覆蓋的身體部位群組：BodyPartGroupDef.defName --&gt;</span>
+      <span class="xml-tag">&lt;bodyPartGroups&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Torso<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Shoulders<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Arms<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/bodyPartGroups&gt;</span>
+
+      <span class="cm">&lt;!-- (c) 穿著時疊在 pawn 身上的圖形（詳見 §3） --&gt;</span>
+      <span class="xml-tag">&lt;wornGraphicPath&gt;</span>Things/Pawn/Humanlike/Apparel/MyCorp/FiberCoat<span class="xml-tag">&lt;/wornGraphicPath&gt;</span>
+
+      <span class="cm">&lt;!-- (d) tags：供突襲者生成 / 出售清單 / C# 篩選 --&gt;</span>
+      <span class="xml-tag">&lt;tags&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Outlander<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>IndustrialBasic<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/tags&gt;</span>
+
+      <span class="cm">&lt;!-- (e) 男女是否共用同一張 wornGraphic --&gt;</span>
+      <span class="xml-tag">&lt;useWornGraphicMask&gt;</span>false<span class="xml-tag">&lt;/useWornGraphicMask&gt;</span>
+    <span class="xml-tag">&lt;/apparel&gt;</span>
+
+    <span class="xml-tag">&lt;thingCategories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>ApparelArmor<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/thingCategories&gt;</span>
+
+    <span class="xml-tag">&lt;recipeMaker&gt;</span>
+      <span class="xml-tag">&lt;researchPrerequisite&gt;</span>ComplexClothing<span class="xml-tag">&lt;/researchPrerequisite&gt;</span>
+      <span class="xml-tag">&lt;unfinishedThingDef&gt;</span>UnfinishedApparel<span class="xml-tag">&lt;/unfinishedThingDef&gt;</span>
+      <span class="xml-tag">&lt;recipeUsers&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>ElectricTailoringBench<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/recipeUsers&gt;</span>
+    <span class="xml-tag">&lt;/recipeMaker&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <table>
+      <thead>
+        <tr><th>apparel 欄位</th><th>型別</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>layers</code></td><td><code>List&lt;ApparelLayerDef&gt;</code></td><td>佔用哪些圖層（決定疊穿衝突）</td></tr>
+        <tr><td><code>bodyPartGroups</code></td><td><code>List&lt;BodyPartGroupDef&gt;</code></td><td>覆蓋哪些部位（決定防護命中與穿著前提）</td></tr>
+        <tr><td><code>wornGraphicPath</code></td><td><code>string</code></td><td>穿在 pawn 身上的貼圖路徑（無路徑＝隱形穿戴）</td></tr>
+        <tr><td><code>tags</code></td><td><code>List&lt;string&gt;</code></td><td>純字串標籤，供生成 / 篩選邏輯使用</td></tr>
+        <tr><td><code>useWornGraphicMask</code></td><td><code>bool</code></td><td>是否用 mask 套色（染色 / 派系色）</td></tr>
+        <tr><td><code>careIfWornByCorpse</code></td><td><code>bool</code></td><td>從屍體扒下是否產生負面心情（詳見 §7）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>layers 與 bodyPartGroups 缺一不可</strong>
+      只填 <code>layers</code> 不填 <code>bodyPartGroups</code>，遊戲不知道服裝覆蓋哪些部位，
+      防護完全失效且可能無法判定穿著衝突；反之只填 <code>bodyPartGroups</code> 不填 <code>layers</code>，
+      則疊穿邏輯無依據。兩者是後續所有機制的基礎。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §2  ApparelLayerDef 與圖層衝突
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2　ApparelLayerDef 與圖層衝突</div>
+
+    <p>
+      <code>RimWorld.ApparelLayerDef</code> 定義服裝的「穿著層次」。同一個 <strong>(layer, bodyPartGroup)</strong>
+      組合<strong>同時只能被一件服裝佔用</strong>——這就是「穿了背心就不能再穿同層 T 恤」的底層規則。
+      原版核心四層由近身體往外：
+    </p>
+
+    <div class="g4">
+      <div class="card card-accent-green">
+        <h3>OnSkin</h3>
+        <p>貼身層。T 恤、長褲、束腰甲內襯。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Middle</h3>
+        <p>中層。防彈背心、軍裝甲（PlateArmor 的軀幹層）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Shell</h3>
+        <p>外層。外套、披風、動力裝甲外殼。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Overhead</h3>
+        <p>頭部 / 頭頂層。帽子、頭盔、面罩。</p>
+      </div>
+    </div>
+
+    <p>圖層本身也是 Def，可自訂新層以避免與原版衝突：</p>
+
+    <pre><code><span class="cm">&lt;!-- Defs/ApparelLayerDefs/MyCorp_Layers.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ApparelLayerDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Backpack<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>背包層<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="cm">&lt;!-- 數字越大越靠外、越晚繪製、越蓋在上面 --&gt;</span>
+    <span class="xml-tag">&lt;drawOrder&gt;</span>80<span class="xml-tag">&lt;/drawOrder&gt;</span>
+    <span class="cm">&lt;!-- 是否計入「身上覆蓋層數」的厚重懲罰判定 --&gt;</span>
+    <span class="xml-tag">&lt;bulky&gt;</span>true<span class="xml-tag">&lt;/bulky&gt;</span>
+  <span class="xml-tag">&lt;/ApparelLayerDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></code></pre>
+
+    <table>
+      <thead>
+        <tr><th>原版圖層 defName</th><th>drawOrder（約略）</th><th>典型部位群組</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>OnSkin</code></td><td>10</td><td>Torso / Legs</td></tr>
+        <tr><td><code>Middle</code></td><td>20</td><td>Torso</td></tr>
+        <tr><td><code>Shell</code></td><td>30</td><td>Torso / Shoulders / Arms</td></tr>
+        <tr><td><code>Belt</code></td><td>50</td><td>Waist（腰帶，與軀幹層不衝突）</td></tr>
+        <tr><td><code>Overhead</code></td><td>80</td><td>FullHead / UpperHead</td></tr>
+        <tr><td><code>EyeCover</code></td><td>90</td><td>Eyes（面罩 / 護目鏡）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>判斷衝突的真正邏輯</strong>
+      衝突判定在 <code>ApparelUtility.CanWearTogether(defA, defB, bodyDef)</code>。它檢查兩件服裝是否
+      <strong>同時</strong>共享至少一個 layer <em>且</em>共享至少一個 bodyPartGroup。
+      只要任一維度不重疊（不同層、或同層但不同部位）即可共存——這就是腰帶 (Belt) 能與外套並存的原因。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §3  穿著圖形與 PawnRenderer
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3　穿著圖形 (wornGraphicData / drawData) 與 PawnRenderer 圖層</div>
+
+    <p>
+      物品本體圖（<code>graphicData</code>）與「穿在身上」的圖（<code>wornGraphicPath</code>）是<strong>兩套不同貼圖</strong>。
+      穿著圖需提供四方向（south/north/east/west）紋理，由 <code>PawnRenderer</code> 在繪製 pawn 時疊上。
+    </p>
+
+    <h3>wornGraphicData（1.4+ 控制縮放與偏移）</h3>
+    <pre><code><span class="xml-tag">&lt;apparel&gt;</span>
+  <span class="xml-tag">&lt;wornGraphicPath&gt;</span>Things/Pawn/Humanlike/Apparel/MyCorp/FiberCoat<span class="xml-tag">&lt;/wornGraphicPath&gt;</span>
+
+  <span class="cm">&lt;!-- wornGraphicData：控制穿著圖在 body / head 上的縮放與偏移 --&gt;</span>
+  <span class="xml-tag">&lt;wornGraphicData&gt;</span>
+    <span class="cm">&lt;!-- 對齊 body 還是 head 的渲染錨點 --&gt;</span>
+    <span class="xml-tag">&lt;renderUtilityAsPack&gt;</span>false<span class="xml-tag">&lt;/renderUtilityAsPack&gt;</span>
+    <span class="xml-tag">&lt;male&gt;</span>
+      <span class="xml-tag">&lt;bodyTypeScale&gt;</span>(1.0, 1.0)<span class="xml-tag">&lt;/bodyTypeScale&gt;</span>
+      <span class="xml-tag">&lt;south&gt;</span>
+        <span class="xml-tag">&lt;offset&gt;</span>(0, 0)<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;scale&gt;</span>(1, 1)<span class="xml-tag">&lt;/scale&gt;</span>
+      <span class="xml-tag">&lt;/south&gt;</span>
+    <span class="xml-tag">&lt;/male&gt;</span>
+  <span class="xml-tag">&lt;/wornGraphicData&gt;</span>
+<span class="xml-tag">&lt;/apparel&gt;</span></code></pre>
+
+    <h3>drawData（控制特定方向 / 圖層的繪製順序）</h3>
+    <pre><code><span class="cm">&lt;!-- drawData 直接覆寫某方向的 layer 值，解決「披風被頭髮蓋住」一類問題 --&gt;</span>
+<span class="xml-tag">&lt;wornGraphicData&gt;</span>
+  <span class="xml-tag">&lt;drawData&gt;</span>
+    <span class="xml-tag">&lt;defaultData&gt;</span>
+      <span class="cm">&lt;!-- layer 越大越靠近鏡頭（覆蓋在上面） --&gt;</span>
+      <span class="xml-tag">&lt;layer&gt;</span>55<span class="xml-tag">&lt;/layer&gt;</span>
+    <span class="xml-tag">&lt;/defaultData&gt;</span>
+    <span class="xml-tag">&lt;dataNorth&gt;</span>
+      <span class="cm">&lt;!-- 背面時讓披風蓋過身體 --&gt;</span>
+      <span class="xml-tag">&lt;layer&gt;</span>95<span class="xml-tag">&lt;/layer&gt;</span>
+    <span class="xml-tag">&lt;/dataNorth&gt;</span>
+  <span class="xml-tag">&lt;/drawData&gt;</span>
+<span class="xml-tag">&lt;/wornGraphicData&gt;</span></code></pre>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>PawnRenderTree (1.5+)</h3>
+        <p>
+          1.5 改用 <code>PawnRenderTree</code> / <code>PawnRenderNode</code> 取代舊 <code>PawnRenderer</code> 散落邏輯。
+          服裝由 <code>PawnRenderNodeWorker_Apparel_Body</code> / <code>_Head</code> 掛入節點樹，
+          按 <code>ApparelLayerDef.drawOrder</code> 與 <code>drawData.layer</code> 排序。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>頭部 vs 身體</h3>
+        <p>
+          <code>Overhead</code> / <code>EyeCover</code> 圖綁在<strong>頭部錨點</strong>，會隨頭部偏移；其餘層綁在
+          <strong>身體錨點</strong>。貼圖必須對齊原版 body atlas 尺寸（通常 128×128 四方向）。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>強制重繪</strong>
+      C# 端動態換裝後若畫面沒更新，呼叫 <code>pawn.Drawer.renderer.SetAllGraphicsDirty()</code>
+      （1.5：<code>pawn.Drawer.renderer.renderTree.SetDirty()</code>）強制 PawnRenderer 重建圖層快取。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §4  StatBases 防護與保溫
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4　StatBases 防護與保溫</div>
+
+    <p>服裝的防護與保溫全由 <code>statBases</code> 內對應的 <code>StatDef</code> 控制：</p>
+
+    <table>
+      <thead>
+        <tr><th>StatDef</th><th>範圍 / 單位</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>ArmorRating_Sharp</code></td><td>0–2.0（=0–200%）</td><td>對銳器（刀、子彈）的護甲值</td></tr>
+        <tr><td><code>ArmorRating_Blunt</code></td><td>0–2.0</td><td>對鈍器（棍、爆炸衝擊）的護甲值</td></tr>
+        <tr><td><code>ArmorRating_Heat</code></td><td>0–2.0</td><td>對火焰 / 高溫傷害的護甲值</td></tr>
+        <tr><td><code>Insulation_Cold</code></td><td>°C</td><td>降低 pawn 可承受最低溫（保暖）</td></tr>
+        <tr><td><code>Insulation_Heat</code></td><td>°C</td><td>提高 pawn 可承受最高溫（散熱）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>護甲的機率三分機制</strong>
+      命中時引擎將攻擊的 <code>armorPenetration</code> 與部位上服裝的 <code>ArmorRating_*</code> 比較
+      （見 <code>ArmorUtility.ApplyArmor</code>）：護甲值<strong>一半</strong>機率「完全擋下」，
+      另一半範圍內「減半傷害並降級」（Sharp→Blunt），剩餘才全額穿透。所以 100% 護甲不等於免疫，而是高機率減傷。
+    </div>
+
+    <h3>材質加成：StuffEffectMultiplier</h3>
+    <p>
+      可製作服裝的最終護甲 = <code>ArmorRating_Sharp</code>（基底）×
+      材質的 <code>StatFactors/ArmorRating_Sharp</code> × Def 的 <code>StuffEffectMultiplierArmor</code>。
+      若希望服裝完全不受材質影響（如固定數值的科幻裝甲），把 <code>StuffEffectMultiplierArmor</code> 設 0 並移除
+      <code>stuffCategories</code>。
+    </p>
+
+    <pre><code><span class="cm">&lt;!-- 固定數值、不吃材質的動力裝甲 --&gt;</span>
+<span class="xml-tag">&lt;statBases&gt;</span>
+  <span class="xml-tag">&lt;ArmorRating_Sharp&gt;</span>1.06<span class="xml-tag">&lt;/ArmorRating_Sharp&gt;</span>
+  <span class="xml-tag">&lt;ArmorRating_Blunt&gt;</span>0.50<span class="xml-tag">&lt;/ArmorRating_Blunt&gt;</span>
+  <span class="xml-tag">&lt;ArmorRating_Heat&gt;</span>0.54<span class="xml-tag">&lt;/ArmorRating_Heat&gt;</span>
+  <span class="xml-tag">&lt;Insulation_Cold&gt;</span>40<span class="xml-tag">&lt;/Insulation_Cold&gt;</span>
+  <span class="xml-tag">&lt;Insulation_Heat&gt;</span>8<span class="xml-tag">&lt;/Insulation_Heat&gt;</span>
+  <span class="cm">&lt;!-- 設 0 → 材質不再影響護甲 --&gt;</span>
+  <span class="xml-tag">&lt;StuffEffectMultiplierArmor&gt;</span>0<span class="xml-tag">&lt;/StuffEffectMultiplierArmor&gt;</span>
+<span class="xml-tag">&lt;/statBases&gt;</span></code></pre>
+
+    <h3>C# 端讀取防護值</h3>
+    <pre><code><span class="cm">// 讀取單件服裝某 StatDef 的最終值（含材質與品質加成）</span>
+<span class="kw">float</span> sharp = apparel.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.ArmorRating_Sharp);
+
+<span class="cm">// 整個 pawn 在某部位的總護甲（合計所有覆蓋該部位的服裝）</span>
+<span class="kw">float</span> bodyArmor = pawn.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.ArmorRating_Sharp);</code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §5  Equipment 與武器持有
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5　Equipment 與武器持有（equipmentType Primary）</div>
+
+    <p>
+      武器是帶 <code>&lt;equipmentType&gt;</code> 的 <code>ThingDef</code>。
+      <code>equipmentType</code> 是 <code>EquipmentType</code> enum，只有兩個有效值：
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <h3>Primary</h3>
+        <p>主手持握，<strong>每個 pawn 同時僅一件</strong>。近戰與遠程武器都用此值。裝備新的會先卸下舊的。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>None</h3>
+        <p>不可被「裝備」進 equipment 槽（一般物品的預設）。注意：盾牌帶（Shield Belt）其實是 <em>Apparel</em>（Belt 層），不是 equipment。</p>
+      </div>
+    </div>
+
+    <pre><code><span class="cm">&lt;!-- Defs/Weapons/MyCorp_Gun_PulseRifle.xml --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseHumanMakeableGun"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyCorp_Gun_PulseRifle<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>脈衝步槍<span class="xml-tag">&lt;/label&gt;</span>
+
+  <span class="cm">&lt;!-- 主武器槽 --&gt;</span>
+  <span class="xml-tag">&lt;equipmentType&gt;</span>Primary<span class="xml-tag">&lt;/equipmentType&gt;</span>
+
+  <span class="cm">&lt;!-- 拿在手上的圖（與物品圖通常同一張，遠程武器無 wornGraphic） --&gt;</span>
+  <span class="xml-tag">&lt;graphicData&gt;</span>
+    <span class="xml-tag">&lt;texPath&gt;</span>Things/Item/Equipment/MyCorp/PulseRifle<span class="xml-tag">&lt;/texPath&gt;</span>
+    <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;/graphicData&gt;</span>
+
+  <span class="cm">&lt;!-- 遠程武器的開火行為 --&gt;</span>
+  <span class="xml-tag">&lt;verbs&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;verbClass&gt;</span>Verb_Shoot<span class="xml-tag">&lt;/verbClass&gt;</span>
+      <span class="xml-tag">&lt;defaultProjectile&gt;</span>Bullet_ChargeRifle<span class="xml-tag">&lt;/defaultProjectile&gt;</span>
+      <span class="xml-tag">&lt;warmupTime&gt;</span>1.0<span class="xml-tag">&lt;/warmupTime&gt;</span>
+      <span class="xml-tag">&lt;range&gt;</span>30<span class="xml-tag">&lt;/range&gt;</span>
+      <span class="xml-tag">&lt;burstShotCount&gt;</span>3<span class="xml-tag">&lt;/burstShotCount&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/verbs&gt;</span>
+
+  <span class="xml-tag">&lt;weaponTags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>GunHeavy<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/weaponTags&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></code></pre>
+
+    <div class="callout callout-warn">
+      <strong>近戰武器需 tools，遠程武器需 verbs</strong>
+      只設 <code>equipmentType</code> 而沒有 <code>tools</code>（近戰）或 <code>verbs</code>（遠程）的物品，
+      pawn 拿著它也<strong>無法攻擊</strong>。詳見 XML Defs 章關於 <code>tools</code> 的範例。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §6  從 C# 給 Pawn 穿戴
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6　從 C# 給 Pawn 穿戴 / 裝備</div>
+
+    <h3>穿服裝：pawn.apparel.Wear()</h3>
+    <pre><code><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static void</span> <span class="nm">EquipFiberCoat</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="cm">// 1. 用 stuff 生成 Apparel 實例（轉型成 Apparel）</span>
+    <span class="ty">ThingDef</span> def  = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyCorp_Apparel_FiberCoat"</span>);
+    <span class="ty">Apparel</span> coat = (<span class="ty">Apparel</span>)<span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(def, <span class="ty">ThingDefOf</span>.Cloth);
+
+    <span class="cm">// 2. 可選：設定品質</span>
+    coat.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompQuality</span>&gt;()?.<span class="nm">SetQuality</span>(
+        <span class="ty">QualityCategory</span>.Excellent, <span class="ty">ArtGenerationContext</span>.Colony);
+
+    <span class="cm">// 3. 穿上——dropReplacedApparel=true 會自動把同層舊衣脫下丟地上</span>
+    pawn.apparel.<span class="nm">Wear</span>(coat, dropReplacedApparel: <span class="kw">true</span>);
+}</code></pre>
+
+    <h3>穿前先檢查相容性（避免報錯）</h3>
+    <pre><code><span class="cm">// ApparelUtility.HasPartsToWear：pawn 是否有對應 bodyPartGroups 的部位</span>
+<span class="kw">if</span> (!<span class="ty">ApparelUtility</span>.<span class="nm">HasPartsToWear</span>(pawn, coat.def))
+{
+    Log.<span class="nm">Warning</span>(<span class="st">$"{pawn.LabelShort} 缺少穿戴 {coat.def.defName} 所需的身體部位"</span>);
+    <span class="kw">return</span>;
+}
+
+<span class="cm">// 檢查與身上現有服裝是否衝突</span>
+<span class="kw">foreach</span> (<span class="ty">Apparel</span> worn <span class="kw">in</span> pawn.apparel.WornApparel)
+{
+    <span class="kw">if</span> (!<span class="ty">ApparelUtility</span>.<span class="nm">CanWearTogether</span>(coat.def, worn.def, pawn.RaceProps.body))
+    {
+        <span class="cm">// 衝突：要嘛先脫，要嘛放棄</span>
+        pawn.apparel.<span class="nm">Remove</span>(worn);
+        <span class="kw">break</span>;
+    }
+}
+pawn.apparel.<span class="nm">Wear</span>(coat);</code></pre>
+
+    <h3>裝武器：pawn.equipment.AddEquipment()</h3>
+    <pre><code><span class="kw">public static void</span> <span class="nm">EquipPulseRifle</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="ty">ThingDef</span> gunDef = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyCorp_Gun_PulseRifle"</span>);
+    <span class="ty">ThingWithComps</span> gun = (<span class="ty">ThingWithComps</span>)<span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(gunDef);
+
+    <span class="cm">// 先卸下既有主武器（Primary 僅能一件），避免 AddEquipment 拋例外</span>
+    <span class="kw">if</span> (pawn.equipment.Primary != <span class="kw">null</span>)
+        pawn.equipment.<span class="nm">Remove</span>(pawn.equipment.Primary);
+
+    pawn.equipment.<span class="nm">AddEquipment</span>(gun);
+}</code></pre>
+
+    <div class="callout callout-tip">
+      <strong>更安全的高階 API</strong>
+      若只是要 pawn「去撿起並裝備」地上的武器，用 <code>pawn.equipment.MakeRoomFor(thing)</code>
+      會自動處理卸舊；或建立 <code>JobMaker.MakeJob(JobDefOf.Equip, weaponThing)</code> 讓 pawn 走過去裝備，
+      比直接塞進槽更符合遊戲流程（會觸發動畫、扣時間）。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §7  ApparelProperties 進階
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7　ApparelProperties 進階欄位</div>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>預設</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>careIfWornByCorpse</code></td><td><code>true</code></td>
+          <td>true 時，從屍體扒下並穿著會給殖民者「穿死人衣」負面 Thought。動物裝、科幻裝常設 false。</td>
+        </tr>
+        <tr>
+          <td><code>careIfDamaged</code></td><td><code>true</code></td>
+          <td>是否因「破損衣物」產生負面心情。</td>
+        </tr>
+        <tr>
+          <td><code>useWornGraphicMask</code></td><td><code>false</code></td>
+          <td>true 時 wornGraphic 套用 mask 染色 / 派系著色（mask 檔名加 <code>m</code> 後綴）。</td>
+        </tr>
+        <tr>
+          <td><code>wornGraphicPath</code></td><td>—</td>
+          <td>留空＝穿著但身上不顯示（隱形腰帶、體內植入式裝置常用）。</td>
+        </tr>
+        <tr>
+          <td><code>hatRenderedFrontOfFace</code></td><td><code>false</code></td>
+          <td>帽子是否畫在臉前（面罩 / 防毒面具），影響 Overhead 層繪製位置。</td>
+        </tr>
+        <tr>
+          <td><code>countsAsClothingForNudity</code></td><td><code>true</code></td>
+          <td>是否計入「有穿衣服」（影響裸體 Thought）；護目鏡等小配件設 false。</td>
+        </tr>
+        <tr>
+          <td><code>developmentalStageFilter</code></td><td>Adult</td>
+          <td>限制可穿年齡階段（Baby / Child / Adult），Biotech DLC 相關。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code><span class="cm">&lt;!-- 範例：派系著色 + 不在意死人衣 + 隱形佩戴 --&gt;</span>
+<span class="xml-tag">&lt;apparel&gt;</span>
+  <span class="xml-tag">&lt;layers&gt;</span><span class="xml-tag">&lt;li&gt;</span>Belt<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/layers&gt;</span>
+  <span class="xml-tag">&lt;bodyPartGroups&gt;</span><span class="xml-tag">&lt;li&gt;</span>Waist<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/bodyPartGroups&gt;</span>
+  <span class="cm">&lt;!-- 無 wornGraphicPath → 身上不顯示 --&gt;</span>
+  <span class="xml-tag">&lt;careIfWornByCorpse&gt;</span>false<span class="xml-tag">&lt;/careIfWornByCorpse&gt;</span>
+  <span class="xml-tag">&lt;careIfDamaged&gt;</span>false<span class="xml-tag">&lt;/careIfDamaged&gt;</span>
+  <span class="xml-tag">&lt;countsAsClothingForNudity&gt;</span>false<span class="xml-tag">&lt;/countsAsClothingForNudity&gt;</span>
+<span class="xml-tag">&lt;/apparel&gt;</span></code></pre>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §8  自訂 Apparel Comp
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8　自訂 Apparel Comp（發光衣、特效裝）</div>
+
+    <p>
+      要讓服裝具備主動行為（穿著時發光、回血、施加 Hediff），用 <code>ThingComp</code>。
+      與裝飾 <code>CompGlower</code> 不同的是：服裝需要「<strong>穿上才生效、脫下就失效</strong>」的生命週期掛鉤，
+      因此覆寫 <code>CompGetWornGizmosExtra</code> 與配合 <code>Pawn_ApparelTracker</code> 的 tick。
+    </p>
+
+    <h3>CompProperties 定義</h3>
+    <pre><code><span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">CompProperties_GlowApparel</span> : <span class="ty">CompProperties</span>
+{
+    <span class="kw">public float</span> glowRadius = <span class="nu">6f</span>;
+    <span class="kw">public float</span> healPerDay = <span class="nu">2f</span>;   <span class="cm">// 每日回血量</span>
+
+    <span class="kw">public</span> <span class="nm">CompProperties_GlowApparel</span>()
+    {
+        <span class="cm">// 綁定到 Comp 實作類別</span>
+        compClass = <span class="kw">typeof</span>(<span class="ty">CompGlowApparel</span>);
+    }
+}</code></pre>
+
+    <h3>Comp 實作</h3>
+    <pre><code><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> UnityEngine;
+
+<span class="kw">public class</span> <span class="ty">CompGlowApparel</span> : <span class="ty">ThingComp</span>
+{
+    <span class="kw">private</span> <span class="ty">CompProperties_GlowApparel</span> Props
+        =&gt; (<span class="ty">CompProperties_GlowApparel</span>)props;
+
+    <span class="cm">// 取得「穿著者」：parent 是 Apparel，Wearer 由 tracker 反推</span>
+    <span class="kw">private</span> <span class="ty">Pawn</span> Wearer =&gt; (parent <span class="kw">as</span> <span class="ty">Apparel</span>)?.Wearer;
+
+    <span class="cm">// 每 tick 由 Pawn_ApparelTracker.ApparelTrackerTick 驅動</span>
+    <span class="kw">public override void</span> <span class="nm">CompTick</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">CompTick</span>();
+        <span class="ty">Pawn</span> p = Wearer;
+        <span class="kw">if</span> (p == <span class="kw">null</span> || !p.Spawned) <span class="kw">return</span>;
+
+        <span class="cm">// 每 250 tick（約一遊戲小時的 1/15）結算一次回血</span>
+        <span class="kw">if</span> (p.IsHashIntervalTick(<span class="nu">250</span>))
+        {
+            <span class="kw">float</span> healPerTick = Props.healPerDay / <span class="nu">60000f</span> * <span class="nu">250f</span>;
+            <span class="kw">foreach</span> (<span class="ty">Hediff_Injury</span> inj <span class="kw">in</span> p.health.hediffSet
+                     .GetHediffs&lt;<span class="ty">Hediff_Injury</span>&gt;())
+            {
+                <span class="kw">if</span> (inj.CanHealNaturally())
+                {
+                    inj.Heal(healPerTick);
+                    <span class="kw">break</span>;
+                }
+            }
+        }
+    }
+
+    <span class="cm">// 穿上時掛 glower（用 dynamic glow 較簡單；此處示意 Hediff 法）</span>
+    <span class="kw">public override void</span> <span class="nm">Notify_Equipped</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_Equipped</span>(pawn);
+        Log.<span class="nm">Message</span>(<span class="st">$"{pawn.LabelShort} 穿上發光衣"</span>);
+    }
+
+    <span class="cm">// 脫下 / 掉落時清理</span>
+    <span class="kw">public override void</span> <span class="nm">Notify_Unequipped</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_Unequipped</span>(pawn);
+    }
+
+    <span class="cm">// 在穿著者選取時於右下加一個資訊 Gizmo</span>
+    <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Gizmo</span>&gt; <span class="nm">CompGetWornGizmosExtra</span>()
+    {
+        <span class="kw">yield return new</span> <span class="ty">Gizmo_GlowReadout</span> { comp = <span class="kw">this</span> };
+    }
+}</code></pre>
+
+    <p>掛到 ThingDef：</p>
+    <pre><code><span class="xml-tag">&lt;comps&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyCorp.CompProperties_GlowApparel"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;glowRadius&gt;</span>8<span class="xml-tag">&lt;/glowRadius&gt;</span>
+    <span class="xml-tag">&lt;healPerDay&gt;</span>3<span class="xml-tag">&lt;/healPerDay&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/comps&gt;</span></code></pre>
+
+    <div class="callout callout-info">
+      <strong>真正要持續發光？用 CompGlower + 動態色彩</strong>
+      若只是要「穿著者周圍變亮」，更穩的做法是穿上時對穿著者掛一個帶 <code>HediffComp</code> 的 Hediff，
+      或在 <code>Notify_Equipped</code> 透過 <code>GlowGrid</code> 註冊一個臨時光源；
+      <code>ThingComp.CompTick</code> 只在物品本身 Spawned 時才跑，而<strong>穿在身上的服裝並未獨立 Spawn</strong>，
+      靠的是 tracker 轉發 tick（如上 <code>CompTick</code> 由 <code>ApparelTrackerTick</code> 呼叫），這點務必理解。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §9  常見坑
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9　常見坑</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>bodyPartGroups 不符 → 無法穿 <span class="tag tag-red">高頻</span></h3>
+        <p>
+          服裝的 <code>bodyPartGroups</code> 在 pawn 的 <code>BodyDef</code> 中找不到對應部位群組時，
+          <code>HasPartsToWear</code> 回 false，<code>Wear()</code> 失敗或無聲略過。常見於替異種族 /
+          機械族做衣服卻沿用人類部位群組。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>圖層遮擋（看不到 / 蓋錯）<span class="tag tag-orange">中頻</span></h3>
+        <p>
+          穿著圖被頭髮、其他服裝蓋住或反過來蓋住身體，多半是 <code>drawData.layer</code> /
+          <code>ApparelLayerDef.drawOrder</code> 設錯，或北向 (north) 沒單獨調 layer。用 <code>drawData</code>
+          逐方向覆寫解決。
+        </p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Primary 衝突拋例外 <span class="tag tag-purple">中頻</span></h3>
+        <p>
+          <code>AddEquipment</code> 時 pawn 已有 Primary 武器會 assert 失敗。務必先
+          <code>Remove(pawn.equipment.Primary)</code> 或用 <code>MakeRoomFor</code>。
+        </p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>同層同部位重疊不顯示 <span class="tag tag-red">高頻</span></h3>
+        <p>
+          兩件服裝共享 (layer, bodyPartGroup) 時引擎只允許一件存在；自訂裝甲若與原版背心同
+          <code>Middle + Torso</code>，玩家就無法兩件並穿。需求並穿時改用<strong>自訂圖層</strong>（§2）。
+        </p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>wornGraphic 路徑 / 尺寸錯 <span class="tag tag-orange">中頻</span></h3>
+        <p>
+          <code>wornGraphicPath</code> 指向的不是四方向圖、或尺寸不對齊 body atlas，會出現偏移 / 拉伸 / 紫色
+          missing 貼圖。穿著圖與物品圖是<strong>不同資料夾、不同尺寸</strong>，別共用。
+        </p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>護甲沒生效 <span class="tag tag-green">易查</span></h3>
+        <p>
+          填了 <code>ArmorRating_Sharp</code> 卻沒效果，常因 <code>bodyPartGroups</code> 沒覆蓋被擊中的部位
+          （頭部被打但衣服只蓋 Torso），或基底值被 <code>StuffEffectMultiplierArmor=0</code> 之外的材質乘成 0。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>除錯清單</strong>
+      穿不上 → 查 <code>bodyPartGroups</code> 是否在該 BodyDef；圖不對 → 查
+      <code>wornGraphicPath</code> 四方向與 <code>drawData.layer</code>；護甲無效 → 查覆蓋部位與材質乘子；
+      無法並穿 → 查 (layer, bodyPartGroup) 是否與既有服裝撞。善用開發者模式
+      <code>Debug Actions → Spawn apparel</code> 與選取 pawn 看 Health 部位護甲百分比。
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       §10  最小可運行清單
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10　最小可運行清單</div>
+
+    <ol class="steps">
+      <li>建立 <code>Defs/Apparel/*.xml</code>：ThingDef 含 <code>&lt;apparel&gt;</code>（layers + bodyPartGroups + wornGraphicPath）。</li>
+      <li>放置兩套貼圖：物品圖（<code>Things/Apparel/...</code>）與四方向穿著圖（<code>Things/Pawn/Humanlike/Apparel/...</code>）。</li>
+      <li>填 <code>statBases</code> 的 <code>ArmorRating_*</code> 與 <code>Insulation_*</code>。</li>
+      <li>武器則建 ThingDef 含 <code>equipmentType=Primary</code> 與 <code>tools</code>（近戰）或 <code>verbs</code>（遠程）。</li>
+      <li>需要主動行為 → 寫 <code>CompProperties + ThingComp</code>，掛進 <code>&lt;comps&gt;</code>。</li>
+      <li>C# 給 pawn 套裝：<code>apparel.Wear(...)</code> / <code>equipment.AddEquipment(...)</code>，先做 §6 相容性檢查。</li>
+      <li>開發者模式 spawn 測試，選取 pawn 檢視 Health 部位護甲與保溫範圍。</li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       底部導覽
+  ══════════════════════════════════════════ -->
+  <div class="section">
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>← 相關章節</h3>
+        <p><a href="02-xml-defs.html">XML Def 系統</a> — ThingDef、繼承、comps 多型列表的基礎</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>相關章節 →</h3>
+        <p><a href="03-harmony.html">Harmony Patching</a> — 攔截 PawnRenderer / ApparelUtility 行為</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Mod 指南 &mdash; 服裝與裝備 (Apparel &amp; Equipment) &mdash; 繁體中文版
+</footer>
+
+</body>
+</html>

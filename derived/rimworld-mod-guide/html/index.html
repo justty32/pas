@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RimWorld Modding — C# 工程師入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html" class="active">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>RimWorld Modding 入門指南</h1>
+  <p>給資深 C# 工程師的快速上手路徑——跳過廢話，直達核心。</p>
+  <span class="badge">RimWorld 1.5 / Ludeon Studios · 共 28 章</span>
+</div>
+
+<div class="container">
+
+  <div class="section">
+    <div class="section-title">Modding 的兩根支柱</div>
+    <p>RimWorld mod 由兩個完全獨立的層次組成，理解這個分界是一切的基礎：</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>📄 XML Defs（資料層）</h3>
+        <p>定義「世界裡有什麼東西」。武器、建築、生物、科技、配方……幾乎所有遊戲內容都是 Def XML。<br><br>
+        不需要編譯，熱修改即時生效（Dev mode），可跨 mod 繼承與覆蓋。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>⚙ C# Assembly（邏輯層）</h3>
+        <p>定義「東西怎麼運作」。自訂行為、AI Job、UI Tab、資料持久化……需要超出 Def 表達能力的邏輯就靠 C#。<br><br>
+        編譯為 DLL 放入 <code>Assemblies/</code>，靠 <strong>Harmony</strong> 修補原始遊戲方法。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>給 C# 工程師的心態轉換</strong>
+      RimWorld 的 Assembly-CSharp.dll 是閉源的，但可完整反編譯（dnSpy）。你主要的工作是<em>理解現有架構 → 用 Harmony 插入自己的邏輯</em>，而不是從零寫遊戲。XML 是膠水，C# 是手術刀。
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mod 資料夾結構</div>
+    <pre><span class="cm"># RimWorld/Mods/YourModName/</span>
+├── About/
+│   ├── About.xml          <span class="cm"># 必要：Mod 元資料（名稱、作者、依賴）</span>
+│   └── Preview.png        <span class="cm"># Steam 封面圖（可選）</span>
+├── Assemblies/
+│   └── YourMod.dll        <span class="cm"># 編譯好的 C# DLL</span>
+├── Defs/
+│   ├── ThingDefs/         <span class="cm"># 物品、建築、植物等 Def</span>
+│   ├── RecipeDefs/        <span class="cm"># 製作配方</span>
+│   └── ...                <span class="cm"># 子資料夾名稱任意，遊戲遞迴掃描</span>
+├── Patches/
+│   └── patch_*.xml        <span class="cm"># PatchOperation：修改其他 mod 的 Def</span>
+├── Textures/              <span class="cm"># PNG 圖片</span>
+├── Sounds/                <span class="cm"># 音效</span>
+└── Languages/             <span class="cm"># 在地化字串</span></pre>
+  </div>
+
+  <div class="section">
+    <div class="section-title">About.xml 最小範例</div>
+    <pre><span class="xml-tag">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span>
+<span class="xml-tag">&lt;ModMetaData&gt;</span>
+  <span class="xml-tag">&lt;name&gt;</span>My First Mod<span class="xml-tag">&lt;/name&gt;</span>
+  <span class="xml-tag">&lt;author&gt;</span>YourName<span class="xml-tag">&lt;/author&gt;</span>
+  <span class="xml-tag">&lt;packageId&gt;</span>YourName.MyFirstMod<span class="xml-tag">&lt;/packageId&gt;</span>   <span class="cm">&lt;!-- 全局唯一 --&gt;</span>
+  <span class="xml-tag">&lt;supportedVersions&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>1.5<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/supportedVersions&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>A sample mod.<span class="xml-tag">&lt;/description&gt;</span>
+<span class="xml-tag">&lt;/ModMetaData&gt;</span></pre>
+  </div>
+
+  <div class="section">
+    <div class="section-title">核心技術棧</div>
+    <div class="g3">
+      <div class="card card-accent-green">
+        <h3>Harmony 2.x</h3>
+        <p>Andreas Pardeike 開發的 IL 級方法修補框架。RimWorld modding 的骨幹。Prefix / Postfix / Transpiler 三種掛鉤點。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>dnSpy / ILSpy</h3>
+        <p>反編譯 Assembly-CSharp.dll，讀懂遊戲內部邏輯。dnSpy 額外支援 attach debug。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>RimWorld API</h3>
+        <p>ThingComp、GameComponent、MapComponent、Hediff、WorkGiver、JobDriver……一套精心設計的擴充點體系。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>UnityEngine</h3>
+        <p>RimWorld 跑在 Unity 上。Rect、GUI、Widgets（RW 封裝）用於 UI。Texture2D 用於貼圖。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">核心基礎（建議依序）</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <a href="01-environment.html"><h3>01 · 環境設定</h3><p>VS/Rider 專案、Assembly 參考、dnSpy、開發迴圈。</p></a>
+      </div>
+      <div class="card card-accent-orange">
+        <a href="02-xml-defs.html"><h3>02 · XML Defs</h3><p>Def 繼承、類型速查、PatchOperation、DefOf。</p></a>
+      </div>
+      <div class="card card-accent-red">
+        <a href="03-harmony.html"><h3>03 · Harmony</h3><p>Prefix/Postfix/Transpiler、AccessTools、優先權。</p></a>
+      </div>
+      <div class="card card-accent-green">
+        <a href="04-patterns.html"><h3>04 · 常見模式</h3><p>ThingComp、GameComponent、JobDriver、Hediff、ITab。</p></a>
+      </div>
+      <div class="card card-accent-purple">
+        <a href="05-debug.html"><h3>05 · 除錯發布</h3><p>Dev mode、Log 閱讀、dnSpy attach、Steam 發布。</p></a>
+      </div>
+      <div class="card card-accent-cyan">
+        <a href="06-ui-widgets.html"><h3>06 · UI Widgets</h3><p>IMGUI、Widgets 速查、Listing_Standard、Dialog。</p></a>
+      </div>
+      <div class="card card-accent-blue">
+        <a href="07-advanced.html"><h3>07 · 進階技巧</h3><p>IL Transpiler、性能、Scribe 存檔、多版本相容。</p></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">內容系統</div>
+    <div class="g4">
+      <div class="card card-accent-orange"><a href="08-graphics-textures.html"><h3>08 · 貼圖圖形</h3><p>GraphicData、多方向、自訂 Graphic、Mote。</p></a></div>
+      <div class="card card-accent-purple"><a href="09-sound-audio.html"><h3>09 · 音效</h3><p>SoundDef、grains、Sustainer 持續音。</p></a></div>
+      <div class="card card-accent-green"><a href="10-localization.html"><h3>10 · 在地化</h3><p>Keyed/DefInjected、.Translate()、文法。</p></a></div>
+      <div class="card card-accent-cyan"><a href="11-pawn-generation.html"><h3>11 · Pawn 生成</h3><p>PawnKindDef、GeneratePawn、Backstory、Skill。</p></a></div>
+      <div class="card card-accent-red"><a href="12-incidents-storyteller.html"><h3>12 · 事件敘事</h3><p>IncidentDef/Worker、Storyteller、威脅點數。</p></a></div>
+      <div class="card card-accent-blue"><a href="13-world-map.html"><h3>13 · 世界地圖</h3><p>WorldObject、FactionDef、Caravan、Biome。</p></a></div>
+      <div class="card card-accent-orange"><a href="14-research-production.html"><h3>14 · 研究生產</h3><p>ResearchProjectDef、RecipeDef、Bill、StatPart。</p></a></div>
+      <div class="card card-accent-red"><a href="15-combat-damage.html"><h3>15 · 戰鬥傷害</h3><p>DamageDef、Verb、Projectile、護甲、命中部位。</p></a></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">進階主題與參考</div>
+    <div class="g4">
+      <div class="card card-accent-green"><a href="16-testing.html"><h3>16 · 測試</h3><p>邏輯抽離、NUnit、DebugAction、CI 編譯。</p></a></div>
+      <div class="card card-accent-purple"><a href="17-apparel-equipment.html"><h3>17 · 服裝裝備</h3><p>Apparel 圖層、護甲 Stat、Equipment。</p></a></div>
+      <div class="card card-accent-cyan"><a href="18-buildings-power.html"><h3>18 · 建築電力</h3><p>Building、CompPower、PlaceWorker。</p></a></div>
+      <div class="card card-accent-green"><a href="19-plants-animals.html"><h3>19 · 植物動物</h3><p>plant 區塊、RaceProperties、訓練、產出。</p></a></div>
+      <div class="card card-accent-orange"><a href="20-needs-mood-thoughts.html"><h3>20 · 需求心情</h3><p>NeedDef、ThoughtDef、MentalBreak。</p></a></div>
+      <div class="card card-accent-purple"><a href="21-genes-xenotypes.html"><h3>21 · 基因異種</h3><p>GeneDef、XenotypeDef（Biotech）。</p></a></div>
+      <div class="card card-accent-blue"><a href="22-quests.html"><h3>22 · 任務系統</h3><p>QuestScriptDef、QuestNode/Part、Slate、Signal。</p></a></div>
+      <div class="card card-accent-cyan"><a href="23-stuff-materials.html"><h3>23 · 材質系統</h3><p>Stuff、StuffCategoryDef、statFactors、染色。</p></a></div>
+      <div class="card card-accent-red"><a href="24-abilities-psycasts.html"><h3>24 · 能力超能</h3><p>AbilityDef、CompAbilityEffect、psyfocus。</p></a></div>
+      <div class="card card-accent-green"><a href="25-map-generation.html"><h3>25 · 地圖生成</h3><p>GenStep 流水線、TerrainDef、噪聲、order。</p></a></div>
+      <div class="card card-accent-orange"><a href="26-storage-filters.html"><h3>26 · 儲存分類</h3><p>ThingCategoryDef、ThingFilter、Building_Storage。</p></a></div>
+      <div class="card card-accent-purple"><a href="27-cookbook.html"><h3>27 · 速查食譜</h3><p>即查即用 code snippet 大全（9 大分類）。</p></a></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">快速參考：關鍵 DLL 位置</div>
+    <table>
+      <tr><th>DLL</th><th>路徑（Windows Steam）</th><th>用途</th></tr>
+      <tr><td><code>Assembly-CSharp.dll</code></td><td><code>RimWorld/RimWorldWin64_Data/Managed/</code></td><td>遊戲主要邏輯，反編譯對象</td></tr>
+      <tr><td><code>UnityEngine.CoreModule.dll</code></td><td>同上目錄</td><td>Unity API</td></tr>
+      <tr><td><code>0Harmony.dll</code></td><td><code>RimWorld/RimWorldWin64_Data/Managed/</code></td><td>Harmony 框架（遊戲內建）</td></tr>
+      <tr><td><code>UnityEngine.IMGUIModule.dll</code></td><td>同上目錄</td><td>GUI.DrawTexture 等</td></tr>
+    </table>
+    <div class="callout callout-tip">
+      <strong>提示</strong>
+      不需要自己下載 Harmony NuGet。RimWorld 已內建 0Harmony.dll，專案只需加 reference 即可，<strong>不要</strong>將 Harmony 打包進你的 DLL。
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

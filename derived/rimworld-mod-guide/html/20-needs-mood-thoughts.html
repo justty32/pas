@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求、心情與想法 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+  .api-table td:first-child { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html" class="active">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>需求、心情與想法</h1>
+  <p>Needs、Mood 與 Thoughts 構成 RimWorld 殖民者的心理模型——從 Need 數值、Thought 記憶到精神崩潰的完整鏈路。</p>
+  <span class="badge">RimWorld 1.5 · Harmony 2.x · C#</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#overview">心理模型總覽：資料流</a></li>
+      <li><a href="#needdef">NeedDef 與自訂 Need</a></li>
+      <li><a href="#enable-need">在 PawnKindDef / race 啟用 need</a></li>
+      <li><a href="#thoughtdef">ThoughtDef（stages / durationDays / stackLimit）</a></li>
+      <li><a href="#memory-vs-situational">Thought_Memory vs Thought_Situational</a></li>
+      <li><a href="#add-thought">從 C# 加想法（TryGainMemory）</a></li>
+      <li><a href="#mood-break">MoodOffset 與心情崩潰閾值</a></li>
+      <li><a href="#mentalstate">MentalStateDef 與 MentalBreakDef</a></li>
+      <li><a href="#thoughtworker">自訂 ThoughtWorker（情境條件）</a></li>
+      <li><a href="#traits">特質影響想法（nullifies / thoughtOffset）</a></li>
+      <li><a href="#pitfalls">常見坑</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══ 總覽 ═══ -->
+  <div class="section" id="overview">
+    <div class="section-title">心理模型總覽：資料流</div>
+    <p>
+      RimWorld 的殖民者心理由三層組成。對 C# 工程師而言，最重要的是釐清「誰是狀態的擁有者」與「資料如何向上彙整」：
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Need（需求）</h3>
+        <p>連續數值（0–1）。如 Food、Rest、Joy、Mood。掛在 <code>pawn.needs</code> 下，每隔一段 tick 由 <code>NeedInterval()</code> 衰減/更新。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Thought（想法）</h3>
+        <p>對 Mood 施加正/負偏移的「條目」。分記憶型（事件觸發、會過期）與情境型（持續判斷）。彙整於 <code>pawn.needs.mood.thoughts</code>。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>MentalState（精神狀態）</h3>
+        <p>當 Mood 跌破閾值，<code>MentalBreaker</code> 觸發 <code>MentalBreakDef</code>，進而啟動 <code>MentalStateDef</code>（暴走、發呆、逃跑等）。</p>
+      </div>
+    </div>
+
+    <p>三者的依賴方向是單向的：</p>
+    <pre class="cm"><span class="cm">Thought（記憶+情境）  ──彙整 MoodOffset──▶  Need_Mood.CurLevel
+                                                  │
+                                                  ▼
+                                      MentalBreaker（比對閾值）
+                                                  │
+                                                  ▼
+                              MentalBreakDef ──▶ MentalStateDef</span></pre>
+
+    <div class="callout callout-info">
+      <strong>核心型別所在組件</strong>
+      <code>Need</code>、<code>NeedDef</code>、<code>ThoughtDef</code>、<code>Thought_Memory</code>、<code>MentalBreaker</code> 全在 <code>RimWorld</code> 命名空間（<code>Assembly-CSharp.dll</code>）。
+      用 dnSpy 開 <code>RimWorld.Need_Mood</code> / <code>RimWorld.MentalBreaker</code> 是理解這套機制最快的方式。
+    </div>
+  </div>
+
+  <!-- ═══ 1. NeedDef ═══ -->
+  <div class="section" id="needdef">
+    <div class="section-title">1 · NeedDef 與自訂 Need</div>
+    <p>
+      一個需求 = <code>NeedDef</code>（XML 定義）+ 一個繼承 <code>Need</code> 的 C# 類別（<code>needClass</code> 指向它）。
+      <code>NeedDef</code> 描述顯示與閾值；<code>Need</code> 子類別實作衰減邏輯。
+    </p>
+
+    <h3>XML：NeedDef 定義</h3>
+    <pre><span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;NeedDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>Caffeine<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;needClass&gt;</span>MyMod.Need_Caffeine<span class="xml-tag">&lt;/needClass&gt;</span>  <span class="cm">&lt;!-- 指向你的 C# 類別 --&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>咖啡因<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>缺乏咖啡因會降低工作效率並影響心情。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;colonistAndPrisonersOnly&gt;</span>true<span class="xml-tag">&lt;/colonistAndPrisonersOnly&gt;</span>
+    <span class="xml-tag">&lt;major&gt;</span>true<span class="xml-tag">&lt;/major&gt;</span>           <span class="cm">&lt;!-- 是否在 Need 面板顯示為主要需求 --&gt;</span>
+    <span class="xml-tag">&lt;showOnNeedList&gt;</span>true<span class="xml-tag">&lt;/showOnNeedList&gt;</span>
+    <span class="cm">&lt;!-- 顯示在 bar 上的門檻刻度（0–1）--&gt;</span>
+    <span class="xml-tag">&lt;listPriority&gt;</span>40<span class="xml-tag">&lt;/listPriority&gt;</span>
+  <span class="xml-tag">&lt;/NeedDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>C#：繼承 Need，覆寫 NeedInterval 與 CurLevel</h3>
+    <p>
+      <code>Need.NeedInterval()</code> 由引擎每 <strong>150 ticks</strong>（約遊戲內 1 小時/每秒約 2.5 次，視速度）呼叫一次——這是衰減邏輯的放置處。
+      <code>CurLevel</code> 是 0–1 的當前值；其 setter 通常被覆寫以套用 clamp 與門檻效果。
+    </p>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">Need_Caffeine</span> : <span class="ty">Need</span>
+    {
+        <span class="cm">// 每個遊戲日的衰減量（0–1 區間）。150 ticks 呼叫一次 NeedInterval，</span>
+        <span class="cm">// 一個遊戲日 = 60000 ticks，故一天約 400 次 interval。</span>
+        <span class="kw">private const float</span> FallPerDay = <span class="nu">0.6f</span>;
+
+        <span class="cm">// 建構子簽章固定：Need(Pawn pawn)。XML 用 needClass 反射建立。</span>
+        <span class="kw">public</span> <span class="nm">Need_Caffeine</span>(<span class="ty">Pawn</span> pawn) : <span class="kw">base</span>(pawn) { }
+
+        <span class="cm">// CurLevel 在基底已是 float 自動屬性；如需門檻語意可覆寫 CurCategory 等。</span>
+        <span class="cm">// 這裡示範三段門檻供 UI 與其他系統查詢。</span>
+        <span class="kw">public</span> <span class="ty">CaffeineCategory</span> CurCategory
+        {
+            <span class="kw">get</span>
+            {
+                <span class="kw">if</span> (CurLevel &lt; <span class="nu">0.15f</span>) <span class="kw">return</span> <span class="ty">CaffeineCategory</span>.Withdrawal;
+                <span class="kw">if</span> (CurLevel &lt; <span class="nu">0.40f</span>) <span class="kw">return</span> <span class="ty">CaffeineCategory</span>.Low;
+                <span class="kw">return</span> <span class="ty">CaffeineCategory</span>.Fine;
+            }
+        }
+
+        <span class="cm">// 在面板 bar 上畫門檻線（選用）</span>
+        <span class="kw">public override int</span> GUIChangeArrow => -<span class="nu">1</span>; <span class="cm">// 顯示向下箭頭（持續下降）</span>
+
+        <span class="cm">// 核心：每 150 ticks 被引擎呼叫，負責衰減</span>
+        <span class="kw">public override void</span> <span class="nm">NeedInterval</span>()
+        {
+            <span class="cm">// IsFrozen：pawn 被收進容器/世界地圖外時凍結，不衰減</span>
+            <span class="kw">if</span> (IsFrozen) <span class="kw">return</span>;
+
+            <span class="cm">// 150 ticks 佔一天的比例 = 150 / 60000</span>
+            <span class="kw">float</span> tickFraction = <span class="nu">150f</span> / <span class="nu">60000f</span>;
+            CurLevel -= FallPerDay * tickFraction;
+            <span class="cm">// CurLevel setter 已 clamp 到 [0,1]，但顯式 clamp 更安全</span>
+            CurLevel = <span class="ty">Mathf</span>.<span class="nm">Clamp01</span>(CurLevel);
+        }
+
+        <span class="cm">// 新 pawn / 載入時設定初始值</span>
+        <span class="kw">public override void</span> <span class="nm">SetInitialLevel</span>()
+        {
+            CurLevel = <span class="ty">Rand</span>.<span class="nm">Range</span>(<span class="nu">0.4f</span>, <span class="nu">0.8f</span>);
+        }
+    }
+
+    <span class="kw">public enum</span> <span class="ty">CaffeineCategory</span> { Withdrawal, Low, Fine }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>讓喝咖啡補充 Need</strong>
+      在 ingestible 的 <code>CompProperties_Ingested</code> / 或自訂 <code>ThingComp</code> 的攝取 hook 裡，
+      取 <code>pawn.needs.TryGetNeed&lt;Need_Caffeine&gt;()?.CurLevel += amount;</code> 即可。
+      <code>TryGetNeed&lt;T&gt;()</code> 在 pawn 未啟用該 need 時回傳 null，務必判空。
+    </div>
+  </div>
+
+  <!-- ═══ 2. 啟用 need ═══ -->
+  <div class="section" id="enable-need">
+    <div class="section-title">2 · 在 PawnKindDef / race 啟用 need</div>
+    <p>
+      Need 不會自動掛到每個 pawn。<code>Pawn_NeedsTracker.ShouldHaveNeed(NeedDef)</code> 決定某 pawn 是否擁有該 need。
+      預設規則包含：<code>NeedDef.colonistAndPrisonersOnly</code>、<code>NeedDef.onlyIfCausedByHediff</code>、種族 intelligence 等。
+      自訂 need 通常需要透過下列其中一種方式納入判定。
+    </p>
+
+    <h3>方式 A：XML — 用 developmentalStageFilter / 種族條件控制</h3>
+    <p>
+      若你的 need 適用所有 humanlike 殖民者，<code>colonistAndPrisonersOnly=true</code> 加上不額外限制即可被 <code>ShouldHaveNeed</code> 接受。
+      想限定特定種族，最乾淨的做法是在 race 的 <code>RaceProperties</code> 不直接支援 need 清單，故改用下列 Harmony 或 hediff 方式。
+    </p>
+
+    <h3>方式 B：綁定到 Hediff（最穩健）</h3>
+    <p>
+      設定 <code>&lt;onlyIfCausedByHediff&gt;</code>，則只有帶該 Hediff 的 pawn 才會有此 need。常用於「植入物 / 異種生理」需求。
+    </p>
+    <pre><span class="xml-tag">&lt;NeedDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Caffeine<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;needClass&gt;</span>MyMod.Need_Caffeine<span class="xml-tag">&lt;/needClass&gt;</span>
+  <span class="xml-tag">&lt;onlyIfCausedByHediff&gt;</span>true<span class="xml-tag">&lt;/onlyIfCausedByHediff&gt;</span>
+  <span class="cm">&lt;!-- 哪些 Hediff 會「導致」此 need --&gt;</span>
+  <span class="xml-tag">&lt;causedByHediff&gt;</span>CaffeineDependency<span class="xml-tag">&lt;/causedByHediff&gt;</span>
+<span class="xml-tag">&lt;/NeedDef&gt;</span></pre>
+
+    <h3>方式 C：Harmony Postfix 攔截 ShouldHaveNeed</h3>
+    <p>
+      最靈活——可依 <code>PawnKindDef</code>、faction、trait 任意條件決定。針對 <code>Pawn_NeedsTracker.ShouldHaveNeed</code>。
+    </p>
+    <pre><span class="at">[HarmonyPatch(typeof(</span><span class="ty">Pawn_NeedsTracker</span><span class="at">), "ShouldHaveNeed")]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_ShouldHaveNeed</span>
+{
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="ty">Pawn</span> ___pawn, <span class="ty">NeedDef</span> nd, <span class="kw">ref bool</span> __result)
+    {
+        <span class="cm">// ___pawn：Pawn_NeedsTracker 的私有欄位 pawn（三底線存取）</span>
+        <span class="kw">if</span> (nd != <span class="ty">MyNeedDefOf</span>.Caffeine) <span class="kw">return</span>;
+
+        <span class="cm">// 只給特定 PawnKind（例如某種喝咖啡成癮的種族/職業）</span>
+        <span class="kw">bool</span> eligible =
+            ___pawn.RaceProps.Humanlike &amp;&amp;
+            ___pawn.kindDef == <span class="ty">MyPawnKindDefOf</span>.CoffeeAddict;
+
+        __result = eligible;
+    }
+}
+
+<span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyNeedDefOf</span>
+{
+    <span class="kw">public static</span> <span class="ty">NeedDef</span> Caffeine;
+    <span class="kw">static</span> <span class="ty">MyNeedDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitialized</span>(<span class="kw">typeof</span>(<span class="ty">MyNeedDefOf</span>));
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>need 清單會被快取</strong>
+      <code>Pawn_NeedsTracker</code> 內部會快取已建立的 need 清單，呼叫 <code>AddOrRemoveNeedsAsAppropriate()</code> 才重新評估。
+      若你在遊戲中動態改變條件（例如加上 trait），需手動觸發：
+      <code>pawn.needs.AddOrRemoveNeedsAsAppropriate();</code>
+    </div>
+  </div>
+
+  <!-- ═══ 3. ThoughtDef ═══ -->
+  <div class="section" id="thoughtdef">
+    <div class="section-title">3 · ThoughtDef（stages / durationDays / stackLimit / thoughtClass）</div>
+    <p>
+      <code>ThoughtDef</code> 是想法的藍圖。一個 ThoughtDef 可有多個 <code>stages</code>（階段），
+      每個 stage 帶不同 label 與 <code>baseMoodEffect</code>。引擎依條件選擇當前 stage。
+    </p>
+
+    <table class="api-table">
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td>thoughtClass</td><td>C# 類別。預設記憶型用 <code>Thought_Memory</code>，情境型用 <code>Thought_Situational</code>，或你的子類別</td></tr>
+      <tr><td>workerClass</td><td>情境型用：<code>ThoughtWorker</code> 子類別，回傳是否啟動與當前 stage</td></tr>
+      <tr><td>durationDays</td><td>記憶型才有效：想法存在的天數，到期自動移除</td></tr>
+      <tr><td>stackLimit</td><td>同一 ThoughtDef 可堆疊的最大份數（多次觸發累積）</td></tr>
+      <tr><td>stackedEffectMultiplier</td><td>第 2 份起的 mood 衰減乘數（避免線性疊加過強）</td></tr>
+      <tr><td>stages</td><td>多階段定義，每段含 label / description / baseMoodEffect</td></tr>
+      <tr><td>nullifyingTraits</td><td>擁有這些 trait 的 pawn 完全不受此想法影響</td></tr>
+      <tr><td>nullifyingPrecepts</td><td>（Ideology）特定 precept 抵銷此想法</td></tr>
+    </table>
+
+    <h3>XML：記憶型 ThoughtDef（多 stage）</h3>
+    <pre><span class="xml-tag">&lt;ThoughtDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>DrankGreatCoffee<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;durationDays&gt;</span>1<span class="xml-tag">&lt;/durationDays&gt;</span>        <span class="cm">&lt;!-- 1 遊戲日後過期 --&gt;</span>
+  <span class="xml-tag">&lt;stackLimit&gt;</span>3<span class="xml-tag">&lt;/stackLimit&gt;</span>            <span class="cm">&lt;!-- 最多疊 3 份 --&gt;</span>
+  <span class="xml-tag">&lt;stackedEffectMultiplier&gt;</span>0.5<span class="xml-tag">&lt;/stackedEffectMultiplier&gt;</span>
+  <span class="cm">&lt;!-- 不指定 thoughtClass 時預設 Thought_Memory --&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>喝了好咖啡<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;description&gt;</span>那杯咖啡香醇極了，整個人精神奕奕。<span class="xml-tag">&lt;/description&gt;</span>
+      <span class="xml-tag">&lt;baseMoodEffect&gt;</span>6<span class="xml-tag">&lt;/baseMoodEffect&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/ThoughtDef&gt;</span></pre>
+
+    <h3>XML：負面 + 多 stage（依嚴重度切換）</h3>
+    <pre><span class="xml-tag">&lt;ThoughtDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>CaffeineWithdrawal<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.ThoughtWorker_Caffeine<span class="xml-tag">&lt;/workerClass&gt;</span>  <span class="cm">&lt;!-- 情境型 --&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>有點想喝咖啡<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;baseMoodEffect&gt;</span>-3<span class="xml-tag">&lt;/baseMoodEffect&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>咖啡因戒斷<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;baseMoodEffect&gt;</span>-10<span class="xml-tag">&lt;/baseMoodEffect&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/ThoughtDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>baseMoodEffect 的單位</strong>
+      想法的 mood 偏移以「心情點數」計（殖民者 mood 內部是 0–1，但 UI 與想法以 ±N 點顯示，N 約對應 1 個百分點）。
+      實際生效值還會經過 <code>MoodOffset()</code> 與 trait <code>thoughtOffset</code> 修正（見第 6、9 節）。
+    </div>
+  </div>
+
+  <!-- ═══ 4. Memory vs Situational ═══ -->
+  <div class="section" id="memory-vs-situational">
+    <div class="section-title">4 · Thought_Memory vs Thought_Situational</div>
+    <p>這是 modding 最關鍵的二分。選錯類型會導致想法不消失、或效能災難。</p>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>Thought_Memory（記憶型）</h3>
+        <ul>
+          <li><strong>事件驅動</strong>：你主動 <code>TryGainMemory()</code> 加入</li>
+          <li>會被<strong>儲存</strong>於 <code>MemoryThoughtHandler</code></li>
+          <li>依 <code>durationDays</code> <strong>自動過期</strong>移除</li>
+          <li>可堆疊（<code>stackLimit</code>）</li>
+          <li>適合：一次性事件——吃到好料、目睹死亡、收到禮物</li>
+        </ul>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>Thought_Situational（情境型）</h3>
+        <ul>
+          <li><strong>條件驅動</strong>：由 <code>ThoughtWorker</code> 每隔一段時間重新評估</li>
+          <li><strong>不儲存</strong>——條件不成立就自動消失，不需手動移除</li>
+          <li>無 <code>durationDays</code>（持續存在於條件為真期間）</li>
+          <li>適合：環境/狀態類——在漂亮房間、太擠、餓肚子、戒斷中</li>
+        </ul>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>面向</th><th>Thought_Memory</th><th>Thought_Situational</th></tr>
+      <tr><td>加入方式</td><td>C# 主動呼叫 TryGainMemory</td><td>ThoughtWorker 自動評估</td></tr>
+      <tr><td>移除方式</td><td>durationDays 到期 / 手動 RemoveMemory</td><td>條件不成立自動消失</td></tr>
+      <tr><td>是否存檔</td><td>是（含剩餘 age）</td><td>否（每次重算）</td></tr>
+      <tr><td>效能成本</td><td>低（只在事件時）</td><td>較高（週期性評估）</td></tr>
+      <tr><td>typical workerClass</td><td>無</td><td>必填</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══ 5. 從 C# 加想法 ═══ -->
+  <div class="section" id="add-thought">
+    <div class="section-title">5 · 從 C# 加想法（TryGainMemory）</div>
+    <p>
+      記憶型想法透過 <code>pawn.needs.mood.thoughts.memories.TryGainMemory(...)</code> 加入。
+      存取鏈每一層都可能為 null（動物、無 mood need 的 pawn），務必逐層判空。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">CoffeeMood</span>
+{
+    <span class="cm">// 安全地給 pawn 加一個記憶型想法</span>
+    <span class="kw">public static void</span> <span class="nm">GainDrankGreatCoffee</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="cm">// needs 可能為 null（如未生成的 pawn），mood 只在 humanlike 上存在</span>
+        <span class="ty">ThoughtHandler</span> thoughts = pawn?.needs?.mood?.thoughts;
+        <span class="kw">if</span> (thoughts == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 1) 最簡單：直接用 ThoughtDef</span>
+        thoughts.memories.<span class="nm">TryGainMemory</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee);
+    }
+
+    <span class="cm">// 指定 stage / 來源 pawn（社交想法）</span>
+    <span class="kw">public static void</span> <span class="nm">GainSocialThought</span>(<span class="ty">Pawn</span> pawn, <span class="ty">Pawn</span> otherPawn)
+    {
+        <span class="ty">ThoughtHandler</span> thoughts = pawn?.needs?.mood?.thoughts;
+        <span class="kw">if</span> (thoughts == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 2) 建立 Thought_Memory 實例，設定 stage 後再加入</span>
+        <span class="ty">Thought_Memory</span> mem = (<span class="ty">Thought_Memory</span>)<span class="ty">ThoughtMaker</span>.<span class="nm">MakeThought</span>(
+            <span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee,
+            stageIndex: <span class="nu">0</span>);
+
+        <span class="cm">// otherPawn 用於社交想法（影響 opinion）</span>
+        thoughts.memories.<span class="nm">TryGainMemory</span>(mem, otherPawn);
+    }
+
+    <span class="cm">// 手動移除（記憶型不一定要等過期）</span>
+    <span class="kw">public static void</span> <span class="nm">RemoveCoffeeThought</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="ty">ThoughtHandler</span> thoughts = pawn?.needs?.mood?.thoughts;
+        thoughts?.memories.<span class="nm">RemoveMemoriesOfDef</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee);
+    }
+}
+
+<span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyThoughtDefOf</span>
+{
+    <span class="kw">public static</span> <span class="ty">ThoughtDef</span> DrankGreatCoffee;
+    <span class="kw">public static</span> <span class="ty">ThoughtDef</span> CaffeineWithdrawal;
+    <span class="kw">static</span> <span class="ty">MyThoughtDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitialized</span>(<span class="kw">typeof</span>(<span class="ty">MyThoughtDefOf</span>));
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>常用 ThoughtHandler / MemoryThoughtHandler API</strong>
+      <ul style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li><code>memories.TryGainMemory(ThoughtDef / Thought_Memory, Pawn otherPawn = null)</code></li>
+        <li><code>memories.RemoveMemoriesOfDef(ThoughtDef)</code></li>
+        <li><code>memories.NumMemoriesOfDef(ThoughtDef)</code> — 已堆疊份數（檢查 stackLimit 用）</li>
+        <li><code>thoughts.TotalMoodOffset()</code> — 當前所有想法的 mood 總偏移</li>
+        <li><code>thoughts.GetAllMoodThoughts(List&lt;Thought&gt;)</code> — 取全部生效想法</li>
+      </ul>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>情境型想法不要用 TryGainMemory</strong>
+      情境型由 ThoughtWorker 自動產生。對情境型 ThoughtDef 呼叫 <code>TryGainMemory</code> 會塞進 memory handler，
+      變成「不會自動消失的殭屍想法」。情境型只要寫好 worker，引擎自己會處理。
+    </div>
+  </div>
+
+  <!-- ═══ 6. MoodOffset 與崩潰閾值 ═══ -->
+  <div class="section" id="mood-break">
+    <div class="section-title">6 · MoodOffset 與心情崩潰閾值（MentalBreak）</div>
+
+    <h3>MoodOffset：想法實際生效值</h3>
+    <p>
+      <code>Thought.MoodOffset()</code> 回傳該想法當下對 mood 的實際偏移。基底是 <code>CurStage.baseMoodEffect</code>，
+      但你的子類別可覆寫以做動態計算（例如依 need 數值線性插值）。
+    </p>
+    <pre><span class="kw">public class</span> <span class="ty">Thought_CaffeineWithdrawal</span> : <span class="ty">Thought_Situational</span>
+{
+    <span class="cm">// 依 Caffeine need 的缺乏程度，動態計算 mood 懲罰</span>
+    <span class="kw">public override float</span> <span class="nm">MoodOffset</span>()
+    {
+        <span class="ty">Need_Caffeine</span> need = pawn.needs?.<span class="nm">TryGetNeed</span>&lt;<span class="ty">Need_Caffeine</span>&gt;();
+        <span class="kw">if</span> (need == <span class="kw">null</span>) <span class="kw">return</span> <span class="nu">0f</span>;
+
+        <span class="cm">// need 越低，懲罰越大：0 → -15，0.4 → 0</span>
+        <span class="kw">float</span> deficit = <span class="ty">Mathf</span>.<span class="nm">Clamp01</span>((<span class="nu">0.4f</span> - need.CurLevel) / <span class="nu">0.4f</span>);
+        <span class="kw">return</span> -<span class="nu">15f</span> * deficit;
+    }
+}</pre>
+
+    <h3>心情崩潰閾值</h3>
+    <p>
+      <code>MentalBreaker</code>（<code>pawn.mindState.mentalBreaker</code>）持有三條閾值，依 mood 跌破哪一條決定崩潰嚴重度：
+    </p>
+    <table>
+      <tr><th>屬性</th><th>預設值（mood 0–1）</th><th>對應崩潰</th></tr>
+      <tr><td><code>BreakThresholdMinor</td><td>~0.35</td><td>Minor（輕度，如 sad wander）</td></tr>
+      <tr><td><code>BreakThresholdMajor</td><td>~0.20</td><td>Major（中度，如 binging）</td></tr>
+      <tr><td><code>BreakThresholdExtreme</td><td>~0.05</td><td>Extreme（重度，如 berserk）</td></tr>
+    </table>
+    <p>
+      這些閾值受 trait（如 <code>Nerves</code>）、hediff、難度設定影響。
+      <code>MentalBreaker.MentalBreakThresholdFor(category)</code> 與 <code>CurMood</code> 是查詢入口。
+    </p>
+
+    <pre><span class="cm">// 查詢某 pawn 當前距離崩潰多遠</span>
+<span class="ty">MentalBreaker</span> breaker = pawn.mindState.mentalBreaker;
+<span class="kw">float</span> mood    = pawn.needs.mood.CurLevel;          <span class="cm">// 0–1</span>
+<span class="kw">float</span> minorAt = breaker.BreakThresholdMinor;        <span class="cm">// 0–1</span>
+<span class="kw">bool</span>  atRisk  = breaker.BreakMinorIsImminent;        <span class="cm">// 即將輕度崩潰</span>
+<span class="kw">bool</span>  extreme = breaker.BreakExtremeIsApproaching;</pre>
+
+    <div class="callout callout-info">
+      <strong>調整閾值的正確切入點</strong>
+      不要直接寫 <code>MentalBreaker</code> 私有欄位。閾值來自 stat <code>MentalBreakThreshold</code> 與相關修正。
+      要全域調整可 patch <code>MentalBreaker</code> 的閾值 getter，或新增提供 <code>StatPart</code> 的 hediff/trait。
+    </div>
+  </div>
+
+  <!-- ═══ 7. MentalStateDef / MentalBreakDef ═══ -->
+  <div class="section" id="mentalstate">
+    <div class="section-title">7 · MentalStateDef 與 MentalBreakDef（精神崩潰）</div>
+    <p>
+      兩者分工明確：<strong>MentalBreakDef</strong> = 「在哪個嚴重度可被選中」的觸發包裝，
+      內含對應的 <strong>MentalStateDef</strong> = 實際的行為狀態機（pawn 進入後做什麼）。
+    </p>
+
+    <h3>XML：MentalStateDef（行為狀態）</h3>
+    <pre><span class="xml-tag">&lt;MentalStateDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>CaffeineRage<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;stateClass&gt;</span>RimWorld.MentalState_Berserk<span class="xml-tag">&lt;/stateClass&gt;</span> <span class="cm">&lt;!-- 重用既有狀態類別 --&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>RimWorld.MentalStateWorker<span class="xml-tag">&lt;/workerClass&gt;</span>
+  <span class="xml-tag">&lt;category&gt;</span>Aggro<span class="xml-tag">&lt;/category&gt;</span>
+  <span class="xml-tag">&lt;beginLetterLabel&gt;</span>咖啡因暴走<span class="xml-tag">&lt;/beginLetterLabel&gt;</span>
+  <span class="xml-tag">&lt;beginLetter&gt;</span>{0} 因為咖啡因戒斷而陷入暴怒，開始攻擊周遭的一切。<span class="xml-tag">&lt;/beginLetter&gt;</span>
+  <span class="xml-tag">&lt;beginLetterDef&gt;</span>ThreatSmall<span class="xml-tag">&lt;/beginLetterDef&gt;</span>
+  <span class="xml-tag">&lt;recoveryMtbDays&gt;</span>0.5<span class="xml-tag">&lt;/recoveryMtbDays&gt;</span>  <span class="cm">&lt;!-- 平均回復時間 --&gt;</span>
+  <span class="xml-tag">&lt;danger&gt;</span>Deadly<span class="xml-tag">&lt;/danger&gt;</span>
+<span class="xml-tag">&lt;/MentalStateDef&gt;</span></pre>
+
+    <h3>XML：MentalBreakDef（觸發包裝）</h3>
+    <pre><span class="xml-tag">&lt;MentalBreakDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Break_CaffeineRage<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;mentalState&gt;</span>CaffeineRage<span class="xml-tag">&lt;/mentalState&gt;</span>     <span class="cm">&lt;!-- 指向上面的 MentalStateDef --&gt;</span>
+  <span class="xml-tag">&lt;intensity&gt;</span>Extreme<span class="xml-tag">&lt;/intensity&gt;</span>            <span class="cm">&lt;!-- Minor / Major / Extreme --&gt;</span>
+  <span class="xml-tag">&lt;baseCommonality&gt;</span>1.0<span class="xml-tag">&lt;/baseCommonality&gt;</span>      <span class="cm">&lt;!-- 在同 intensity 池內被抽中的權重 --&gt;</span>
+  <span class="cm">&lt;!-- 只有符合此 worker 條件的 pawn 才會抽到這個 break --&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.MentalBreakWorker_Caffeine<span class="xml-tag">&lt;/workerClass&gt;</span>
+<span class="xml-tag">&lt;/MentalBreakDef&gt;</span></pre>
+
+    <h3>C#：MentalBreakWorker — 限定誰會觸發</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">MentalBreakWorker_Caffeine</span> : <span class="ty">MentalBreakWorker</span>
+{
+    <span class="cm">// 回傳此 break 對特定 pawn 的觸發機率權重；0 = 永不觸發</span>
+    <span class="kw">public override float</span> <span class="nm">CommonalityFor</span>(<span class="ty">Pawn</span> pawn, <span class="kw">bool</span> moodCaused = <span class="kw">false</span>)
+    {
+        <span class="ty">Need_Caffeine</span> need = pawn.needs?.<span class="nm">TryGetNeed</span>&lt;<span class="ty">Need_Caffeine</span>&gt;();
+        <span class="cm">// 只有處於嚴重戒斷的 pawn 才可能咖啡因暴走</span>
+        <span class="kw">if</span> (need == <span class="kw">null</span> || need.CurLevel &gt; <span class="nu">0.1f</span>) <span class="kw">return</span> <span class="nu">0f</span>;
+        <span class="kw">return</span> <span class="kw">base</span>.<span class="nm">CommonalityFor</span>(pawn, moodCaused);
+    }
+}</pre>
+
+    <h3>C#：主動讓 pawn 進入精神狀態</h3>
+    <pre><span class="cm">// 略過 mood 判定，直接強制進入某精神狀態（事件腳本常用）</span>
+<span class="kw">bool</span> started = pawn.mindState.mentalStateHandler.<span class="nm">TryStartMentalState</span>(
+    <span class="ty">MyMentalStateDefOf</span>.CaffeineRage,
+    reason: <span class="st">"咖啡因戒斷"</span>,
+    forceWake: <span class="kw">true</span>,
+    causedByMood: <span class="kw">false</span>);
+
+<span class="cm">// 或透過 MentalBreakDef 走正常崩潰流程</span>
+<span class="ty">MyMentalBreakDefOf</span>.Break_CaffeineRage.<span class="nm">Worker</span>.<span class="nm">TryStart</span>(pawn, <span class="st">"咖啡因戒斷"</span>, causedByMood: <span class="kw">true</span>);</pre>
+
+    <div class="callout callout-tip">
+      <strong>重用內建 stateClass</strong>
+      多數情況不需要自己寫 <code>MentalState</code> 子類別——RimWorld 已有 <code>MentalState_Berserk</code>、
+      <code>MentalState_Wander_Sad</code>、<code>MentalState_BingingFood</code> 等十餘種。只在需要全新行為時才繼承 <code>MentalState</code> 並覆寫 <code>MentalStateTick()</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 8. ThoughtWorker ═══ -->
+  <div class="section" id="thoughtworker">
+    <div class="section-title">8 · 自訂 ThoughtWorker（情境想法的條件判斷）</div>
+    <p>
+      情境型想法的核心是 <code>ThoughtWorker</code>。引擎週期性對每個 pawn 呼叫 <code>CurrentStateInternal(pawn)</code>，
+      由你回傳 <code>ThoughtState</code>：是否啟動、用哪個 stage。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">ThoughtWorker_Caffeine</span> : <span class="ty">ThoughtWorker</span>
+{
+    <span class="cm">// 回傳 ThoughtState：</span>
+    <span class="cm">//   ThoughtState.Inactive            → 想法不出現</span>
+    <span class="cm">//   ThoughtState.ActiveAtStage(int)  → 出現，並指定 stage 索引</span>
+    <span class="kw">protected override</span> <span class="ty">ThoughtState</span> <span class="nm">CurrentStateInternal</span>(<span class="ty">Pawn</span> p)
+    {
+        <span class="cm">// humanlike 且有 mood need 才評估（情境想法只給有 mood 的 pawn）</span>
+        <span class="kw">if</span> (!p.RaceProps.Humanlike) <span class="kw">return</span> <span class="ty">ThoughtState</span>.Inactive;
+
+        <span class="ty">Need_Caffeine</span> need = p.needs?.<span class="nm">TryGetNeed</span>&lt;<span class="ty">Need_Caffeine</span>&gt;();
+        <span class="kw">if</span> (need == <span class="kw">null</span>) <span class="kw">return</span> <span class="ty">ThoughtState</span>.Inactive;
+
+        <span class="cm">// 依需求高低選 stage（對應 ThoughtDef 的 stages 索引）</span>
+        <span class="kw">if</span> (need.CurLevel &lt; <span class="nu">0.15f</span>) <span class="kw">return</span> <span class="ty">ThoughtState</span>.<span class="nm">ActiveAtStage</span>(<span class="nu">1</span>); <span class="cm">// 戒斷</span>
+        <span class="kw">if</span> (need.CurLevel &lt; <span class="nu">0.40f</span>) <span class="kw">return</span> <span class="ty">ThoughtState</span>.<span class="nm">ActiveAtStage</span>(<span class="nu">0</span>); <span class="cm">// 想喝</span>
+        <span class="kw">return</span> <span class="ty">ThoughtState</span>.Inactive;
+    }
+}</pre>
+
+    <h3>內建可繼承/參考的 ThoughtWorker</h3>
+    <ul>
+      <li><code>ThoughtWorker_Hungry</code> / <code>ThoughtWorker_Tired</code> — need 門檻型範本</li>
+      <li><code>ThoughtWorker_RoomBeauty</code> / <code>ThoughtWorker_Spacious</code> — 環境型</li>
+      <li><code>ThoughtWorker_Precept</code>（Ideology）— 信念型，可帶參數</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>ThoughtState 是 readonly struct</strong>
+      不要 new 一個再改欄位。一律用靜態工廠：<code>ThoughtState.Inactive</code>、<code>ThoughtState.ActiveAtStage(i)</code>、
+      <code>ThoughtState.ActiveWithReason(label, desc)</code>（自訂顯示文字）。
+    </div>
+  </div>
+
+  <!-- ═══ 9. 特質影響想法 ═══ -->
+  <div class="section" id="traits">
+    <div class="section-title">9 · 特質影響想法（nullifiesThoughts / thoughtOffset）</div>
+    <p>
+      Trait 透過 <code>TraitDegreeData</code> 修改想法效果，兩個主要機制：完全抵銷某想法、或對某想法施加額外 mood 偏移。
+    </p>
+
+    <h3>XML：在 TraitDef 內宣告</h3>
+    <pre><span class="xml-tag">&lt;TraitDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>CaffeineImmune<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;commonality&gt;</span>0.5<span class="xml-tag">&lt;/commonality&gt;</span>
+  <span class="xml-tag">&lt;degreeDatas&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>咖啡因免疫<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;degree&gt;</span>0<span class="xml-tag">&lt;/degree&gt;</span>
+
+      <span class="cm">&lt;!-- A) 完全抵銷這些 ThoughtDef（戒斷對他無效）--&gt;</span>
+      <span class="xml-tag">&lt;nullifiedThoughts&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>CaffeineWithdrawal<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/nullifiedThoughts&gt;</span>
+
+      <span class="cm">&lt;!-- B) 對特定想法施加額外 mood 偏移 --&gt;</span>
+      <span class="xml-tag">&lt;thoughtOffsets&gt;</span>
+        <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThoughtOffsetThought"</span><span class="xml-tag">&gt;</span>
+          <span class="xml-tag">&lt;thought&gt;</span>DrankGreatCoffee<span class="xml-tag">&lt;/thought&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>3<span class="xml-tag">&lt;/offset&gt;</span>   <span class="cm">&lt;!-- 對他喝好咖啡的快樂再 +3 --&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/thoughtOffsets&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/degreeDatas&gt;</span>
+<span class="xml-tag">&lt;/TraitDef&gt;</span></pre>
+
+    <h3>反向：在 ThoughtDef 指定 nullifyingTraits</h3>
+    <p>也可從想法那端宣告「哪些 trait 會讓我失效」，效果等同。擇一即可，別兩邊重複。</p>
+    <pre><span class="xml-tag">&lt;ThoughtDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>CaffeineWithdrawal<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;nullifyingTraits&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>CaffeineImmune<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/nullifyingTraits&gt;</span>
+  <span class="cm">&lt;!-- ... --&gt;</span>
+<span class="xml-tag">&lt;/ThoughtDef&gt;</span></pre>
+
+    <h3>C# 查詢：pawn 是否被 trait 抵銷某想法</h3>
+    <pre><span class="cm">// 引擎內部在彙整 mood 時會自動處理 nullify；如需手動查：</span>
+<span class="kw">bool</span> immune = pawn.story?.traits?
+    .<span class="nm">HasTrait</span>(<span class="ty">MyTraitDefOf</span>.CaffeineImmune) == <span class="kw">true</span>;
+
+<span class="cm">// 取得 trait 對某 ThoughtDef 的 offset（若有）</span>
+<span class="ty">Trait</span> t = pawn.story.traits.<span class="nm">GetTrait</span>(<span class="ty">MyTraitDefOf</span>.CaffeineImmune);
+<span class="kw">float</span> off = t?.CurrentData.<span class="nm">MoodOffsetOfThought</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee) ?? <span class="nu">0f</span>;</pre>
+  </div>
+
+  <!-- ═══ 10. 常見坑 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">10 · 常見坑</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 1</span> stackLimit 與 NumMemoriesOfDef 的關係</h3>
+      <p>
+        <code>TryGainMemory</code> 不會「自動」拒絕超過 <code>stackLimit</code> 的疊加——它會加入，但生效時引擎只計入前 <code>stackLimit</code> 份的 mood，
+        多餘份數仍佔記憶槽位、仍各自獨立倒數過期。若你需要「達上限就不再加」，自行檢查：
+      </p>
+      <pre><span class="kw">var</span> mem = pawn.needs.mood.thoughts.memories;
+<span class="kw">if</span> (mem.<span class="nm">NumMemoriesOfDef</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee)
+        &lt; <span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee.stackLimit)
+{
+    mem.<span class="nm">TryGainMemory</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee);
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 2</span> 記憶想法「不消失」</h3>
+      <p>常見兩個原因：</p>
+      <ul>
+        <li><strong>沒設 <code>durationDays</code></strong>：未指定 duration 的記憶型想法<em>永久存在</em>，除非手動 <code>RemoveMemoriesOfDef</code>。
+        若你想要永久就 OK；否則務必設定。</li>
+        <li><strong>把情境型用成記憶型</strong>：對情境型 ThoughtDef 呼叫了 <code>TryGainMemory</code>（見第 5 節警告）。
+        它會被當記憶儲存、沒有 duration、條件改變也不消失，變成殭屍想法。</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 3</span> Situational 想法的效能</h3>
+      <p>
+        情境型 worker 由引擎週期性對<strong>每個有 mood 的 pawn</strong>呼叫。<code>CurrentStateInternal</code> 內若做昂貴運算
+        （遍歷地圖、LINQ 配置、反射），在大殖民地會成為明顯卡頓來源。
+      </p>
+      <ul>
+        <li>盡早 <code>return ThoughtState.Inactive</code>（先檢查最廉價的排除條件）</li>
+        <li>避免每次呼叫 new 集合 / 用 LINQ；改快取或用 for 迴圈</li>
+        <li>昂貴的判定可自行降頻：用 <code>Find.TickManager.TicksGame % N</code> 配合欄位快取結果</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 4</span> 存取鏈 NullReference</h3>
+      <p>
+        <code>pawn.needs.mood.thoughts.memories</code> 任何一層都可能 null：動物無 mood need、
+        生成前的 pawn <code>needs</code> 為 null、機械族無心理。一律 <code>?.</code> 逐層判空，別假設殖民者就一定有。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 5</span> NeedInterval 的 tick 換算</h3>
+      <p>
+        <code>NeedInterval()</code> 不是每 tick 呼叫，而是每 <strong>150 ticks</strong>。寫衰減時要用「每 interval」而非「每 tick」的量，
+        否則衰減會慢 150 倍。一天 = 60000 ticks = 400 個 interval。換算公式：
+        <code>perInterval = perDay * 150 / 60000</code>。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 6</span> DefOf 未初始化 / Def 載入順序</h3>
+      <p>
+        <code>[DefOf]</code> 欄位在 Def 全部載入後才被填值。若在更早的時機（如 <code>Mod</code> 建構子）存取會是 null。
+        把使用 ThoughtDef/NeedDef 的邏輯放在遊戲執行期（如 worker、tick、patch），別放在載入早期的靜態初始化。
+      </p>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>除錯 Checklist</strong>
+      <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li>開發者模式 → 右下 God mode，選 pawn 看 <strong>Inspect → Needs/Mood</strong> 即時數值</li>
+        <li>Debug actions → <code>Mental break</code> / <code>Give thought</code> 直接灌想法測試</li>
+        <li><code>Log.Message(pawn.needs.mood.thoughts.TotalMoodOffset().ToString())</code> 驗證彙整值</li>
+        <li>想法不顯示？確認 ThoughtDef 有至少一個 stage 且 baseMoodEffect 非 0（0 偏移想法不列入面板）</li>
+        <li>情境想法不出現？在 worker 第一行加 Log 確認有被呼叫，再逐條檢查 return 路徑</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 快速參考 -->
+  <div class="section">
+    <div class="section-title">快速參考：類型 → 用途速查</div>
+    <table>
+      <tr><th>你想做的事</th><th>用什麼</th></tr>
+      <tr><td>新增一條 0–1 連續需求</td><td>NeedDef + 繼承 Need（覆寫 NeedInterval）</td></tr>
+      <tr><td>事件觸發、會過期的心情</td><td>ThoughtDef（durationDays）+ TryGainMemory</td></tr>
+      <tr><td>依環境/狀態持續判定的心情</td><td>ThoughtDef + workerClass（ThoughtWorker）</td></tr>
+      <tr><td>動態計算 mood 偏移</td><td>覆寫 Thought 子類別的 MoodOffset()</td></tr>
+      <tr><td>低心情時觸發特殊崩潰</td><td>MentalBreakDef + MentalStateDef + MentalBreakWorker</td></tr>
+      <tr><td>讓某 trait 對某想法免疫/加成</td><td>TraitDef 的 nullifiedThoughts / thoughtOffsets</td></tr>
+      <tr><td>強制 pawn 進入精神狀態</td><td>mentalStateHandler.TryStartMentalState</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 指南 · 需求、心情與想法 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

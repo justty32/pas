@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>能力與超能 (Abilities & Psycasts) — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .param-table td:first-child { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+  .param-table td:nth-child(2) { color: var(--purple); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; columns: 2; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html" class="active">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>能力與超能 (Abilities &amp; Psycasts)</h1>
+  <p>從 AbilityDef 結構、Ability comp 體系，到自訂效果、Psylink 超能與目標選擇的完整實作。</p>
+  <span class="badge">RimWorld 1.5 · Royalty / Anomaly</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#abilitydef">AbilityDef 結構</a></li>
+      <li><a href="#comps">Ability comps（效果系列）</a></li>
+      <li><a href="#custom-comp">自訂 CompAbilityEffect</a></li>
+      <li><a href="#gain">從 C# 給 Pawn 能力</a></li>
+      <li><a href="#cast">施放能力（Activate / CanCast）</a></li>
+      <li><a href="#psycast">Psycast 與 PsycasterPathDef</a></li>
+      <li><a href="#psyfocus">精神專注 / 失序 / Psylink</a></li>
+      <li><a href="#group">AbilityGroupDef 與冷卻共用</a></li>
+      <li><a href="#targeting">目標選擇</a></li>
+      <li><a href="#pitfalls">常見坑</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念 -->
+  <div class="section">
+    <div class="section-title">能力系統的全貌</div>
+    <p>
+      RimWorld 的「能力 (Ability)」是一套統一的主動技能框架——pawn 透過 <code>Pawn_AbilityTracker</code>（<code>pawn.abilities</code>）持有一組 <code>Ability</code> 實例，
+      每個 <code>Ability</code> 由一個 <code>AbilityDef</code> 驅動，UI 上以 Gizmo（指令按鈕）呈現。
+      Royalty DLC 的超能 (Psycast) 與 Anomaly DLC 的實體能力都是建立在<strong>同一套</strong> Ability 基礎上，差別只在於是否消耗精神專注 (psyfocus)、是否掛在 <code>PsycasterPathDef</code> 上。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>AbilityDef</h3>
+        <p>能力的<strong>定義</strong>（XML）：冷卻、verb、效果 comps、目標需求。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Ability</h3>
+        <p>能力的<strong>執行期實例</strong>：綁定 pawn，負責 <code>Activate</code> / <code>CanCast</code> / Gizmo。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>CompAbilityEffect</h3>
+        <p>能力命中時的<strong>實際效果</strong>：發射投射物、施加 Hediff、傳送等。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>關鍵命名空間</strong>
+      <code>Ability</code>、<code>AbilityDef</code>、<code>AbilityComp</code> 系列都在 <code>RimWorld</code> 命名空間；
+      <code>Pawn_AbilityTracker</code> 在 <code>Verse</code>。Psycast 相關（<code>Hediff_Psylink</code>、<code>Pawn_PsychicEntropyTracker</code>）在 <code>RimWorld</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 1. AbilityDef ═══ -->
+  <div class="section" id="abilitydef">
+    <div class="section-title">1 · AbilityDef 結構</div>
+
+    <p>
+      <code>AbilityDef</code> 是能力的 XML 定義。最核心的四個面向：冷卻 (<code>cooldownTicksRange</code>)、施放動作 (<code>verbProperties</code>)、效果 (<code>comps</code>)、是否需要目標 (<code>targetRequired</code>)。
+    </p>
+
+    <h3>欄位速查</h3>
+    <table class="param-table">
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td>cooldownTicksRange</td><td>IntRange</td><td>冷卻範圍（60 ticks = 1 秒）。實作層常見 <code>cooldownTicksRange</code>；舊資料/部分能力用單一 <code>cooldownTicks</code></td></tr>
+      <tr><td>verbProperties</td><td>VerbProperties</td><td>施放動作（射程、warmup、音效、是否需要 LoS）。<code>verbClass</code> 通常為 <code>Verb_CastAbility</code></td></tr>
+      <tr><td>comps</td><td>List&lt;CompProperties&gt;</td><td>效果 comp 清單；命中時依序套用</td></tr>
+      <tr><td>targetRequired</td><td>bool</td><td>是否必須選目標（false = 自我施放型，如增益光環）</td></tr>
+      <tr><td>targetWorldCell</td><td>bool</td><td>目標是地格而非 thing（如砲擊、傳送落點）</td></tr>
+      <tr><td>jobDef</td><td>JobDef</td><td>施放時執行的 Job，預設 <code>CastAbilityOnThing</code> / <code>CastAbilityOnWorldTile</code></td></tr>
+      <tr><td>hostile</td><td>bool</td><td>是否為敵對行為（影響 AI / 關係）</td></tr>
+      <tr><td>aiCanUse</td><td>bool</td><td>AI pawn 是否會主動使用</td></tr>
+      <tr><td>warmupMote / iconPath</td><td>string</td><td>蓄力特效 / Gizmo 圖示</td></tr>
+    </table>
+
+    <h3>完整 XML 範例：一個範圍治療能力</h3>
+    <pre><span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;AbilityDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_HealingPulse<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>治療脈衝<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>對目標區域釋放治療能量，移除流血並恢復少量傷害。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;iconPath&gt;</span>UI/Abilities/HealingPulse<span class="xml-tag">&lt;/iconPath&gt;</span>
+    <span class="xml-tag">&lt;cooldownTicksRange&gt;</span>1800~1800<span class="xml-tag">&lt;/cooldownTicksRange&gt;</span>  <span class="cm">&lt;!-- 30 秒 --&gt;</span>
+    <span class="xml-tag">&lt;hostile&gt;</span>false<span class="xml-tag">&lt;/hostile&gt;</span>
+    <span class="xml-tag">&lt;targetRequired&gt;</span>true<span class="xml-tag">&lt;/targetRequired&gt;</span>
+    <span class="xml-tag">&lt;targetWorldCell&gt;</span>true<span class="xml-tag">&lt;/targetWorldCell&gt;</span>  <span class="cm">&lt;!-- 點地格而非單體 --&gt;</span>
+
+    <span class="cm">&lt;!-- 施放動作：射程、蓄力 --&gt;</span>
+    <span class="xml-tag">&lt;verbProperties&gt;</span>
+      <span class="xml-tag">&lt;verbClass&gt;</span>Verb_CastAbility<span class="xml-tag">&lt;/verbClass&gt;</span>
+      <span class="xml-tag">&lt;drawAimPie&gt;</span>false<span class="xml-tag">&lt;/drawAimPie&gt;</span>
+      <span class="xml-tag">&lt;range&gt;</span>24.9<span class="xml-tag">&lt;/range&gt;</span>
+      <span class="xml-tag">&lt;warmupTime&gt;</span>1.0<span class="xml-tag">&lt;/warmupTime&gt;</span>
+      <span class="xml-tag">&lt;requireLineOfSight&gt;</span>true<span class="xml-tag">&lt;/requireLineOfSight&gt;</span>
+      <span class="xml-tag">&lt;targetParams&gt;</span>
+        <span class="xml-tag">&lt;canTargetLocations&gt;</span>true<span class="xml-tag">&lt;/canTargetLocations&gt;</span>
+        <span class="xml-tag">&lt;canTargetPawns&gt;</span>true<span class="xml-tag">&lt;/canTargetPawns&gt;</span>
+        <span class="xml-tag">&lt;canTargetSelf&gt;</span>true<span class="xml-tag">&lt;/canTargetSelf&gt;</span>
+      <span class="xml-tag">&lt;/targetParams&gt;</span>
+    <span class="xml-tag">&lt;/verbProperties&gt;</span>
+
+    <span class="cm">&lt;!-- 命中時套用的效果（見第 2 節）--&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityGiveHediff"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;compClass&gt;</span>CompAbilityEffect_GiveHediff<span class="xml-tag">&lt;/compClass&gt;</span>
+        <span class="xml-tag">&lt;hediffDef&gt;</span>MyMod_HealingBuff<span class="xml-tag">&lt;/hediffDef&gt;</span>
+        <span class="xml-tag">&lt;onlyApplyToSelf&gt;</span>false<span class="xml-tag">&lt;/onlyApplyToSelf&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/AbilityDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>cooldownTicksRange vs cooldownTicks</strong>
+      實際施放後的冷卻是寫進 <code>Ability.StartCooldown()</code>，讀的是 <code>def.cooldownTicksRange</code>。
+      若你只寫 <code>&lt;cooldownTicks&gt;</code> 而程式碼讀 range，會得到 0 冷卻（無冷卻）。請以 <code>cooldownTicksRange</code> 為準，固定值寫成 <code>1800~1800</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 2. Comps ═══ -->
+  <div class="section" id="comps">
+    <div class="section-title">2 · Ability comps（CompProperties_AbilityEffect 系列）</div>
+
+    <p>
+      能力的「效果」由掛在 <code>&lt;comps&gt;</code> 下的一組 comp 組成。每個 comp 由
+      <code>CompProperties_AbilityXxx</code>（資料）+ <code>CompAbilityEffect_Xxx</code>（行為）配對。
+      命中時 <code>Ability.Activate</code> 會依序對每個目標呼叫 comp 的 <code>Apply</code>。
+    </p>
+
+    <h3>常用內建效果 comp</h3>
+    <table>
+      <tr><th>Properties Class</th><th>Comp Class</th><th>效果</th></tr>
+      <tr><td><code>CompProperties_AbilityLaunchProjectile</code></td><td><code>CompAbilityEffect_LaunchProjectile</code></td><td>朝目標發射 <code>ThingDef</code> 投射物</td></tr>
+      <tr><td><code>CompProperties_AbilityGiveHediff</code></td><td><code>CompAbilityEffect_GiveHediff</code></td><td>對目標施加指定 <code>HediffDef</code></td></tr>
+      <tr><td><code>CompProperties_AbilityTeleport</code></td><td><code>CompAbilityEffect_Teleport</code></td><td>把 caster / 目標傳送到目標地格</td></tr>
+      <tr><td><code>CompProperties_AbilityGoodwillImpact</code></td><td><code>CompAbilityEffect_GoodwillImpact</code></td><td>調整派系關係</td></tr>
+      <tr><td><code>CompProperties_AbilityStun</code></td><td><code>CompAbilityEffect_Stun</code></td><td>暈眩目標</td></tr>
+      <tr><td><code>CompProperties_AbilityResurrect</code></td><td><code>CompAbilityEffect_ResurrectMech</code> 等</td><td>復活類</td></tr>
+    </table>
+
+    <h3>範例：LaunchProjectile + GiveHediff 組合</h3>
+    <pre>  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="cm">&lt;!-- 1. 對目標發射一枚投射物 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityLaunchProjectile"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompAbilityEffect_LaunchProjectile<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;projectileDef&gt;</span>MyMod_Projectile_Frostbolt<span class="xml-tag">&lt;/projectileDef&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+
+    <span class="cm">&lt;!-- 2. 同時對目標施加減速 Hediff --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityGiveHediff"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompAbilityEffect_GiveHediff<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;hediffDef&gt;</span>MyMod_Chilled<span class="xml-tag">&lt;/hediffDef&gt;</span>
+      <span class="xml-tag">&lt;severity&gt;</span>1.0<span class="xml-tag">&lt;/severity&gt;</span>
+      <span class="xml-tag">&lt;onlyApplyToSelf&gt;</span>false<span class="xml-tag">&lt;/onlyApplyToSelf&gt;</span>
+      <span class="xml-tag">&lt;applyToSelfOnTarget&gt;</span>false<span class="xml-tag">&lt;/applyToSelfOnTarget&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span></pre>
+
+    <h3>範例：Teleport（自我傳送 / 閃現）</h3>
+    <pre>  <span class="xml-tag">&lt;targetWorldCell&gt;</span>true<span class="xml-tag">&lt;/targetWorldCell&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityTeleport"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompAbilityEffect_Teleport<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;destination&gt;</span>Selected<span class="xml-tag">&lt;/destination&gt;</span>      <span class="cm">&lt;!-- 傳到選定地格 --&gt;</span>
+      <span class="xml-tag">&lt;range&gt;</span>0<span class="xml-tag">&lt;/range&gt;</span>
+      <span class="xml-tag">&lt;destClamping&gt;</span>true<span class="xml-tag">&lt;/destClamping&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>找正確欄位名的最快路徑</strong>
+      用 dnSpy / ILSpy 打開 <code>Assembly-CSharp.dll</code>，搜尋對應的 <code>CompProperties_Ability*</code> class，
+      其 public 欄位就是 XML 可填的標籤。RimWorld 的 XML loader 直接以反射對應欄位名（大小寫敏感）。
+    </div>
+  </div>
+
+  <!-- ═══ 3. 自訂 comp ═══ -->
+  <div class="section" id="custom-comp">
+    <div class="section-title">3 · 自訂 CompAbilityEffect（覆寫 Apply）</div>
+
+    <p>
+      內建效果不夠用時，繼承 <code>CompAbilityEffect</code> 並覆寫 <code>Apply(LocalTargetInfo target, LocalTargetInfo dest)</code>。
+      若要自訂欄位，同時繼承 <code>CompProperties_AbilityEffect</code> 並在建構子指定 <code>compClass</code>。
+    </p>
+
+    <h3>Properties + Comp 配對</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="cm">// ── 1. Properties：定義 XML 可填欄位 ──────────────────────</span>
+<span class="kw">public class</span> <span class="ty">CompProperties_AbilityDrainHealth</span> : <span class="ty">CompProperties_AbilityEffect</span>
+{
+    <span class="kw">public float</span> drainAmount = <span class="nu">10f</span>;       <span class="cm">// 吸取血量</span>
+    <span class="kw">public</span> <span class="ty">HediffDef</span> healCasterHediff;       <span class="cm">// 給施法者的治療 Hediff</span>
+
+    <span class="kw">public</span> <span class="ty">CompProperties_AbilityDrainHealth</span>()
+    {
+        <span class="cm">// 把 Properties 綁定到行為 class</span>
+        compClass = <span class="kw">typeof</span>(<span class="ty">CompAbilityEffect_DrainHealth</span>);
+    }
+}
+
+<span class="cm">// ── 2. Comp：實際行為 ─────────────────────────────────────</span>
+<span class="kw">public class</span> <span class="ty">CompAbilityEffect_DrainHealth</span> : <span class="ty">CompAbilityEffect</span>
+{
+    <span class="cm">// 強型別存取 Properties</span>
+    <span class="kw">public new</span> <span class="ty">CompProperties_AbilityDrainHealth</span> Props =>
+        (<span class="ty">CompProperties_AbilityDrainHealth</span>)props;
+
+    <span class="cm">/// &lt;summary&gt;
+    /// 能力命中每個目標時呼叫一次。
+    /// target = 主要目標；dest = 次要目標（多數能力相同）。
+    /// &lt;/summary&gt;</span>
+    <span class="kw">public override void</span> <span class="nm">Apply</span>(<span class="ty">LocalTargetInfo</span> target, <span class="ty">LocalTargetInfo</span> dest)
+    {
+        <span class="kw">base</span>.<span class="nm">Apply</span>(target, dest); <span class="cm">// 保留基底行為（可省，但建議呼叫）</span>
+
+        <span class="ty">Pawn</span> victim = target.<span class="nm">Pawn</span>;
+        <span class="ty">Pawn</span> caster = parent.<span class="nm">pawn</span>; <span class="cm">// parent = Ability，pawn = 施法者</span>
+        <span class="kw">if</span> (victim == <span class="kw">null</span> || caster == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 對目標造成傷害</span>
+        <span class="kw">var</span> dinfo = <span class="kw">new</span> <span class="ty">DamageInfo</span>(
+            <span class="ty">DamageDefOf</span>.Psychic, Props.drainAmount, instigator: caster);
+        victim.<span class="nm">TakeDamage</span>(dinfo);
+
+        <span class="cm">// 回饋給施法者一個治療 Hediff</span>
+        <span class="kw">if</span> (Props.healCasterHediff != <span class="kw">null</span>)
+        {
+            <span class="ty">Hediff</span> h = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(Props.healCasterHediff, caster);
+            caster.<span class="nm">health</span>.<span class="nm">AddHediff</span>(h);
+        }
+    }
+
+    <span class="cm">// 可選：能力是否能對某目標生效（影響 UI 灰階與右鍵提示）</span>
+    <span class="kw">public override bool</span> <span class="nm">CanApplyOn</span>(<span class="ty">LocalTargetInfo</span> target, <span class="ty">LocalTargetInfo</span> dest)
+    {
+        <span class="kw">return</span> target.<span class="nm">Pawn</span> != <span class="kw">null</span> &amp;&amp; !target.<span class="nm">Pawn</span>.<span class="nm">Dead</span>;
+    }
+
+    <span class="cm">// 可選：滑鼠懸停目標時顯示的提示文字</span>
+    <span class="kw">public override</span> <span class="ty">string</span> <span class="nm">ExtraLabelMouseAttachment</span>(<span class="ty">LocalTargetInfo</span> target)
+    {
+        <span class="kw">return</span> target.<span class="nm">Pawn</span> != <span class="kw">null</span> ? <span class="st">"將吸取生命"</span> : <span class="kw">null</span>;
+    }
+}</pre>
+
+    <h3>對應 XML</h3>
+    <pre>  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"YourNamespace.CompProperties_AbilityDrainHealth"</span><span class="xml-tag">&gt;</span>
+      <span class="cm">&lt;!-- compClass 已在建構子設定，不必再寫 --&gt;</span>
+      <span class="xml-tag">&lt;drainAmount&gt;</span>15<span class="xml-tag">&lt;/drainAmount&gt;</span>
+      <span class="xml-tag">&lt;healCasterHediff&gt;</span>MyMod_LifeStolen<span class="xml-tag">&lt;/healCasterHediff&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>Apply 的兩個關鍵入口</strong>
+      多目標能力（AoE）會對範圍內每個目標各呼叫一次 <code>Apply(target, dest)</code>；
+      若需要「整體一次性」邏輯（如生成單一爆炸），覆寫 <code>Apply(GlobalTargetInfo)</code> 或在
+      <code>Ability.Activate</code> 層處理較合適。<code>parent</code> 是 <code>AbilityComp.parent</code>（型別 <code>Ability</code>）。
+    </div>
+  </div>
+
+  <!-- ═══ 4. 給能力 ═══ -->
+  <div class="section" id="gain">
+    <div class="section-title">4 · 從 C# 給 Pawn 能力</div>
+
+    <p>
+      pawn 的能力存在 <code>Pawn_AbilityTracker</code>（<code>pawn.abilities</code>）。
+      用 <code>GainAbility(AbilityDef)</code> 新增，<code>RemoveAbility</code> 移除，<code>GetAbility</code> 取得實例。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">AbilityGrantUtility</span>
+{
+    <span class="kw">public static</span> <span class="ty">Ability</span> <span class="nm">GrantHealingPulse</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="cm">// pawn.abilities 在某些 pawn（如動物）可能為 null，先確認</span>
+        <span class="kw">if</span> (pawn.<span class="nm">abilities</span> == <span class="kw">null</span>)
+        {
+            <span class="cm">// 必要時手動建立 tracker（極少需要；人形 pawn 通常已有）</span>
+            <span class="ty">Log</span>.<span class="nm">Warning</span>(<span class="st">$"{pawn} 沒有 AbilityTracker，無法授予能力"</span>);
+            <span class="kw">return null</span>;
+        }
+
+        <span class="kw">var</span> def = <span class="ty">DefDatabase</span><<span class="ty">AbilityDef</span>>.<span class="nm">GetNamed</span>(<span class="st">"MyMod_HealingPulse"</span>);
+
+        <span class="cm">// 已擁有就不重複授予</span>
+        <span class="kw">if</span> (pawn.<span class="nm">abilities</span>.<span class="nm">GetAbility</span>(def) != <span class="kw">null</span>)
+            <span class="kw">return</span> pawn.<span class="nm">abilities</span>.<span class="nm">GetAbility</span>(def);
+
+        <span class="cm">// 授予；第二參數 sendLetter 控制是否跳出「習得能力」信件</span>
+        pawn.<span class="nm">abilities</span>.<span class="nm">GainAbility</span>(def);
+
+        <span class="kw">return</span> pawn.<span class="nm">abilities</span>.<span class="nm">GetAbility</span>(def);
+    }
+
+    <span class="kw">public static void</span> <span class="nm">RevokeHealingPulse</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">var</span> def = <span class="ty">DefDatabase</span><<span class="ty">AbilityDef</span>>.<span class="nm">GetNamed</span>(<span class="st">"MyMod_HealingPulse"</span>);
+        pawn.<span class="nm">abilities</span>?.<span class="nm">RemoveAbility</span>(def);
+    }
+}</pre>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>常見授予時機</h3>
+        <ul>
+          <li>透過 <code>Hediff</code> 的 <code>HediffComp_GiveAbility</code>（裝植入物時自動給）</li>
+          <li><code>GeneDef</code>（Biotech 基因）的 <code>abilities</code> 欄位</li>
+          <li><code>TraitDef</code> 的 degreeData → <code>abilities</code></li>
+          <li>劇情事件 / 自訂 <code>Comp</code> 中手動 <code>GainAbility</code></li>
+        </ul>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>來源管理（重要）</h3>
+        <p>
+          若能力由 Hediff/Gene 提供，移除來源時要記得 <code>RemoveAbility</code>，否則
+          能力會殘留。透過 <code>HediffComp_GiveAbility</code> 等內建機制可自動處理生命週期。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>透過 Hediff 自動給能力（推薦）</strong>
+      與其在 C# 硬塞，更穩健的做法是定義一個帶 <code>HediffCompProperties_GiveAbility</code> 的 Hediff，
+      讓「裝上植入物 → 自動獲得能力 / 拆除 → 自動移除」的生命週期由引擎托管。
+    </div>
+  </div>
+
+  <!-- ═══ 5. 施放 ═══ -->
+  <div class="section" id="cast">
+    <div class="section-title">5 · 施放能力（Activate / CanCast / Gizmo）</div>
+
+    <p>
+      <code>Ability</code> 實例封裝了施放的全部邏輯。正常流程是玩家點 Gizmo → 進入目標選擇 → 產生 Job → Job 末端呼叫 <code>Activate</code>。
+      你也可以在 C# 中直接驅動。
+    </p>
+
+    <h3>核心 API</h3>
+    <table class="param-table">
+      <tr><th>成員</th><th>回傳</th><th>說明</th></tr>
+      <tr><td>CanCast</td><td>bool</td><td>屬性：目前是否可施放（冷卻、psyfocus、條件皆通過）</td></tr>
+      <tr><td>GizmosForPawn(...)</td><td>IEnumerable&lt;Command&gt;</td><td>產生 UI 指令按鈕</td></tr>
+      <tr><td>Activate(target, dest)</td><td>bool</td><td>立即執行能力效果（跳過目標選擇 UI）</td></tr>
+      <tr><td>QueueCastingJob(target, dest)</td><td>—</td><td>排入 Job，pawn 走過去/蓄力後再施放（正常路徑）</td></tr>
+      <tr><td>StartCooldown(ticks)</td><td>—</td><td>手動進入冷卻</td></tr>
+      <tr><td>CooldownTicksRemaining</td><td>int</td><td>剩餘冷卻</td></tr>
+      <tr><td>GicCanCast / CanCast +<br>GetReason</td><td>—</td><td>含原因字串的版本，用於 UI 灰階提示</td></tr>
+    </table>
+
+    <h3>直接施放（程式驅動，無 UI）</h3>
+    <pre><span class="kw">public static void</span> <span class="nm">ForceCast</span>(<span class="ty">Pawn</span> caster, <span class="ty">LocalTargetInfo</span> target)
+{
+    <span class="kw">var</span> def = <span class="ty">DefDatabase</span><<span class="ty">AbilityDef</span>>.<span class="nm">GetNamed</span>(<span class="st">"MyMod_HealingPulse"</span>);
+    <span class="ty">Ability</span> ability = caster.<span class="nm">abilities</span>?.<span class="nm">GetAbility</span>(def);
+    <span class="kw">if</span> (ability == <span class="kw">null</span>) <span class="kw">return</span>;
+
+    <span class="cm">// CanCast：冷卻中 / psyfocus 不足 / 目標不合法都會擋下</span>
+    <span class="kw">if</span> (!ability.<span class="nm">CanCast</span>)
+    {
+        <span class="ty">Messages</span>.<span class="nm">Message</span>(<span class="st">"無法施放（冷卻或條件不符）"</span>,
+            <span class="ty">MessageTypeDefOf</span>.RejectInput, historical: <span class="kw">false</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="cm">// 路徑 A：立即生效（不走 pawn 移動 / 蓄力）</span>
+    ability.<span class="nm">Activate</span>(target, target);
+
+    <span class="cm">// 路徑 B（較自然）：排入 Job，pawn 自己處理移動與蓄力
+    // ability.QueueCastingJob(target, target);</span>
+}</pre>
+
+    <h3>覆寫 Gizmo（自訂按鈕外觀 / 行為）</h3>
+    <p>
+      Gizmo 由 <code>Ability.GizmosForPawn(...)</code> 產生，內部建立 <code>Command_Ability</code>。
+      要自訂時，最乾淨的做法是繼承 <code>Ability</code> 並在 <code>AbilityDef.abilityClass</code> 指定你的子類。
+    </p>
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">Ability_ChargedHeal</span> : <span class="ty">Ability</span>
+{
+    <span class="cm">// AbilityDef 需指定 &lt;abilityClass&gt;YourNamespace.Ability_ChargedHeal&lt;/abilityClass&gt;</span>
+    <span class="kw">public</span> <span class="ty">Ability_ChargedHeal</span>(<span class="ty">Pawn</span> pawn, <span class="ty">AbilityDef</span> def) : <span class="kw">base</span>(pawn, def) { }
+
+    <span class="kw">public override</span> <span class="ty">IEnumerable</span><<span class="ty">Command</span>> <span class="nm">GetGizmos</span>()
+    {
+        <span class="kw">foreach</span> (<span class="kw">var</span> g <span class="kw">in</span> <span class="kw">base</span>.<span class="nm">GetGizmos</span>())
+        {
+            <span class="kw">if</span> (g <span class="kw">is</span> <span class="ty">Command_Ability</span> cmd)
+            {
+                <span class="cm">// 自訂：低血量時按鈕變紅，提示更醒目</span>
+                <span class="kw">if</span> (pawn.<span class="nm">health</span>.<span class="nm">summaryHealth</span>.<span class="nm">SummaryHealthPercent</span> &lt; <span class="nu">0.3f</span>)
+                    cmd.defaultLabel = <span class="ty">def</span>.label + <span class="st">" (緊急!)"</span>;
+            }
+            <span class="kw">yield return</span> g;
+        }
+    }
+
+    <span class="cm">// 覆寫額外的施放條件（疊加在 CanCast 之上）</span>
+    <span class="kw">public override bool</span> <span class="nm">GizmoDisabled</span>(<span class="kw">out</span> <span class="ty">string</span> reason)
+    {
+        <span class="kw">if</span> (pawn.<span class="nm">InMentalState</span>)
+        {
+            reason = <span class="st">"精神崩潰中無法施放"</span>;
+            <span class="kw">return true</span>;
+        }
+        <span class="kw">return base</span>.<span class="nm">GizmoDisabled</span>(<span class="kw">out</span> reason);
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>Activate vs QueueCastingJob</strong>
+      <code>Activate</code> 立即套用效果並進入冷卻，<em>不會</em>讓 pawn 移動或播放蓄力——適合腳本化、瞬發或除錯。
+      正常玩家路徑請用 <code>QueueCastingJob</code>，它會處理走位、warmup、verb 動畫、psyfocus 消耗時序。
+    </div>
+  </div>
+
+  <!-- ═══ 6. Psycast ═══ -->
+  <div class="section" id="psycast">
+    <div class="section-title">6 · Psycast 與 PsycasterPathDef</div>
+
+    <p>
+      超能 (Psycast) 是 Royalty DLC 引入、建立在 Ability 之上的體系。
+      pawn 需先有 <strong>psylink</strong>（<code>Hediff_Psylink</code>，提供 psychic sensitivity 與 psylink level），
+      超能本身仍是 <code>AbilityDef</code>，但歸屬於 <code>PsycasterPathDef</code>（超能路徑/流派），
+      並透過 <code>AbilityDef.level</code> 與 psylink 等級門檻解鎖。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <h3>PsycasterPathDef</h3>
+        <p>一條超能路徑（如「Voidsent」），定義可學的 abilities、解鎖順序與所需 psylink level。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Hediff_Psylink</h3>
+        <p>賦予 psylink level 的 Hediff，提升可施放的超能等級與 psyfocus 容量。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>AbilityDef（超能）</h3>
+        <p>普通 AbilityDef + <code>&lt;level&gt;</code> + 帶 psyfocus / entropy 消耗的 verb / comp。</p>
+      </div>
+    </div>
+
+    <h3>PsycasterPathDef XML 骨架</h3>
+    <pre><span class="xml-tag">&lt;PsycasterPathDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_FrostPath<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>霜寒之道<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>操控冰霜的超能流派。<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;iconPath&gt;</span>UI/PsycastPaths/Frost<span class="xml-tag">&lt;/iconPath&gt;</span>
+  <span class="cm">&lt;!-- 各能力在此路徑面板中的座標與所需 psylink level --&gt;</span>
+  <span class="xml-tag">&lt;abilities&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>MyMod_Frostbolt<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>MyMod_IceWall<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/abilities&gt;</span>
+<span class="xml-tag">&lt;/PsycasterPathDef&gt;</span></pre>
+
+    <h3>超能 AbilityDef（標註 psyfocus / entropy 消耗）</h3>
+    <pre><span class="xml-tag">&lt;AbilityDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Frostbolt<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>霜彈<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;level&gt;</span>1<span class="xml-tag">&lt;/level&gt;</span>                  <span class="cm">&lt;!-- 所需 psylink level --&gt;</span>
+  <span class="xml-tag">&lt;cooldownTicksRange&gt;</span>600~600<span class="xml-tag">&lt;/cooldownTicksRange&gt;</span>
+
+  <span class="cm">&lt;!-- 超能消耗：psyfocus（藍條）與 entropy（紅條 / 失序）--&gt;</span>
+  <span class="xml-tag">&lt;statBases&gt;</span>
+    <span class="xml-tag">&lt;Ability_EntropyGain&gt;</span>15<span class="xml-tag">&lt;/Ability_EntropyGain&gt;</span>     <span class="cm">&lt;!-- 增加的失序 --&gt;</span>
+    <span class="xml-tag">&lt;Ability_PsyfocusCost&gt;</span>0.05<span class="xml-tag">&lt;/Ability_PsyfocusCost&gt;</span> <span class="cm">&lt;!-- 消耗的精神專注 --&gt;</span>
+  <span class="xml-tag">&lt;/statBases&gt;</span>
+
+  <span class="xml-tag">&lt;verbProperties&gt;</span>
+    <span class="xml-tag">&lt;verbClass&gt;</span>Verb_CastAbility<span class="xml-tag">&lt;/verbClass&gt;</span>
+    <span class="xml-tag">&lt;range&gt;</span>24.9<span class="xml-tag">&lt;/range&gt;</span>
+    <span class="xml-tag">&lt;warmupTime&gt;</span>0.5<span class="xml-tag">&lt;/warmupTime&gt;</span>
+    <span class="xml-tag">&lt;targetParams&gt;</span><span class="xml-tag">&lt;canTargetPawns&gt;</span>true<span class="xml-tag">&lt;/canTargetPawns&gt;</span><span class="xml-tag">&lt;/targetParams&gt;</span>
+  <span class="xml-tag">&lt;/verbProperties&gt;</span>
+
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityLaunchProjectile"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompAbilityEffect_LaunchProjectile<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;projectileDef&gt;</span>MyMod_Projectile_Frostbolt<span class="xml-tag">&lt;/projectileDef&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/AbilityDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>Royalty vs Anomaly 的差異</strong>
+      Royalty 的 psycast 走 psyfocus + entropy 模型；Anomaly 的「實體能力」（如某些怪物/植入物能力）
+      多半是普通 Ability，不消耗 psyfocus，但可能有自己的資源（如黑暗能量）或純冷卻。
+      兩者底層都是 <code>Ability</code>，所以 §1–§5 的 API 對兩者皆適用。
+    </div>
+  </div>
+
+  <!-- ═══ 7. psyfocus / entropy ═══ -->
+  <div class="section" id="psyfocus">
+    <div class="section-title">7 · 精神專注 (psyfocus) / 失序 (entropy) / Hediff_Psylink</div>
+
+    <p>
+      超能的兩種資源由 <code>Pawn_PsychicEntropyTracker</code>（<code>pawn.psychicEntropy</code>）管理：
+    </p>
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Psyfocus（精神專注，藍條）</h3>
+        <p>施放超能的「彈藥」。施放消耗、靜心 (meditation) 回復。容量與回復受 psylink level、psychic sensitivity 影響。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>Entropy（失序，紅條）</h3>
+        <p>施放的「副作用熱量」。累積過高 → 過載 (overload) → 暈眩甚至死亡。會隨時間自然衰退。</p>
+      </div>
+    </div>
+
+    <h3>讀寫資源（C#）</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static void</span> <span class="nm">InspectPsyche</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="ty">Pawn_PsychicEntropyTracker</span> psy = pawn.<span class="nm">psychicEntropy</span>;
+    <span class="kw">if</span> (psy == <span class="kw">null</span>) <span class="kw">return</span>; <span class="cm">// 無 psylink 的 pawn 可能為 null / 無作用</span>
+
+    <span class="kw">float</span> focus   = psy.<span class="nm">CurrentPsyfocus</span>;       <span class="cm">// 0..1</span>
+    <span class="kw">float</span> entropy = psy.<span class="nm">EntropyValue</span>;          <span class="cm">// 當前失序</span>
+    <span class="kw">float</span> maxEnt  = psy.<span class="nm">MaxEntropy</span>;            <span class="cm">// 失序上限</span>
+
+    <span class="cm">// 手動消耗 psyfocus / 增加 entropy（一般交給能力系統，這裡示範 API）</span>
+    psy.<span class="nm">TryAddEntropy</span>(<span class="nu">20f</span>);                  <span class="cm">// 回傳 bool：是否成功（會否過載）</span>
+    psy.<span class="nm">OffsetPsyfocusDirectly</span>(-<span class="nu">0.1f</span>);       <span class="cm">// 直接扣 psyfocus</span>
+
+    <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"focus={focus:P0} entropy={entropy}/{maxEnt}"</span>);
+}</pre>
+
+    <h3>授予 psylink（Hediff_Psylink）</h3>
+    <pre><span class="kw">public static void</span> <span class="nm">GrantPsylink</span>(<span class="ty">Pawn</span> pawn, <span class="kw">int</span> levels = <span class="nu">1</span>)
+{
+    <span class="cm">// 標準工具：自動建立 / 升級 Hediff_Psylink</span>
+    pawn.<span class="nm">ChangePsylinkLevel</span>(levels, sendLetter: <span class="kw">true</span>);
+
+    <span class="cm">// 取得 psylink hediff 實例</span>
+    <span class="ty">Hediff_Psylink</span> link = pawn.<span class="nm">GetMainPsylinkSource</span>();
+    <span class="kw">if</span> (link != <span class="kw">null</span>)
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"psylink level = {link.level}"</span>);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>能力的消耗從哪來</strong>
+      超能 AbilityDef 的 <code>Ability_PsyfocusCost</code> / <code>Ability_EntropyGain</code> 兩個 stat 會在
+      <code>Ability.Activate</code> 內被讀出並套用到 <code>pawn.psychicEntropy</code>。自訂能力若想消耗這些資源，
+      只要設好 statBases 即可，不必在 comp 內手動扣。
+    </div>
+  </div>
+
+  <!-- ═══ 8. AbilityGroupDef ═══ -->
+  <div class="section" id="group">
+    <div class="section-title">8 · AbilityGroupDef 與冷卻共用</div>
+
+    <p>
+      <code>AbilityGroupDef</code> 讓多個能力<strong>共用冷卻</strong>——施放群組中任一能力後，整組一起進入冷卻。
+      常用於「同一組互斥的姿態/變身」或「同類技能不可連發」。
+    </p>
+
+    <h3>定義群組</h3>
+    <pre><span class="xml-tag">&lt;AbilityGroupDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_StanceGroup<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;cooldownTicks&gt;</span>1200<span class="xml-tag">&lt;/cooldownTicks&gt;</span>  <span class="cm">&lt;!-- 群組共用冷卻 --&gt;</span>
+  <span class="xml-tag">&lt;disableGizmosWhileUndrafted&gt;</span>false<span class="xml-tag">&lt;/disableGizmosWhileUndrafted&gt;</span>
+<span class="xml-tag">&lt;/AbilityGroupDef&gt;</span></pre>
+
+    <h3>能力綁定群組</h3>
+    <pre><span class="xml-tag">&lt;AbilityDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_AggressiveStance<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;groupAbility&gt;</span>MyMod_StanceGroup<span class="xml-tag">&lt;/groupAbility&gt;</span> <span class="cm">&lt;!-- 指向群組 --&gt;</span>
+  <span class="cm">&lt;!-- ... 其餘欄位 ... --&gt;</span>
+<span class="xml-tag">&lt;/AbilityDef&gt;</span>
+
+<span class="xml-tag">&lt;AbilityDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_DefensiveStance<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;groupAbility&gt;</span>MyMod_StanceGroup<span class="xml-tag">&lt;/groupAbility&gt;</span> <span class="cm">&lt;!-- 同群組 → 共用冷卻 --&gt;</span>
+<span class="xml-tag">&lt;/AbilityDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>冷卻的兩層</strong>
+      能力本身有 <code>cooldownTicksRange</code>（個別冷卻），群組另有 <code>AbilityGroupDef.cooldownTicks</code>（群組冷卻）。
+      施放後兩者同時計時，<code>CanCast</code> 會取兩者中較嚴格者。可在 C# 用
+      <code>ability.def.groupAbility</code> 取得所屬群組、用 group 的冷卻狀態判斷。
+    </div>
+  </div>
+
+  <!-- ═══ 9. 目標選擇 ═══ -->
+  <div class="section" id="targeting">
+    <div class="section-title">9 · 目標選擇（TargetingParameters / AbilityTargetCategory）</div>
+
+    <p>
+      目標的「合法性」由 <code>verbProperties.targetParams</code>（型別 <code>TargetingParameters</code>）描述——
+      可選 pawn / 物件 / 地格 / 自我，以及陣營過濾。能力的目標類別則由
+      <code>AbilityDef.targetRequired</code> + <code>targetWorldCell</code> + comp 的 <code>CanApplyOn</code> 共同決定。
+    </p>
+
+    <h3>TargetingParameters 常用欄位</h3>
+    <table class="param-table">
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td>canTargetPawns</td><td>bool</td><td>可選 pawn</td></tr>
+      <tr><td>canTargetBuildings</td><td>bool</td><td>可選建築</td></tr>
+      <tr><td>canTargetLocations</td><td>bool</td><td>可選空地格</td></tr>
+      <tr><td>canTargetSelf</td><td>bool</td><td>可選施法者自己</td></tr>
+      <tr><td>canTargetAnimals</td><td>bool</td><td>可選動物</td></tr>
+      <tr><td>onlyTargetFactions</td><td>List&lt;Faction&gt;</td><td>限定陣營</td></tr>
+      <tr><td>validator</td><td>Predicate&lt;TargetInfo&gt;</td><td>自訂過濾（C# 設定）</td></tr>
+    </table>
+
+    <h3>C# 中自訂目標過濾</h3>
+    <p>
+      若要在執行期動態決定合法目標，覆寫 <code>Ability.GetTargetingParameters()</code> 並在
+      <code>validator</code> 加入條件。
+    </p>
+    <pre><span class="kw">public class</span> <span class="ty">Ability_OnlyWounded</span> : <span class="ty">Ability</span>
+{
+    <span class="kw">public</span> <span class="ty">Ability_OnlyWounded</span>(<span class="ty">Pawn</span> pawn, <span class="ty">AbilityDef</span> def) : <span class="kw">base</span>(pawn, def) { }
+
+    <span class="kw">public override</span> <span class="ty">TargetingParameters</span> <span class="nm">GetTargetingParameters</span>()
+    {
+        <span class="kw">var</span> tp = <span class="kw">base</span>.<span class="nm">GetTargetingParameters</span>();
+        tp.canTargetPawns = <span class="kw">true</span>;
+        tp.canTargetLocations = <span class="kw">false</span>;
+
+        <span class="cm">// 只允許選「受傷的友方 pawn」</span>
+        tp.validator = (<span class="ty">TargetInfo</span> t) =>
+        {
+            <span class="ty">Pawn</span> p = t.<span class="nm">Thing</span> <span class="kw">as</span> <span class="ty">Pawn</span>;
+            <span class="kw">return</span> p != <span class="kw">null</span>
+                &amp;&amp; !p.<span class="nm">Dead</span>
+                &amp;&amp; p.<span class="nm">Faction</span> == pawn.<span class="nm">Faction</span>
+                &amp;&amp; p.<span class="nm">health</span>.<span class="nm">summaryHealth</span>.<span class="nm">SummaryHealthPercent</span> &lt; <span class="nu">1f</span>;
+        };
+        <span class="kw">return</span> tp;
+    }
+}</pre>
+
+    <h3>AbilityTargetCategory（多目標 / AoE 形狀）</h3>
+    <p>
+      範圍能力的「波及範圍」常用 <code>verbProperties.range</code> + comp 的半徑欄位（如某些 comp 的
+      <code>radius</code>）。對全圖/方向型能力，可在自訂 comp 的 <code>Apply</code> 內以
+      <code>GenRadial.RadialCellsAround</code> 或 <code>GenAdj</code> 枚舉目標格再逐一處理。
+    </p>
+    <pre><span class="cm">// 在自訂 CompAbilityEffect.Apply 內，對目標周圍 3 格的 pawn 全部生效</span>
+<span class="kw">public override void</span> <span class="nm">Apply</span>(<span class="ty">LocalTargetInfo</span> target, <span class="ty">LocalTargetInfo</span> dest)
+{
+    <span class="ty">Map</span> map = parent.<span class="nm">pawn</span>.<span class="nm">Map</span>;
+    <span class="kw">foreach</span> (<span class="ty">IntVec3</span> c <span class="kw">in</span> <span class="ty">GenRadial</span>.<span class="nm">RadialCellsAround</span>(target.<span class="nm">Cell</span>, <span class="nu">3f</span>, useCenter: <span class="kw">true</span>))
+    {
+        <span class="kw">if</span> (!c.<span class="nm">InBounds</span>(map)) <span class="kw">continue</span>;
+        <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> c.<span class="nm">GetThingList</span>(map))
+            <span class="kw">if</span> (t <span class="kw">is</span> <span class="ty">Pawn</span> p &amp;&amp; !p.<span class="nm">Dead</span>)
+                ApplyToPawn(p);
+    }
+}</pre>
+  </div>
+
+  <!-- ═══ 10. 陷阱 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">10 · 常見坑</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 1</span> DLC 依賴未用 <code>MayRequire</code> 標註</h3>
+      <p>
+        Psycast / Anomaly 相關 Def（<code>PsycasterPathDef</code>、特定 comp class）只在對應 DLC 啟用時存在。
+        若無條件引用，玩家未裝 DLC 時整個 Def 載入失敗。對 XML 欄位或整個 <code>&lt;li&gt;</code> 加上
+        <code>MayRequire</code> 才能優雅降級。
+      </p>
+      <pre><span class="cm">&lt;!-- 整個能力僅在 Royalty 存在時載入 --&gt;</span>
+<span class="xml-tag">&lt;AbilityDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Frostbolt<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- ... --&gt;</span>
+<span class="xml-tag">&lt;/AbilityDef&gt;</span>
+
+<span class="cm">&lt;!-- 或僅某個欄位/comp 需要 DLC --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_AbilityGiveHediff"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Anomaly"</span><span class="xml-tag">&gt;</span>
+  <span class="cm">&lt;!-- ... --&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+      <p>C# 端對應：用 <code>ModsConfig.RoyaltyActive</code> / <code>ModsConfig.AnomalyActive</code> 守住程式路徑。</p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 2</span> comp 的 <code>Apply</code> 時序誤解</h3>
+      <p>
+        <code>Apply</code> 在能力「命中」時呼叫，<em>不是</em>點下 Gizmo 當下。中間有 pawn 走位 + warmup，
+        到實際施放前目標可能已死亡 / 移出地圖 / 變化狀態。<code>Apply</code> 內必須對
+        <code>target.Pawn == null</code>、<code>Dead</code>、<code>Spawned</code> 做防禦性檢查。
+      </p>
+      <pre><span class="kw">public override void</span> <span class="nm">Apply</span>(<span class="ty">LocalTargetInfo</span> target, <span class="ty">LocalTargetInfo</span> dest)
+{
+    <span class="ty">Pawn</span> p = target.<span class="nm">Pawn</span>;
+    <span class="cm">// 命中時目標可能已失效</span>
+    <span class="kw">if</span> (p == <span class="kw">null</span> || p.<span class="nm">Dead</span> || !p.<span class="nm">Spawned</span>) <span class="kw">return</span>;
+    <span class="cm">// ... 安全執行效果 ...</span>
+}</pre>
+      <p>
+        此外，多個 comp 的 <code>Apply</code> 依 <code>comps</code> 清單<strong>順序</strong>執行——
+        若 comp A 殺死目標、comp B 想治療同一目標，B 會撲空。注意順序依賴。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 3</span> 冷卻：range vs 單值、群組冷卻覆蓋</h3>
+      <p>
+        如 §1 所述，引擎讀 <code>cooldownTicksRange</code>。只寫 <code>cooldownTicks</code> 會得到無冷卻。
+        另外，若能力屬於 <code>AbilityGroupDef</code>，玩家感受到的冷卻是「群組冷卻」與「個別冷卻」取較大者——
+        debug 「為什麼冷卻比我設的久」時先檢查群組。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 4</span> <code>pawn.abilities</code> / <code>psychicEntropy</code> 可能為 null</h3>
+      <p>
+        並非所有 pawn 都有 ability tracker 或 psychic entropy tracker（動物、機械、部分特殊 pawn）。
+        任何 <code>GainAbility</code> / 讀 psyfocus 前都要 null-check，否則崩在 NRE。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 5</span> 自訂 comp 的 <code>Props</code> 用 <code>new</code> 而非 <code>override</code></h3>
+      <p>
+        <code>CompAbilityEffect.props</code> 是基底欄位，子類要存取自己的強型別 Properties 必須用
+        <code>public new MyProps Props =&gt; (MyProps)props;</code>（屬性遮蔽，非覆寫）。
+        忘了寫或型別轉錯會在第一次 <code>Apply</code> 拋 <code>InvalidCastException</code>。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 6</span> 自訂 abilityClass 缺正確建構子</h3>
+      <p>
+        繼承 <code>Ability</code> 時必須提供 <code>(Pawn, AbilityDef)</code>（以及序列化用的無/單參）建構子，
+        否則 <code>AbilityUtility</code> 反射建立實例時失敗，能力靜默不出現。
+      </p>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>能力 debug checklist</strong>
+      <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li>能力沒出現 → 確認 pawn 有 <code>abilities</code> tracker、def 有正確 <code>abilityClass</code> 建構子</li>
+        <li>Gizmo 灰階 → 印 <code>ability.CanCast</code> 與冷卻 / psyfocus / 群組冷卻</li>
+        <li>效果沒發生 → 在 <code>Apply</code> 最前面加 <code>Log.Message</code>，確認有命中、target 未失效</li>
+        <li>未裝 DLC 崩潰 → 檢查所有 DLC-only Def / comp 是否加了 <code>MayRequire</code></li>
+        <li>冷卻不對 → 區分 <code>cooldownTicksRange</code> 與 <code>AbilityGroupDef.cooldownTicks</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 快速參考 -->
+  <div class="section">
+    <div class="section-title">快速參考：核心型別對照</div>
+    <table>
+      <tr><th>型別</th><th>命名空間</th><th>角色</th></tr>
+      <tr><td><code>AbilityDef</code></td><td>RimWorld</td><td>能力定義（XML）</td></tr>
+      <tr><td><code>Ability</code></td><td>RimWorld</td><td>能力執行期實例（綁 pawn）</td></tr>
+      <tr><td><code>Pawn_AbilityTracker</code></td><td>Verse</td><td><code>pawn.abilities</code>，持有能力</td></tr>
+      <tr><td><code>CompAbilityEffect</code></td><td>RimWorld</td><td>命中效果基底（覆寫 <code>Apply</code>）</td></tr>
+      <tr><td><code>CompProperties_AbilityEffect</code></td><td>RimWorld</td><td>效果 comp 的 XML 資料基底</td></tr>
+      <tr><td><code>PsycasterPathDef</code></td><td>RimWorld</td><td>超能路徑（Royalty）</td></tr>
+      <tr><td><code>Hediff_Psylink</code></td><td>RimWorld</td><td>psylink 等級來源</td></tr>
+      <tr><td><code>Pawn_PsychicEntropyTracker</code></td><td>RimWorld</td><td><code>pawn.psychicEntropy</code>，管 psyfocus/entropy</td></tr>
+      <tr><td><code>AbilityGroupDef</code></td><td>RimWorld</td><td>能力群組（共用冷卻）</td></tr>
+      <tr><td><code>TargetingParameters</code></td><td>Verse</td><td>目標合法性規則</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 指南 · 能力與超能 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

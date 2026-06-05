@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>研究與生產鏈 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html" class="active">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>研究與生產鏈</h1>
+  <p>從 ResearchProjectDef 解鎖路徑，到 RecipeDef / Bill / WorkGiver 的完整生產流水線——一條龍打通 RimWorld 的科技與製造系統。</p>
+  <span class="badge">Chapter 14 · Research &amp; Production</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1  ResearchProjectDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 ResearchProjectDef：研究專案定義</div>
+
+    <p><code>ResearchProjectDef</code>（命名空間 <code>RimWorld</code>）是科技樹的最小節點。它描述「要花多少研究點、需要哪些前置、要在哪種研究台研究、解鎖後讓哪些 Def 變得可用」。研究本身不直接「解鎖」任何東西——解鎖是反向的：<code>ThingDef</code>/<code>RecipeDef</code> 透過 <code>researchPrerequisites</code> 指向研究專案。</p>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>baseCost</code></td>
+          <td><code>float</code></td>
+          <td>研究所需點數（未經 techprint / 難度縮放）。原版範圍約 100（早期）至 4000（後期）</td>
+        </tr>
+        <tr>
+          <td><code>prerequisites</code></td>
+          <td><code>List&lt;ResearchProjectDef&gt;</code></td>
+          <td>必須先完成的研究專案，全部完成後此節點才可研究</td>
+        </tr>
+        <tr>
+          <td><code>techLevel</code></td>
+          <td><code>TechLevel</code></td>
+          <td>科技時代（<code>Neolithic</code> / <code>Medieval</code> / <code>Industrial</code> / <code>Spacer</code>…），低於玩家派系科技時有成本懲罰</td>
+        </tr>
+        <tr>
+          <td><code>requiredResearchBuilding</code></td>
+          <td><code>ThingDef</code></td>
+          <td>研究時必須在範圍內存在的建築（如 <code>HiTechResearchBench</code>）</td>
+        </tr>
+        <tr>
+          <td><code>requiredResearchFacilities</code></td>
+          <td><code>List&lt;ThingDef&gt;</code></td>
+          <td>必須連接的設施（如多重分析儀 <code>MultiAnalyzer</code>）</td>
+        </tr>
+        <tr>
+          <td><code>researchViewX / researchViewY</code></td>
+          <td><code>float</code></td>
+          <td>在研究樹視圖上的座標（格為單位，X 通常與 tier 對應）</td>
+        </tr>
+        <tr>
+          <td><code>tab</code></td>
+          <td><code>ResearchTabDef</code></td>
+          <td>所屬分頁，未指定時歸入 <code>Main</code></td>
+        </tr>
+        <tr>
+          <td><code>techprintCount</code> / <code>techprintMarketValue</code></td>
+          <td><code>int</code> / <code>float</code></td>
+          <td>（Royalty）需先取得的科技藍圖數量與價值</td>
+        </tr>
+        <tr>
+          <td><code>hiddenPrerequisites</code></td>
+          <td><code>List&lt;ResearchProjectDef&gt;</code></td>
+          <td>不在樹上畫線、但仍必須完成的隱藏前置</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>完整 XML 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/ResearchProjectDefs/Research_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="cm">&lt;!-- 第一層：基礎能量學 --&gt;</span>
+  <span class="xml-tag">&lt;ResearchProjectDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_BasicEnergetics<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>basic energetics<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>解鎖能量電池與基礎導管。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;baseCost&gt;</span>500<span class="xml-tag">&lt;/baseCost&gt;</span>
+    <span class="xml-tag">&lt;techLevel&gt;</span>Industrial<span class="xml-tag">&lt;/techLevel&gt;</span>
+    <span class="xml-tag">&lt;tab&gt;</span>MyMod_Tab<span class="xml-tag">&lt;/tab&gt;</span>
+    <span class="xml-tag">&lt;researchViewX&gt;</span>0<span class="xml-tag">&lt;/researchViewX&gt;</span>
+    <span class="xml-tag">&lt;researchViewY&gt;</span>1.0<span class="xml-tag">&lt;/researchViewY&gt;</span>
+  <span class="xml-tag">&lt;/ResearchProjectDef&gt;</span>
+
+  <span class="cm">&lt;!-- 第二層：進階導能（需要基礎 + 高科技台 + 多重分析儀） --&gt;</span>
+  <span class="xml-tag">&lt;ResearchProjectDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_AdvancedConduction<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>advanced conduction<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>解鎖高效導管與我的工作台。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;baseCost&gt;</span>2000<span class="xml-tag">&lt;/baseCost&gt;</span>
+    <span class="xml-tag">&lt;techLevel&gt;</span>Spacer<span class="xml-tag">&lt;/techLevel&gt;</span>
+    <span class="xml-tag">&lt;tab&gt;</span>MyMod_Tab<span class="xml-tag">&lt;/tab&gt;</span>
+    <span class="xml-tag">&lt;prerequisites&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_BasicEnergetics<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MicroelectronicsBasics<span class="xml-tag">&lt;/li&gt;</span> <span class="cm">&lt;!-- 原版專案 --&gt;</span>
+    <span class="xml-tag">&lt;/prerequisites&gt;</span>
+    <span class="xml-tag">&lt;requiredResearchBuilding&gt;</span>HiTechResearchBench<span class="xml-tag">&lt;/requiredResearchBuilding&gt;</span>
+    <span class="xml-tag">&lt;requiredResearchFacilities&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MultiAnalyzer<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/requiredResearchFacilities&gt;</span>
+    <span class="xml-tag">&lt;researchViewX&gt;</span>2<span class="xml-tag">&lt;/researchViewX&gt;</span>
+    <span class="xml-tag">&lt;researchViewY&gt;</span>1.0<span class="xml-tag">&lt;/researchViewY&gt;</span>
+  <span class="xml-tag">&lt;/ResearchProjectDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>techLevel 的成本縮放</strong>
+      實際研究成本 = <code>baseCost × ResearchManager 的難度倍率 × techLevel 倍率</code>。當研究的 <code>techLevel</code> 高於玩家派系科技時，每差一級成本乘以 <code>0.5</code> 的倒數（亦即更貴）；計算邏輯位於 <code>ResearchProjectDef::CostFactor(TechLevel researcherTechLevel)</code>。Spacer 級研究讓 Industrial 派系研究時會顯著變貴。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  研究樹佈局與 ResearchTabDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 研究樹佈局與 ResearchTabDef</div>
+
+    <p>研究視窗（<code>MainTabWindow_Research</code>）以分頁（tab）區隔不同領域。原版只有 <code>Main</code> 與 <code>Anomaly</code>（DLC）。自訂大量研究時，建立專屬 <code>ResearchTabDef</code> 可避免塞爆主分頁。</p>
+
+    <h3>定義一個 ResearchTabDef</h3>
+
+<pre><span class="cm">&lt;!-- Defs/ResearchTabDefs/ResearchTabs_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ResearchTabDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Tab<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>my mod tech<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;generalTitle&gt;</span>My Mod Technologies<span class="xml-tag">&lt;/generalTitle&gt;</span>
+  <span class="xml-tag">&lt;/ResearchTabDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>佈局座標的心智模型</h3>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>researchViewX → 水平層級</h3>
+        <p>對應科技的「深度」。前置在左、後續在右。原版慣例：每個 tier 約間隔 1～2 格。X 必須大於所有 <code>prerequisites</code> 的 X，否則連線會往回畫，視覺混亂。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>researchViewY → 垂直分流</h3>
+        <p>同一層的並列研究用不同 Y 分開避免重疊。Y 沒有語意，純為排版。若兩節點 X 相同且 Y 太近，連線箭頭會打結。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>用除錯模式校正佈局</strong>
+      開啟 Dev Mode 後在研究視窗右上有座標輔助；也可用 <code>Debug Actions → Research → Finish all</code> 快速驗證解鎖鏈。佈局重疊時，RimWorld 不會報錯，只會把節點疊在一起——務必開遊戲目視檢查。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  從 C# 查詢與解鎖研究
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 從 C# 查詢與解鎖研究</div>
+
+    <p>執行期的研究狀態由 <code>Find.ResearchManager</code>（<code>ResearchManager</code> 型別，掛在 <code>Game</code> 上）管理。每個 <code>ResearchProjectDef</code> 也提供便捷的查詢屬性。</p>
+
+    <h3>查詢狀態</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="ty">ResearchProjectDef</span> proj = <span class="ty">DefDatabase</span>&lt;<span class="ty">ResearchProjectDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_BasicEnergetics"</span>);
+
+<span class="cm">// 是否已完成（屬性，內部查 ResearchManager 的進度表）</span>
+<span class="kw">bool</span> done = proj.<span class="nm">IsFinished</span>;
+
+<span class="cm">// 目前進度（0~1）與已累積點數</span>
+<span class="kw">float</span> pct      = proj.<span class="nm">ProgressPercent</span>;          <span class="cm">// 0.0 ~ 1.0</span>
+<span class="kw">float</span> apparent = proj.<span class="nm">ProgressApparent</span>;         <span class="cm">// 已投入的研究點</span>
+
+<span class="cm">// 前置是否全部滿足（可以開始研究嗎）</span>
+<span class="kw">bool</span> canStart = proj.<span class="nm">PrerequisitesCompleted</span>;
+
+<span class="cm">// 1.5 起部分查詢需要傳入派系/分析等級，安全寫法用屬性即可</span></pre>
+
+    <h3>強制解鎖（FinishProject）</h3>
+
+<pre><span class="cm">// 立即完成整個研究專案——常用於事件獎勵、作弊指令、測試</span>
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">FinishProject</span>(proj);
+
+<span class="cm">// 1.5 的完整簽章：FinishProject(project, doCompletionDialog, researcher, doCompletionLetter)</span>
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">FinishProject</span>(
+    proj,
+    doCompletionDialog: <span class="kw">false</span>,   <span class="cm">// 不彈完成對話框</span>
+    researcher:         <span class="kw">null</span>,
+    doCompletionLetter: <span class="kw">true</span>);    <span class="cm">// 仍寄出解鎖信件</span></pre>
+
+    <h3>增加部分進度（不直接完成）</h3>
+
+<pre><span class="cm">// 給研究專案加點（例如「研究情報」事件給予一次性進度）</span>
+<span class="cm">// 1.5：AddProgress(project, amount, source)；舊版可能為 amount 直接累加。</span>
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">AddProgress</span>(proj, <span class="nu">300f</span>);
+
+<span class="cm">// 設定當前正在研究的專案（相當於玩家點選）</span>
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">SetCurrentProject</span>(proj);</pre>
+
+    <h3>遍歷所有研究 / 反查解鎖內容</h3>
+
+<pre><span class="cm">// 列出所有尚未完成、但前置已滿足的可研究專案</span>
+<span class="kw">var</span> available = <span class="ty">DefDatabase</span>&lt;<span class="ty">ResearchProjectDef</span>&gt;.<span class="nm">AllDefsListForReading</span>
+    .<span class="nm">Where</span>(p =&gt; !p.<span class="nm">IsFinished</span> &amp;&amp; p.<span class="nm">PrerequisitesCompleted</span>);
+
+<span class="cm">// 反查：某研究解鎖了哪些 ThingDef（用 researchPrerequisites 過濾）</span>
+<span class="kw">var</span> unlockedThings = <span class="ty">DefDatabase</span>&lt;<span class="ty">ThingDef</span>&gt;.<span class="nm">AllDefsListForReading</span>
+    .<span class="nm">Where</span>(t =&gt; t.<span class="nm">researchPrerequisites</span> != <span class="kw">null</span>
+             &amp;&amp; t.<span class="nm">researchPrerequisites</span>.<span class="nm">Contains</span>(proj));</pre>
+
+    <div class="callout callout-warn">
+      <strong>FinishProject 不會回溯前置</strong>
+      直接對後段研究呼叫 <code>FinishProject</code> 不會自動完成它的 <code>prerequisites</code>。若你的事件要「解鎖一整條鏈」，需自行遞迴走 <code>prerequisites</code> 逐一完成，否則玩家會看到一個「已完成但前置未完成」的怪異狀態（研究樹連線顯示錯亂）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  RecipeDef 深入
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 RecipeDef 深入</div>
+
+    <p><code>RecipeDef</code>（命名空間 <code>RimWorld</code>）描述「一筆生產工單做什麼」：吃什麼原料、產出什麼、花多少工、需要什麼技能。它本身不綁定工作台——綁定關係由 <code>recipeUsers</code>（在 RecipeDef 上）或 <code>recipes</code>（在 ThingDef 上）建立（見 §10 的坑）。</p>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ingredients</code></td>
+          <td><code>List&lt;IngredientCount&gt;</code></td>
+          <td>輸入原料清單，每項含數量 + ThingFilter（見 §5）</td>
+        </tr>
+        <tr>
+          <td><code>fixedIngredientFilter</code></td>
+          <td><code>ThingFilter</code></td>
+          <td>限制玩家在工單 UI 可勾選的原料集合（白名單）</td>
+        </tr>
+        <tr>
+          <td><code>products</code></td>
+          <td><code>List&lt;ThingDefCountClass&gt;</code></td>
+          <td>產出物與數量</td>
+        </tr>
+        <tr>
+          <td><code>workAmount</code></td>
+          <td><code>float</code></td>
+          <td>基礎工作量（work ticks 等價值，未除以工人工作速度）。-1 表示由原料量推算</td>
+        </tr>
+        <tr>
+          <td><code>workSpeedStat</code></td>
+          <td><code>StatDef</code></td>
+          <td>決定工作快慢的 Stat（如 <code>GeneralLaborSpeed</code>、<code>SmithingSpeed</code>）</td>
+        </tr>
+        <tr>
+          <td><code>workSkill</code> / <code>workSkillLearnFactor</code></td>
+          <td><code>SkillDef</code> / <code>float</code></td>
+          <td>影響品質與經驗的技能</td>
+        </tr>
+        <tr>
+          <td><code>skillRequirements</code></td>
+          <td><code>List&lt;SkillRequirement&gt;</code></td>
+          <td>最低技能門檻，不達標的 Pawn 無法接此工單</td>
+        </tr>
+        <tr>
+          <td><code>recipeUsers</code></td>
+          <td><code>List&lt;ThingDef&gt;</code></td>
+          <td>哪些工作台可執行此配方（反向綁定）</td>
+        </tr>
+        <tr>
+          <td><code>researchPrerequisite(s)</code></td>
+          <td><code>ResearchProjectDef</code> / <code>List&lt;…&gt;</code></td>
+          <td>解鎖此配方所需研究（單數 / 複數兩個欄位）</td>
+        </tr>
+        <tr>
+          <td><code>workerClass</code></td>
+          <td><code>Type</code></td>
+          <td>處理生產完成回呼的 C# 類別，預設 <code>RecipeWorker</code>（見 §8）</td>
+        </tr>
+        <tr>
+          <td><code>effectWorking</code> / <code>soundWorking</code></td>
+          <td><code>EffecterDef</code> / <code>SoundDef</code></td>
+          <td>製作時的特效與循環音效</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>完整 XML 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/RecipeDefs/Recipes_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RecipeDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_MakeEnergyCell<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>make energy cell<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>用鋼鐵與元件製作能量電池。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;jobString&gt;</span>Making energy cell.<span class="xml-tag">&lt;/jobString&gt;</span>
+    <span class="xml-tag">&lt;workAmount&gt;</span>1200<span class="xml-tag">&lt;/workAmount&gt;</span>
+    <span class="xml-tag">&lt;workSpeedStat&gt;</span>GeneralLaborSpeed<span class="xml-tag">&lt;/workSpeedStat&gt;</span>
+    <span class="xml-tag">&lt;workSkill&gt;</span>Crafting<span class="xml-tag">&lt;/workSkill&gt;</span>
+    <span class="xml-tag">&lt;effectWorking&gt;</span>Smith<span class="xml-tag">&lt;/effectWorking&gt;</span>
+    <span class="xml-tag">&lt;soundWorking&gt;</span>Recipe_Smith<span class="xml-tag">&lt;/soundWorking&gt;</span>
+
+    <span class="xml-tag">&lt;ingredients&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;filter&gt;</span>
+          <span class="xml-tag">&lt;thingDefs&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>Steel<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;/thingDefs&gt;</span>
+        <span class="xml-tag">&lt;/filter&gt;</span>
+        <span class="xml-tag">&lt;count&gt;</span>50<span class="xml-tag">&lt;/count&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;filter&gt;</span>
+          <span class="xml-tag">&lt;thingDefs&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>ComponentIndustrial<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;/thingDefs&gt;</span>
+        <span class="xml-tag">&lt;/filter&gt;</span>
+        <span class="xml-tag">&lt;count&gt;</span>2<span class="xml-tag">&lt;/count&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/ingredients&gt;</span>
+
+    <span class="cm">&lt;!-- UI 白名單：限制可勾選原料（避免顯示無關物資） --&gt;</span>
+    <span class="xml-tag">&lt;fixedIngredientFilter&gt;</span>
+      <span class="xml-tag">&lt;thingDefs&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Steel<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>ComponentIndustrial<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/thingDefs&gt;</span>
+    <span class="xml-tag">&lt;/fixedIngredientFilter&gt;</span>
+
+    <span class="xml-tag">&lt;products&gt;</span>
+      <span class="xml-tag">&lt;MyMod_EnergyCell&gt;</span>1<span class="xml-tag">&lt;/MyMod_EnergyCell&gt;</span>
+    <span class="xml-tag">&lt;/products&gt;</span>
+
+    <span class="xml-tag">&lt;skillRequirements&gt;</span>
+      <span class="xml-tag">&lt;Crafting&gt;</span>6<span class="xml-tag">&lt;/Crafting&gt;</span>
+    <span class="xml-tag">&lt;/skillRequirements&gt;</span>
+
+    <span class="xml-tag">&lt;researchPrerequisite&gt;</span>MyMod_BasicEnergetics<span class="xml-tag">&lt;/researchPrerequisite&gt;</span>
+
+    <span class="cm">&lt;!-- 反向綁定到工作台 --&gt;</span>
+    <span class="xml-tag">&lt;recipeUsers&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_AssemblyBench<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/recipeUsers&gt;</span>
+  <span class="xml-tag">&lt;/RecipeDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>workAmount 的單位</strong>
+      <code>workAmount</code> 是「總工作 tick 數」的基準值，但實際耗時要除以工人的 <code>workSpeedStat</code> 與工作台的 <code>WorkTableWorkSpeedFactor</code>。<code>workAmount = 1200</code> 對技能與設備皆為 1.0 的工人約 1200 ticks ≈ 20 遊戲秒。設為 <code>-1</code> 時 RimWorld 會以原料總量推算（罕用，多數配方明確指定）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  IngredientCount 與 ThingFilter
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 IngredientCount 與 ThingFilter</div>
+
+    <p>每筆 <code>ingredients</code> li 反序列化成一個 <code>IngredientCount</code>，內含一個 <code>filter</code>（<code>ThingFilter</code>）與一個 <code>count</code>。<code>ThingFilter</code> 是 RimWorld 中極為通用的「物品集合描述器」，同時用於儲存區、工單、貿易、配方原料。</p>
+
+    <h3>ThingFilter 的篩選維度</h3>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>thingDefs</h3>
+        <p>逐一列舉允許的具體 ThingDef。最精確的白名單。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>categories</h3>
+        <p>以 <code>ThingCategoryDef</code> 整類納入，如 <code>Textiles</code>、<code>MeatRaw</code>、<code>Foods</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>stuffCategories</h3>
+        <p>按材質類別篩選（<code>Metallic</code>、<code>Woody</code>、<code>Fabric</code>…），用於「任意金屬」這種配方。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>disallowed* / 品質 / 血量</h3>
+        <p><code>disallowedThingDefs</code>、<code>allowedQualities</code>、<code>allowedHitPointsPercents</code> 可排除特定項或設定品質/耐久區間。</p>
+      </div>
+    </div>
+
+    <h3>「任意肉類 75 份」配方原料寫法</h3>
+
+<pre><span class="xml-tag">&lt;ingredients&gt;</span>
+  <span class="xml-tag">&lt;li&gt;</span>
+    <span class="xml-tag">&lt;filter&gt;</span>
+      <span class="xml-tag">&lt;categories&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>MeatRaw<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;disallowedThingDefs&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Meat_Human<span class="xml-tag">&lt;/li&gt;</span> <span class="cm">&lt;!-- 排除人肉 --&gt;</span>
+      <span class="xml-tag">&lt;/disallowedThingDefs&gt;</span>
+    <span class="xml-tag">&lt;/filter&gt;</span>
+    <span class="xml-tag">&lt;count&gt;</span>75<span class="xml-tag">&lt;/count&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/ingredients&gt;</span>
+
+<span class="cm">&lt;!-- 配套：UI 白名單同步限制可勾選範圍 --&gt;</span>
+<span class="xml-tag">&lt;fixedIngredientFilter&gt;</span>
+  <span class="xml-tag">&lt;categories&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>MeatRaw<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/categories&gt;</span>
+  <span class="xml-tag">&lt;disallowedThingDefs&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Meat_Human<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/disallowedThingDefs&gt;</span>
+<span class="xml-tag">&lt;/fixedIngredientFilter&gt;</span></pre>
+
+    <h3>從 C# 動態檢查 ThingFilter</h3>
+
+<pre><span class="cm">// 判斷某個 Thing 是否符合配方第一個原料的篩選</span>
+<span class="ty">IngredientCount</span> ing = recipe.<span class="nm">ingredients</span>[<span class="nu">0</span>];
+<span class="kw">bool</span> ok = ing.<span class="nm">filter</span>.<span class="nm">Allows</span>(someThing);
+
+<span class="cm">// 該原料總共需要的數量（已考量 nutrition 類特殊計數）</span>
+<span class="kw">float</span> need = ing.<span class="nm">GetBaseCount</span>();
+
+<span class="cm">// 程式建立一個 ThingFilter（如動態配方）</span>
+<span class="kw">var</span> filter = <span class="kw">new</span> <span class="ty">ThingFilter</span>();
+filter.<span class="nm">SetAllow</span>(<span class="ty">ThingDefOf</span>.Steel, <span class="kw">true</span>);
+filter.<span class="nm">SetAllow</span>(<span class="ty">ThingCategoryDefOf</span>.Manufactured, <span class="kw">true</span>);
+filter.<span class="nm">RecalculateDisplayRootCategory</span>();   <span class="cm">// 重建 UI 樹</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>ingredients filter vs fixedIngredientFilter</strong>
+      <code>ingredients[i].filter</code> 決定「該原料槽位接受什麼」；<code>fixedIngredientFilter</code> 決定「玩家在工單 UI 能勾選哪些細項」。兩者必須一致或前者更寬，否則會出現「配方允許但 UI 不給選」或反之的矛盾。漏寫 <code>fixedIngredientFilter</code> 時 RimWorld 會自動以 ingredients 的聯集推導，但顯示可能凌亂。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  工作台 ThingDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 工作台 ThingDef（billGiver / WorkGiver）</div>
+
+    <p>工作台是一個 <code>thingClass = Building_WorkTable</code> 的 <code>ThingDef</code>。<code>Building_WorkTable</code> 實作 <code>IBillGiver</code>，因此它擁有一個 <code>BillStack</code>，玩家可在其上排工單。Pawn 端則由 <code>WorkGiver_DoBill</code> 掃描所有 billGiver、找到可做的工單並指派工作。</p>
+
+    <h3>工作台 ThingDef 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/ThingDefs_Buildings/Buildings_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BenchBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_AssemblyBench<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>assembly bench<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;thingClass&gt;</span>Building_WorkTable<span class="xml-tag">&lt;/thingClass&gt;</span>
+    <span class="xml-tag">&lt;category&gt;</span>Building<span class="xml-tag">&lt;/category&gt;</span>
+    <span class="xml-tag">&lt;altitudeLayer&gt;</span>Building<span class="xml-tag">&lt;/altitudeLayer&gt;</span>
+    <span class="xml-tag">&lt;passability&gt;</span>PassThroughOnly<span class="xml-tag">&lt;/passability&gt;</span>
+    <span class="xml-tag">&lt;useHitPoints&gt;</span>true<span class="xml-tag">&lt;/useHitPoints&gt;</span>
+    <span class="xml-tag">&lt;designationCategory&gt;</span>Production<span class="xml-tag">&lt;/designationCategory&gt;</span>
+
+    <span class="xml-tag">&lt;size&gt;</span>(3,1)<span class="xml-tag">&lt;/size&gt;</span>
+    <span class="xml-tag">&lt;fillPercent&gt;</span>0.5<span class="xml-tag">&lt;/fillPercent&gt;</span>
+
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MaxHitPoints&gt;</span>180<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+      <span class="xml-tag">&lt;WorkToBuild&gt;</span>3000<span class="xml-tag">&lt;/WorkToBuild&gt;</span>
+      <span class="cm">&lt;!-- 工作台自身的工作速度加成 --&gt;</span>
+      <span class="xml-tag">&lt;WorkTableWorkSpeedFactor&gt;</span>1.0<span class="xml-tag">&lt;/WorkTableWorkSpeedFactor&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="xml-tag">&lt;costList&gt;</span>
+      <span class="xml-tag">&lt;Steel&gt;</span>100<span class="xml-tag">&lt;/Steel&gt;</span>
+      <span class="xml-tag">&lt;ComponentIndustrial&gt;</span>2<span class="xml-tag">&lt;/ComponentIndustrial&gt;</span>
+    <span class="xml-tag">&lt;/costList&gt;</span>
+
+    <span class="cm">&lt;!-- 需要電力：加上 CompPowerTrader --&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+        <span class="xml-tag">&lt;basePowerConsumption&gt;</span>200<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+
+    <span class="cm">&lt;!-- 解鎖此建築的研究 --&gt;</span>
+    <span class="xml-tag">&lt;researchPrerequisites&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_AdvancedConduction<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/researchPrerequisites&gt;</span>
+
+    <span class="cm">&lt;!-- 正向綁定配方（也可只用 RecipeDef.recipeUsers 反向綁，見 §10） --&gt;</span>
+    <span class="xml-tag">&lt;recipes&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_MakeEnergyCell<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/recipes&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>WorkGiver_DoBill 的運作鏈</h3>
+
+    <pre><span class="cm">// 概念流程（無需自己寫，Building_WorkTable 已內建）</span>
+WorkGiver_DoBill.JobOnThing(pawn, billGiver)
+  → 取得 billGiver.BillStack
+  → 逐一檢查每張 Bill：ShouldDoNow() &amp;&amp; PawnAllowedToStartAnew()
+  → 找到原料（TryFindBestBillIngredients）
+  → 產生 JobDriver_DoBill：移動 → 取料 → 在工作台製作 → 產出</pre>
+
+    <div class="callout callout-tip">
+      <strong>billGiver 不一定是工作台</strong>
+      任何實作 <code>IBillGiver</code> 的 ThingDef 都能掛工單——例如裝設屍體火化的「火葬電爐」、手術用的「醫療床」（手術其實也是 RecipeDef + Bill）。判斷一個建築能不能排工單，看它的 <code>thingClass</code> 是否實作 <code>IBillGiver</code>，而非它叫不叫「bench」。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  Bill 系統
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 Bill 系統（Bill_Production / BillStack）</div>
+
+    <p>玩家排的每一筆「做 X 直到 Y」就是一個 <code>Bill_Production</code>（繼承 <code>Bill</code>）。所有工單收在 <code>IBillGiver.BillStack</code>（<code>BillStack</code> 型別）裡。</p>
+
+    <h3>關鍵型別關係</h3>
+
+    <table>
+      <thead>
+        <tr><th>型別</th><th>角色</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>BillStack</code></td><td>掛在 billGiver 上的工單容器，含 <code>List&lt;Bill&gt; bills</code></td></tr>
+        <tr><td><code>Bill_Production</code></td><td>標準生產工單：含 repeatMode、targetCount、ingredientSearchRadius、儲存篩選</td></tr>
+        <tr><td><code>Bill_ProductionWithUft</code></td><td>產出「未完成品」(UnfinishedThing) 的工單，如雕像、神經訓練器</td></tr>
+        <tr><td><code>RecipeWorkerCounter</code></td><td>計算「做到 N 個」時的現有數量（見下）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>從 C# 程式化新增工單</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="ty">Building_WorkTable</span> bench = ...;      <span class="cm">// 目標工作台</span>
+<span class="ty">RecipeDef</span> recipe = <span class="ty">DefDatabase</span>&lt;<span class="ty">RecipeDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_MakeEnergyCell"</span>);
+
+<span class="cm">// 用 RecipeDef.MakeNewBill() 確保套用 workerClass 對應的 Bill 型別</span>
+<span class="ty">Bill_Production</span> bill = (<span class="ty">Bill_Production</span>)recipe.<span class="nm">MakeNewBill</span>();
+
+<span class="cm">// 設定「重複做到庫存達 10 個」</span>
+bill.<span class="nm">repeatMode</span>  = <span class="ty">BillRepeatModeDefOf</span>.TargetCount;
+bill.<span class="nm">targetCount</span> = <span class="nu">10</span>;
+
+<span class="cm">// 原料搜尋半徑（格）；999 表示整張地圖</span>
+bill.<span class="nm">ingredientSearchRadius</span> = <span class="nu">30f</span>;
+
+<span class="cm">// 加入工作台的 BillStack</span>
+bench.<span class="nm">billStack</span>.<span class="nm">AddBill</span>(bill);</pre>
+
+    <h3>RecipeWorkerCounter：自訂「做到 N 個」的計數</h3>
+
+    <p>「做到庫存有 N 個」時，RimWorld 需要知道「現在有幾個」。預設用 <code>products[0]</code> 計數，但若你的配方產出抽象成果（如把幾種物品算成同一類），需自訂 <code>RecipeWorkerCounter</code>。</p>
+
+<pre><span class="kw">public class</span> <span class="ty">RecipeWorkerCounter_EnergyCells</span> : <span class="ty">RecipeWorkerCounter</span>
+{
+    <span class="cm">// 計算地圖上「已存在」多少個目標物（決定是否還要繼續做）</span>
+    <span class="kw">public override int</span> <span class="nm">CountProducts</span>(<span class="ty">Bill_Production</span> bill)
+    {
+        <span class="ty">Map</span> map = bill.<span class="nm">billStack</span>.<span class="nm">billGiver</span>.<span class="nm">Map</span> ?? <span class="ty">Find</span>.CurrentMap;
+        <span class="kw">int</span> total = <span class="nu">0</span>;
+        total += map.<span class="nm">resourceCounter</span>.<span class="nm">GetCount</span>(MyModDefOf.MyMod_EnergyCell);
+        <span class="cm">// 把「高階電池」也計入，2 顆抵 1 顆高階</span>
+        total += map.<span class="nm">resourceCounter</span>.<span class="nm">GetCount</span>(MyModDefOf.MyMod_EnergyCellHi) * <span class="nu">2</span>;
+        <span class="kw">return</span> total;
+    }
+
+    <span class="cm">// 計數對象的可讀標籤（顯示在工單 UI）</span>
+    <span class="kw">public override string</span> <span class="nm">ProductsDescription</span>(<span class="ty">Bill_Production</span> bill)
+        =&gt; <span class="st">"energy cells (incl. hi-cap)"</span>;
+}</pre>
+
+<pre><span class="cm">&lt;!-- 在 RecipeDef 指定 counter --&gt;</span>
+<span class="xml-tag">&lt;RecipeDef&gt;</span>
+  ...
+  <span class="xml-tag">&lt;workerCounterClass&gt;</span>MyMod.RecipeWorkerCounter_EnergyCells<span class="xml-tag">&lt;/workerCounterClass&gt;</span>
+<span class="xml-tag">&lt;/RecipeDef&gt;</span></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  自訂 RecipeWorker
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 自訂 RecipeWorker</div>
+
+    <p><code>RecipeWorker</code>（<code>workerClass</code>，預設 <code>RecipeWorker</code>）是配方的「邏輯處理器」。當你需要在生產完成時插入額外行為（給經驗、觸發事件、變更產出、消耗額外資源），覆寫它最乾淨——比 Harmony patch <code>GenRecipe.MakeRecipeProducts</code> 安全得多。</p>
+
+    <h3>常見覆寫點</h3>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>Notify_IterationCompleted</h3>
+        <p>每完成「一次製作迭代」呼叫。最常用——在此給技能經驗、觸發成就、隨機掉落副產物、消耗 Hediff 資源。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>MakeRecipeProducts</h3>
+        <p>覆寫產出生成本身。回傳 <code>IEnumerable&lt;Thing&gt;</code>，可依工人技能、原料品質動態決定產出種類與數量。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>ConsumeIngredients</h3>
+        <p>覆寫原料消耗邏輯（少見）。例如保留部分原料、或依機率不消耗。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>AvailableOnNow / GetIngredientCount</h3>
+        <p>條件式可用性（如僅夜間）、或動態調整所需原料量。</p>
+      </div>
+    </div>
+
+    <h3>完整範例：完成時給額外經驗 + 機率副產物</h3>
+
+<pre><span class="kw">using</span> <span class="ty">System.Collections.Generic</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">RecipeWorker_EnergyCell</span> : <span class="ty">RecipeWorker</span>
+{
+    <span class="cm">// 每完成一次製作迭代後呼叫</span>
+    <span class="kw">public override void</span> <span class="nm">Notify_IterationCompleted</span>(
+        <span class="ty">Pawn</span> billDoer, <span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; ingredients)
+    {
+        <span class="kw">base</span>.<span class="nm">Notify_IterationCompleted</span>(billDoer, ingredients);
+        <span class="kw">if</span> (billDoer == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// ① 額外給 Intellectual 經驗（製作高科技品的副學習）</span>
+        billDoer.<span class="nm">skills</span>?.<span class="nm">Learn</span>(<span class="ty">SkillDefOf</span>.Intellectual, <span class="nu">60f</span>);
+
+        <span class="cm">// ② 20% 機率掉落一個「廢料」副產物</span>
+        <span class="kw">if</span> (<span class="ty">Rand</span>.<span class="nm">Chance</span>(<span class="nu">0.2f</span>))
+        {
+            <span class="ty">Thing</span> scrap = <span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(MyModDefOf.MyMod_Scrap);
+            scrap.<span class="nm">stackCount</span> = <span class="nu">3</span>;
+            <span class="ty">GenPlace</span>.<span class="nm">TryPlaceThing</span>(
+                scrap, billDoer.<span class="nm">Position</span>, billDoer.<span class="nm">Map</span>,
+                <span class="ty">ThingPlaceMode</span>.Near);
+        }
+
+        <span class="cm">// ③ 觸發世界統計 / 自訂事件</span>
+        <span class="ty">Find</span>.<span class="nm">World</span>.<span class="nm">GetComponent</span>&lt;<span class="ty">WorldComp_MyStats</span>&gt;()
+            ?.<span class="nm">RegisterEnergyCellMade</span>();
+    }
+
+    <span class="cm">// 動態調整產出：技能 ≥ 12 的工人額外多產 1 個</span>
+    <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Thing</span>&gt; <span class="nm">MakeRecipeProducts</span>(
+        <span class="ty">RecipeDef</span> recipeDef, <span class="ty">Pawn</span> worker,
+        <span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; ingredients,
+        <span class="ty">Thing</span> dominantIngredient, <span class="ty">IBillGiver</span> billGiver,
+        <span class="ty">Precept_ThingStyle</span> precept = <span class="kw">null</span>,
+        <span class="ty">ThingStyleDef</span> style = <span class="kw">null</span>, <span class="kw">int?</span> overrideGraphicIndex = <span class="kw">null</span>)
+    {
+        <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> <span class="kw">base</span>.<span class="nm">MakeRecipeProducts</span>(
+            recipeDef, worker, ingredients, dominantIngredient,
+            billGiver, precept, style, overrideGraphicIndex))
+        {
+            <span class="kw">yield return</span> t;
+        }
+
+        <span class="kw">if</span> (worker?.<span class="nm">skills</span>?.<span class="nm">GetSkill</span>(<span class="ty">SkillDefOf</span>.Crafting).<span class="nm">Level</span> &gt;= <span class="nu">12</span>)
+        {
+            <span class="ty">Thing</span> bonus = <span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(MyModDefOf.MyMod_EnergyCell);
+            <span class="kw">yield return</span> bonus;
+        }
+    }
+}</pre>
+
+<pre><span class="cm">&lt;!-- 在 RecipeDef 掛上 workerClass --&gt;</span>
+<span class="xml-tag">&lt;RecipeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_MakeEnergyCell<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.RecipeWorker_EnergyCell<span class="xml-tag">&lt;/workerClass&gt;</span>
+  ...
+<span class="xml-tag">&lt;/RecipeDef&gt;</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>MakeRecipeProducts 的簽章隨版本變動</strong>
+      此方法的參數列在 1.3 → 1.4 → 1.5 多次新增（precept、style、overrideGraphicIndex 都是後加的）。覆寫時務必對照你目標版本反編譯的真實簽章，否則 override 不會生效（變成多載新方法、原方法照跑 base）。若要跨版本，用 <code>#if</code> 切換簽章或只覆寫穩定的 <code>Notify_IterationCompleted</code>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  StatDef 與生產效率
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 StatDef 與生產效率</div>
+
+    <p>生產耗時 = <code>workAmount ÷ (工人 workSpeedStat × 工作台 WorkTableWorkSpeedFactor)</code>。要做出「升級版工作台更快」「特定 Pawn 製作更快」的效果，重點都在操作 <code>StatDef</code>。</p>
+
+    <h3>生產相關的關鍵 StatDef</h3>
+
+    <table>
+      <thead>
+        <tr><th>StatDef</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>WorkSpeedGlobal</code></td><td>Pawn 的全域工作速度（受傷、心情、義體影響）</td></tr>
+        <tr><td><code>GeneralLaborSpeed</code></td><td>泛用勞動速度，多數工作台配方的 <code>workSpeedStat</code></td></tr>
+        <tr><td><code>SmithingSpeed</code> / <code>TailoringSpeed</code> / <code>DrugSynthesisSpeed</code> 等</td><td>特定工種的速度乘數</td></tr>
+        <tr><td><code>WorkTableWorkSpeedFactor</code></td><td>工作台自身的速度倍率（建築 statBase）</td></tr>
+        <tr><td><code>FoodPoisonChance</code> / <code>ButcheryFleshEfficiency</code></td><td>產出品質/效率類 Stat（非速度）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>自訂 StatDef + StatPart：依電力狀態調整速度</h3>
+
+    <p><code>StatPart</code> 讓你在「基礎值」之上加入動態修正。下例：工作台通電時速度 +20%，斷電（用備援）時 -50%。</p>
+
+<pre><span class="cm">&lt;!-- Defs/StatDefs/Stats_MyMod.xml：可選的自訂 Stat --&gt;</span>
+<span class="xml-tag">&lt;StatDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_AssemblySpeed<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>assembly speed<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;category&gt;</span>BasicsPawn<span class="xml-tag">&lt;/category&gt;</span>
+  <span class="xml-tag">&lt;defaultBaseValue&gt;</span>1.0<span class="xml-tag">&lt;/defaultBaseValue&gt;</span>
+  <span class="xml-tag">&lt;minValue&gt;</span>0.1<span class="xml-tag">&lt;/minValue&gt;</span>
+  <span class="xml-tag">&lt;toStringStyle&gt;</span>PercentZero<span class="xml-tag">&lt;/toStringStyle&gt;</span>
+  <span class="xml-tag">&lt;parts&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyMod.StatPart_PowerBonus"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;poweredFactor&gt;</span>1.2<span class="xml-tag">&lt;/poweredFactor&gt;</span>
+      <span class="xml-tag">&lt;unpoweredFactor&gt;</span>0.5<span class="xml-tag">&lt;/unpoweredFactor&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/parts&gt;</span>
+<span class="xml-tag">&lt;/StatDef&gt;</span></pre>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">StatPart_PowerBonus</span> : <span class="ty">StatPart</span>
+{
+    <span class="kw">public float</span> poweredFactor   = <span class="nu">1f</span>;
+    <span class="kw">public float</span> unpoweredFactor = <span class="nu">1f</span>;
+
+    <span class="cm">// 修改最終數值</span>
+    <span class="kw">public override void</span> <span class="nm">TransformValue</span>(<span class="ty">StatRequest</span> req, <span class="kw">ref float</span> val)
+    {
+        <span class="kw">if</span> (!req.<span class="nm">HasThing</span>) <span class="kw">return</span>;
+        <span class="ty">CompPowerTrader</span> power = req.<span class="nm">Thing</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        <span class="kw">if</span> (power == <span class="kw">null</span>) <span class="kw">return</span>;
+        val *= power.<span class="nm">PowerOn</span> ? poweredFactor : unpoweredFactor;
+    }
+
+    <span class="cm">// 滑鼠懸停時的解釋文字</span>
+    <span class="kw">public override string</span> <span class="nm">ExplanationPart</span>(<span class="ty">StatRequest</span> req)
+    {
+        <span class="kw">if</span> (!req.<span class="nm">HasThing</span>) <span class="kw">return null</span>;
+        <span class="ty">CompPowerTrader</span> power = req.<span class="nm">Thing</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        <span class="kw">if</span> (power == <span class="kw">null</span>) <span class="kw">return null</span>;
+        <span class="kw">return</span> power.<span class="nm">PowerOn</span>
+            ? <span class="st">$"通電加成: x{poweredFactor:F2}"</span>
+            : <span class="st">$"斷電懲罰: x{unpoweredFactor:F2}"</span>;
+    }
+}</pre>
+
+    <h3>從 C# 讀取生產速度</h3>
+
+<pre><span class="cm">// 取 Pawn 的某項生產速度（含所有 StatPart 與 Hediff 修正）</span>
+<span class="kw">float</span> speed = pawn.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.GeneralLaborSpeed);
+
+<span class="cm">// 取建築的工作台速度倍率</span>
+<span class="kw">float</span> tableFactor = bench.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.WorkTableWorkSpeedFactor);
+
+<span class="cm">// 估算一筆工單的實際耗時（ticks）</span>
+<span class="kw">float</span> ticks = recipe.<span class="nm">WorkAmountTotal</span>(stuffDef: <span class="kw">null</span>)
+            / (speed * tableFactor);</pre>
+
+    <div class="callout callout-info">
+      <strong>StatPart vs 直接 statBases</strong>
+      靜態固定值用 <code>statBases</code>（如建築固定 1.2x）；需要依執行期狀態（電力、天氣、Hediff、附近建築）動態變化時才用 <code>StatPart</code>。StatPart 是官方提供、相容性最佳的動態 Stat 機制，遠優於 Harmony patch <code>StatWorker.GetValue</code>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10  常見坑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 常見坑</div>
+
+    <h3>坑 1：recipeUsers vs ThingDef.recipes 的雙向綁定</h3>
+
+    <p>配方與工作台的關聯有兩種寫法，兩者等價但作用方向相反：</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>RecipeDef.recipeUsers</h3>
+        <p>在<strong>配方</strong>上列出可用它的工作台。適合「我新增配方，要塞進別人（含原版）的工作台」——無需碰原版 ThingDef。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>ThingDef.recipes</h3>
+        <p>在<strong>工作台</strong>上列出它能做的配方。適合「我新增工作台，掛上自己的配方」。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>把配方加進「原版工作台」務必用 recipeUsers 或 PatchOperation</strong>
+      若你想讓配方出現在原版 <code>ElectricSmelter</code> 上，<strong>不要</strong>直接改寫原版 ThingDef 的 <code>recipes</code>（會與其他 mod 衝突、且需整段覆蓋）。正確做法是在你的 <code>RecipeDef</code> 寫 <code>&lt;recipeUsers&gt;&lt;li&gt;ElectricSmelter&lt;/li&gt;&lt;/recipeUsers&gt;</code>，或用 <code>PatchOperationAdd</code> 對原版 ThingDef 的 <code>recipes</code> 節點追加。兩種綁定都會被收進同一份運行期清單（<code>ThingDef.AllRecipes</code>），不會重複觸發，但同一配方同時寫進兩邊會在某些版本造成清單出現兩次——擇一即可。
+    </div>
+
+    <h3>坑 2：研究前置循環 / 跨檔載入順序</h3>
+
+    <div class="callout callout-warn">
+      <strong>prerequisites 形成環會導致整條鏈永遠無法研究</strong>
+      A 的前置是 B、B 的前置又是 A，RimWorld 不會在載入時報明確錯誤，只會讓兩者都顯示為「鎖定」且永遠無法開始。<code>hiddenPrerequisites</code> 也計入循環判定。設計多分支科技樹時，務必確保是有向無環圖（DAG）。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>跨檔引用不受檔名順序影響，但 defName 必須存在</strong>
+      RimWorld 先載入<em>所有</em> Def 再解析交叉引用，所以 <code>prerequisites</code> 指向哪個檔案的研究都行。但若 defName 拼錯或指向不存在的 Def，會在啟動日誌出現 <code>Could not resolve cross-reference</code>，該欄位變 null——研究會直接「沒有前置」而非報錯卡住，容易漏看。發布前務必檢查紅字日誌。
+    </div>
+
+    <h3>坑 3：解鎖了配方卻沒解鎖工作台</h3>
+
+    <div class="callout callout-warn">
+      <strong>研究只解鎖「掛了該 researchPrerequisite 的 Def」</strong>
+      常見錯誤是：研究完成，配方解鎖了，但放置工作台的研究忘了設定，導致玩家「能做卻沒地方做」。確認三者前置一致：① 工作台 ThingDef 的 <code>researchPrerequisites</code>；② 配方 RecipeDef 的 <code>researchPrerequisite</code>；③ 產物 ThingDef（若需單獨解鎖）。三者通常指向同一個研究專案。
+    </div>
+
+    <h3>坑 4：fixedIngredientFilter 漏寫導致 UI 空白</h3>
+
+    <div class="callout callout-warn">
+      <strong>用 categories 當原料時，記得同步 fixedIngredientFilter</strong>
+      若 <code>ingredients</code> 用 <code>categories</code> 但 <code>fixedIngredientFilter</code> 只列了部分 thingDefs，玩家在工單詳情會看到「允許的原料」清單與實際可用原料對不上，甚至勾不到該勾的項目。最穩做法：<code>fixedIngredientFilter</code> 覆蓋範圍 ≥ <code>ingredients</code> 各槽 filter 的聯集。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       本章重點回顧
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>研究</h3>
+        <p>ResearchProjectDef 用 prerequisites 建 DAG，FinishProject 不回溯前置</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>配方</h3>
+        <p>RecipeDef = 原料(IngredientCount+ThingFilter)→產物，workAmount 是基準 tick</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>工單</h3>
+        <p>Building_WorkTable 是 IBillGiver，WorkGiver_DoBill 掃 BillStack 指派工作</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>擴充</h3>
+        <p>RecipeWorker.Notify_IterationCompleted + StatPart 動態效率，比 Harmony 安全</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 14 研究與生產鏈<br>
+  適用 RimWorld 1.4 / 1.5 · Harmony 2.x · 繁體中文
+</footer>
+
+</body>
+</html>

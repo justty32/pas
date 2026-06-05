@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>環境設定 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html" class="active">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>環境設定</h1>
+  <p>IDE 配置、Assembly 參考、反編譯工具、開發迴圈——一次到位，之後不再碰設定。</p>
+  <span class="badge">Visual Studio 2022 / JetBrains Rider · .NET Framework 4.7.2</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. 專案建立 ── -->
+  <div class="section">
+    <div class="section-title">1 · Visual Studio / Rider 專案設定</div>
+
+    <h3>為什麼是 .NET Framework 4.7.2？</h3>
+    <p>
+      RimWorld 跑在 Unity 的 <strong>Mono 執行期</strong>（非 CoreCLR）。
+      Unity 2022 LTS 內建的 Mono 對應 .NET Framework 4.7.2 的 API surface，
+      因此你的 Class Library 目標框架必須是 <code>net472</code>。
+      .NET 5 / 6 / 8 編譯出來的 assembly 格式（PE 特徵、runtime directive）Mono 無法載入，
+      會在遊戲啟動時拋 <code>BadImageFormatException</code>。
+    </p>
+
+    <div class="callout callout-warn">
+      <strong>常見誤區</strong>
+      .NET Standard 2.0 Class Library 看似相容，但它的 TFM 是 <code>netstandard2.0</code>，
+      NuGet restore 會拉 .NET Standard 版本的傳遞依賴，最終 DLL 仍可能引入 CoreCLR 限定 API。
+      <strong>直接用 <code>net472</code></strong>，避免隱性問題。
+    </div>
+
+    <h3>建立專案（Visual Studio 2022）</h3>
+    <ol class="steps">
+      <li>新增專案 → <strong>類別庫 (.NET Framework)</strong>，框架選 <strong>.NET Framework 4.7.2</strong>。</li>
+      <li>建議命名為 <code>YourName.YourMod</code>（與 <code>packageId</code> 一致，方便追蹤）。</li>
+      <li>刪除自動生成的 <code>Class1.cs</code>。</li>
+      <li>在 <strong>專案屬性 → 建置 → 輸出路徑</strong> 填入 mod 資料夾的絕對路徑：<br>
+          <code>C:\...\RimWorld\Mods\YourMod\Assemblies\</code>（末尾加反斜線）。</li>
+      <li>將 <strong>平台目標</strong> 改為 <code>x64</code>（RimWorldWin64 是 64-bit 執行檔）。</li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <strong>輸出路徑直接指向 Assemblies/</strong>
+      設定後，每次 Build 都會把 DLL 直接放到 mod 目錄，免去手動複製。
+      啟動 RimWorld 即可測試最新版。
+    </div>
+
+    <h3>加入 Assembly References</h3>
+    <p>
+      所有參考 DLL 都位於 <code>RimWorld/RimWorldWin64_Data/Managed/</code>（Steam 預設路徑
+      <code>C:\Program Files (x86)\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\</code>）。
+      <strong>每一個 Reference 都必須將 Copy Local 設為 <code>false</code></strong>，
+      否則建置輸出會把遊戲 DLL 複製到你的 Assemblies/ 目錄，造成版本衝突。
+    </p>
+
+    <table>
+      <tr><th>DLL 檔名</th><th>必要性</th><th>用途</th></tr>
+      <tr>
+        <td><code>Assembly-CSharp.dll</code></td>
+        <td><span class="tag tag-red">必要</span></td>
+        <td>所有 RimWorld 遊戲類別（<code>ThingDef</code>、<code>Pawn</code>、<code>Map</code>…）</td>
+      </tr>
+      <tr>
+        <td><code>0Harmony.dll</code></td>
+        <td><span class="tag tag-red">必要</span></td>
+        <td>Harmony 2.x 修補框架，遊戲已內建，<strong>不要打包</strong></td>
+      </tr>
+      <tr>
+        <td><code>UnityEngine.CoreModule.dll</code></td>
+        <td><span class="tag tag-red">必要</span></td>
+        <td><code>Vector2/3</code>、<code>Color</code>、<code>GameObject</code> 等 Unity 核心型別</td>
+      </tr>
+      <tr>
+        <td><code>UnityEngine.IMGUIModule.dll</code></td>
+        <td><span class="tag tag-orange">UI 開發</span></td>
+        <td><code>GUI</code>、<code>GUIStyle</code>、<code>GUILayout</code></td>
+      </tr>
+      <tr>
+        <td><code>UnityEngine.TextRenderingModule.dll</code></td>
+        <td><span class="tag tag-orange">UI 開發</span></td>
+        <td><code>Font</code>、<code>TextMesh</code></td>
+      </tr>
+      <tr>
+        <td><code>UnityEngine.AudioModule.dll</code></td>
+        <td><span class="tag tag-purple">音效</span></td>
+        <td><code>AudioClip</code>、<code>AudioSource</code></td>
+      </tr>
+    </table>
+
+    <h3>.csproj 範例片段</h3>
+    <p>以下是手工編輯後的典型 <code>.csproj</code>（SDK-style 之前的舊格式，net472 仍用舊格式）：</p>
+
+<pre><span class="xml-tag">&lt;Project</span> <span class="xml-attr">ToolsVersion</span>=<span class="xml-val">"15.0"</span> <span class="xml-attr">xmlns</span>=<span class="xml-val">"http://schemas.microsoft.com/developer/msbuild/2003"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;PropertyGroup&gt;</span>
+    <span class="xml-tag">&lt;Configuration</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Configuration)'==''"</span><span class="xml-tag">&gt;</span>Debug<span class="xml-tag">&lt;/Configuration&gt;</span>
+    <span class="xml-tag">&lt;Platform</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Platform)'==''"</span><span class="xml-tag">&gt;</span>x64<span class="xml-tag">&lt;/Platform&gt;</span>
+    <span class="xml-tag">&lt;TargetFrameworkVersion&gt;</span>v4.7.2<span class="xml-tag">&lt;/TargetFrameworkVersion&gt;</span>
+    <span class="xml-tag">&lt;AssemblyName&gt;</span>YourName.YourMod<span class="xml-tag">&lt;/AssemblyName&gt;</span>
+    <span class="xml-tag">&lt;OutputType&gt;</span>Library<span class="xml-tag">&lt;/OutputType&gt;</span>
+  <span class="xml-tag">&lt;/PropertyGroup&gt;</span>
+
+  <span class="xml-tag">&lt;PropertyGroup</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Configuration)'=='Debug'"</span><span class="xml-tag">&gt;</span>
+    <span class="cm">&lt;!-- 輸出直接進 mod 目錄，省去手動複製 --&gt;</span>
+    <span class="xml-tag">&lt;OutputPath&gt;</span>..\..\Mods\YourMod\Assemblies\<span class="xml-tag">&lt;/OutputPath&gt;</span>
+    <span class="xml-tag">&lt;DebugType&gt;</span>portable<span class="xml-tag">&lt;/DebugType&gt;</span>
+    <span class="xml-tag">&lt;DebugSymbols&gt;</span>true<span class="xml-tag">&lt;/DebugSymbols&gt;</span>
+  <span class="xml-tag">&lt;/PropertyGroup&gt;</span>
+
+  <span class="xml-tag">&lt;PropertyGroup</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Configuration)'=='Release'"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;OutputPath&gt;</span>..\..\Mods\YourMod\Assemblies\<span class="xml-tag">&lt;/OutputPath&gt;</span>
+    <span class="xml-tag">&lt;Optimize&gt;</span>true<span class="xml-tag">&lt;/Optimize&gt;</span>
+  <span class="xml-tag">&lt;/PropertyGroup&gt;</span>
+
+  <span class="xml-tag">&lt;ItemGroup&gt;</span>
+    <span class="cm">&lt;!-- RimWorld 主要 API ─────────────────────────────────────────── --&gt;</span>
+    <span class="xml-tag">&lt;Reference</span> <span class="xml-attr">Include</span>=<span class="xml-val">"Assembly-CSharp"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;HintPath&gt;</span>$(RIMWORLD_PATH)\RimWorldWin64_Data\Managed\Assembly-CSharp.dll<span class="xml-tag">&lt;/HintPath&gt;</span>
+      <span class="xml-tag">&lt;Private&gt;</span>false<span class="xml-tag">&lt;/Private&gt;</span>    <span class="cm">&lt;!-- Copy Local = false --&gt;</span>
+    <span class="xml-tag">&lt;/Reference&gt;</span>
+
+    <span class="cm">&lt;!-- Harmony (遊戲已內建，絕對不能 Copy Local) ──────────────── --&gt;</span>
+    <span class="xml-tag">&lt;Reference</span> <span class="xml-attr">Include</span>=<span class="xml-val">"0Harmony"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;HintPath&gt;</span>$(RIMWORLD_PATH)\RimWorldWin64_Data\Managed\0Harmony.dll<span class="xml-tag">&lt;/HintPath&gt;</span>
+      <span class="xml-tag">&lt;Private&gt;</span>false<span class="xml-tag">&lt;/Private&gt;</span>
+    <span class="xml-tag">&lt;/Reference&gt;</span>
+
+    <span class="cm">&lt;!-- Unity 核心 ──────────────────────────────────────────────── --&gt;</span>
+    <span class="xml-tag">&lt;Reference</span> <span class="xml-attr">Include</span>=<span class="xml-val">"UnityEngine.CoreModule"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;HintPath&gt;</span>$(RIMWORLD_PATH)\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll<span class="xml-tag">&lt;/HintPath&gt;</span>
+      <span class="xml-tag">&lt;Private&gt;</span>false<span class="xml-tag">&lt;/Private&gt;</span>
+    <span class="xml-tag">&lt;/Reference&gt;</span>
+
+    <span class="xml-tag">&lt;Reference</span> <span class="xml-attr">Include</span>=<span class="xml-val">"UnityEngine.IMGUIModule"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;HintPath&gt;</span>$(RIMWORLD_PATH)\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll<span class="xml-tag">&lt;/HintPath&gt;</span>
+      <span class="xml-tag">&lt;Private&gt;</span>false<span class="xml-tag">&lt;/Private&gt;</span>
+    <span class="xml-tag">&lt;/Reference&gt;</span>
+  <span class="xml-tag">&lt;/ItemGroup&gt;</span>
+
+  <span class="xml-tag">&lt;ItemGroup&gt;</span>
+    <span class="xml-tag">&lt;Compile</span> <span class="xml-attr">Include</span>=<span class="xml-val">"**\*.cs"</span> <span class="xml-tag">/&gt;</span>
+  <span class="xml-tag">&lt;/ItemGroup&gt;</span>
+
+  <span class="xml-tag">&lt;Import</span> <span class="xml-attr">Project</span>=<span class="xml-val">"$(MSBuildToolsPath)\Microsoft.CSharp.targets"</span> <span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;/Project&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>使用環境變數 <code>RIMWORLD_PATH</code></strong>
+      在系統環境變數加一條 <code>RIMWORLD_PATH=C:\...\RimWorld</code>，
+      HintPath 就可以跨機器共用（CI / 多台電腦）。
+      Visual Studio 重啟後即可讀取。
+    </div>
+
+    <h3>Rider 使用者的注意事項</h3>
+    <p>
+      Rider 可直接開啟 <code>.csproj</code>，所有設定與 Visual Studio 相同。
+      例外：Rider 的「Output Path」對話框會把路徑寫成絕對路徑；
+      建議直接手動編輯 <code>.csproj</code> XML 使用相對路徑或環境變數，
+      避免把本機絕對路徑 commit 進版本庫。
+    </p>
+  </div>
+
+  <!-- ── 2. 反編譯工具 ── -->
+  <div class="section">
+    <div class="section-title">2 · 反編譯工具</div>
+    <p>
+      RimWorld 的核心邏輯封裝在 <code>Assembly-CSharp.dll</code>（閉源），
+      但 IL（Intermediate Language）可完整反編譯回接近原始的 C#。
+      搞清楚某個系統怎麼跑，幾乎都靠反編譯，沒有捷徑。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>dnSpy <span class="tag tag-green">推薦</span></h3>
+        <p>
+          開源的 .NET 除錯器兼反編譯器。除了閱讀反編譯結果，
+          更支援 <strong>Attach to Process</strong>（附加到執行中的 RimWorld），
+          在反編譯出來的假 source 上設斷點，實際命中時暫停遊戲進程並顯示區域變數。
+          是 modder 的首選利器。
+        </p>
+        <p style="margin-top:0.5rem"><strong>下載：</strong><a href="https://github.com/dnSpy/dnSpy/releases" target="_blank">github.com/dnSpy/dnSpy</a>（已停止主線維護，但功能完整）<br>
+        或使用社群 fork <a href="https://github.com/dnSpyEx/dnSpy" target="_blank">dnSpyEx</a>（持續更新）</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>ILSpy <span class="tag tag-orange">輕量替代</span></h3>
+        <p>
+          官方持續維護，有獨立 GUI 程式與 Visual Studio Extension 兩種形式。
+          不支援 attach debug，但反編譯品質與搜尋速度俱佳。
+          <strong>ILSpy VS Extension</strong> 可讓你在 VS 內對著型別名稱按
+          <code>F12</code> 直接跳到反編譯結果，工作流程最順暢。
+        </p>
+        <p style="margin-top:0.5rem"><strong>下載：</strong><a href="https://github.com/icsharpcode/ILSpy" target="_blank">github.com/icsharpcode/ILSpy</a></p>
+      </div>
+    </div>
+
+    <h3>Assembly-CSharp.dll 的位置</h3>
+    <pre><span class="cm"># Windows Steam</span>
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll
+
+<span class="cm"># macOS Steam</span>
+~/Library/Application Support/Steam/steamapps/common/RimWorld/RimWorld.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll
+
+<span class="cm"># Linux Steam</span>
+~/.steam/steam/steamapps/common/RimWorld/RimWorld_Data/Managed/Assembly-CSharp.dll</pre>
+
+    <h3>dnSpy 使用技巧</h3>
+    <ol class="steps">
+      <li>
+        <strong>開啟 DLL</strong>：File → Open → 選 <code>Assembly-CSharp.dll</code>。
+        一次可以把整個 Managed 目錄拖進去，dnSpy 會自動掃描。
+      </li>
+      <li>
+        <strong>搜尋類別</strong>：Ctrl+Shift+K → 輸入類別名稱（如 <code>JobGiver_Work</code>），
+        支援 camelCase 縮寫（<code>JGW</code> 即可找到）。
+      </li>
+      <li>
+        <strong>追蹤呼叫鏈</strong>：右鍵方法名稱 → <em>Analyze</em>，
+        左側 Analyzer 視窗會展示「誰呼叫了這個方法」（Used By）
+        與「這個方法呼叫了誰」（Uses）。
+        從 <code>Pawn.Tick()</code> 追到底層業務邏輯只需幾次點擊。
+      </li>
+      <li>
+        <strong>Attach to Process debug</strong>：啟動 RimWorld，
+        dnSpy → Debug → Attach to Process → 選 <code>RimWorld64.exe</code>。
+        在反編譯出的方法體內設斷點（F9），當遊戲執行到該 IL 時會暫停。
+        <em>注意：Debug build 的中斷點命中率較高；Release 優化可能讓某些斷點永遠不命中。</em>
+      </li>
+      <li>
+        <strong>搜尋字串 / 欄位值</strong>：Edit → Search Assemblies，
+        Kind 選 <code>String</code> 或 <code>Field</code>，可快速定位硬編碼的標籤或 defName。
+      </li>
+    </ol>
+
+    <div class="callout callout-info">
+      <strong>搜尋策略建議</strong>
+      先從 XML Def 的 <code>&lt;thingClass&gt;</code> 或 <code>&lt;workerClass&gt;</code> 欄位找到進入點類別，
+      再用 Analyzer 展開呼叫樹。不要從 <code>Main()</code> 追，Unity 的生命週期是
+      <code>MonoBehaviour</code> 驅動的，入口在 <code>Root.Start()</code>（Verse 命名空間）。
+    </div>
+  </div>
+
+  <!-- ── 3. 開發迴圈 ── -->
+  <div class="section">
+    <div class="section-title">3 · 開發迴圈（Development Loop）</div>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>XML / Def 更改</h3>
+        <p>改完存檔後，在遊戲內 Dev mode 介面按 <strong>Reload Defs</strong>，
+        無需重啟。適用於調整數值、新增 Def 等純資料變更。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>C# DLL 更改</h3>
+        <p>必須<strong>完全重啟遊戲</strong>。Mono 不支援 assembly unload / hot reload，
+        改了 DLL 進程仍持有舊版本的記憶體映射。</p>
+      </div>
+    </div>
+
+    <h3>開啟 Dev Mode</h3>
+    <p>有兩種方式，效果相同：</p>
+
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <h3>方法 A：啟動參數</h3>
+        <p>在 Steam 右鍵 → 內容 → 啟動選項，填入：</p>
+        <pre style="margin-top:0.6rem">-dev</pre>
+        <p style="margin-top:0.4rem;font-size:0.85rem;color:var(--text-dim)">每次啟動都進入 Dev mode，適合開發中的機器。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>方法 B：Preferences.xml</h3>
+        <p>編輯 RimWorld 設定檔，把 <code>&lt;devMode&gt;</code> 改為 <code>True</code>：</p>
+        <pre style="margin-top:0.6rem"><span class="cm"># 檔案位置（Windows）</span>
+%USERPROFILE%\AppData\LocalLow\Ludeon Studios\
+  RimWorld by Ludeon Studios\Config\Preferences.xml
+
+<span class="xml-tag">&lt;devMode&gt;</span><span class="xml-val">True</span><span class="xml-tag">&lt;/devMode&gt;</span></pre>
+      </div>
+    </div>
+
+    <h3>Dev Mode 在畫面上提供什麼</h3>
+    <p>進入遊戲後，右上角會出現一排工具列，關鍵按鈕包括：</p>
+
+    <table>
+      <tr><th>按鈕</th><th>功能</th><th>Modding 用途</th></tr>
+      <tr>
+        <td><code>Reload Defs</code></td>
+        <td>重新載入所有 XML Def</td>
+        <td>調整數值後立即看效果，免重啟</td>
+      </tr>
+      <tr>
+        <td><code>Log</code></td>
+        <td>打開遊戲內 Log 視窗</td>
+        <td>看 <code>Log.Error</code> / <code>Log.Warning</code> 輸出</td>
+      </tr>
+      <tr>
+        <td><code>Spawn Pawn</code></td>
+        <td>生成任意 Pawn</td>
+        <td>快速測試自訂 Hediff、ThingComp 行為</td>
+      </tr>
+      <tr>
+        <td><code>Inspect String</code></td>
+        <td>滑鼠懸停顯示物件偵錯資訊</td>
+        <td>確認 Def 是否正確綁定</td>
+      </tr>
+      <tr>
+        <td><code>God Mode</code></td>
+        <td>殖民者無敵，建設瞬間完成</td>
+        <td>跳過遊戲前置，快速到達測試場景</td>
+      </tr>
+    </table>
+
+    <h3>Log 檔案位置</h3>
+    <pre><span class="cm"># Windows（Unity Player.log）</span>
+%USERPROFILE%\AppData\LocalLow\Ludeon Studios\RimWorld by Ludeon Studios\Player.log
+
+<span class="cm"># macOS</span>
+~/Library/Logs/Unity/Player.log
+
+<span class="cm"># Linux</span>
+~/.config/unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Player.log</pre>
+
+    <div class="callout callout-info">
+      <strong>Log 在開發中的重要性</strong>
+      RimWorld 的 Mod loading 錯誤（型別找不到、Def parse 失敗、Harmony patch 例外）
+      全都輸出到 Player.log。遊戲閃退時這是第一個要看的地方。
+      在 C# 裡用 <code>Log.Error("msg")</code>、<code>Log.Warning("msg")</code>
+      寫出的訊息也會進這個檔，並帶上呼叫堆疊。
+    </div>
+
+    <h3>推薦輔助 Mod</h3>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>HugsLib</h3>
+        <p>
+          提供更好用的 Log 視窗（支援篩選、複製、上傳分享）、
+          Mod setting 框架、更完善的 Harmony bootstrapping。
+          許多 mod 以它為基底。Steam Workshop 有現成安裝。
+        </p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>RimWorld Dev Tools</h3>
+        <p>
+          擴充 Dev mode 工具列，增加 Pawn property editor、
+          Hediff 注入介面、Research 一鍵解鎖等。
+          開發期間大幅縮短從「build」到「看到效果」的時間。
+        </p>
+      </div>
+    </div>
+
+    <h3>典型開發迴圈（C# Mod）</h3>
+    <ol class="steps">
+      <li>在 IDE 修改 C# 邏輯，Build（<code>Ctrl+Shift+B</code>），DLL 自動輸出到 <code>Assemblies/</code>。</li>
+      <li>切換到 RimWorld，關閉遊戲（Alt+F4），重新啟動。</li>
+      <li>進入存檔或新遊戲，在 Dev Log 確認沒有 Load Error。</li>
+      <li>觸發測試場景，觀察行為；若有 Bug，看 Log 或用 dnSpy Attach debug。</li>
+      <li>重複。</li>
+    </ol>
+  </div>
+
+  <!-- ── 4. About.xml ── -->
+  <div class="section">
+    <div class="section-title">4 · About.xml — 進階欄位</div>
+    <p>
+      總覽頁已展示最小範例。這裡補充 <code>modDependencies</code> 與
+      <code>loadAfter</code> / <code>loadBefore</code> 的正確寫法——這些欄位在
+      多 mod 互動時至關重要。
+    </p>
+
+    <pre><span class="xml-tag">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span>
+<span class="xml-tag">&lt;ModMetaData&gt;</span>
+  <span class="xml-tag">&lt;name&gt;</span>My Advanced Mod<span class="xml-tag">&lt;/name&gt;</span>
+  <span class="xml-tag">&lt;author&gt;</span>YourName<span class="xml-tag">&lt;/author&gt;</span>
+
+  <span class="cm">&lt;!-- packageId 全域唯一，格式：Author.ModName，只用 ASCII 英數與句點 --&gt;</span>
+  <span class="xml-tag">&lt;packageId&gt;</span>YourName.MyAdvancedMod<span class="xml-tag">&lt;/packageId&gt;</span>
+
+  <span class="xml-tag">&lt;supportedVersions&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>1.5<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/supportedVersions&gt;</span>
+
+  <span class="cm">&lt;!-- 宣告硬性依賴：缺少時啟動器警告，並拒絕啟動遊戲 --&gt;</span>
+  <span class="xml-tag">&lt;modDependencies&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;packageId&gt;</span>brrainz.harmony<span class="xml-tag">&lt;/packageId&gt;</span>
+      <span class="xml-tag">&lt;displayName&gt;</span>Harmony<span class="xml-tag">&lt;/displayName&gt;</span>
+      <span class="xml-tag">&lt;steamWorkshopUrl&gt;</span>https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077<span class="xml-tag">&lt;/steamWorkshopUrl&gt;</span>
+      <span class="xml-tag">&lt;downloadUrl&gt;</span>https://github.com/pardeike/HarmonyRimWorld/releases<span class="xml-tag">&lt;/downloadUrl&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;packageId&gt;</span>UnlimitedHugs.HugsLib<span class="xml-tag">&lt;/packageId&gt;</span>
+      <span class="xml-tag">&lt;displayName&gt;</span>HugsLib<span class="xml-tag">&lt;/displayName&gt;</span>
+      <span class="xml-tag">&lt;steamWorkshopUrl&gt;</span>https://steamcommunity.com/sharedfiles/filedetails/?id=818773962<span class="xml-tag">&lt;/steamWorkshopUrl&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/modDependencies&gt;</span>
+
+  <span class="cm">&lt;!-- 宣告載入順序：Def 繼承與 Harmony patch 執行順序依賴此設定 --&gt;</span>
+  <span class="xml-tag">&lt;loadAfter&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>brrainz.harmony<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>UnlimitedHugs.HugsLib<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/loadAfter&gt;</span>
+
+  <span class="cm">&lt;!-- 宣告必須在某 mod 之前載入（較少用） --&gt;</span>
+  <span class="xml-tag">&lt;loadBefore&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>SomeOther.CompatMod<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/loadBefore&gt;</span>
+
+  <span class="xml-tag">&lt;description&gt;</span>An example mod with proper dependency declarations.<span class="xml-tag">&lt;/description&gt;</span>
+<span class="xml-tag">&lt;/ModMetaData&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>modDependencies vs loadAfter 的差異</strong>
+      <code>modDependencies</code> 是強制需求：依賴的 Mod 若未啟用，RimWorld 啟動器會警告，
+      甚至拒絕進入遊戲。<code>loadAfter</code> 只影響載入順序，不強制對方存在。
+      兩者通常需要同時宣告：先用 <code>modDependencies</code> 強制依賴，
+      再用 <code>loadAfter</code> 確保載入序正確。
+    </div>
+  </div>
+
+  <!-- ── 5. 常見坑 ── -->
+  <div class="section">
+    <div class="section-title">5 · 常見坑</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>Copy Local = true <span class="tag tag-red">高頻</span></h3>
+        <p>
+          預設值是 <code>true</code>，建置時會把 <code>Assembly-CSharp.dll</code>、
+          <code>0Harmony.dll</code>、<code>UnityEngine.*.dll</code> 都複製到輸出目錄。
+          遊戲啟動時若在 <code>Assemblies/</code> 發現這些 DLL，會載入<em>你複製的舊版</em>，
+          蓋掉執行時的正確版本，導致型別衝突、<code>TypeLoadException</code>、或詭異的執行錯誤。
+          <strong>所有 Reference 的 Copy Local 都必須是 false</strong>。
+        </p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>packageId 不唯一 <span class="tag tag-orange">中頻</span></h3>
+        <p>
+          RimWorld Mod Manager 以 <code>packageId</code> 識別 Mod，重複的 ID
+          會導致 Mod 載入衝突、存檔損壞、依賴解析失敗。
+          格式規範：<code>AuthorName.ModName</code>，只用 ASCII 英數字母與句點，
+          大小寫不敏感。<strong>永遠不要使用</strong> <code>example.mod</code> 或
+          <code>Author.NewMod</code> 這類通用名稱。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>.NET Standard / Core 不相容 <span class="tag tag-orange">中頻</span></h3>
+        <p>
+          Visual Studio 新專案精靈預設可能產生 <code>netstandard2.0</code> 或
+          <code>net8.0</code> 的 TFM。這些格式 Mono 無法載入，遊戲 Log 會出現
+          <code>BadImageFormatException</code> 或靜默忽略（DLL 存在但類別不注冊）。
+          確認 <code>.csproj</code> 內有 <code>&lt;TargetFrameworkVersion&gt;v4.7.2&lt;/TargetFrameworkVersion&gt;</code>
+          而非 <code>&lt;TargetFramework&gt;net472&lt;/TargetFramework&gt;</code>
+          （後者是 SDK-style 格式，部分版本 Mono 仍可接受，但前者更保險）。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Harmony 重複載入 <span class="tag tag-orange">中頻</span></h3>
+        <p>
+          若把 <code>0Harmony.dll</code> 打包進自己的 <code>Assemblies/</code>，
+          且其他 Mod 也打包了不同版本的 Harmony，CLR 會載入多個版本的 Harmony 到同一 AppDomain，
+          Patch 追蹤表錯亂，導致覆蓋彼此的 Patch 或無限遞迴。
+          <strong>永遠只 Reference，絕不打包 0Harmony.dll</strong>。
+        </p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>HintPath 指向絕對路徑 <span class="tag tag-purple">低頻但惱人</span></h3>
+        <p>
+          把 <code>C:\Program Files (x86)\Steam\...</code> 寫死在 <code>.csproj</code> 後
+          commit 進版本庫，其他協作者或 CI 機器立刻爆紅。
+          改用 <strong>環境變數</strong>（<code>$(RIMWORLD_PATH)</code>）
+          或相對於 solution 的 <code>libs/</code> 符號連結目錄。
+        </p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>Debug symbols 缺失 <span class="tag tag-purple">低頻</span></h3>
+        <p>
+          <code>DebugType</code> 預設是 <code>full</code>（Windows PDB 格式），
+          Mono 讀不懂，dnSpy Attach debug 時看不到區域變數名稱。
+          改為 <code>&lt;DebugType&gt;portable&lt;/DebugType&gt;</code>，
+          Mono 可讀取，dnSpy 也相容。
+        </p>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>存檔相容性警告</strong>
+      修改已存在 Def 的 <code>defName</code>、或刪除 <code>ThingComp</code>、
+      <code>Hediff</code> 類別後，舊存檔嘗試讀取對應資料時會觸發
+      <code>NullReferenceException</code>，嚴重時整個存檔損壞。
+      開發期間用獨立測試存檔，正式發布前絕不重命名已上線的 defName 或類別名稱。
+    </div>
+  </div>
+
+  <!-- ── 快速檢查清單 ── -->
+  <div class="section">
+    <div class="section-title">快速檢查清單</div>
+    <p>每次新建 Mod 專案時，過一遍以下確認事項：</p>
+    <table>
+      <tr><th>項目</th><th>正確設定</th><th>狀態</th></tr>
+      <tr>
+        <td>目標框架</td>
+        <td><code>.NET Framework 4.7.2</code></td>
+        <td><span class="tag tag-red">必查</span></td>
+      </tr>
+      <tr>
+        <td>平台目標</td>
+        <td><code>x64</code>（或 Any CPU）</td>
+        <td><span class="tag tag-red">必查</span></td>
+      </tr>
+      <tr>
+        <td>所有 Reference 的 Copy Local</td>
+        <td><code>false</code></td>
+        <td><span class="tag tag-red">必查</span></td>
+      </tr>
+      <tr>
+        <td>輸出路徑</td>
+        <td>指向 <code>Mods/YourMod/Assemblies/</code></td>
+        <td><span class="tag tag-green">推薦</span></td>
+      </tr>
+      <tr>
+        <td>DebugType</td>
+        <td><code>portable</code></td>
+        <td><span class="tag tag-green">推薦</span></td>
+      </tr>
+      <tr>
+        <td>HintPath</td>
+        <td>使用環境變數或相對路徑</td>
+        <td><span class="tag tag-green">推薦</span></td>
+      </tr>
+      <tr>
+        <td>About.xml — packageId</td>
+        <td>全域唯一，符合 <code>Author.ModName</code> 格式</td>
+        <td><span class="tag tag-red">必查</span></td>
+      </tr>
+      <tr>
+        <td>0Harmony.dll</td>
+        <td>Reference only，不打包進 Assemblies/</td>
+        <td><span class="tag tag-red">必查</span></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

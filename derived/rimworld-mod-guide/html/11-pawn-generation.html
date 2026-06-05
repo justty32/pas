@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pawn 生成與屬性 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html" class="active">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>Pawn 生成與屬性</h1>
+  <p>從 PawnKindDef 到 PawnGenerator，深入 Pawn 的物件結構、Backstory、Trait、Skill、Hediff 與生成流程——給要程式化造人的工程師。</p>
+  <span class="badge">Chapter 11 · Pawn Generation</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1  PawnKindDef 結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 PawnKindDef：Pawn 的「種類藍圖」</div>
+
+    <p><code>PawnKindDef</code> 是生成 Pawn 的入口設定檔。它不描述「單一個體」，而是描述「<strong>一類</strong> Pawn 該如何被生出來」——用哪個 race、屬於哪個陣營、戰力多高、生成時帶哪些裝備與衣物標籤。<code>PawnGenerator</code> 會讀取它，再加上隨機種子，產出實際的 <code>Pawn</code> 實例。</p>
+
+    <div class="callout callout-info">
+      <strong>PawnKindDef vs ThingDef（race）的分工</strong>
+      <code>ThingDef</code>（其 <code>race</code> 欄位是 <code>RaceProperties</code>）描述「這個物種本質上是什麼」（智力、體型、食性、解剖學）。<code>PawnKindDef</code> 描述「這個<em>角色類型</em>怎麼被生成」（哪個陣營的海盜、帶什麼槍、年齡分布）。同一個 race（如 Human）可以對應數十個 PawnKindDef（Colonist、Pirate、Tribesman、Mercenary_Heavy…）。
+    </div>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>race</code></td><td><code>ThingDef</code></td><td>指向物種 ThingDef（如 <code>Human</code>），其 <code>race</code> 子節點才是 RaceProperties</td></tr>
+        <tr><td><code>defaultFactionType</code></td><td><code>FactionDef</code></td><td>未指定 faction 時的預設陣營型別（生成請求可覆寫）</td></tr>
+        <tr><td><code>combatPower</code></td><td><code>float</code></td><td>戰力值，襲擊規模 / 賞金 / 威脅點數的計算依據</td></tr>
+        <tr><td><code>apparelTags</code></td><td><code>List&lt;string&gt;</code></td><td>可穿戴衣物的標籤白名單（對應 ThingDef.apparel.tags）</td></tr>
+        <tr><td><code>weaponTags</code></td><td><code>List&lt;string&gt;</code></td><td>可持有武器的標籤白名單（對應 ThingDef.weaponTags）</td></tr>
+        <tr><td><code>apparelMoney</code></td><td><code>FloatRange</code></td><td>生成衣物的預算範圍，越高越精良</td></tr>
+        <tr><td><code>weaponMoney</code></td><td><code>FloatRange</code></td><td>生成武器的預算範圍</td></tr>
+        <tr><td><code>backstoryFilters</code> / <code>backstoryCategories</code></td><td><code>List&lt;...&gt;</code></td><td>限制可抽到的 Backstory 類別（如 Tribal、Pirate）</td></tr>
+        <tr><td><code>itemQuality</code></td><td><code>QualityCategory?</code></td><td>強制裝備品質（如 Mercenary 給 Good 以上）</td></tr>
+        <tr><td><code>techHediffsTags</code></td><td><code>List&lt;string&gt;</code></td><td>可植入的仿生 / 義體 Hediff 標籤（高階傭兵會帶義肢）</td></tr>
+        <tr><td><code>chemicalAddictionChance</code></td><td><code>float</code></td><td>生成時帶藥物成癮 Hediff 的機率</td></tr>
+      </tbody>
+    </table>
+
+    <h3>XML 範例：自訂一個 PawnKindDef</h3>
+
+<pre><span class="cm">&lt;!-- Defs/PawnKindDefs/PawnKinds_MyRaiders.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;PawnKindDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BasePlayerPawnKind"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_CyberMercenary<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>cyber mercenary<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;race&gt;</span>Human<span class="xml-tag">&lt;/race&gt;</span>
+    <span class="xml-tag">&lt;defaultFactionType&gt;</span>OutlanderRough<span class="xml-tag">&lt;/defaultFactionType&gt;</span>
+    <span class="xml-tag">&lt;combatPower&gt;</span><span class="xml-val">180</span><span class="xml-tag">&lt;/combatPower&gt;</span>
+    <span class="xml-tag">&lt;itemQuality&gt;</span>Good<span class="xml-tag">&lt;/itemQuality&gt;</span>
+    <span class="xml-tag">&lt;forceNormalGearQuality&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/forceNormalGearQuality&gt;</span>
+
+    <span class="cm">&lt;!-- 衣物：預算 + 標籤白名單 --&gt;</span>
+    <span class="xml-tag">&lt;apparelMoney&gt;</span><span class="xml-val">1200~2500</span><span class="xml-tag">&lt;/apparelMoney&gt;</span>
+    <span class="xml-tag">&lt;apparelTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>IndustrialAdvanced<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>SpacerMilitary<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/apparelTags&gt;</span>
+
+    <span class="cm">&lt;!-- 武器：預算 + 標籤白名單 --&gt;</span>
+    <span class="xml-tag">&lt;weaponMoney&gt;</span><span class="xml-val">800~1800</span><span class="xml-tag">&lt;/weaponMoney&gt;</span>
+    <span class="xml-tag">&lt;weaponTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>GunHeavy<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>SpacerGun<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/weaponTags&gt;</span>
+
+    <span class="cm">&lt;!-- 可植入的義體 Hediff（高階傭兵帶仿生件）--&gt;</span>
+    <span class="xml-tag">&lt;techHediffsTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Advanced<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/techHediffsTags&gt;</span>
+    <span class="xml-tag">&lt;techHediffsChance&gt;</span><span class="xml-val">0.35</span><span class="xml-tag">&lt;/techHediffsChance&gt;</span>
+
+    <span class="xml-tag">&lt;backstoryCategories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Outlander<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Pirate<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/backstoryCategories&gt;</span>
+  <span class="xml-tag">&lt;/PawnKindDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>標籤如何配對</strong>
+      <code>apparelTags</code> / <code>weaponTags</code> 是「PawnKind 端」的白名單。對應的「物品端」是 ThingDef 上的 <code>&lt;apparel&gt;&lt;tags&gt;</code> 與 <code>&lt;weaponTags&gt;</code>。生成器會取兩邊標籤的交集，再用 <code>apparelMoney</code> / <code>weaponMoney</code> 預算篩選。想讓自訂武器能被某類 NPC 拿到，記得在武器 ThingDef 補上對應 weaponTag。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  PawnGenerationRequest 與 GeneratePawn
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 PawnGenerationRequest 與 PawnGenerator.GeneratePawn</div>
+
+    <p>實際生成 Pawn 走的是 <code>PawnGenerator.GeneratePawn(PawnGenerationRequest request)</code>。<code>PawnGenerationRequest</code> 是一個 <code>struct</code>，欄位非常多（1.5 約 50+ 個），但建構子只要求 <code>PawnKindDef</code>，其餘皆有預設值，可用具名引數選擇性覆寫。</p>
+
+    <h3>常用建構參數</h3>
+
+    <table>
+      <thead>
+        <tr><th>參數</th><th>型別</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>kind</code></td><td><code>PawnKindDef</code></td><td>必填，決定 race / 裝備 / backstory 範圍</td></tr>
+        <tr><td><code>faction</code></td><td><code>Faction</code></td><td>所屬陣營；<span class="tag tag-orange">null 有特殊語意（見 §10）</span></td></tr>
+        <tr><td><code>context</code></td><td><code>PawnGenerationContext</code></td><td><code>PlayerStarter</code> / <code>NonPlayer</code> / <code>All</code>，影響開局特殊規則</td></tr>
+        <tr><td><code>forceGenerateNewPawn</code></td><td><code>bool</code></td><td>true 時不從 WorldPawns 池回收，強制造新的</td></tr>
+        <tr><td><code>allowDead</code> / <code>allowDowned</code></td><td><code>bool</code></td><td>允許生成已死亡 / 倒地的 Pawn（屍體、俘虜場景）</td></tr>
+        <tr><td><code>canGeneratePawnRelations</code></td><td><code>bool</code></td><td>是否生成與現有 Pawn 的親屬關係</td></tr>
+        <tr><td><code>fixedBiologicalAge</code> / <code>fixedChronologicalAge</code></td><td><code>float?</code></td><td>鎖定生理 / 實際年齡（cryptosleep 會讓兩者不同）</td></tr>
+        <tr><td><code>fixedGender</code></td><td><code>Gender?</code></td><td>鎖定性別</td></tr>
+        <tr><td><code>fixedLastName</code> / <code>fixedBirthName</code></td><td><code>string</code></td><td>鎖定姓氏 / 名字</td></tr>
+        <tr><td><code>forcedTraits</code></td><td><code>List&lt;TraitDef&gt;</code></td><td>強制帶上的特質</td></tr>
+        <tr><td><code>prohibitedTraits</code></td><td><code>List&lt;TraitDef&gt;</code></td><td>禁止抽到的特質</td></tr>
+        <tr><td><code>allowGay</code> / <code>allowAddictions</code> / <code>allowFood</code></td><td><code>bool</code></td><td>細部開關</td></tr>
+        <tr><td><code>colonistRelationChanceFactor</code></td><td><code>float</code></td><td>與殖民者產生關係的機率倍率</td></tr>
+        <tr><td><code>biocodeWeaponChance</code></td><td><code>float</code></td><td>武器綁定生物碼的機率（綁定後他人無法使用）</td></tr>
+        <tr><td><code>developmentalStages</code></td><td><code>DevelopmentalStage</code> (flags)</td><td>1.4+：Newborn / Child / Adult，控制可生成的發育階段</td></tr>
+      </tbody>
+    </table>
+
+    <h3>建構 Request 的標準寫法</h3>
+
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// 具名引數覆寫，未列出的欄位走預設值</span>
+<span class="kw">var</span> request = <span class="kw">new</span> <span class="ty">PawnGenerationRequest</span>(
+    kind:                  <span class="ty">PawnKindDefOf</span>.Colonist,
+    faction:               <span class="ty">Faction</span>.OfPlayer,
+    context:               <span class="ty">PawnGenerationContext</span>.NonPlayer,
+    tile:                  -<span class="nu">1</span>,
+    forceGenerateNewPawn:  <span class="kw">true</span>,
+    allowDead:             <span class="kw">false</span>,
+    allowDowned:           <span class="kw">false</span>,
+    canGeneratePawnRelations: <span class="kw">false</span>,
+    mustBeCapableOfViolence:  <span class="kw">true</span>,
+    colonistRelationChanceFactor: <span class="nu">0f</span>,
+    fixedGender:           <span class="ty">Gender</span>.Male,
+    fixedBiologicalAge:    <span class="nu">28f</span>,
+    fixedChronologicalAge: <span class="nu">28f</span>,
+    forcedTraits:          <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">TraitDef</span>&gt; { <span class="ty">TraitDefOf</span>.Tough },
+    prohibitedTraits:      <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">TraitDef</span>&gt; { <span class="ty">TraitDefOf</span>.Wimp }
+);
+
+<span class="ty">Pawn</span> pawn = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(request);</pre>
+
+    <div class="callout callout-warn">
+      <strong>建構子簽章會隨版本變動</strong>
+      <code>PawnGenerationRequest</code> 的建構子參數順序與數量在 1.3 → 1.4 → 1.5 之間多次擴充（gene、xenotype、developmentalStages 都是後加的）。<strong>務必使用具名引數</strong>而非位置引數，否則跨版本編譯會錯位甚至靜默傳錯值。Harmony patch 也別硬性比對參數數量。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>有簡便版本：PawnGenerator.GeneratePawn(kind, faction)</strong>
+      若只需要快速造一個 Pawn，可直接呼叫 <code>PawnGenerator.GeneratePawn(PawnKindDef kind, Faction faction = null)</code> 多載，內部會用預設 Request。需要細控時才手動建 Request。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  Pawn 的核心結構
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 Pawn 的核心物件結構（Tracker 模式）</div>
+
+    <p>生成出來的 <code>Pawn</code>（繼承自 <code>ThingWithComps</code>）本身只是個「容器」，真正的狀態被拆進一組 <strong>Tracker 物件</strong>（命名慣例 <code>Pawn_XxxTracker</code>）。理解這些子物件的職責分工，是操作 Pawn 的關鍵。</p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>pawn.health <span class="tag tag-red">Pawn_HealthTracker</span></h3>
+        <p>傷病與健康狀態。核心子物件 <code>health.hediffSet</code>（所有 Hediff 集合）。新增狀態用 <code>health.AddHediff(...)</code>，傷害用 <code>health.AddHediff</code> 或 <code>TakeDamage</code>。能力值（視覺、行走）由 <code>health.capacities</code> 計算。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>pawn.story <span class="tag tag-purple">Pawn_StoryTracker</span></h3>
+        <p>背景與外觀。<code>story.Childhood</code> / <code>story.Adulthood</code>（BackstoryDef）、<code>story.traits</code>（TraitSet）、髮型 <code>story.hairDef</code>、膚色、身體類型 <code>story.bodyType</code>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>pawn.skills <span class="tag tag-green">Pawn_SkillTracker</span></h3>
+        <p>技能。<code>skills.skills</code> 是 <code>List&lt;SkillRecord&gt;</code>，每個含 <code>Level</code>、<code>passion</code>（熱情）、<code>xpSinceLastLevel</code>。取單一技能用 <code>skills.GetSkill(SkillDefOf.Shooting)</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>pawn.needs <span class="tag tag-orange">Pawn_NeedsTracker</span></h3>
+        <p>需求。食物、休息、娛樂、心情等。取特定需求 <code>needs.food</code>、<code>needs.rest</code>、<code>needs.mood</code>。心情下的想法集合在 <code>needs.mood.thoughts</code>。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>pawn.equipment <span class="tag tag-blue">Pawn_EquipmentTracker</span></h3>
+        <p>手持裝備（主要是武器）。<code>equipment.Primary</code> 是主武器（ThingWithComps）。加裝備 <code>equipment.AddEquipment(...)</code>，<code>equipment.MakeRoomFor(...)</code> 先清位置。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>pawn.apparel <span class="tag tag-cyan">Pawn_ApparelTracker</span></h3>
+        <p>身上衣物。<code>apparel.WornApparel</code> 是 <code>List&lt;Apparel&gt;</code>。穿衣 <code>apparel.Wear(apparelThing)</code>。會自動處理身體部位覆蓋衝突。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>pawn.jobs <span class="tag tag-green">Pawn_JobTracker</span></h3>
+        <p>當前工作與佇列。<code>jobs.curJob</code> / <code>jobs.curDriver</code>。下達工作 <code>jobs.StartJob(job, JobCondition...)</code>，中斷 <code>jobs.EndCurrentJob(...)</code>。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>pawn.mindState <span class="tag tag-red">Pawn_MindState</span></h3>
+        <p>AI 心智狀態。<code>mindState.mentalStateHandler</code>（精神崩潰）、<code>mindState.duty</code>（Lord 指派的任務）、敵意追蹤、最後攻擊者等。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>其他常用 Tracker</strong>
+      <code>pawn.relations</code>（社交關係 / 親屬）、<code>pawn.workSettings</code>（工作優先序）、<code>pawn.timetable</code>（作息表）、<code>pawn.ageTracker</code>（年齡與生命週期）、<code>pawn.records</code>（統計紀錄）、<code>pawn.genes</code>（1.4+ 基因，Biotech DLC）、<code>pawn.guest</code>（俘虜 / 客人狀態）。所有 Tracker 都實作 <code>IExposable</code>，由 Pawn 的 ExposeData 串接存檔。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  RaceProperties
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 RaceProperties：物種的本質定義</div>
+
+    <p><code>RaceProperties</code> 掛在物種 ThingDef 的 <code>&lt;race&gt;</code> 節點下（C# 端 <code>thingDef.race</code>）。它決定這個物種「是什麼」，影響 AI、食物、繁殖、解剖學等深層行為。</p>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>intelligence</code></td><td><code>Intelligence</code></td><td><code>Animal</code> / <code>ToolUser</code> / <code>Humanlike</code>。決定能否用工具、有 backstory、組陣營</td></tr>
+        <tr><td><code>baseBodySize</code></td><td><code>float</code></td><td>體型倍率（人類 = 1.0）。影響食量、負重、傷害縮放、肉量</td></tr>
+        <tr><td><code>baseHealthScale</code></td><td><code>float</code></td><td>整體血量縮放（與 body size 分離）</td></tr>
+        <tr><td><code>lifeExpectancy</code></td><td><code>float</code></td><td>平均壽命（年），影響年齡曲線與老化 Hediff</td></tr>
+        <tr><td><code>foodType</code></td><td><code>FoodTypeFlags</code></td><td>可食的食物類別（flags 組合，見下）</td></tr>
+        <tr><td><code>wildBiomes</code></td><td><code>List&lt;...&gt;</code></td><td>野生出沒的生態域與密度</td></tr>
+        <tr><td><code>lifeStageAges</code></td><td><code>List&lt;LifeStageAge&gt;</code></td><td>各生命階段（幼體→成體）的年齡門檻與貼圖</td></tr>
+        <tr><td><code>body</code></td><td><code>BodyDef</code></td><td>解剖學定義（有哪些身體部位、可被打哪）</td></tr>
+        <tr><td><code>hasGenders</code></td><td><code>bool</code></td><td>是否有性別之分</td></tr>
+        <tr><td><code>trainability</code></td><td><code>TrainabilityDef</code></td><td>動物可訓練程度（None / Intermediate / Advanced）</td></tr>
+        <tr><td><code>petness</code></td><td><code>float</code></td><td>成為寵物的傾向</td></tr>
+      </tbody>
+    </table>
+
+    <h3>FoodTypeFlags 常見組合</h3>
+
+<pre><span class="cm">// FoodTypeFlags 是 [Flags] enum，可用 | 組合</span>
+<span class="ty">FoodTypeFlags</span>.OmnivoreAnimal   <span class="cm">// 肉 + 植物（雜食動物）</span>
+<span class="ty">FoodTypeFlags</span>.CarnivoreAnimal  <span class="cm">// 純肉食</span>
+<span class="ty">FoodTypeFlags</span>.OmnivoreHuman    <span class="cm">// 人類雜食（含熟食、餐點）</span>
+<span class="ty">FoodTypeFlags</span>.VegetarianAnimal <span class="cm">// 純素</span>
+
+<span class="cm">// 程式中檢查某物種是否吃肉</span>
+<span class="kw">bool</span> eatsMeat = (pawn.<span class="nm">RaceProps</span>.foodType &amp; <span class="ty">FoodTypeFlags</span>.Meat) != <span class="nu">0</span>;</pre>
+
+    <h3>XML：自訂物種的 RaceProperties</h3>
+
+<pre><span class="cm">&lt;!-- ThingDef 的 race 節點（節錄）--&gt;</span>
+<span class="xml-tag">&lt;race&gt;</span>
+  <span class="xml-tag">&lt;intelligence&gt;</span>Animal<span class="xml-tag">&lt;/intelligence&gt;</span>
+  <span class="xml-tag">&lt;baseBodySize&gt;</span><span class="xml-val">2.4</span><span class="xml-tag">&lt;/baseBodySize&gt;</span>
+  <span class="xml-tag">&lt;baseHealthScale&gt;</span><span class="xml-val">4.0</span><span class="xml-tag">&lt;/baseHealthScale&gt;</span>
+  <span class="xml-tag">&lt;lifeExpectancy&gt;</span><span class="xml-val">22</span><span class="xml-tag">&lt;/lifeExpectancy&gt;</span>
+  <span class="xml-tag">&lt;foodType&gt;</span>OmnivoreAnimal<span class="xml-tag">&lt;/foodType&gt;</span>
+  <span class="xml-tag">&lt;trainability&gt;</span>Advanced<span class="xml-tag">&lt;/trainability&gt;</span>
+  <span class="xml-tag">&lt;body&gt;</span>QuadrupedAnimalWithPawsAndTail<span class="xml-tag">&lt;/body&gt;</span>
+  <span class="xml-tag">&lt;hasGenders&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/hasGenders&gt;</span>
+  <span class="xml-tag">&lt;lifeStageAges&gt;</span>
+    <span class="xml-tag">&lt;li&gt;&lt;def&gt;</span>AnimalBaby<span class="xml-tag">&lt;/def&gt;&lt;minAge&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/minAge&gt;&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;&lt;def&gt;</span>AnimalJuvenile<span class="xml-tag">&lt;/def&gt;&lt;minAge&gt;</span><span class="xml-val">0.3</span><span class="xml-tag">&lt;/minAge&gt;&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;&lt;def&gt;</span>AnimalAdult<span class="xml-tag">&lt;/def&gt;&lt;minAge&gt;</span><span class="xml-val">1.0</span><span class="xml-tag">&lt;/minAge&gt;&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/lifeStageAges&gt;</span>
+<span class="xml-tag">&lt;/race&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>intelligence 是行為的總開關</strong>
+      設為 <code>Animal</code> 的物種<strong>不會</strong>抽 backstory、不能裝備武器衣物、不能加入玩家陣營為「殖民者」（只能當動物）。要做「可玩的類人異種族」必須是 <code>Humanlike</code>。改錯這個值會讓整個生成流程的後半段被跳過。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  完整生成範例
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 完整範例：從 C# 生成一個 Pawn 並放上地圖</div>
+
+    <p>把前面的概念串起來。下面是一個工具方法：生成指定 PawnKind、設好陣營、塞進你想要的裝備，最後 spawn 到地圖某格。</p>
+
+    <ol class="steps">
+      <li>建構 <code>PawnGenerationRequest</code></li>
+      <li><code>PawnGenerator.GeneratePawn</code> 取得 Pawn 實例（此時尚未在地圖上）</li>
+      <li>（可選）程式化調整 trait / skill / hediff / equipment</li>
+      <li>用 <code>GenSpawn.Spawn</code> 把它放到地圖座標</li>
+      <li>（可選）下達初始 Job 或加入 Lord（群體 AI）</li>
+    </ol>
+
+<pre><span class="kw">using</span> <span class="ty">System.Linq</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public static class</span> <span class="ty">PawnSpawnUtility</span>
+{
+    <span class="kw">public static</span> <span class="ty">Pawn</span> <span class="nm">SpawnCustomPawn</span>(<span class="ty">Map</span> map, <span class="ty">IntVec3</span> cell, <span class="ty">Faction</span> faction)
+    {
+        <span class="cm">// ① 建構生成請求（具名引數）</span>
+        <span class="kw">var</span> request = <span class="kw">new</span> <span class="ty">PawnGenerationRequest</span>(
+            kind:                 <span class="ty">PawnKindDefOf</span>.Colonist,
+            faction:              faction,
+            context:              <span class="ty">PawnGenerationContext</span>.NonPlayer,
+            forceGenerateNewPawn: <span class="kw">true</span>,
+            mustBeCapableOfViolence: <span class="kw">true</span>,
+            fixedBiologicalAge:   <span class="nu">25f</span>,
+            fixedChronologicalAge:<span class="nu">25f</span>,
+            allowFood:            <span class="kw">true</span>);
+
+        <span class="cm">// ② 生成（尚未在地圖上，只是個記憶體物件）</span>
+        <span class="ty">Pawn</span> pawn = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(request);
+
+        <span class="cm">// ③ 程式化調整：拉高射擊技能、給熱情、強制特質</span>
+        <span class="kw">var</span> shooting = pawn.skills.<span class="nm">GetSkill</span>(<span class="ty">SkillDefOf</span>.Shooting);
+        shooting.<span class="nm">Level</span> = <span class="nu">12</span>;
+        shooting.passion = <span class="ty">Passion</span>.Major;
+
+        <span class="cm">// 給一把武器（生成 + AddEquipment）</span>
+        <span class="kw">if</span> (pawn.equipment.Primary == <span class="kw">null</span>)
+        {
+            <span class="kw">var</span> gun = (<span class="ty">ThingWithComps</span>)<span class="ty">ThingMaker</span>.<span class="nm">MakeThing</span>(
+                <span class="ty">ThingDefOf</span>.Gun_Autopistol);
+            pawn.equipment.<span class="nm">AddEquipment</span>(gun);
+        }
+
+        <span class="cm">// ④ Spawn 到地圖（核心步驟，缺了它 Pawn 不存在於世界）</span>
+        <span class="ty">IntVec3</span> spawnCell = cell.<span class="nm">IsValid</span> &amp;&amp; cell.<span class="nm">InBounds</span>(map)
+            ? cell
+            : <span class="ty">CellFinder</span>.<span class="nm">RandomEdgeCell</span>(map);
+        <span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(pawn, spawnCell, map, <span class="ty">WipeMode</span>.Vanish);
+
+        <span class="cm">// ⑤（可選）下達一個閒晃 Job，避免站著不動</span>
+        <span class="kw">if</span> (pawn.Faction == <span class="ty">Faction</span>.OfPlayer)
+        {
+            <span class="cm">// 玩家陣營會自動接管 AI，不必手動派工</span>
+        }
+        <span class="kw">else</span>
+        {
+            <span class="cm">// 非玩家：通常交給 Lord（見下方 callout）</span>
+        }
+
+        <span class="kw">return</span> pawn;
+    }
+}</pre>
+
+    <h3>用 DebugAction 快速測試</h3>
+
+<pre><span class="cm">// 加一個除錯選單動作，點地圖即生成</span>
+[<span class="at">DebugAction</span>(<span class="st">"MyMod"</span>, <span class="st">"Spawn custom pawn"</span>,
+    actionType = <span class="ty">DebugActionType</span>.ToolMap,
+    allowedGameStates = <span class="ty">AllowedGameStates</span>.PlayingOnMap)]
+<span class="kw">private static void</span> <span class="nm">DebugSpawnCustomPawn</span>()
+{
+    <span class="ty">Map</span> map = <span class="ty">Find</span>.CurrentMap;
+    <span class="ty">IntVec3</span> cell = <span class="ty">UI</span>.<span class="nm">MouseCell</span>();
+    <span class="ty">PawnSpawnUtility</span>.<span class="nm">SpawnCustomPawn</span>(map, cell, <span class="ty">Faction</span>.OfPlayer);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>非玩家群體要用 Lord 管 AI</strong>
+      單獨 spawn 的敵對 Pawn 不會主動進攻——它沒有「任務」。襲擊邏輯靠 <code>LordMaker.MakeNewLord(faction, lordJob, map, pawns)</code> 建立群體 AI（<code>LordJob_AssaultColony</code> 等）。若只是要一個會反擊的中立 / 敵對個體，至少確保它的 faction 與玩家關係正確；要協同行動則必須掛 Lord。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  Backstory 系統
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 Backstory 系統</div>
+
+    <p>每個 Humanlike Pawn 有兩段 Backstory：<strong>childhood</strong>（童年，所有人都有）與 <strong>adulthood</strong>（成年，未成年 Pawn 可為空）。Backstory 提供技能加成、禁用工作、禁用特質與外觀偏好。</p>
+
+    <div class="callout callout-info">
+      <strong>1.4 起 Backstory 改用 BackstoryDef</strong>
+      舊版 Backstory 存在程式碼內的字典（<code>BackstoryDatabase</code>）。1.4 之後改為標準的 <code>BackstoryDef</code>（放在 <code>Defs/BackstoryDefs/</code>），可像其他 Def 一樣繼承、PatchOperation。C# 端用 <code>pawn.story.Childhood</code> / <code>pawn.story.Adulthood</code> 取得 <code>BackstoryDef</code>。
+    </div>
+
+    <h3>BackstoryDef 核心欄位</h3>
+
+    <table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>slot</code></td><td><code>Childhood</code> 或 <code>Adulthood</code>，決定它能填哪一段</td></tr>
+        <tr><td><code>title</code> / <code>titleShort</code></td><td>顯示標題（如 "Vatgrown soldier"）</td></tr>
+        <tr><td><code>baseDesc</code></td><td>背景描述文字，可含 <code>[PAWN_nameDef]</code> 等占位符</td></tr>
+        <tr><td><code>skillGains</code></td><td>技能加成清單（可為負，代表荒廢）</td></tr>
+        <tr><td><code>workDisables</code></td><td>禁用的工作類別（<code>WorkTags</code> flags，如 Violent、Intellectual）</td></tr>
+        <tr><td><code>disallowedTraits</code></td><td>與此背景矛盾、不可同時出現的特質</td></tr>
+        <tr><td><code>forcedTraits</code></td><td>此背景必帶的特質</td></tr>
+        <tr><td><code>spawnCategories</code></td><td>可被哪些 PawnKind 的 backstoryCategories 抽到</td></tr>
+        <tr><td><code>bodyTypeGlobal</code> / <code>bodyTypeMale</code> / <code>bodyTypeFemale</code></td><td>偏好的身體類型</td></tr>
+      </tbody>
+    </table>
+
+    <h3>XML 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/BackstoryDefs/Backstories_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;BackstoryDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ChildVatSoldier<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;slot&gt;</span>Childhood<span class="xml-tag">&lt;/slot&gt;</span>
+    <span class="xml-tag">&lt;title&gt;</span>vat-grown trainee<span class="xml-tag">&lt;/title&gt;</span>
+    <span class="xml-tag">&lt;titleShort&gt;</span>trainee<span class="xml-tag">&lt;/titleShort&gt;</span>
+    <span class="xml-tag">&lt;baseDesc&gt;</span>[PAWN_nameDef] was decanted and drilled for combat from infancy.<span class="xml-tag">&lt;/baseDesc&gt;</span>
+    <span class="xml-tag">&lt;skillGains&gt;</span>
+      <span class="xml-tag">&lt;li&gt;&lt;key&gt;</span>Shooting<span class="xml-tag">&lt;/key&gt;&lt;value&gt;</span><span class="xml-val">4</span><span class="xml-tag">&lt;/value&gt;&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;&lt;key&gt;</span>Melee<span class="xml-tag">&lt;/key&gt;&lt;value&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/value&gt;&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;&lt;key&gt;</span>Social<span class="xml-tag">&lt;/key&gt;&lt;value&gt;</span><span class="xml-val">-3</span><span class="xml-tag">&lt;/value&gt;&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/skillGains&gt;</span>
+    <span class="xml-tag">&lt;workDisables&gt;</span>Intellectual<span class="xml-tag">&lt;/workDisables&gt;</span>
+    <span class="xml-tag">&lt;disallowedTraits&gt;</span>
+      <span class="xml-tag">&lt;li&gt;&lt;def&gt;</span>Wimp<span class="xml-tag">&lt;/def&gt;&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;&lt;def&gt;</span>Nerves<span class="xml-tag">&lt;/def&gt;&lt;degree&gt;</span><span class="xml-val">-1</span><span class="xml-tag">&lt;/degree&gt;&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/disallowedTraits&gt;</span>
+    <span class="xml-tag">&lt;spawnCategories&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Pirate<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Outlander<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/spawnCategories&gt;</span>
+  <span class="xml-tag">&lt;/BackstoryDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>C# 端強制指定 Backstory</h3>
+
+<pre><span class="cm">// 生成後覆寫 Backstory（需在 spawn 前後皆可，建議生成後立即）</span>
+pawn.story.Childhood = <span class="ty">DefDatabase</span>&lt;<span class="ty">BackstoryDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_ChildVatSoldier"</span>);
+pawn.story.Adulthood = <span class="ty">DefDatabase</span>&lt;<span class="ty">BackstoryDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_AdultMercenary"</span>);
+
+<span class="cm">// 變更 backstory 後，技能與工作限制不會自動重算——需手動刷新</span>
+pawn.Notify_DisabledWorkTypesChanged();
+pawn.skills.<span class="nm">Notify_SkillDisablesChanged</span>();</pre>
+
+    <div class="callout callout-warn">
+      <strong>改 Backstory 後務必刷新衍生狀態</strong>
+      <code>workDisables</code> 與 <code>skillGains</code> 在 Pawn 生成當下套用。事後直接賦值 <code>story.Childhood</code> 不會回溯重算技能等級，但<strong>會</strong>立即影響「禁用工作」判斷的快取。呼叫 <code>Notify_DisabledWorkTypesChanged()</code> 讓快取失效，否則 UI 與 AI 可能讀到舊的工作能力。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  Trait 與 Skill 程式化設定
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 Trait 與 Skill 的程式化操作</div>
+
+    <h3>Trait（特質）</h3>
+
+    <p>特質存在 <code>pawn.story.traits</code>（<code>TraitSet</code>）。<code>TraitDef</code> 可有多個 <strong>degree</strong>（如 Psychopath 只有一階；Nerves 有 -1 / +1 / +2）。新增時要同時指定 def 與 degree。</p>
+
+<pre><span class="cm">// 取得 TraitSet</span>
+<span class="ty">TraitSet</span> traits = pawn.story.traits;
+
+<span class="cm">// ① 新增特質（degree 預設 0，多階特質要指定）</span>
+traits.<span class="nm">GainTrait</span>(<span class="kw">new</span> <span class="ty">Trait</span>(<span class="ty">TraitDefOf</span>.Tough, degree: <span class="nu">0</span>));
+traits.<span class="nm">GainTrait</span>(<span class="kw">new</span> <span class="ty">Trait</span>(<span class="ty">TraitDef</span>.<span class="nm">Named</span>(<span class="st">"Nerves"</span>), degree: <span class="nu">2</span>)); <span class="cm">// 鋼鐵神經</span>
+
+<span class="cm">// ② 查詢是否擁有某特質</span>
+<span class="kw">bool</span> isPsychopath = traits.<span class="nm">HasTrait</span>(<span class="ty">TraitDefOf</span>.Psychopath);
+<span class="ty">Trait</span> nerves = traits.<span class="nm">GetTrait</span>(<span class="ty">TraitDef</span>.<span class="nm">Named</span>(<span class="st">"Nerves"</span>));
+<span class="kw">int</span> degree = nerves?.Degree ?? <span class="nu">0</span>;
+
+<span class="cm">// ③ 移除特質</span>
+<span class="kw">if</span> (traits.<span class="nm">HasTrait</span>(<span class="ty">TraitDefOf</span>.Wimp))
+    traits.<span class="nm">RemoveTrait</span>(traits.<span class="nm">GetTrait</span>(<span class="ty">TraitDefOf</span>.Wimp));
+
+<span class="cm">// ④ 特質帶來的能力修正（如 Tough 減傷）由 TraitDegreeData 提供</span>
+<span class="cm">//    這些在 GainTrait 時自動套用到 Pawn，無需手動計算</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>GainTrait 會觸發連鎖效果</strong>
+      <code>GainTrait</code> 不只是加進清單——某些特質會立即修改需求（如 <code>Pyromaniac</code> 加放火慾望）、心情想法、能力上限。手動加特質後若 UI 沒更新，多半是某個衍生狀態需要 Notify。生成階段透過 <code>PawnGenerationRequest.forcedTraits</code> 指定是最安全的方式，能讓生成器在正確時機套用。
+    </div>
+
+    <h3>Skill（技能）</h3>
+
+<pre><span class="cm">// SkillRecord 含 Level（0~20）、passion（熱情）、xpSinceLastLevel</span>
+<span class="ty">SkillRecord</span> mining = pawn.skills.<span class="nm">GetSkill</span>(<span class="ty">SkillDefOf</span>.Mining);
+
+<span class="cm">// 設定等級與熱情</span>
+mining.<span class="nm">Level</span> = <span class="nu">15</span>;
+mining.passion = <span class="ty">Passion</span>.Major;   <span class="cm">// None / Minor / Major</span>
+
+<span class="cm">// 直接給經驗值（會自動升級）</span>
+mining.<span class="nm">Learn</span>(<span class="nu">5000f</span>, direct: <span class="kw">true</span>); <span class="cm">// direct=true 跳過學習速率倍率</span>
+
+<span class="cm">// 批次設定所有技能</span>
+<span class="kw">foreach</span> (<span class="ty">SkillRecord</span> s <span class="kw">in</span> pawn.skills.skills)
+{
+    <span class="kw">if</span> (s.<span class="nm">TotallyDisabled</span>) <span class="kw">continue</span>; <span class="cm">// 被 backstory 禁用的技能不能設</span>
+    s.<span class="nm">Level</span> = <span class="ty">Mathf</span>.<span class="nm">Clamp</span>(s.<span class="nm">Level</span>, <span class="nu">3</span>, <span class="nu">20</span>);
+}
+
+<span class="cm">// 取有效等級（含 trait / hediff / 心情等臨時修正）</span>
+<span class="kw">int</span> effective = pawn.skills.<span class="nm">GetSkill</span>(<span class="ty">SkillDefOf</span>.Shooting)
+    .<span class="nm">GetLevel</span>(includeAptitudes: <span class="kw">true</span>);</pre>
+
+    <div class="callout callout-tip">
+      <strong>TotallyDisabled 是常見的坑</strong>
+      若 Pawn 的 backstory 禁用了某 work tag，對應技能的 <code>TotallyDisabled</code> 為 true，此時設定 <code>Level</code> 無效（會被 UI 顯示為「—」）。批次設定前先檢查這個旗標。要解除禁用，得改 backstory 或移除來源特質。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  Hediff 注入
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 Hediff 注入：讓 Pawn 出生即帶狀態</div>
+
+    <p><code>Hediff</code>（Health Difference）是 RimWorld 表達一切「健康狀態變化」的統一抽象：受傷、疾病、義肢、藥效、成癮、基因效果、甚至「懷孕」都是 Hediff。要讓生成的 Pawn 帶先天狀態，就在生成後 <code>AddHediff</code>。</p>
+
+    <h3>基本注入</h3>
+
+<pre><span class="cm">// ① 全身性 Hediff（無特定部位，如疾病、藥效）</span>
+<span class="ty">Hediff</span> plague = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(
+    <span class="ty">HediffDefOf</span>.Plague, pawn);
+plague.<span class="nm">Severity</span> = <span class="nu">0.3f</span>;
+pawn.health.<span class="nm">AddHediff</span>(plague);
+
+<span class="cm">// ② 部位專屬 Hediff（如義肢、缺肢、植入物）</span>
+<span class="ty">BodyPartRecord</span> leftLeg = pawn.<span class="nm">RaceProps</span>.body
+    .<span class="nm">GetPartsWithDef</span>(<span class="ty">BodyPartDefOf</span>.Leg)
+    .<span class="nm">FirstOrDefault</span>();   <span class="cm">// 取一條腿的部位記錄</span>
+
+<span class="kw">if</span> (leftLeg != <span class="kw">null</span>)
+{
+    <span class="ty">Hediff</span> bionicLeg = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(
+        <span class="ty">HediffDef</span>.<span class="nm">Named</span>(<span class="st">"BionicLeg"</span>), pawn, leftLeg);
+    pawn.health.<span class="nm">AddHediff</span>(bionicLeg, leftLeg);
+}</pre>
+
+    <h3>注入成癮（需要兩個 Hediff）</h3>
+
+<pre><span class="cm">// 成癮通常 = 化學依賴 Hediff + 耐受度 Hediff</span>
+<span class="kw">var</span> addiction = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(
+    <span class="ty">HediffDefOf</span>.AlcoholAddiction ?? <span class="ty">HediffDef</span>.<span class="nm">Named</span>(<span class="st">"AlcoholAddiction"</span>),
+    pawn);
+pawn.health.<span class="nm">AddHediff</span>(addiction);
+
+<span class="cm">// 也可用官方工具一步到位（會處理相關 Hediff 與耐受）</span>
+<span class="ty">AddictionUtility</span>.<span class="nm">CheckDrugAddictionTeachOpportunity</span>(pawn); <span class="cm">// 教學提示用</span></pre>
+
+    <h3>用 HediffGiver / 生成階段注入</h3>
+
+    <p>若想讓「某 PawnKind 生成時就機率帶某 Hediff」而不寫 C#，可用 PawnKindDef 的相關欄位（<code>chemicalAddictionChance</code>、<code>techHediffsTags</code>）或自訂 <code>PawnGenOption</code>。完全程式化時，最穩定的做法是 Harmony patch <code>PawnGenerator.GeneratePawn</code> 的 Postfix。</p>
+
+<pre>[<span class="at">HarmonyPatch</span>(<span class="kw">typeof</span>(<span class="ty">PawnGenerator</span>), <span class="st">"GeneratePawn"</span>,
+    <span class="kw">new</span> <span class="ty">Type</span>[] { <span class="kw">typeof</span>(<span class="ty">PawnGenerationRequest</span>) })]
+<span class="kw">public static class</span> <span class="ty">GeneratePawn_InjectHediff</span>
+{
+    <span class="kw">static void</span> <span class="nm">Postfix</span>(<span class="ty">Pawn</span> __result, <span class="ty">PawnGenerationRequest</span> request)
+    {
+        <span class="kw">if</span> (__result == <span class="kw">null</span>) <span class="kw">return</span>;
+        <span class="kw">if</span> (request.<span class="nm">KindDef</span> != <span class="ty">PawnKindDef</span>.<span class="nm">Named</span>(<span class="st">"MyMod_CyberMercenary"</span>)) <span class="kw">return</span>;
+
+        <span class="cm">// 30% 機率帶「戰鬥強化劑」Hediff</span>
+        <span class="kw">if</span> (<span class="ty">Rand</span>.<span class="nm">Chance</span>(<span class="nu">0.3f</span>))
+        {
+            <span class="kw">var</span> h = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(
+                <span class="ty">HediffDef</span>.<span class="nm">Named</span>(<span class="st">"MyMod_CombatStim"</span>), __result);
+            __result.health.<span class="nm">AddHediff</span>(h);
+        }
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>AddHediff 的時機與部位有效性</strong>
+      在 Pawn 尚未完整生成（生成流程中途）就加 Hediff 可能被後續步驟覆蓋；最安全是在 <code>GeneratePawn</code> 的 Postfix 或生成完成後。加部位專屬 Hediff 時，<code>BodyPartRecord</code> 必須來自<strong>該 Pawn 自己的</strong> <code>RaceProps.body</code>，不能用別的物種的部位記錄，否則 hediffSet 對不上會丟例外。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §9  ThingSetMaker
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§9 ThingSetMaker：程式化生成物品組</div>
+
+    <p>生成 Pawn 常伴隨「給它一組裝備 / 戰利品 / 任務獎勵」。<code>ThingSetMaker</code> 是 RimWorld 統一的「物品組生成器」，被獎勵、貿易、墜落艙、考古遺物等系統共用。它根據 <code>ThingSetMakerParams</code>（總價值、技術等級、可包含的類別）產出一批 <code>Thing</code>。</p>
+
+    <h3>用內建 ThingSetMakerDefOf 生成獎勵</h3>
+
+<pre><span class="cm">// 設定參數：要價值約 1500 銀、工業級科技的物品組</span>
+<span class="kw">var</span> parms = <span class="kw">new</span> <span class="ty">ThingSetMakerParams</span>
+{
+    totalMarketValueRange = <span class="kw">new</span> <span class="ty">FloatRange</span>(<span class="nu">1200f</span>, <span class="nu">1800f</span>),
+    techLevel             = <span class="ty">TechLevel</span>.Industrial,
+    makingFaction         = <span class="ty">Faction</span>.OfPlayer,
+    qualityGenerator      = <span class="ty">QualityGenerator</span>.BaseGen
+};
+
+<span class="cm">// 用內建的「隨機武器組」ThingSetMaker 生成</span>
+<span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; loot = <span class="ty">ThingSetMakerDefOf</span>.MapGen_DefaultStockpile
+    .root.<span class="nm">Generate</span>(parms);
+
+<span class="cm">// 把生成的物品放到地圖某格（near + 散落）</span>
+<span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> loot)
+{
+    <span class="ty">GenPlace</span>.<span class="nm">TryPlaceThing</span>(t, dropCell, map, <span class="ty">ThingPlaceMode</span>.Near);
+}</pre>
+
+    <h3>自訂 ThingSetMakerDef（XML）</h3>
+
+<pre><span class="cm">&lt;!-- Defs/ThingSetMakerDefs/ThingSetMakers_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ThingSetMakerDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_MercLoot<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;root</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThingSetMaker_Sum"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;options&gt;</span>
+        <span class="cm">&lt;!-- 一把武器 --&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;thingSetMaker</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThingSetMaker_RandomGeneralGoods"</span><span class="xml-tag">&gt;</span>
+            <span class="xml-tag">&lt;fixedParams&gt;</span>
+              <span class="xml-tag">&lt;filter&gt;</span>
+                <span class="xml-tag">&lt;categories&gt;&lt;li&gt;</span>WeaponsRanged<span class="xml-tag">&lt;/li&gt;&lt;/categories&gt;</span>
+              <span class="xml-tag">&lt;/filter&gt;</span>
+            <span class="xml-tag">&lt;/fixedParams&gt;</span>
+          <span class="xml-tag">&lt;/thingSetMaker&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+        <span class="cm">&lt;!-- 一些藥品 --&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;thingSetMaker</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThingSetMaker_Count"</span><span class="xml-tag">&gt;</span>
+            <span class="xml-tag">&lt;fixedParams&gt;</span>
+              <span class="xml-tag">&lt;countRange&gt;</span><span class="xml-val">2~5</span><span class="xml-tag">&lt;/countRange&gt;</span>
+              <span class="xml-tag">&lt;filter&gt;&lt;thingDefs&gt;&lt;li&gt;</span>MedicineIndustrial<span class="xml-tag">&lt;/li&gt;&lt;/thingDefs&gt;&lt;/filter&gt;</span>
+            <span class="xml-tag">&lt;/fixedParams&gt;</span>
+          <span class="xml-tag">&lt;/thingSetMaker&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/options&gt;</span>
+    <span class="xml-tag">&lt;/root&gt;</span>
+  <span class="xml-tag">&lt;/ThingSetMakerDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>常見 ThingSetMaker root class</strong>
+      <code>ThingSetMaker_Sum</code>（多個子組相加）、<code>ThingSetMaker_Count</code>（固定數量）、<code>ThingSetMaker_MarketValue</code>（湊到目標價值）、<code>ThingSetMaker_RandomOption</code>（隨機選一組）。組合這些就能描述絕大多數「掉落表」。生成後別忘了用 <code>GenPlace.TryPlaceThing</code> 或加進容器，否則物品只存在於記憶體。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §10  常見坑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§10 常見坑與生命週期陷阱</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>坑 1：faction = null 的行為</h3>
+        <p>
+          生成請求傳 <code>faction: null</code> 不等於「無陣營」。對 Humanlike，生成器可能：①報錯或②按 PawnKind 的 <code>defaultFactionType</code> 補一個。真正想要「沒有陣營的野人」要明確處理，且 null-faction 的 Pawn 不受任何陣營 AI 管理，常導致它呆站。
+        </p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>坑 2：未 spawn 的 Pawn</h3>
+        <p>
+          <code>GeneratePawn</code> 回傳的 Pawn <strong>不在地圖上</strong>。它 <code>Spawned == false</code>、<code>Position</code> 無效、不會 Tick、AI 不運作。必須 <code>GenSpawn.Spawn</code> 才真正進入世界。忘記 spawn 是「我造了 Pawn 但畫面上看不到」的頭號原因。
+        </p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>坑 3：世界 Pawn vs 地圖 Pawn</h3>
+        <p>
+          地圖 Pawn 在 <code>map.mapPawns</code>；離開地圖的（商隊成員、星際旅人、被擄走的）進入 <code>Find.WorldPawns</code> 池。查詢 Pawn 要搞清楚它在哪一邊，用 <code>PawnsFinder.AllMapsWorldAndTemporary_AliveOrDead</code> 才能涵蓋全部。
+        </p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>坑 4：孤兒 Pawn 被 GC / 存檔漏掉</h3>
+        <p>
+          生成後既不 spawn、也不註冊到 WorldPawns、也沒被任何系統引用的 Pawn，會在存檔時消失或造成引用懸空。臨時 Pawn 要嘛及時 spawn，要嘛 <code>Find.WorldPawns.PassToWorld(pawn)</code> 交給世界池管理。
+        </p>
+      </div>
+    </div>
+
+    <h3>正確的「丟棄一個生成失敗 / 不要的 Pawn」</h3>
+
+<pre><span class="cm">// 若生成後決定不用這個 Pawn，要正確銷毀，否則洩漏</span>
+<span class="ty">Pawn</span> pawn = <span class="ty">PawnGenerator</span>.<span class="nm">GeneratePawn</span>(request);
+
+<span class="kw">if</span> (!<span class="nm">MeetsMyCriteria</span>(pawn))
+{
+    <span class="cm">// 尚未 spawn 的 Pawn：直接 Discard</span>
+    <span class="kw">if</span> (!pawn.Spawned)
+    {
+        pawn.relations?.<span class="nm">ClearAllRelations</span>();      <span class="cm">// 斷開關係避免懸空</span>
+        <span class="ty">Find</span>.WorldPawns.<span class="nm">RemovePawn</span>(pawn);        <span class="cm">// 若已在世界池</span>
+        pawn.<span class="nm">Destroy</span>(<span class="ty">DestroyMode</span>.Vanish);
+        <span class="ty">Find</span>.WorldPawns.<span class="nm">PassToWorld</span>(pawn, <span class="ty">PawnDiscardDecideMode</span>.Discard);
+    }
+}</pre>
+
+    <h3>spawn 前後狀態對照</h3>
+
+    <table>
+      <thead>
+        <tr><th>屬性</th><th>GeneratePawn 後（未 spawn）</th><th>GenSpawn.Spawn 後</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>pawn.Spawned</code></td><td><span class="tag tag-red">false</span></td><td><span class="tag tag-green">true</span></td></tr>
+        <tr><td><code>pawn.Position</code></td><td>IntVec3.Invalid</td><td>spawn 座標</td></tr>
+        <tr><td><code>pawn.Map</code></td><td>null</td><td>目標 Map</td></tr>
+        <tr><td><code>pawn.Tick()</code></td><td>不執行</td><td>每 tick 執行（含 AI）</td></tr>
+        <tr><td>是否被存檔</td><td>除非被引用，否則丟失</td><td>隨 Map 存檔</td></tr>
+        <tr><td><code>jobs</code> 運作</td><td>不會自動派工</td><td>ThinkTree 接管</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-danger">
+      <strong>不要在地圖載入 / 生成的錯誤時機呼叫 GeneratePawn</strong>
+      <code>PawnGenerator</code> 內部依賴 <code>Find.World</code>、faction 管理器等全域狀態。在主選單（沒有遊戲）、世界生成早期、或讀檔的 LoadingVars 階段呼叫會丟 null 例外。確保只在 <code>Current.ProgramState == ProgramState.Playing</code> 且世界已就緒時生成。
+    </div>
+  </div>
+
+  <!-- 本章重點回顧 -->
+  <div class="section">
+    <div class="section-title">本章重點回顧</div>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>兩層定義</h3>
+        <p>RaceProperties 定義「物種本質」，PawnKindDef 定義「角色類型怎麼生成」</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>生成流程</h3>
+        <p>建 Request（用具名引數）→ GeneratePawn → 調整 → GenSpawn.Spawn → 掛 Lord/Job</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>狀態拆分</h3>
+        <p>health / story / skills / needs / equipment / apparel / jobs / mindState 各管一塊</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>頭號坑</h3>
+        <p>忘了 spawn、faction=null、世界 vs 地圖 Pawn、孤兒 Pawn 洩漏</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  RimWorld Modding 入門指南 · Chapter 11 Pawn 生成與屬性<br>
+  適用 RimWorld 1.4 / 1.5 · Harmony 2.x · 繁體中文
+</footer>
+
+</body>
+</html>

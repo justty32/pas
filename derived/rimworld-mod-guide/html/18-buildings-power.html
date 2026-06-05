@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>建築與電力 — RimWorld Modding 入門指南</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .subsection {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .subsection h3 { margin-top: 0; }
+  .param-table td:first-child { color: var(--cyan); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; white-space: nowrap; }
+  .param-table td:nth-child(2) { color: var(--purple); font-family: 'Cascadia Code','Fira Code','Consolas',monospace; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+  .toc h4 { color: var(--accent2); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .toc ol { margin: 0; padding-left: 1.4rem; }
+  .toc li { margin-bottom: 0.2rem; font-size: 0.88rem; }
+  .toc a { color: var(--text-dim); text-decoration: none; }
+  .toc a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html" class="active">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>建築與電力</h1>
+  <p>從 ThingDef 到自訂 Building class，再到 PowerNet 與 Comp 體系——把一棟會運作的機器搬進殖民地。</p>
+  <span class="badge">RimWorld 1.5 · Verse / RimWorld 命名空間</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#thingdef">Building ThingDef 結構</a></li>
+      <li><a href="#class">繼承 Building 自訂建築 class</a></li>
+      <li><a href="#powercomps">CompPowerTrader / PowerPlant / Battery 與 PowerNet</a></li>
+      <li><a href="#compprops">CompProperties_Power 設定</a></li>
+      <li><a href="#powerctrl">從 C# 控制耗電與發電</a></li>
+      <li><a href="#othercomps">CompFlickable / CompRefuelable / CompHeatPusher</a></li>
+      <li><a href="#placeworker">PlaceWorker — 放置限制驗證</a></li>
+      <li><a href="#designation">designationCategory 與建造選單</a></li>
+      <li><a href="#linking">連線建築與 graphic linking</a></li>
+      <li><a href="#pitfalls">常見坑</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念卡片 -->
+  <div class="section">
+    <div class="section-title">心智模型：三層分工</div>
+    <p>
+      RimWorld 的建築是「資料（Def）+ 行為（Building class）+ 可插拔功能（Comp）」的組合。
+      多數建築甚至<strong>不需要</strong>自訂 class——一個 <code>ThingDef</code> 掛上幾個 <code>ThingComp</code> 就能跑。
+      理解這三層各自的職責，是寫出乾淨 mod 的關鍵。
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>ThingDef（資料）</h3>
+        <p>XML 定義。尺寸、外觀、材質需求、掛哪些 Comp、放在哪個建造選單。<strong>能用 XML 就別寫 C#。</strong></p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Building（行為）</h3>
+        <p><code>Verse.Building</code> 子類別。需要每 tick 邏輯、自訂 Gizmo、繪製覆寫、檢視面板文字時才繼承。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>ThingComp（功能）</h3>
+        <p>橫切功能模組：電力、燃料、開關、散熱。可組合、可重用，不綁定特定 class。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>命名空間速記</strong>
+      <code>Building</code>、<code>ThingComp</code>、<code>ThingWithComps</code>、<code>Map</code> 在 <code>Verse</code>；
+      <code>CompPowerTrader</code>、<code>CompPower</code>、<code>PowerNet</code>、<code>Building_Battery</code> 在 <code>RimWorld</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 1. ThingDef ═══ -->
+  <div class="section" id="thingdef">
+    <div class="section-title">1 · Building ThingDef 結構</div>
+
+    <p>
+      建築和物品共用同一個 <code>ThingDef</code>，差別在 <code>&lt;category&gt;Building&lt;/category&gt;</code>
+      以及一個 <code>&lt;building&gt;</code> 子區塊。下面是一個帶電力消耗的自訂機器的完整骨架。
+    </p>
+
+    <pre><span class="xml-tag">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMachine<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>共振機<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>一台會嗡嗡作響的神祕機器。<span class="xml-tag">&lt;/description&gt;</span>
+
+    <span class="cm">&lt;!-- 關鍵：歸類為建築 --&gt;</span>
+    <span class="xml-tag">&lt;category&gt;</span>Building<span class="xml-tag">&lt;/category&gt;</span>
+
+    <span class="cm">&lt;!-- 指向自訂 Building 子類別（純資料建築可省略，預設 Verse.Building） --&gt;</span>
+    <span class="xml-tag">&lt;thingClass&gt;</span>MyMod.Building_MyMachine<span class="xml-tag">&lt;/thingClass&gt;</span>
+
+    <span class="cm">&lt;!-- 外觀 --&gt;</span>
+    <span class="xml-tag">&lt;graphicData&gt;</span>
+      <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/MyMachine<span class="xml-tag">&lt;/texPath&gt;</span>
+      <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+      <span class="cm">&lt;!-- drawSize 可大於 size 以突出格線 --&gt;</span>
+      <span class="xml-tag">&lt;drawSize&gt;</span>(2, 2)<span class="xml-tag">&lt;/drawSize&gt;</span>
+    <span class="xml-tag">&lt;/graphicData&gt;</span>
+
+    <span class="cm">&lt;!-- 佔地大小（寬, 高），以格為單位 --&gt;</span>
+    <span class="xml-tag">&lt;size&gt;</span>(2, 2)<span class="xml-tag">&lt;/size&gt;</span>
+
+    <span class="cm">&lt;!-- 可否被穿越：Impassable / PassThroughOnly / Standable --&gt;</span>
+    <span class="xml-tag">&lt;passability&gt;</span>Impassable<span class="xml-tag">&lt;/passability&gt;</span>
+
+    <span class="cm">&lt;!-- 是否可旋轉（家具/機台常為 true，方正機器設 false 較單純） --&gt;</span>
+    <span class="xml-tag">&lt;rotatable&gt;</span>false<span class="xml-tag">&lt;/rotatable&gt;</span>
+
+    <span class="cm">&lt;!-- 阻擋光照與視線 --&gt;</span>
+    <span class="xml-tag">&lt;blockLight&gt;</span>true<span class="xml-tag">&lt;/blockLight&gt;</span>
+    <span class="xml-tag">&lt;fillPercent&gt;</span>0.5<span class="xml-tag">&lt;/fillPercent&gt;</span>
+
+    <span class="cm">&lt;!-- 建造分類選單（見第 8 節） --&gt;</span>
+    <span class="xml-tag">&lt;designationCategory&gt;</span>Production<span class="xml-tag">&lt;/designationCategory&gt;</span>
+
+    <span class="cm">&lt;!-- 統計：血量、易燃度、製作工時 --&gt;</span>
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MaxHitPoints&gt;</span>180<span class="xml-tag">&lt;/MaxHitPoints&gt;</span>
+      <span class="xml-tag">&lt;WorkToBuild&gt;</span>2400<span class="xml-tag">&lt;/WorkToBuild&gt;</span>
+      <span class="xml-tag">&lt;Flammability&gt;</span>0.5<span class="xml-tag">&lt;/Flammability&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="cm">&lt;!-- 建材需求 --&gt;</span>
+    <span class="xml-tag">&lt;costList&gt;</span>
+      <span class="xml-tag">&lt;Steel&gt;</span>120<span class="xml-tag">&lt;/Steel&gt;</span>
+      <span class="xml-tag">&lt;ComponentIndustrial&gt;</span>4<span class="xml-tag">&lt;/ComponentIndustrial&gt;</span>
+    <span class="xml-tag">&lt;/costList&gt;</span>
+
+    <span class="cm">&lt;!-- building 子區塊：建築專屬旗標 --&gt;</span>
+    <span class="xml-tag">&lt;building&gt;</span>
+      <span class="xml-tag">&lt;isEdifice&gt;</span>true<span class="xml-tag">&lt;/isEdifice&gt;</span>      <span class="cm">&lt;!-- 是否為「主結構物」，一格一個 --&gt;</span>
+      <span class="xml-tag">&lt;ai_chillDestination&gt;</span>false<span class="xml-tag">&lt;/ai_chillDestination&gt;</span>
+      <span class="xml-tag">&lt;destroySound&gt;</span>BuildingDestroyed_Metal_Small<span class="xml-tag">&lt;/destroySound&gt;</span>
+    <span class="xml-tag">&lt;/building&gt;</span>
+
+    <span class="cm">&lt;!-- 掛載功能 Comp（電力消耗 + 開關 + 散熱）--&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+        <span class="xml-tag">&lt;basePowerConsumption&gt;</span>200<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+        <span class="xml-tag">&lt;shortCircuitInRain&gt;</span>false<span class="xml-tag">&lt;/shortCircuitInRain&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Flickable"</span> <span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>核心欄位速查</h3>
+    <table class="param-table">
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td>category</td><td>ThingCategory</td><td>必須為 <code>Building</code> 才會出現在建造選單體系</td></tr>
+      <tr><td>thingClass</td><td>Type</td><td>對應的 C# class；省略則用父類別繼承的（通常 <code>Building</code>）</td></tr>
+      <tr><td>size</td><td>IntVec2</td><td>佔地 (寬,高)；旋轉時 RimWorld 自動交換</td></tr>
+      <tr><td>passability</td><td>Traversability</td><td>Impassable / PassThroughOnly / Standable</td></tr>
+      <tr><td>rotatable</td><td>bool</td><td>true 時玩家可旋轉，須備四向材質或單向自轉</td></tr>
+      <tr><td>fillPercent</td><td>float</td><td>掩體填充率，影響射擊命中與路徑成本</td></tr>
+      <tr><td>building</td><td>BuildingProperties</td><td>建築專屬旗標容器（isEdifice、isPowerConduit…）</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>ParentName=&quot;BuildingBase&quot;</strong>
+      RimWorld 核心提供大量抽象基底 Def（<code>Abstract="True"</code>），如 <code>BuildingBase</code> 已預設好
+      <code>selectable</code>、<code>useHitPoints</code>、<code>drawerType</code> 等。繼承它能省下幾十行樣板。
+      用 dnSpy / 解包 Core 的 <code>Buildings_*.xml</code> 查可用的 ParentName。
+    </div>
+  </div>
+
+  <!-- ═══ 2. 自訂 Building class ═══ -->
+  <div class="section" id="class">
+    <div class="section-title">2 · 繼承 Building 自訂建築 class</div>
+
+    <p>
+      當你需要 tick 邏輯、自訂按鈕、特殊繪製或檢視面板文字時，繼承 <code>Verse.Building</code>。
+      下面展示最常覆寫的幾個方法，並標出各自的呼叫時機與注意事項。
+    </p>
+
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> System.Text;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> Verse;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">Building_MyMachine</span> : <span class="ty">Building</span>
+    {
+        <span class="cm">// 快取 Comp 參照，避免每次 GetComp 反覆查表</span>
+        <span class="kw">private</span> <span class="ty">CompPowerTrader</span> powerComp;
+        <span class="kw">private int</span> resonanceLevel;   <span class="cm">// 需存檔的自訂狀態</span>
+
+        <span class="cm">// ── 生成（放置完成 / 讀檔重建時呼叫）──────────────</span>
+        <span class="kw">public override void</span> <span class="nm">SpawnSetup</span>(<span class="ty">Map</span> map, <span class="kw">bool</span> respawningAfterLoad)
+        {
+            <span class="cm">// 一定要先呼叫 base，否則 Comp 不會初始化、PowerNet 不會掛上</span>
+            <span class="kw">base</span>.<span class="nm">SpawnSetup</span>(map, respawningAfterLoad);
+
+            <span class="cm">// base.SpawnSetup 之後才能安全取得 Comp</span>
+            powerComp = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+
+            <span class="kw">if</span> (!respawningAfterLoad)
+            {
+                <span class="cm">// 只在「首次放置」執行的初始化（讀檔時不要重做）</span>
+                resonanceLevel = <span class="nu">0</span>;
+            }
+        }
+
+        <span class="cm">// ── 存檔 / 讀檔（自訂欄位序列化）──────────────────</span>
+        <span class="kw">public override void</span> <span class="nm">ExposeData</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">ExposeData</span>();
+            <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> resonanceLevel, <span class="st">"resonanceLevel"</span>, <span class="nu">0</span>);
+        }
+
+        <span class="cm">// ── 低頻 tick（每 250 ticks ≈ 4 秒一次，省效能）────</span>
+        <span class="kw">public override void</span> <span class="nm">TickRare</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">TickRare</span>();
+
+            <span class="cm">// powerComp 可能為 null（極少數情況），務必判空</span>
+            <span class="kw">if</span> (powerComp == <span class="kw">null</span> || !powerComp.<span class="nm">PowerOn</span>)
+                <span class="kw">return</span>;   <span class="cm">// 沒電就什麼都不做</span>
+
+            <span class="cm">// 有電才累積共振（每次 TickRare 加一）</span>
+            resonanceLevel = <span class="ty">Mathf</span>.<span class="nm">Min</span>(resonanceLevel + <span class="nu">1</span>, <span class="nu">100</span>);
+        }
+
+        <span class="cm">// ── 繪製（疊加效果在主貼圖之上）──────────────────</span>
+        <span class="kw">public override void</span> <span class="nm">Draw</span>()
+        {
+            <span class="kw">base</span>.<span class="nm">Draw</span>();   <span class="cm">// 先畫本體</span>
+
+            <span class="kw">if</span> (powerComp != <span class="kw">null</span> &amp;&amp; powerComp.<span class="nm">PowerOn</span> &amp;&amp; resonanceLevel &gt; <span class="nu">50</span>)
+            {
+                <span class="cm">// 在建築上方畫一個發光特效（範例用 OverlayDrawer 思路）</span>
+                <span class="kw">this</span>.<span class="nm">Map</span>.<span class="nm">overlayDrawer</span>.<span class="nm">DrawOverlay</span>(<span class="kw">this</span>, <span class="ty">OverlayTypes</span>.<span class="nm">PowerOn</span>);
+            }
+        }
+
+        <span class="cm">// ── 右鍵 / 選取時的按鈕（Gizmo）──────────────────</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Gizmo</span>&gt; <span class="nm">GetGizmos</span>()
+        {
+            <span class="cm">// 保留 base 的 gizmo（複製/拆除/Flick 開關等）</span>
+            <span class="kw">foreach</span> (<span class="ty">Gizmo</span> g <span class="kw">in</span> <span class="kw">base</span>.<span class="nm">GetGizmos</span>())
+                <span class="kw">yield return</span> g;
+
+            <span class="cm">// 追加自訂按鈕</span>
+            <span class="kw">yield return new</span> <span class="ty">Command_Action</span>
+            {
+                <span class="nm">defaultLabel</span>  = <span class="st">"重置共振"</span>,
+                <span class="nm">defaultDesc</span>   = <span class="st">"將共振等級歸零。"</span>,
+                <span class="nm">icon</span>          = <span class="ty">ContentFinder</span>&lt;<span class="ty">Texture2D</span>&gt;.<span class="nm">Get</span>(<span class="st">"UI/Commands/ResetResonance"</span>),
+                <span class="nm">action</span>        = () =&gt; resonanceLevel = <span class="nu">0</span>
+            };
+        }
+
+        <span class="cm">// ── 檢視面板（左下角資訊）的附加文字──────────────</span>
+        <span class="kw">public override string</span> <span class="nm">GetInspectString</span>()
+        {
+            <span class="kw">var</span> sb = <span class="kw">new</span> <span class="ty">StringBuilder</span>();
+            <span class="cm">// base 會輸出血量、電力狀態、Flick 狀態等標準行</span>
+            sb.<span class="nm">Append</span>(<span class="kw">base</span>.<span class="nm">GetInspectString</span>());
+
+            <span class="kw">if</span> (sb.<span class="nm">Length</span> &gt; <span class="nu">0</span>) sb.<span class="nm">AppendLine</span>();
+            sb.<span class="nm">Append</span>(<span class="st">$"共振等級：{resonanceLevel} / 100"</span>);
+
+            <span class="cm">// 慣例：結尾不要留多餘換行，用 TrimEndNewlines</span>
+            <span class="kw">return</span> sb.<span class="nm">ToString</span>().<span class="nm">TrimEndNewlines</span>();
+        }
+    }
+}</pre>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>tick 三種頻率</h3>
+        <ul>
+          <li><code>Tick()</code> — 每 tick（60/秒），高耗能，需在 ThingDef 設 <code>tickerType=Normal</code></li>
+          <li><code>TickRare()</code> — 每 250 ticks，預設 <code>tickerType=Rare</code></li>
+          <li><code>TickLong()</code> — 每 2000 ticks，超低頻背景邏輯</li>
+        </ul>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>呼叫順序要點</h3>
+        <ul>
+          <li>所有覆寫先呼叫對應的 <code>base.XXX()</code></li>
+          <li>取 Comp 必須在 <code>base.SpawnSetup</code> 之後</li>
+          <li><code>GetGizmos</code> 先 <code>yield</code> base 的，再追加自己的</li>
+          <li>自訂欄位一律寫進 <code>ExposeData</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>tickerType 必須對得上</strong>
+      只覆寫 <code>TickRare()</code> 卻在 ThingDef 設 <code>&lt;tickerType&gt;Normal&lt;/tickerType&gt;</code>，
+      你的 <code>TickRare</code> 永遠不會被呼叫（反之亦然）。預設 BuildingBase 多為 <code>Rare</code>，
+      要每 tick 邏輯記得改成 <code>Normal</code>。
+    </div>
+  </div>
+
+  <!-- ═══ 3. Power Comps & PowerNet ═══ -->
+  <div class="section" id="powercomps">
+    <div class="section-title">3 · CompPowerTrader / CompPowerPlant / CompPowerBattery 與 PowerNet</div>
+
+    <p>
+      電力系統的核心是 <code>PowerNet</code>——由相連的電纜（conduit）構成的一張網。
+      每個耗電/發電/儲電建築透過一個 <code>CompPower</code> 子類別接入這張網。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-orange">
+        <h3>CompPowerTrader</h3>
+        <p>「交易者」：可發電（正值）也可耗電（負值）。一般機器用它，<code>PowerOn</code> 表示目前是否通電。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>CompPowerPlant</h3>
+        <p>發電廠基底。子類別 <code>CompPowerPlantWind</code> / <code>Solar</code> / <code>Steam</code> 各自算發電量。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>CompPowerBattery</h3>
+        <p>儲電。<code>StoredEnergy</code> / <code>AmountCanAccept</code>，PowerNet 自動充放電。</p>
+      </div>
+    </div>
+
+    <h3>PowerNet 的角色</h3>
+    <p>
+      <code>PowerNet</code> 每 tick 結算：把所有 <code>CompPowerTrader.PowerOutput</code> 為正的加總成供給，
+      負的加總成需求；不足時從電池放電，仍不足則整網斷電（所有 <code>PowerOn</code> 變 false）。
+      你幾乎不直接操作 PowerNet，但讀取它的狀態很常見：
+    </p>
+
+    <pre><span class="cm">// 從任一接電 Comp 取得所屬 PowerNet</span>
+<span class="ty">CompPowerTrader</span> trader = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+<span class="ty">PowerNet</span> net = trader?.<span class="nm">PowerNet</span>;   <span class="cm">// ⚠ 未接上電纜時為 null！</span>
+
+<span class="kw">if</span> (net != <span class="kw">null</span>)
+{
+    <span class="kw">float</span> gain   = net.<span class="nm">CurrentEnergyGainRate</span>();   <span class="cm">// 本 tick 淨增益（含電池）</span>
+    <span class="kw">float</span> stored = net.<span class="nm">CurrentStoredEnergy</span>();    <span class="cm">// 全網電池總存量 Wd</span>
+
+    <span class="cm">// 遍歷網內所有發電/耗電者</span>
+    <span class="kw">foreach</span> (<span class="ty">CompPowerTrader</span> c <span class="kw">in</span> net.<span class="nm">powerComps</span>)
+    {
+        <span class="cm">// c.PowerOutput &gt; 0 → 發電；&lt; 0 → 耗電</span>
+    }
+}</pre>
+
+    <h3>三者比較</h3>
+    <table>
+      <tr><th>Comp</th><th>典型用途</th><th>關鍵屬性</th><th>PowerOutput 正負</th></tr>
+      <tr><td><code>CompPowerTrader</code></td><td>機器、燈、門</td><td><code>PowerOn</code>、<code>PowerOutput</code></td><td>耗電為負</td></tr>
+      <tr><td><code>CompPowerPlant</code></td><td>各式發電廠</td><td><code>PowerOutput</code>（由子類計算）</td><td>發電為正</td></tr>
+      <tr><td><code>CompPowerBattery</code></td><td>電池</td><td><code>StoredEnergy</code>、<code>AmountCanAccept</code></td><td>不直接交易，由網調度</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>電纜其實也是建築</strong>
+      電纜 <code>PowerConduit</code> 的 ThingDef 在 <code>building</code> 區塊設了
+      <code>&lt;isPowerConduit&gt;true&lt;/isPowerConduit&gt;</code>。建築若 <code>isPowerConduit</code> 為 true，
+      自身就是網的一部分（如核心反應爐的整合電纜）。
+    </div>
+  </div>
+
+  <!-- ═══ 4. CompProperties_Power ═══ -->
+  <div class="section" id="compprops">
+    <div class="section-title">4 · CompProperties_Power 設定</div>
+
+    <p>
+      <code>CompProperties_Power</code> 是電力 Comp 的 XML 設定容器。
+      用 <code>&lt;compClass&gt;</code> 指定要實例化哪個 <code>CompPower</code> 子類別。
+    </p>
+
+    <h3>耗電機器</h3>
+    <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+  <span class="cm">&lt;!-- 正值 = 耗電（單位 W）。引擎內部存成負的 PowerOutput --&gt;</span>
+  <span class="xml-tag">&lt;basePowerConsumption&gt;</span>200<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+  <span class="cm">&lt;!-- 下雨時是否可能短路（戶外電器設 true）--&gt;</span>
+  <span class="xml-tag">&lt;shortCircuitInRain&gt;</span>false<span class="xml-tag">&lt;/shortCircuitInRain&gt;</span>
+  <span class="cm">&lt;!-- 待機耗電（部分建築閒置時較省電）--&gt;</span>
+  <span class="xml-tag">&lt;idlePowerDraw&gt;</span>-1<span class="xml-tag">&lt;/idlePowerDraw&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <h3>固定輸出發電機（如地熱）</h3>
+    <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;compClass&gt;</span>CompPowerPlant<span class="xml-tag">&lt;/compClass&gt;</span>
+  <span class="cm">&lt;!-- 負值 = 發電。-3600 表示穩定供給 3600W --&gt;</span>
+  <span class="xml-tag">&lt;basePowerConsumption&gt;</span>-3600<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <h3>電池</h3>
+    <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Battery"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;storedEnergyMax&gt;</span>1000<span class="xml-tag">&lt;/storedEnergyMax&gt;</span>     <span class="cm">&lt;!-- 容量 Wd --&gt;</span>
+  <span class="xml-tag">&lt;efficiency&gt;</span>0.5<span class="xml-tag">&lt;/efficiency&gt;</span>             <span class="cm">&lt;!-- 充電效率（核心電池 50%）--&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <table class="param-table">
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td>compClass</td><td>Type</td><td>CompPowerTrader / CompPowerPlant / 自訂子類</td></tr>
+      <tr><td>basePowerConsumption</td><td>float</td><td>正=耗電、負=發電（W）。引擎以負值代表淨輸出</td></tr>
+      <tr><td>shortCircuitInRain</td><td>bool</td><td>戶外暴露電器下雨短路的事件來源</td></tr>
+      <tr><td>idlePowerDraw</td><td>float</td><td>待機耗電；-1 表示不啟用待機機制</td></tr>
+      <tr><td>transmitsPower</td><td>bool</td><td>此 Comp 本身是否傳導電力（電纜為 true）</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>正負號是新手最常踩的坑</strong>
+      <code>basePowerConsumption</code> 在 XML 裡「正數代表耗電」是直覺寫法；
+      但 C# 端 <code>CompPowerTrader.PowerOutput</code> <em>耗電是負值、發電是正值</em>。
+      兩邊符號相反，改 C# 時務必記住這個轉換。
+    </div>
+  </div>
+
+  <!-- ═══ 5. 從 C# 控制耗電 ═══ -->
+  <div class="section" id="powerctrl">
+    <div class="section-title">5 · 從 C# 控制耗電與發電</div>
+
+    <p>
+      動態調整功耗是常見需求：機器運轉時全功率、待機時省電；或發電量隨某個條件變動。
+      關鍵是 <code>CompPowerTrader.PowerOutput</code>（屬性，內部欄位 <code>powerOutputInt</code>）與 <code>PowerOn</code>。
+    </p>
+
+    <pre><span class="kw">public class</span> <span class="ty">Building_VariableMachine</span> : <span class="ty">Building</span>
+{
+    <span class="kw">private</span> <span class="ty">CompPowerTrader</span> power;
+    <span class="kw">private bool</span> running;
+
+    <span class="kw">public override void</span> <span class="nm">SpawnSetup</span>(<span class="ty">Map</span> map, <span class="kw">bool</span> respawningAfterLoad)
+    {
+        <span class="kw">base</span>.<span class="nm">SpawnSetup</span>(map, respawningAfterLoad);
+        power = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+    }
+
+    <span class="kw">public override void</span> <span class="nm">Tick</span>()   <span class="cm">// 需 tickerType=Normal</span>
+    {
+        <span class="kw">base</span>.<span class="nm">Tick</span>();
+        <span class="kw">if</span> (power == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// PowerOn 是唯讀的（由 PowerNet 結算決定），不能直接設定。</span>
+        <span class="cm">// 沒電時直接停擺。</span>
+        <span class="kw">if</span> (!power.<span class="nm">PowerOn</span>)
+        {
+            running = <span class="kw">false</span>;
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// ✅ 可寫：動態改變功耗。耗電為「負值」！</span>
+        <span class="cm">// PowerOutput = -消耗瓦數。</span>
+        <span class="kw">float</span> baseDraw = -<span class="kw">this</span>.<span class="nm">def</span>.<span class="nm">GetCompProperties</span>&lt;<span class="ty">CompProperties_Power</span>&gt;().basePowerConsumption;
+        power.<span class="nm">PowerOutput</span> = running
+            ? baseDraw            <span class="cm">// 全功率（已是負值）</span>
+            : baseDraw * <span class="nu">0.1f</span>;    <span class="cm">// 待機只用 10%</span>
+    }
+}</pre>
+
+    <h3>三種寫法對照</h3>
+    <table>
+      <tr><th>目標</th><th>API</th><th>備註</th></tr>
+      <tr><td>讀目前是否通電</td><td><code>power.PowerOn</code></td><td>唯讀；PowerNet 結算結果</td></tr>
+      <tr><td>動態改耗電/發電</td><td><code>power.PowerOutput = value</code></td><td>耗電負值、發電正值</td></tr>
+      <tr><td>取設定的基礎值</td><td><code>props.PowerConsumption</code> / <code>basePowerConsumption</code></td><td>從 CompProperties_Power 讀</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>不要直接寫 <code>powerOutputInt</code></strong>
+      <code>powerOutputInt</code> 是 backing field，存取修飾子為 protected。
+      請走公開屬性 <code>PowerOutput</code>（它做了必要的內部更新）。
+      若你真的需要繞過（例如 Harmony patch 別人的建築），用 <code>AccessTools.FieldRefAccess</code>，
+      細節見 <a href="03-harmony.html">Harmony 章節</a>。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>發電量隨條件變動：覆寫 CompPowerPlant</strong>
+      風力/太陽能發電廠透過繼承 <code>CompPowerPlant</code> 並覆寫
+      <code>protected override float DesiredPowerOutput</code> 來回傳即時發電量。
+      自訂發電機照此模式即可，無需每 tick 手動賦值。
+    </div>
+  </div>
+
+  <!-- ═══ 6. 其他 Comp ═══ -->
+  <div class="section" id="othercomps">
+    <div class="section-title">6 · CompFlickable / CompRefuelable / CompHeatPusher</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-green">CompFlickable</span> 開關</h3>
+      <p>
+        加上它，建築就會有「開/關」按鈕（Flick），由小人執行撥動 Job。
+        關閉時 <code>CompPowerTrader</code> 會自動停止耗電。從 C# 讀 <code>SwitchIsOn</code>。
+      </p>
+      <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Flickable"</span> <span class="xml-tag">/&gt;</span></pre>
+      <pre><span class="ty">CompFlickable</span> flick = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompFlickable</span>&gt;();
+<span class="kw">if</span> (flick != <span class="kw">null</span> &amp;&amp; flick.<span class="nm">SwitchIsOn</span>)
+{
+    <span class="cm">// 開關開啟。注意：剛撥動到實際生效中間有 Job 延遲</span>
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">CompRefuelable</span> 燃料</h3>
+      <p>
+        以燃料驅動（如化學燃料發電機、火爐）。小人會自動補充燃料。
+        從 C# 用 <code>Fuel</code> / <code>HasFuel</code> 判斷，用 <code>ConsumeFuel</code> 手動消耗。
+      </p>
+      <pre><span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Refuelable"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;fuelConsumptionRate&gt;</span>4.5<span class="xml-tag">&lt;/fuelConsumptionRate&gt;</span>   <span class="cm">&lt;!-- 每天消耗 --&gt;</span>
+  <span class="xml-tag">&lt;fuelCapacity&gt;</span>75<span class="xml-tag">&lt;/fuelCapacity&gt;</span>
+  <span class="xml-tag">&lt;fuelFilter&gt;</span>
+    <span class="xml-tag">&lt;thingDefs&gt;</span><span class="xml-tag">&lt;li&gt;</span>Chemfuel<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/thingDefs&gt;</span>
+  <span class="xml-tag">&lt;/fuelFilter&gt;</span>
+  <span class="xml-tag">&lt;consumeFuelOnlyWhenUsed&gt;</span>false<span class="xml-tag">&lt;/consumeFuelOnlyWhenUsed&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+      <pre><span class="ty">CompRefuelable</span> fuel = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompRefuelable</span>&gt;();
+<span class="kw">if</span> (fuel != <span class="kw">null</span> &amp;&amp; fuel.<span class="nm">HasFuel</span>)
+{
+    fuel.<span class="nm">ConsumeFuel</span>(<span class="nu">1f</span>);   <span class="cm">// 自訂事件消耗一單位</span>
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">CompHeatPusher</span> 散熱</h3>
+      <p>
+        每 tick 向周圍格子注入（或抽走）熱量。發電機、火爐都靠它升溫；冷氣則用負值。
+        通常搭配 <code>CompProperties_HeatPusherPowered</code>，只有通電時才推熱。
+      </p>
+      <pre><span class="cm">&lt;!-- 純散熱（永遠推熱） --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_HeatPusher"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;compClass&gt;</span>CompHeatPusher<span class="xml-tag">&lt;/compClass&gt;</span>
+  <span class="xml-tag">&lt;heatPerSecond&gt;</span>3.5<span class="xml-tag">&lt;/heatPerSecond&gt;</span>          <span class="cm">&lt;!-- 正=放熱 負=吸熱 --&gt;</span>
+  <span class="xml-tag">&lt;heatPushMaxTemperature&gt;</span>28<span class="xml-tag">&lt;/heatPushMaxTemperature&gt;</span> <span class="cm">&lt;!-- 超過此溫不再放熱 --&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span>
+
+<span class="cm">&lt;!-- 只在通電時放熱 --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_HeatPusherPowered"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;compClass&gt;</span>CompHeatPusherPowered<span class="xml-tag">&lt;/compClass&gt;</span>
+  <span class="xml-tag">&lt;heatPerSecond&gt;</span>3.5<span class="xml-tag">&lt;/heatPerSecond&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Comp 之間會互相感知</strong>
+      <code>CompHeatPusherPowered</code> 內部會 <code>TryGetComp&lt;CompPowerTrader&gt;()</code> 檢查 PowerOn；
+      <code>CompFlickable</code> 關閉時 <code>CompPowerTrader</code> 自動停耗。
+      這種 Comp 互查是 RimWorld 模組化的精髓——你的自訂 Comp 也可以照樣查詢同物件上的其他 Comp。
+    </div>
+  </div>
+
+  <!-- ═══ 7. PlaceWorker ═══ -->
+  <div class="section" id="placeworker">
+    <div class="section-title">7 · PlaceWorker — 放置限制驗證</div>
+
+    <p>
+      <code>PlaceWorker</code> 在玩家拖放建築藍圖時即時驗證位置是否合法，並可繪製輔助提示（範圍圈、相鄰高亮）。
+      它不影響已放置的建築，純粹是「能不能蓋在這」的規則。
+    </p>
+
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public class</span> <span class="ty">PlaceWorker_NotNearOther</span> : <span class="ty">PlaceWorker</span>
+{
+    <span class="cm">// 回傳是否允許放置；不允許時回傳的字串會顯示為紅字理由</span>
+    <span class="kw">public override</span> <span class="ty">AcceptanceReport</span> <span class="nm">AllowsPlacing</span>(
+        <span class="ty">BuildableDef</span> def,
+        <span class="ty">IntVec3</span>      center,
+        <span class="ty">Rot4</span>         rot,
+        <span class="ty">Map</span>          map,
+        <span class="ty">Thing</span>        thingToIgnore = <span class="kw">null</span>,
+        <span class="ty">Thing</span>        thing = <span class="kw">null</span>)
+    {
+        <span class="cm">// 範例：方圓 5 格內不能有另一座同類建築</span>
+        <span class="kw">int</span> radius = <span class="nu">5</span>;
+        <span class="kw">foreach</span> (<span class="ty">IntVec3</span> cell <span class="kw">in</span> <span class="ty">GenRadial</span>.<span class="nm">RadialCellsAround</span>(center, radius, useCenter: <span class="kw">true</span>))
+        {
+            <span class="kw">if</span> (!cell.<span class="nm">InBounds</span>(map)) <span class="kw">continue</span>;
+
+            <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> cell.<span class="nm">GetThingList</span>(map))
+            {
+                <span class="kw">if</span> (t.<span class="nm">def</span> == def &amp;&amp; t != thingToIgnore)
+                    <span class="kw">return new</span> <span class="ty">AcceptanceReport</span>(<span class="st">"附近已有一座共振機。"</span>);
+            }
+        }
+        <span class="kw">return</span> <span class="ty">AcceptanceReport</span>.<span class="nm">WasAccepted</span>;
+    }
+
+    <span class="cm">// 選取藍圖 / 拖放時繪製輔助圖示（選用）</span>
+    <span class="kw">public override void</span> <span class="nm">DrawGhost</span>(
+        <span class="ty">ThingDef</span> def, <span class="ty">IntVec3</span> center, <span class="ty">Rot4</span> rot,
+        <span class="ty">Color</span> ghostCol, <span class="ty">Thing</span> thing = <span class="kw">null</span>)
+    {
+        <span class="cm">// 畫出 5 格半徑的範圍圈</span>
+        <span class="ty">GenDraw</span>.<span class="nm">DrawRadiusRing</span>(center, <span class="nu">5</span>);
+    }
+}</pre>
+
+    <h3>掛載到 ThingDef</h3>
+    <pre><span class="xml-tag">&lt;placeWorkers&gt;</span>
+  <span class="xml-tag">&lt;li&gt;</span>MyMod.PlaceWorker_NotNearOther<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="cm">&lt;!-- 也可疊加核心提供的，例如顯示需要研究、需要屋頂等 --&gt;</span>
+  <span class="xml-tag">&lt;li&gt;</span>PlaceWorker_ShowFacilitiesConnections<span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/placeWorkers&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>常用核心 PlaceWorker</strong>
+      <code>PlaceWorker_Heater</code>（顯示影響的房間）、<code>PlaceWorker_OnSteamGeyser</code>（限定間歇泉上）、
+      <code>PlaceWorker_NeverAdjacentTrap</code>、<code>PlaceWorker_WindTurbine</code>（風機間距）。
+      要做相似行為時先找有沒有現成的，能省很多力。
+    </div>
+  </div>
+
+  <!-- ═══ 8. designationCategory ═══ -->
+  <div class="section" id="designation">
+    <div class="section-title">8 · designationCategory 與建造選單分類</div>
+
+    <p>
+      <code>&lt;designationCategory&gt;</code> 決定建築出現在底部「建造（Architect）」選單的哪個分頁。
+      值必須對應一個既有或自訂的 <code>DesignationCategoryDef</code>。
+    </p>
+
+    <h3>核心內建分類（部分）</h3>
+    <table>
+      <tr><th>defName</th><th>分頁</th></tr>
+      <tr><td><code>Structure</code></td><td>結構（牆、門、地板）</td></tr>
+      <tr><td><code>Production</code></td><td>生產（工作台、機器）</td></tr>
+      <tr><td><code>Furniture</code></td><td>家具</td></tr>
+      <tr><td><code>Power</code></td><td>電力</td></tr>
+      <tr><td><code>Security</code></td><td>防禦</td></tr>
+      <tr><td><code>Temperature</code></td><td>溫度（冷暖氣）</td></tr>
+      <tr><td><code>Misc</code></td><td>雜項</td></tr>
+    </table>
+
+    <h3>自訂一個新分頁</h3>
+    <pre><span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;DesignationCategoryDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyModCategory<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>共振科技<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;order&gt;</span>250<span class="xml-tag">&lt;/order&gt;</span>   <span class="cm">&lt;!-- 數字越大越靠右；參考核心值排位 --&gt;</span>
+  <span class="xml-tag">&lt;/DesignationCategoryDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <pre><span class="cm">&lt;!-- 然後在 ThingDef 引用 --&gt;</span>
+<span class="xml-tag">&lt;designationCategory&gt;</span>MyModCategory<span class="xml-tag">&lt;/designationCategory&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>把建築塞進「別人的」分頁</strong>
+      若只想把一兩個建築加進既有分頁，直接設 <code>designationCategory</code> 即可，不要 PatchOperation。
+      但若要往核心分頁加 <code>specialDesignatorClasses</code> 之類，才需要 XML PatchOperation。
+      自訂分頁太多會讓玩家選單雜亂——能借用既有分頁就借用。
+    </div>
+  </div>
+
+  <!-- ═══ 9. 連線建築 ═══ -->
+  <div class="section" id="linking">
+    <div class="section-title">9 · 連線建築（CompPipe 概念與 graphic linking）</div>
+
+    <p>
+      「連線建築」指相鄰時會自動拼接外觀或共享資源的建築，分兩個獨立面向：
+      <strong>外觀拼接</strong>（graphic linking）與<strong>資源網路</strong>（如電力、或 mod 自訂的管線網）。
+    </p>
+
+    <h3>外觀拼接：graphic linking</h3>
+    <p>
+      牆、電纜、管線那種「會自動和鄰居接起來」的視覺，靠 <code>Graphic_Linked</code> 系列實現。
+      引擎依相鄰同類建築選擇對應的接合貼圖（直線、轉角、T 字、十字）。
+    </p>
+    <pre><span class="xml-tag">&lt;graphicData&gt;</span>
+  <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/Linked/MyPipe_Atlas<span class="xml-tag">&lt;/texPath&gt;</span>
+  <span class="cm">&lt;!-- Graphic_LinkedTransmitter：和電纜一樣的接線視覺 --&gt;</span>
+  <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_LinkedTransmitter<span class="xml-tag">&lt;/graphicClass&gt;</span>
+  <span class="xml-tag">&lt;linkType&gt;</span>Transmitter<span class="xml-tag">&lt;/linkType&gt;</span>
+  <span class="xml-tag">&lt;linkFlags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Custom1<span class="xml-tag">&lt;/li&gt;</span>   <span class="cm">&lt;!-- 只和帶相同 flag 的鄰居拼接 --&gt;</span>
+  <span class="xml-tag">&lt;/linkFlags&gt;</span>
+<span class="xml-tag">&lt;/graphicData&gt;</span>
+<span class="xml-tag">&lt;building&gt;</span>
+  <span class="xml-tag">&lt;linkFlags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Custom1<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/linkFlags&gt;</span>
+<span class="xml-tag">&lt;/building&gt;</span></pre>
+
+    <h3>資源網路：CompPipe 概念</h3>
+    <p>
+      RimWorld 核心<em>沒有</em>通用「管線」Comp——電力的 <code>PowerNet</code> 是寫死的特例。
+      DLC（如 Biotech 的氣體管）與大型 mod（PRF、VFE）各自實作了自己的管網系統，
+      社群慣稱這類為 <code>CompPipe</code> / <code>CompResource</code>。核心思路與 PowerNet 同構：
+    </p>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>節點 Comp</h3>
+        <p>每個接網建築掛一個 Comp，持有對所屬 Net 的參照，並在 <code>PostSpawnSetup</code> / <code>PostDeSpawn</code> 時通知網重建。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>Net Manager</h3>
+        <p>一個 <code>MapComponent</code> 維護所有 Net，用 flood-fill 從相鄰節點重建連通分量，每 tick 結算供需。</p>
+      </div>
+    </div>
+    <pre><span class="cm">// 自訂管網節點 Comp 的骨架（概念示意）</span>
+<span class="kw">public class</span> <span class="ty">CompPipe</span> : <span class="ty">ThingComp</span>
+{
+    <span class="kw">public</span> <span class="ty">PipeNet</span> net;   <span class="cm">// 由 MapComponent 指派；未連網時為 null</span>
+
+    <span class="kw">public override void</span> <span class="nm">PostSpawnSetup</span>(<span class="kw">bool</span> respawningAfterLoad)
+    {
+        <span class="kw">base</span>.<span class="nm">PostSpawnSetup</span>(respawningAfterLoad);
+        <span class="cm">// 通知地圖的管網管理器：有新節點，請重建受影響的網</span>
+        parent.<span class="nm">Map</span>.<span class="nm">GetComponent</span>&lt;<span class="ty">PipeNetManager</span>&gt;()?.<span class="nm">RegisterNode</span>(<span class="kw">this</span>);
+    }
+
+    <span class="kw">public override void</span> <span class="nm">PostDeSpawn</span>(<span class="ty">Map</span> map)
+    {
+        map.<span class="nm">GetComponent</span>&lt;<span class="ty">PipeNetManager</span>&gt;()?.<span class="nm">DeregisterNode</span>(<span class="kw">this</span>);
+        <span class="kw">base</span>.<span class="nm">PostDeSpawn</span>(map);
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>要做管網？先看 PipeSystem 函式庫</strong>
+      社群開源的 <code>PipeSystem</code>（Vanilla Expanded 系列依賴）已把這套抽象做成可重用框架。
+      除非要深度客製，否則直接依賴它比自己重寫一遍 PowerNet 划算得多。
+    </div>
+  </div>
+
+  <!-- ═══ 10. 常見坑 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">10 · 常見坑</div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 1</span> <code>PowerNet</code> 為 null</h3>
+      <p>
+        建築剛放下、或從未接到電纜時，<code>CompPowerTrader.PowerNet</code> 是 <code>null</code>。
+        在 <code>SpawnSetup</code> 當下、或孤立建築上存取 <code>PowerNet.xxx()</code> 會直接 NRE。
+      </p>
+      <pre><span class="cm">// ❌ 危險</span>
+<span class="kw">float</span> g = powerComp.<span class="nm">PowerNet</span>.<span class="nm">CurrentEnergyGainRate</span>();
+
+<span class="cm">// ✅ 一律判空</span>
+<span class="ty">PowerNet</span> net = powerComp?.<span class="nm">PowerNet</span>;
+<span class="kw">if</span> (net != <span class="kw">null</span>)
+    <span class="kw">float</span> g = net.<span class="nm">CurrentEnergyGainRate</span>();</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-red">坑 2</span> 忽略 <code>respawningAfterLoad</code></h3>
+      <p>
+        <code>SpawnSetup</code> 在「首次放置」與「讀檔重建」兩種情境都會呼叫。
+        把一次性初始化（給予初始資源、播放放置特效、註冊到管理器計數）寫在沒判斷 flag 的分支，
+        會在每次讀檔時重複執行，造成存檔污染或數值翻倍。
+      </p>
+      <pre><span class="kw">public override void</span> <span class="nm">SpawnSetup</span>(<span class="ty">Map</span> map, <span class="kw">bool</span> respawningAfterLoad)
+{
+    <span class="kw">base</span>.<span class="nm">SpawnSetup</span>(map, respawningAfterLoad);
+
+    <span class="kw">if</span> (!respawningAfterLoad)
+    {
+        <span class="cm">// ✅ 只有真正首次放置才做：發特效、給初始狀態</span>
+        <span class="ty">FleckMaker</span>.<span class="nm">Static</span>(<span class="kw">this</span>.<span class="nm">Position</span>, map, <span class="ty">FleckDefOf</span>.PsycastAreaEffect);
+    }
+
+    <span class="cm">// 兩種情境都要做的（取 Comp、註冊 tick 監聽）放外面</span>
+    powerComp = <span class="kw">this</span>.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+}</pre>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 3</span> 忘記呼叫 <code>base.SpawnSetup</code></h3>
+      <p>
+        漏掉 <code>base.SpawnSetup(map, respawningAfterLoad)</code>，Comp 不會 PostSpawnSetup、
+        電力不會接網、繪製器不會註冊。症狀通常是「建築看不見」或「TryGetComp 回 null」。
+        所有覆寫的生命週期方法都要記得鏈式呼叫 base。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-orange">坑 4</span> 在 ExposeData 漏存 Comp 自身狀態的誤解</h3>
+      <p>
+        Comp 的狀態由 Comp 自己的 <code>PostExposeData</code> 處理，<em>不需要</em>你在 Building 的
+        <code>ExposeData</code> 裡手動存。你只需存 Building class 上自己宣告的欄位。
+        重複存反而會出現「節點重複」之類的讀檔警告。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 5</span> 耗電/發電正負號搞反</h3>
+      <p>
+        XML <code>basePowerConsumption</code>：正=耗電。
+        C# <code>PowerOutput</code>：負=耗電。兩邊相反。
+        若設定後機器反而在「發電」，十之八九是把 C# 端的符號寫成正的了。
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3><span class="tag tag-purple">坑 6</span> Draw 裡做重運算</h3>
+      <p>
+        <code>Draw()</code> 每幀呼叫（非每 tick），且和畫面更新率綁定。
+        在裡面做尋路、查 PowerNet 遍歷、配置記憶體都會明顯掉幀。
+        把計算放 <code>TickRare</code> 算好快取，<code>Draw</code> 只負責畫。
+      </p>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>上線前 Checklist</strong>
+      <ol style="padding-left:1.2rem;margin:0.5rem 0 0">
+        <li>所有覆寫方法都呼叫了對應的 <code>base.XXX()</code></li>
+        <li>取 Comp 在 <code>base.SpawnSetup</code> 之後，且結果判空</li>
+        <li>存取 <code>PowerNet</code> 前判 null</li>
+        <li>一次性初始化包在 <code>if (!respawningAfterLoad)</code></li>
+        <li>tickerType 與你實際覆寫的 tick 方法相符</li>
+        <li>正負號：XML 正=耗電 / C# 負=耗電</li>
+        <li>自訂欄位寫進 <code>ExposeData</code>，且未重複存 Comp 狀態</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>

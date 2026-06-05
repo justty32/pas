@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>進階技巧 — RimWorld Modding</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html" class="active">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+</nav>
+
+<div class="hero">
+  <h1>進階技巧</h1>
+  <p>Transpiler IL 操作、性能最佳化、Scribe 存檔深入、物件引用陷阱、多版本相容、跨 Mod 互動，以及資料結構速查。</p>
+  <span class="badge">RimWorld 1.4 / 1.5 · 針對 C# 資深工程師 · 假設已熟悉 Harmony</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. Transpiler ── -->
+  <div class="section">
+    <div class="section-title">1. Transpiler 深入：IL 指令操作</div>
+
+    <p>
+      Prefix / Postfix 只能在方法<strong>前後</strong>切入；當你必須改寫方法<strong>內部</strong>的某段邏輯
+      （而不能整個取代）時，Transpiler 是唯一選擇。Transpiler 接收原方法的 IL 指令串
+      （<code>IEnumerable&lt;CodeInstruction&gt;</code>），回傳改寫後的指令串。本質上你是在編譯後的 CIL 層級做手術。
+    </p>
+
+    <div class="callout callout-warn">
+      <strong>Transpiler 是最後手段</strong>
+      它對目標方法的 IL 結構高度敏感，任何遊戲更新都可能讓你的指令比對失效。能用 Prefix/Postfix 解決就別用 Transpiler。
+      務必加上「找不到目標就拋例外或記錄並原樣回傳」的防呆。
+    </div>
+
+    <h3>CodeInstruction 與 OpCodes 對應 C#</h3>
+    <p>每個 <code>CodeInstruction</code> 包含一個 <code>opcode</code>（<code>System.Reflection.Emit.OpCode</code>）與選用的 <code>operand</code>。常見對應如下：</p>
+
+    <table>
+      <tr><th>C# 概念</th><th>典型 OpCode</th><th>operand 內容</th></tr>
+      <tr><td>載入區域變數 / 參數</td><td><code>Ldloc</code>, <code>Ldloc_0..3</code>, <code>Ldarg</code>, <code>Ldarg_0</code></td><td>區域變數索引 / 參數索引</td></tr>
+      <tr><td>儲存到區域變數</td><td><code>Stloc</code>, <code>Stloc_0..3</code></td><td>區域變數索引</td></tr>
+      <tr><td>載入整數常數</td><td><code>Ldc_I4</code>, <code>Ldc_I4_S</code>, <code>Ldc_I4_0..8</code></td><td>整數值（短型用 <code>_S</code>）</td></tr>
+      <tr><td>呼叫方法</td><td><code>Call</code>, <code>Callvirt</code></td><td><code>MethodInfo</code></td></tr>
+      <tr><td>讀 / 寫欄位</td><td><code>Ldfld</code>, <code>Stfld</code>, <code>Ldsfld</code>, <code>Stsfld</code></td><td><code>FieldInfo</code></td></tr>
+      <tr><td>比較</td><td><code>Cgt</code>, <code>Clt</code>, <code>Ceq</code></td><td>無</td></tr>
+      <tr><td>條件跳躍</td><td><code>Brfalse</code>, <code>Brtrue</code>, <code>Beq</code>, <code>Ble</code>, <code>Bgt</code></td><td><code>Label</code></td></tr>
+      <tr><td>回傳</td><td><code>Ret</code></td><td>無</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>查 IL 的工具</strong>
+      用 <strong>dnSpy</strong> / <strong>ILSpy</strong> 開啟 <code>Assembly-CSharp.dll</code>，切到「IL」檢視模式，逐條對照目標方法的指令，
+      就能寫出對應的比對與替換邏輯。沒看過實際 IL 而硬寫 Transpiler 幾乎一定錯。
+    </div>
+
+    <h3>定位指令模式</h3>
+    <p>典型做法是把指令串轉成 <code>List</code>，用迴圈掃描特徵指令（anchor），再以其為基準插入 / 刪除 / 替換。</p>
+<pre><span class="kw">static</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">CodeInstruction</span>&gt; <span class="nm">Transpiler</span>(<span class="ty">IEnumerable</span>&lt;<span class="ty">CodeInstruction</span>&gt; instructions)
+{
+    <span class="kw">var</span> codes = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">CodeInstruction</span>&gt;(instructions);
+
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; codes.Count; i++)
+    {
+        <span class="cm">// 找出「呼叫某個特定方法」的位置作為錨點</span>
+        <span class="kw">if</span> (codes[i].opcode == <span class="ty">OpCodes</span>.Call
+            &amp;&amp; codes[i].operand <span class="kw">is</span> <span class="ty">MethodInfo</span> mi
+            &amp;&amp; mi.Name == <span class="st">"SomeTargetMethod"</span>)
+        {
+            <span class="ty">FileLog</span>.<span class="nm">Log</span>(<span class="st">$"[MyMod] 在 index {i} 找到 SomeTargetMethod"</span>);
+            <span class="cm">// ... 在此插入 / 刪除 / 替換 ...</span>
+            <span class="kw">break</span>;
+        }
+    }
+    <span class="kw">return</span> codes;
+}</pre>
+
+    <h3>插入 / 刪除 / 替換</h3>
+<pre><span class="cm">// ① 插入：在錨點「前」插入兩條指令（載入 this 與呼叫自訂 hook）</span>
+codes.<span class="nm">InsertRange</span>(i, <span class="kw">new</span>[]
+{
+    <span class="kw">new</span> <span class="ty">CodeInstruction</span>(<span class="ty">OpCodes</span>.Ldarg_0),
+    <span class="kw">new</span> <span class="ty">CodeInstruction</span>(<span class="ty">OpCodes</span>.Call,
+        <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">MyHooks</span>), <span class="kw">nameof</span>(<span class="ty">MyHooks</span>.<span class="nm">OnBeforeCall</span>))),
+});
+
+<span class="cm">// ② 刪除：移除錨點當條指令（例如砍掉一次多餘呼叫）</span>
+codes.<span class="nm">RemoveAt</span>(i);
+
+<span class="cm">// ③ 替換：把「呼叫 A」改成「呼叫 B」(保留 operand 以外其他資訊)</span>
+codes[i].operand = <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">MyHooks</span>), <span class="kw">nameof</span>(<span class="ty">MyHooks</span>.<span class="nm">Replacement</span>));</pre>
+
+    <div class="callout callout-danger">
+      <strong>Label 與 ExceptionBlocks 不要弄丟</strong>
+      若有跳躍指令的目標 <code>Label</code> 或 try/catch 區塊掛在你要刪除 / 替換的那條指令上，
+      必須把 <code>labels</code> / <code>blocks</code> 移轉到新指令（<code>newInstr.labels.AddRange(old.labels)</code>），
+      否則 IL 會驗證失敗、整個遊戲崩潰。安全做法是「替換 operand」而非「整條換掉」。
+    </div>
+
+    <h3>完整範例：把 <code>if (x &gt; 5)</code> 改成 <code>if (x &gt; 10)</code></h3>
+    <p>
+      假設原始 C# 是 <code>if (x &gt; 5) { ... }</code>。編譯後常見為：
+      <code>ldloc x</code> → <code>ldc.i4.5</code> → <code>cgt</code> → <code>brfalse ...</code>。
+      我們只要把那條 <code>ldc.i4.5</code> 的常數從 5 改成 10。
+    </p>
+<pre><span class="cm">// 目標：將比較門檻常數 5 → 10</span>
+<span class="kw">static</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">CodeInstruction</span>&gt; <span class="nm">Transpiler</span>(<span class="ty">IEnumerable</span>&lt;<span class="ty">CodeInstruction</span>&gt; instructions)
+{
+    <span class="kw">var</span> codes = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">CodeInstruction</span>&gt;(instructions);
+    <span class="kw">bool</span> patched = <span class="kw">false</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; codes.Count; i++)
+    {
+        <span class="cm">// 比對「載入常數 5 後面緊接 cgt」這個特徵，避免誤改其他 5</span>
+        <span class="kw">bool</span> isLoad5 =
+            (codes[i].opcode == <span class="ty">OpCodes</span>.Ldc_I4_5) ||
+            (codes[i].opcode == <span class="ty">OpCodes</span>.Ldc_I4_S &amp;&amp; <span class="ty">Convert</span>.<span class="nm">ToInt32</span>(codes[i].operand) == <span class="nu">5</span>) ||
+            (codes[i].opcode == <span class="ty">OpCodes</span>.Ldc_I4   &amp;&amp; <span class="ty">Convert</span>.<span class="nm">ToInt32</span>(codes[i].operand) == <span class="nu">5</span>);
+
+        <span class="kw">bool</span> nextIsCgt = i + <span class="nu">1</span> &lt; codes.Count &amp;&amp; codes[i + <span class="nu">1</span>].opcode == <span class="ty">OpCodes</span>.Cgt;
+
+        <span class="kw">if</span> (isLoad5 &amp;&amp; nextIsCgt)
+        {
+            <span class="cm">// 直接把這條改成「載入 10」（用通用的 Ldc_I4 + operand 最穩）</span>
+            codes[i].opcode  = <span class="ty">OpCodes</span>.Ldc_I4;
+            codes[i].operand = <span class="nu">10</span>;
+            patched = <span class="kw">true</span>;
+            <span class="ty">FileLog</span>.<span class="nm">Log</span>(<span class="st">$"[MyMod] 門檻 5 → 10 已替換 @ index {i}"</span>);
+            <span class="kw">break</span>;
+        }
+    }
+
+    <span class="kw">if</span> (!patched)
+        <span class="ty">FileLog</span>.<span class="nm">Log</span>(<span class="st">"[MyMod] 警告：未找到 (x &gt; 5) 模式，Transpiler 未生效！"</span>);
+
+    <span class="kw">return</span> codes;
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>用 FileLog.Log 除錯 Transpiler</strong>
+      Transpiler 在「方法首次被 patch」時執行一次，此時遊戲 log 系統未必方便觀察。
+      Harmony 內建的 <code>HarmonyLib.FileLog.Log(string)</code> 會寫到桌面的 <code>harmony.log.txt</code>，
+      最適合驗證「有沒有找到錨點、改了哪個 index」。除錯完記得移除或設旗標關閉。
+    </div>
+  </div>
+
+  <!-- ── 2. 性能 ── -->
+  <div class="section">
+    <div class="section-title">2. 性能最佳化</div>
+
+    <p>
+      RimWorld 是 tick-based 模擬，<code>TickRate</code> 預設每秒 60 ticks，大型殖民地可有上千個 Thing 同時 tick。
+      Mod 在 hot path 上的任何浪費都會被放大成卡頓，性能意識是進階 modder 的基本功。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>避免在 Tick() 重運算</h3>
+        <p><code>Thing.Tick()</code> / <code>TickRare()</code> 是每幀（或每 250 ticks）呼叫的 hot path。
+        把不會每幀變的結果<strong>快取在欄位</strong>，只在輸入變動時重算，不要每 tick 做反射、LINQ、字串格式化或集合配置。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>用偶發 tick 分攤負載</h3>
+        <p>不需要每幀精度的邏輯改用 <code>TickRare()</code>（每 250 ticks ≈ 4.16 秒）或 <code>TickLong()</code>（每 2000 ticks）。
+        或自行用 <code>Find.TickManager.TicksGame</code> 配合 <code>GenTicks.TicksGame % N == offset</code> 把工作分散到不同幀。</p>
+      </div>
+    </div>
+
+    <h3>GenTicks 偶發 tick：把負載打散</h3>
+<pre><span class="kw">public override void</span> <span class="nm">Tick</span>()
+{
+    <span class="kw">base</span>.<span class="nm">Tick</span>();
+
+    <span class="cm">// 每 60 ticks（約 1 秒）才做一次昂貴檢查，</span>
+    <span class="cm">// 並以 thingIDNumber 當 offset，讓不同物件落在不同幀，避免同幀尖峰</span>
+    <span class="kw">if</span> ((<span class="ty">GenTicks</span>.TicksGame + thingIDNumber) % <span class="nu">60</span> == <span class="nu">0</span>)
+    {
+        <span class="nm">DoExpensiveScan</span>();
+    }
+}</pre>
+    <div class="callout callout-tip">
+      <strong>HashOffsetTicks 慣例</strong>
+      RimWorld 自身大量使用 <code>this.HashOffsetTicks()</code> / <code>this.IsHashIntervalTick(interval)</code>
+      來實作「分散式間隔 tick」。優先用 <code>this.IsHashIntervalTick(250)</code> 取代自行寫 <code>% 250</code>，語意更清楚且已內建 hash 打散。
+    </div>
+
+    <h3>快取反射結果（MethodInfo / FieldInfo）</h3>
+    <p><code>AccessTools.Method</code> / <code>AccessTools.Field</code> 內部做字串查找與反射，<strong>絕不可</strong>在 hot path 重複呼叫。一律在靜態欄位快取一次。</p>
+<pre><span class="kw">public static class</span> <span class="ty">Reflect</span>
+{
+    <span class="cm">// 一次性快取：型別載入時解析一次，之後零反射查找開銷</span>
+    <span class="kw">public static readonly</span> <span class="ty">FieldInfo</span>  HungerField =
+        <span class="ty">AccessTools</span>.<span class="nm">Field</span>(<span class="kw">typeof</span>(<span class="ty">Need_Food</span>), <span class="st">"curLevelInt"</span>);
+
+    <span class="kw">public static readonly</span> <span class="ty">MethodInfo</span> RecacheMethod =
+        <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">Pawn_NeedsTracker</span>), <span class="st">"Notify_NeedAdded"</span>);
+}
+
+<span class="cm">// 使用（無反射查找開銷，僅一次 GetValue/Invoke）</span>
+<span class="kw">float</span> hunger = (<span class="kw">float</span>)<span class="ty">Reflect</span>.HungerField.<span class="nm">GetValue</span>(pawn.needs.food);</pre>
+    <div class="callout callout-warn">
+      <strong>更進一步：委派快取</strong>
+      連 <code>FieldInfo.GetValue</code> 的反射裝箱開銷都想省，可用 Harmony 的
+      <code>AccessTools.FieldRefAccess&lt;TInstance, TField&gt;(name)</code> 取得強型別存取委派，
+      或用 <code>MethodInfo.CreateDelegate</code> 把 <code>MethodInfo</code> 編成委派，hot path 上接近原生呼叫速度。
+    </div>
+
+    <h3>HashSet vs List：選對容器</h3>
+    <table>
+      <tr><th>操作</th><th><code>List&lt;T&gt;</code></th><th><code>HashSet&lt;T&gt;</code></th><th>建議</th></tr>
+      <tr><td>包含判斷 <code>Contains</code></td><td>O(n) 線性掃描</td><td>O(1) 雜湊</td><td>頻繁查存在性 → HashSet <span class="tag tag-green">快</span></td></tr>
+      <tr><td>循序走訪</td><td>快、cache 友善</td><td>較慢、無序</td><td>只迭代不查存在 → List</td></tr>
+      <tr><td>索引存取 <code>[i]</code></td><td>O(1)</td><td>不支援</td><td>需索引 → List</td></tr>
+      <tr><td>去重</td><td>需手動</td><td>天生去重</td><td>需唯一集合 → HashSet</td></tr>
+    </table>
+<pre><span class="cm">// 反例：在 Tick 裡對大 List 反覆 Contains → O(n) 每幀</span>
+<span class="kw">if</span> (trackedThings.<span class="nm">Contains</span>(thing)) { ... }   <span class="cm">// ❌ List 上是線性掃描</span>
+
+<span class="cm">// 正解：存在性查詢改用 HashSet</span>
+<span class="kw">private readonly</span> <span class="ty">HashSet</span>&lt;<span class="ty">Thing</span>&gt; _tracked = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;<span class="ty">Thing</span>&gt;();
+<span class="kw">if</span> (_tracked.<span class="nm">Contains</span>(thing)) { ... }   <span class="cm">// ✓ O(1)</span></pre>
+
+    <div class="callout callout-info">
+      <strong>Unity Profiler 抓真正瓶頸</strong>
+      別憑感覺優化。RimWorld 用 Unity 引擎，可掛 Unity Profiler（或 Dev mode 下的內建除錯計量、社群的
+      <code>Dubs Performance Analyzer</code> mod）找出實際吃 CPU 的方法。
+      先量測、再優化；把時間花在 self-time 最高的呼叫上，而不是看起來「應該很慢」的地方。
+    </div>
+  </div>
+
+  <!-- ── 3. Scribe ── -->
+  <div class="section">
+    <div class="section-title">3. Scribe 存檔系統深入</div>
+
+    <p>
+      RimWorld 的存讀檔由 <code>Scribe</code> 系統驅動，採「同一份 <code>ExposeData()</code> 同時負責存與讀」的對稱設計。
+      任何要進存檔的自訂類別實作 <code>IExposable</code> 並覆寫 <code>ExposeData()</code>。
+      <code>Scribe.mode</code> 指示當前是 <code>Saving</code>、<code>LoadingVars</code> 等階段。
+    </p>
+
+    <h3>Scribe_* 方法對照</h3>
+    <table>
+      <tr><th>方法</th><th>適用型別</th><th>說明</th></tr>
+      <tr><td><code>Scribe_Values.Look(ref v, "label", default)</code></td><td>值型別 / string / enum</td><td>基本值；提供 default 在缺欄位時回退 <span class="tag tag-green">最常用</span></td></tr>
+      <tr><td><code>Scribe_Defs.Look(ref def, "label")</code></td><td>任何 <code>Def</code></td><td>以 defName 序列化，讀檔時查 DefDatabase 還原</td></tr>
+      <tr><td><code>Scribe_References.Look(ref thing, "label")</code></td><td><code>ILoadReferenceable</code>（Thing/Pawn 等）</td><td>存「引用」而非物件本體；需該物件由別處 Deep 存下 <span class="tag tag-orange">注意順序</span></td></tr>
+      <tr><td><code>Scribe_Deep.Look(ref obj, "label", ctorArgs)</code></td><td><code>IExposable</code></td><td>把物件<strong>內容</strong>整個存進去；擁有者用此存其子物件</td></tr>
+      <tr><td><code>Scribe_Collections.Look(ref list, "label", LookMode.X)</code></td><td>List / Dictionary / HashSet</td><td>須指定 <code>LookMode</code>（Value/Def/Reference/Deep）</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>Deep vs Reference 的關鍵差異</strong>
+      <code>Scribe_Deep</code> 存的是「<strong>誰擁有這個物件</strong>」——把內容完整寫入，讀檔時重建。
+      <code>Scribe_References</code> 存的是「<strong>指向某個別處已存的物件</strong>」。
+      同一個物件只能有<strong>一個</strong> Deep 擁有者，其他持有者一律用 Reference，否則讀檔會產生重複實例或 null。
+    </div>
+
+    <h3>完整範例：IExposable 自訂類別</h3>
+<pre><span class="kw">public class</span> <span class="ty">MyWorldComponentData</span> : <span class="ty">IExposable</span>
+{
+    <span class="kw">public int</span>            counter;
+    <span class="kw">public</span> <span class="ty">ThingDef</span>       favouredDef;          <span class="cm">// Def 引用</span>
+    <span class="kw">public</span> <span class="ty">Pawn</span>           owner;                <span class="cm">// 物件引用（別處 Deep 存）</span>
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt;      tickStamps = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt;();
+    <span class="kw">public</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Pawn</span>, <span class="kw">int</span>&gt; scores = <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Pawn</span>, <span class="kw">int</span>&gt;();
+    <span class="kw">public</span> <span class="ty">SubData</span>        sub = <span class="kw">new</span> <span class="ty">SubData</span>();   <span class="cm">// 由本類別擁有 → Deep</span>
+
+    <span class="kw">public void</span> <span class="nm">ExposeData</span>()
+    {
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> counter, <span class="st">"counter"</span>, <span class="nu">0</span>);
+        <span class="ty">Scribe_Defs</span>.<span class="nm">Look</span>(<span class="kw">ref</span> favouredDef, <span class="st">"favouredDef"</span>);
+        <span class="ty">Scribe_References</span>.<span class="nm">Look</span>(<span class="kw">ref</span> owner, <span class="st">"owner"</span>);
+        <span class="ty">Scribe_Deep</span>.<span class="nm">Look</span>(<span class="kw">ref</span> sub, <span class="st">"sub"</span>);
+
+        <span class="cm">// 集合：list of value</span>
+        <span class="ty">Scribe_Collections</span>.<span class="nm">Look</span>(<span class="kw">ref</span> tickStamps, <span class="st">"tickStamps"</span>, <span class="ty">LookMode</span>.Value);
+
+        <span class="cm">// Dictionary：key = Reference(Pawn)、value = Value(int)</span>
+        <span class="ty">Scribe_Collections</span>.<span class="nm">Look</span>(<span class="kw">ref</span> scores, <span class="st">"scores"</span>,
+            <span class="ty">LookMode</span>.Reference, <span class="ty">LookMode</span>.Value);
+
+        <span class="cm">// 讀檔後集合可能為 null（存檔當時為空），補回空集合避免 NRE</span>
+        <span class="kw">if</span> (<span class="ty">Scribe</span>.mode == <span class="ty">LoadSaveMode</span>.PostLoadInit)
+        {
+            tickStamps ??= <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt;();
+            scores     ??= <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Pawn</span>, <span class="kw">int</span>&gt;();
+        }
+    }
+}</pre>
+
+    <h3>存檔版本升級：欄位遷移</h3>
+    <p>
+      當你新版改了欄位名稱或結構，舊存檔仍寫著舊欄位。遷移邏輯放在
+      <code>Scribe.mode == LoadSaveMode.LoadingVars</code> 階段——此時 XML 已可讀但物件尚未 PostLoad，
+      可同時嘗試讀新舊兩個 key，把舊資料搬到新欄位。
+    </p>
+<pre><span class="kw">public int</span> newThreshold;          <span class="cm">// v2 新欄位</span>
+<span class="cm">// 舊版叫 "oldLimit"，新版改名 "newThreshold"</span>
+
+<span class="kw">public void</span> <span class="nm">ExposeData</span>()
+{
+    <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> newThreshold, <span class="st">"newThreshold"</span>, <span class="nu">-1</span>);
+
+    <span class="kw">if</span> (<span class="ty">Scribe</span>.mode == <span class="ty">LoadSaveMode</span>.LoadingVars &amp;&amp; newThreshold == <span class="nu">-1</span>)
+    {
+        <span class="cm">// 新欄位讀不到（== default）→ 嘗試讀舊欄位做遷移</span>
+        <span class="kw">int</span> legacy = <span class="nu">0</span>;
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> legacy, <span class="st">"oldLimit"</span>, <span class="nu">0</span>);
+        newThreshold = legacy * <span class="nu">10</span>;   <span class="cm">// 套用任何轉換規則</span>
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] 遷移舊存檔 oldLimit={legacy} → newThreshold={newThreshold}"</span>);
+    }
+}</pre>
+    <div class="callout callout-tip">
+      <strong>LoadSaveMode 階段</strong>
+      <code>Saving</code>（寫出）→ <code>LoadingVars</code>（讀入原始值，可做遷移）→ <code>ResolvingCrossRefs</code>（解析 Reference 指向）→
+      <code>PostLoadInit</code>（全部就緒，補 null、重建快取）。遷移放在 <code>LoadingVars</code>，重建衍生狀態放在 <code>PostLoadInit</code>。
+    </div>
+  </div>
+
+  <!-- ── 4. 物件引用陷阱 ── -->
+  <div class="section">
+    <div class="section-title">4. 物件引用陷阱</div>
+
+    <p>
+      C# 工程師最容易踩的雷：把 <code>Pawn</code> / <code>Thing</code> 引用<strong>長期</strong>存進自己的欄位或靜態集合。
+      在 RimWorld 中物件會死亡、被銷毀、被卸載地圖；你的引用會變成「孤兒」——指向一個已 <code>Destroyed</code> 或不再屬於任何地圖的物件，
+      不但邏輯錯誤，還會讓 GC 無法回收，造成記憶體洩漏與存檔膨脹。
+    </p>
+
+    <div class="callout callout-danger">
+      <strong>持有 Pawn 引用的三大風險</strong>
+      ① <strong>孤兒引用洩漏</strong>：Pawn 已死但你的靜態 List 還抓著它，永遠不被 GC。
+      ② <strong>存檔污染</strong>：用 <code>Scribe_References</code> 存一個沒被任何 Deep 擁有者保存的 Pawn，讀檔時得到 null 或殘骸。
+      ③ <strong>跨地圖失效</strong>：Pawn 隨 caravan 離開地圖後，原地圖的快取引用就指向「不在這張地圖」的物件。
+    </div>
+
+    <h3>正解：存 ID，用時重查</h3>
+    <p>不要長期持有物件本身，改存一個穩定識別子，需要時透過查詢重新取得「當下有效」的引用。</p>
+<pre><span class="cm">// ❌ 危險：長期持有 Pawn 引用</span>
+<span class="kw">private static</span> <span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt; _watchedPawns = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">Pawn</span>&gt;();
+
+<span class="cm">// ✓ 安全：只存 thingIDNumber（穩定、跨存檔一致）</span>
+<span class="kw">private static</span> <span class="ty">HashSet</span>&lt;<span class="kw">int</span>&gt; _watchedIds = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;<span class="kw">int</span>&gt;();
+
+<span class="cm">// 登記時存 ID</span>
+_watchedIds.<span class="nm">Add</span>(pawn.thingIDNumber);
+
+<span class="cm">// 使用時重查，並驗證仍然有效</span>
+<span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> <span class="ty">PawnsFinder</span>.AllMaps_FreeColonistsAndPrisoners)
+{
+    <span class="kw">if</span> (_watchedIds.<span class="nm">Contains</span>(p.thingIDNumber) &amp;&amp; !p.Dead &amp;&amp; p.Spawned)
+    {
+        <span class="nm">ProcessWatched</span>(p);   <span class="cm">// 保證是當下有效的活體</span>
+    }
+}</pre>
+
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>thingIDNumber 作為 key</h3>
+        <p>每個 <code>Thing</code> 有唯一且存檔穩定的 <code>thingIDNumber</code>（int）。用它當字典 key / 集合元素，
+        既不阻擋 GC，又能在讀檔後仍對得上同一個物件。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>def + position 重查</h3>
+        <p>對「地圖上某格的某種建築」，可存 <code>def</code> + <code>IntVec3</code>，需要時用
+        <code>map.thingGrid.ThingsAt(cell)</code> 重新定位，避免抓著可能被拆除的舊引用。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>真要持有引用時，配合銷毀事件清理</strong>
+      若設計上不得不快取引用，務必在物件失效時主動移除：覆寫 <code>Thing.Destroy()</code> / <code>Pawn.Kill()</code> 的對應 Postfix，
+      或每隔一段 tick 掃描 <code>!Spawned || Destroyed || Dead</code> 的項目並從集合剔除。
+    </div>
+  </div>
+
+  <!-- ── 5. 多版本相容 ── -->
+  <div class="section">
+    <div class="section-title">5. 多版本相容（1.4 / 1.5）</div>
+
+    <p>
+      RimWorld 每個大版本都可能改動 API 簽名、Def 結構或 IL。維護一份同時支援多版本的 Mod，需要在
+      <code>About.xml</code>、組件 DLL 與目錄結構三個層面協調。
+    </p>
+
+    <h3>About.xml 宣告支援版本</h3>
+<pre><span class="cm">&lt;!-- About/About.xml --&gt;</span>
+<span class="xml-tag">&lt;ModMetaData&gt;</span>
+  <span class="xml-tag">&lt;packageId&gt;</span>yourname.mymod<span class="xml-tag">&lt;/packageId&gt;</span>
+  <span class="xml-tag">&lt;supportedVersions&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>1.4<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>1.5<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/supportedVersions&gt;</span>
+<span class="xml-tag">&lt;/ModMetaData&gt;</span></pre>
+
+    <h3>多版本目錄結構</h3>
+    <p>RimWorld 載入時會優先讀取與當前遊戲版本同名的子資料夾（<code>1.4/</code>、<code>1.5/</code>），其內各有獨立的 <code>Assemblies/</code> 與 <code>Defs/</code>。共用內容放在根目錄。</p>
+<pre>MyMod/
+├── About/About.xml
+├── Defs/            <span class="cm"># 兩版共用的 Def</span>
+├── Textures/        <span class="cm"># 共用資源</span>
+├── 1.4/
+│   ├── Assemblies/MyMod.dll   <span class="cm"># 針對 1.4 編譯的 DLL</span>
+│   └── Defs/                   <span class="cm"># 1.4 專屬 Def 覆寫</span>
+└── 1.5/
+    ├── Assemblies/MyMod.dll   <span class="cm"># 針對 1.5 編譯的 DLL</span>
+    └── Defs/</pre>
+
+    <h3>#if 條件編譯（csproj DefineConstants）</h3>
+    <p>用一份 .cs 原始碼、兩個 build 組態，靠前置處理符號切出不同程式碼路徑。在 csproj 為各組態定義 <code>RW14</code> / <code>RW15</code>。</p>
+<pre><span class="cm">&lt;!-- MyMod.csproj：為不同組態定義常數並輸出到對應資料夾 --&gt;</span>
+<span class="xml-tag">&lt;PropertyGroup</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Configuration)' == 'RW15'"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;DefineConstants&gt;</span>RW15<span class="xml-tag">&lt;/DefineConstants&gt;</span>
+  <span class="xml-tag">&lt;OutputPath&gt;</span>$(SolutionDir)\1.5\Assemblies\<span class="xml-tag">&lt;/OutputPath&gt;</span>
+<span class="xml-tag">&lt;/PropertyGroup&gt;</span>
+<span class="xml-tag">&lt;PropertyGroup</span> <span class="xml-attr">Condition</span>=<span class="xml-val">"'$(Configuration)' == 'RW14'"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;DefineConstants&gt;</span>RW14<span class="xml-tag">&lt;/DefineConstants&gt;</span>
+  <span class="xml-tag">&lt;OutputPath&gt;</span>$(SolutionDir)\1.4\Assemblies\<span class="xml-tag">&lt;/OutputPath&gt;</span>
+<span class="xml-tag">&lt;/PropertyGroup&gt;</span></pre>
+<pre><span class="cm">// 程式碼中以符號切換版本差異的 API</span>
+<span class="kw">public</span> <span class="ty">Vector3</span> <span class="nm">GetDrawPos</span>(<span class="ty">Pawn</span> pawn)
+{
+#if RW15
+    <span class="cm">// 1.5 改了簽名 / 新增參數的假想範例</span>
+    <span class="kw">return</span> pawn.<span class="nm">DrawPosHeld</span>(<span class="ty">Rot4</span>.North);
+#else <span class="cm">// RW14</span>
+    <span class="kw">return</span> pawn.DrawPos;
+#endif
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>執行期偵測版本：VersionControl.CurrentVersion</strong>
+      若差異很小、不值得為它分兩份 DLL，可在執行期判斷：
+      <code>VersionControl.CurrentMajor</code> / <code>VersionControl.CurrentMinor</code>（如 1 / 5），或
+      <code>VersionControl.CurrentVersion</code>（<code>System.Version</code>）。
+      但注意：若某 API 在某版本<strong>根本不存在</strong>，編譯就會失敗，那種情況仍須走 <code>#if</code> 條件編譯——執行期判斷只能處理「兩版都編得過、但行為要不同」的場景。
+    </div>
+  </div>
+
+  <!-- ── 6. 跨 Mod 互動 ── -->
+  <div class="section">
+    <div class="section-title">6. 和其他 Mod 互動</div>
+
+    <p>
+      成熟的 Mod 生態裡，相容與整合是常態。核心原則是<strong>軟相依</strong>：偵測對方是否存在，存在才啟用整合，
+      不存在也不該崩潰；且不要在編譯期硬連結對方 DLL，以免對方未安裝時連載入都失敗。
+    </p>
+
+    <h3>偵測 Mod 是否啟用</h3>
+<pre><span class="cm">// 用對方的 packageId 判斷是否啟用（不需引用其 DLL）</span>
+<span class="kw">if</span> (<span class="ty">ModsConfig</span>.<span class="nm">IsActive</span>(<span class="st">"ceteam.combatextended"</span>))
+{
+    <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">"[MyMod] 偵測到 Combat Extended，啟用相容處理"</span>);
+    <span class="nm">ApplyCombatExtendedPatches</span>();
+}</pre>
+
+    <h3>動態取得型別：AccessTools.TypeByName</h3>
+    <p>當你需要對另一個 Mod 的型別做 Harmony patch，但又不能硬引用它，用字串動態取得 <code>Type</code>，再交給 Harmony。</p>
+<pre><span class="ty">Type</span> ceType = <span class="ty">AccessTools</span>.<span class="nm">TypeByName</span>(<span class="st">"CombatExtended.CompAmmoUser"</span>);
+<span class="kw">if</span> (ceType != <span class="kw">null</span>)
+{
+    <span class="ty">MethodInfo</span> target = <span class="ty">AccessTools</span>.<span class="nm">Method</span>(ceType, <span class="st">"TryStartReload"</span>);
+    <span class="kw">if</span> (target != <span class="kw">null</span>)
+    {
+        harmony.<span class="nm">Patch</span>(target,
+            postfix: <span class="kw">new</span> <span class="ty">HarmonyMethod</span>(
+                <span class="ty">AccessTools</span>.<span class="nm">Method</span>(<span class="kw">typeof</span>(<span class="ty">MyCePatches</span>), <span class="kw">nameof</span>(<span class="ty">MyCePatches</span>.<span class="nm">AfterReload</span>))));
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>用 [HarmonyPatch] 的條件式版本</strong>
+      若改用屬性式 patch，可在 patch 類別放靜態 <code>bool Prepare()</code> 回傳是否套用，並用
+      <code>[HarmonyPatch]</code> 搭配 <code>static MethodBase TargetMethod()</code> 動態回傳目標方法（內部用 <code>TypeByName</code> 解析）。
+      對方未安裝時 <code>Prepare()</code> 回 false，整個 patch 安全跳過。
+    </div>
+
+    <h3>建立 Mod API：Interface + 共享 DLL</h3>
+    <p>
+      若你希望<strong>別的 Mod</strong>能擴充你的功能，正式做法是發佈一個只含介面的「API DLL」：
+      你的 Mod 定義 <code>interface</code>，第三方引用該 API DLL 實作介面，你在執行期反射收集所有實作者並呼叫。
+      雙方都不需硬引用對方的主 DLL。
+    </p>
+<pre><span class="cm">// ── MyMod.API.dll（公開、可被第三方引用）──</span>
+<span class="kw">namespace</span> <span class="ty">MyMod.Api</span>
+{
+    <span class="kw">public interface</span> <span class="ty">IMyModExtension</span>
+    {
+        <span class="kw">string</span> <span class="nm">ExtensionName</span> { <span class="kw">get</span>; }
+        <span class="kw">void</span> <span class="nm">OnColonyTick</span>(<span class="ty">Map</span> map);
+    }
+}
+
+<span class="cm">// ── 你的主 Mod：啟動時掃描所有實作者 ──</span>
+<span class="at">[StaticConstructorOnStartup]</span>
+<span class="kw">public static class</span> <span class="ty">ExtensionRegistry</span>
+{
+    <span class="kw">public static readonly</span> <span class="ty">List</span>&lt;<span class="ty">IMyModExtension</span>&gt; Extensions = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">IMyModExtension</span>&gt;();
+
+    <span class="kw">static</span> <span class="nm">ExtensionRegistry</span>()
+    {
+        <span class="cm">// 掃描所有已載入型別，找實作介面的具象類別並實例化</span>
+        <span class="kw">foreach</span> (<span class="ty">Type</span> t <span class="kw">in</span> <span class="ty">GenTypes</span>.<span class="nm">AllTypes</span>)
+        {
+            <span class="kw">if</span> (<span class="kw">typeof</span>(<span class="ty">IMyModExtension</span>).<span class="nm">IsAssignableFrom</span>(t)
+                &amp;&amp; !t.IsAbstract &amp;&amp; !t.IsInterface)
+            {
+                Extensions.<span class="nm">Add</span>((<span class="ty">IMyModExtension</span>)<span class="ty">Activator</span>.<span class="nm">CreateInstance</span>(t));
+                <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] 載入擴充：{t.FullName}"</span>);
+            }
+        }
+    }
+}
+
+<span class="cm">// 主 Mod 在適當時機廣播給所有擴充</span>
+<span class="kw">foreach</span> (<span class="kw">var</span> ext <span class="kw">in</span> <span class="ty">ExtensionRegistry</span>.Extensions)
+    ext.<span class="nm">OnColonyTick</span>(map);</pre>
+
+    <div class="callout callout-warn">
+      <strong>API DLL 要穩定</strong>
+      一旦發佈 API 介面，第三方就會依賴它。後續盡量只「新增」成員、避免改動既有簽名；
+      若非破壞不可，沿用版本目錄或新介面（<code>IMyModExtension2</code>）並行，給依賴者過渡空間。
+    </div>
+  </div>
+
+  <!-- ── 7. 資料結構速查 ── -->
+  <div class="section">
+    <div class="section-title">7. RimWorld 資料結構速查</div>
+
+    <p>進階開發最常用的「拿到我要的東西」入口。以下都假設 <code>using Verse;</code> / <code>using RimWorld;</code>。</p>
+
+    <table>
+      <tr><th>取用方式</th><th>回傳</th><th>說明 / 用途</th></tr>
+      <tr>
+        <td><code>Find.CurrentMap</code></td>
+        <td><code>Map</code></td>
+        <td>玩家當前正在檢視的地圖。注意：世界視圖或多地圖時可能非你要操作的地圖，UI 以外的邏輯應顯式傳入目標 <code>Map</code> <span class="tag tag-orange">慎用</span></td>
+      </tr>
+      <tr>
+        <td><code>PawnsFinder.AllMaps_FreeColonists</code></td>
+        <td><code>List&lt;Pawn&gt;</code></td>
+        <td>所有地圖上的自由殖民者。另有 <code>AllMaps_FreeColonistsAndPrisoners</code>、<code>AllMapsCaravansAndTravelingTransporters_Alive</code> 等變體</td>
+      </tr>
+      <tr>
+        <td><code>Find.WorldPawns.AllPawnsAlive</code></td>
+        <td><code>IEnumerable&lt;Pawn&gt;</code></td>
+        <td>世界層級（離開地圖但仍存活）的所有 Pawn，例如已離隊但未死的角色</td>
+      </tr>
+      <tr>
+        <td><code>GenClosest.ClosestThingReachable(root, map, req, peMode, traverseParams, ...)</code></td>
+        <td><code>Thing</code></td>
+        <td>從某格出發、考慮可達性，找最近符合條件的 Thing。Job / AI 找目標的核心 API</td>
+      </tr>
+      <tr>
+        <td><code>GenGrid.Walkable(IntVec3, Map)</code></td>
+        <td><code>bool</code></td>
+        <td>該格是否可行走（無不可通過建築 / 地形）。路徑與放置判斷常用</td>
+      </tr>
+      <tr>
+        <td><code>map.thingGrid.ThingsAt(IntVec3)</code></td>
+        <td><code>IEnumerable&lt;Thing&gt;</code></td>
+        <td>取得某格上的所有 Thing。另有 <code>ThingsListAt</code>（回 List，零配置走訪更快）</td>
+      </tr>
+      <tr>
+        <td><code>FloodFiller</code>（<code>map.floodFiller.FloodFill(root, passCheck, processor)</code>）</td>
+        <td><code>void</code></td>
+        <td>從起點做廣度優先洪水填充，可用來找連通區域、房間、可達範圍</td>
+      </tr>
+    </table>
+
+    <h3>組合範例：找最近的可行走、可達的指定物品</h3>
+<pre><span class="cm">// 從 pawn 位置找最近、可達、未被預訂的鋼鐵堆</span>
+<span class="ty">Thing</span> steel = <span class="ty">GenClosest</span>.<span class="nm">ClosestThingReachable</span>(
+    root:           pawn.Position,
+    map:            pawn.Map,
+    thingReq:       <span class="ty">ThingRequest</span>.<span class="nm">ForDef</span>(<span class="ty">ThingDefOf</span>.Steel),
+    peMode:         <span class="ty">PathEndMode</span>.ClosestTouch,
+    traverseParams: <span class="ty">TraverseParms</span>.<span class="nm">For</span>(pawn),
+    maxDistance:    <span class="nu">9999f</span>,
+    validator:      t => !t.<span class="nm">IsForbidden</span>(pawn) &amp;&amp; pawn.<span class="nm">CanReserve</span>(t));
+
+<span class="kw">if</span> (steel != <span class="kw">null</span> &amp;&amp; <span class="ty">GenGrid</span>.<span class="nm">Walkable</span>(steel.Position, pawn.Map))
+{
+    <span class="cm">// 進一步：列出那一格上所有東西</span>
+    <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> pawn.Map.thingGrid.<span class="nm">ThingsAt</span>(steel.Position))
+        <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"同格物件：{t.LabelCap} x{t.stackCount}"</span>);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>找連通房間用 FloodFiller</strong>
+      要計算「從某格出發、所有可步行相連的格子」（例如自訂的密室 / 區域偵測），用
+      <code>map.floodFiller.FloodFill(root, c =&gt; c.Walkable(map), c =&gt; visited.Add(c))</code>。
+      RimWorld 房間系統 <code>RegionAndRoomUpdater</code> 內部也是同類概念。
+    </div>
+  </div>
+
+  <!-- ── 延伸資源 ── -->
+  <div class="section">
+    <div class="section-title">延伸資源</div>
+
+    <p>本指南到此告一段落。以下是持續精進 RimWorld modding 的常用參考來源：</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>RimWorld Wiki — Modding 區</h3>
+        <p>官方授權的社群 Wiki，涵蓋 XML Def 欄位、modding 教學與版本變更紀錄。查 Def 結構的第一站。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>官方 Discord — Modding channel</h3>
+        <p>RimWorld 官方 Discord 伺服器的 modding 頻道，聚集大量資深 modder。疑難雜症、API 變更討論最即時的去處。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Harmony 官方文件</h3>
+        <p>pardeike/Harmony 的官方文件站，Prefix / Postfix / Transpiler / Finalizer、AccessTools、patch 順序與優先級的權威說明。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>HugsLib</h3>
+        <p>廣為使用的 modding 函式庫，提供設定面板、update news、log 發佈、便捷的 mod 生命週期 hook，省去大量樣板程式碼。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>RimWorld 反編譯參考</h3>
+        <p>用 dnSpy / ILSpy 反編譯 <code>Assembly-CSharp.dll</code> 是讀懂遊戲內部行為、寫 patch 與 Transpiler 的終極依據；社群亦有定期同步的反編譯原始碼倉庫可供查閱。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>心法</strong>
+      RimWorld 沒有對外保證穩定的 modding API——遊戲本體的所有 internal / private 成員都可能隨版本變動。
+      養成「先反編譯讀原始碼、再動手 patch」的習慣，並用軟相依與防呆把版本風險降到最低，才是長期維護 Mod 的正道。
+    </div>
+  </div>
+
+</div>
+
+<footer>RimWorld Modding 入門指南 · 進階技巧 · 針對 C# 資深工程師 · 2026</footer>
+</body>
+</html>
