@@ -291,8 +291,8 @@ pawn.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class=
 
 <span class="ty">DamageWorker.DamageResult</span> result = pawn.<span class="nm">TakeDamage</span>(dinfo);
 
-<span class="cm">// DamageResult 回報實際造成的傷害與是否致死</span>
-<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"實際造成 {result.totalDamageDealt} 點，致死={result.deflected}"</span>);</pre>
+<span class="cm">// DamageResult.deflected = 是否被護甲彈開（非致死；致死請查 pawn.Dead）</span>
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"實際造成 {result.totalDamageDealt} 點，被彈開={result.deflected}，死亡={pawn.Dead}"</span>);</pre>
 
     <div class="callout callout-tip">
       <strong>SourceCategory 與 externalViolence</strong>
@@ -639,7 +639,7 @@ pawn.<span class="nm">TakeDamage</span>(<span class="kw">new</span> <span class=
 
     <h3>C# 抽選 / 指定命中部位</h3>
 
-<pre><span class="cm">// 隨機抽一個外層部位（依 coverage 加權）</span>
+<pre><span class="cm">// 隨機抽一個部位（RandomElement 為均勻隨機，非 coverage 加權）</span>
 <span class="ty">BodyPartRecord</span> randomOuter = pawn.<span class="nm">RaceProps</span>.body
     .<span class="nm">GetPartsWithDef</span>(<span class="ty">BodyPartDefOf</span>.Torso)
     .<span class="nm">RandomElement</span>();

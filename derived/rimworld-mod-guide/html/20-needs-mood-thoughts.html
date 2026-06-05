@@ -203,7 +203,7 @@
     <div class="callout callout-tip">
       <strong>讓喝咖啡補充 Need</strong>
       在 ingestible 的 <code>CompProperties_Ingested</code> / 或自訂 <code>ThingComp</code> 的攝取 hook 裡，
-      取 <code>pawn.needs.TryGetNeed&lt;Need_Caffeine&gt;()?.CurLevel += amount;</code> 即可。
+      先 <code>var need = pawn.needs.TryGetNeed&lt;Need_Caffeine&gt;();</code> 再 <code>if (need != null) need.CurLevel += amount;</code>（<code>?.</code> 不能當複合賦值左值）。
       <code>TryGetNeed&lt;T&gt;()</code> 在 pawn 未啟用該 need 時回傳 null，務必判空。
     </div>
   </div>
@@ -260,7 +260,7 @@
 <span class="kw">public static class</span> <span class="ty">MyNeedDefOf</span>
 {
     <span class="kw">public static</span> <span class="ty">NeedDef</span> Caffeine;
-    <span class="kw">static</span> <span class="ty">MyNeedDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitialized</span>(<span class="kw">typeof</span>(<span class="ty">MyNeedDefOf</span>));
+    <span class="kw">static</span> <span class="ty">MyNeedDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyNeedDefOf</span>));
 }</pre>
 
     <div class="callout callout-warn">
@@ -418,7 +418,7 @@
 {
     <span class="kw">public static</span> <span class="ty">ThoughtDef</span> DrankGreatCoffee;
     <span class="kw">public static</span> <span class="ty">ThoughtDef</span> CaffeineWithdrawal;
-    <span class="kw">static</span> <span class="ty">MyThoughtDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitialized</span>(<span class="kw">typeof</span>(<span class="ty">MyThoughtDefOf</span>));
+    <span class="kw">static</span> <span class="ty">MyThoughtDefOf</span>() => <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyThoughtDefOf</span>));
 }</pre>
 
     <div class="callout callout-tip">
@@ -428,7 +428,7 @@
         <li><code>memories.RemoveMemoriesOfDef(ThoughtDef)</code></li>
         <li><code>memories.NumMemoriesOfDef(ThoughtDef)</code> — 已堆疊份數（檢查 stackLimit 用）</li>
         <li><code>thoughts.TotalMoodOffset()</code> — 當前所有想法的 mood 總偏移</li>
-        <li><code>thoughts.GetAllMoodThoughts(List&lt;Thought&gt;)</code> — 取全部生效想法</li>
+        <li><code>thoughts.GetMoodThoughts(List&lt;Thought&gt;)</code> — 取全部生效想法</li>
       </ul>
     </div>
 
@@ -617,18 +617,8 @@
       <span class="xml-tag">&lt;label&gt;</span>咖啡因免疫<span class="xml-tag">&lt;/label&gt;</span>
       <span class="xml-tag">&lt;degree&gt;</span>0<span class="xml-tag">&lt;/degree&gt;</span>
 
-      <span class="cm">&lt;!-- A) 完全抵銷這些 ThoughtDef（戒斷對他無效）--&gt;</span>
-      <span class="xml-tag">&lt;nullifiedThoughts&gt;</span>
-        <span class="xml-tag">&lt;li&gt;</span>CaffeineWithdrawal<span class="xml-tag">&lt;/li&gt;</span>
-      <span class="xml-tag">&lt;/nullifiedThoughts&gt;</span>
-
-      <span class="cm">&lt;!-- B) 對特定想法施加額外 mood 偏移 --&gt;</span>
-      <span class="xml-tag">&lt;thoughtOffsets&gt;</span>
-        <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThoughtOffsetThought"</span><span class="xml-tag">&gt;</span>
-          <span class="xml-tag">&lt;thought&gt;</span>DrankGreatCoffee<span class="xml-tag">&lt;/thought&gt;</span>
-          <span class="xml-tag">&lt;offset&gt;</span>3<span class="xml-tag">&lt;/offset&gt;</span>   <span class="cm">&lt;!-- 對他喝好咖啡的快樂再 +3 --&gt;</span>
-        <span class="xml-tag">&lt;/li&gt;</span>
-      <span class="xml-tag">&lt;/thoughtOffsets&gt;</span>
+      <span class="cm">&lt;!-- 注意：TraitDegreeData 沒有 nullifiedThoughts / thoughtOffsets 欄位。 --&gt;</span>
+      <span class="cm">&lt;!-- 「某 trait 抵銷某想法」一律在 ThoughtDef 端用 nullifyingTraits 宣告（見下）。 --&gt;</span>
     <span class="xml-tag">&lt;/li&gt;</span>
   <span class="xml-tag">&lt;/degreeDatas&gt;</span>
 <span class="xml-tag">&lt;/TraitDef&gt;</span></pre>
@@ -648,9 +638,7 @@
 <span class="kw">bool</span> immune = pawn.story?.traits?
     .<span class="nm">HasTrait</span>(<span class="ty">MyTraitDefOf</span>.CaffeineImmune) == <span class="kw">true</span>;
 
-<span class="cm">// 取得 trait 對某 ThoughtDef 的 offset（若有）</span>
-<span class="ty">Trait</span> t = pawn.story.traits.<span class="nm">GetTrait</span>(<span class="ty">MyTraitDefOf</span>.CaffeineImmune);
-<span class="kw">float</span> off = t?.CurrentData.<span class="nm">MoodOffsetOfThought</span>(<span class="ty">MyThoughtDefOf</span>.DrankGreatCoffee) ?? <span class="nu">0f</span>;</pre>
+<span class="cm">// 註：TraitDegreeData 無 MoodOffsetOfThought()；nullify 由引擎在彙整 mood 時自動套用，無需手動查 offset</span></pre>
   </div>
 
   <!-- ═══ 10. 常見坑 ═══ -->
@@ -742,7 +730,7 @@
       <tr><td>依環境/狀態持續判定的心情</td><td>ThoughtDef + workerClass（ThoughtWorker）</td></tr>
       <tr><td>動態計算 mood 偏移</td><td>覆寫 Thought 子類別的 MoodOffset()</td></tr>
       <tr><td>低心情時觸發特殊崩潰</td><td>MentalBreakDef + MentalStateDef + MentalBreakWorker</td></tr>
-      <tr><td>讓某 trait 對某想法免疫/加成</td><td>TraitDef 的 nullifiedThoughts / thoughtOffsets</td></tr>
+      <tr><td>讓某 trait 對某想法免疫</td><td>ThoughtDef 的 <code>nullifyingTraits</code>（不是寫在 TraitDef）</td></tr>
       <tr><td>強制 pawn 進入精神狀態</td><td>mentalStateHandler.TryStartMentalState</td></tr>
     </table>
   </div>

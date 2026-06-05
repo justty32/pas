@@ -270,14 +270,15 @@
         }
 
         <span class="cm">// ── 繪製（疊加效果在主貼圖之上）──────────────────</span>
-        <span class="kw">public override void</span> <span class="nm">Draw</span>()
+        <span class="kw">public override void</span> <span class="nm">DrawAt</span>(<span class="ty">Vector3</span> drawLoc, <span class="kw">bool</span> flip = <span class="kw">false</span>)
         {
-            <span class="kw">base</span>.<span class="nm">Draw</span>();   <span class="cm">// 先畫本體</span>
+            <span class="kw">base</span>.<span class="nm">DrawAt</span>(drawLoc, flip);   <span class="cm">// 先畫本體（1.5 繪製覆寫點是 DrawAt，非 Draw）</span>
 
             <span class="kw">if</span> (powerComp != <span class="kw">null</span> &amp;&amp; powerComp.<span class="nm">PowerOn</span> &amp;&amp; resonanceLevel &gt; <span class="nu">50</span>)
             {
-                <span class="cm">// 在建築上方畫一個發光特效（範例用 OverlayDrawer 思路）</span>
-                <span class="kw">this</span>.<span class="nm">Map</span>.<span class="nm">overlayDrawer</span>.<span class="nm">DrawOverlay</span>(<span class="kw">this</span>, <span class="ty">OverlayTypes</span>.<span class="nm">PowerOn</span>);
+                <span class="cm">// overlayDrawer 只畫狀態圖示（OverlayTypes 僅 NeedsPower/PowerOff/BrokenDown 等，無 PowerOn）</span>
+                <span class="cm">// 真正的「發光特效」應改用 FleckMaker 或 Graphics.DrawMesh</span>
+                <span class="kw">this</span>.<span class="nm">Map</span>.<span class="nm">overlayDrawer</span>.<span class="nm">DrawOverlay</span>(<span class="kw">this</span>, <span class="ty">OverlayTypes</span>.<span class="nm">NeedsPower</span>);
             }
         }
 
@@ -502,7 +503,7 @@
       <tr><th>目標</th><th>API</th><th>備註</th></tr>
       <tr><td>讀目前是否通電</td><td><code>power.PowerOn</code></td><td>唯讀；PowerNet 結算結果</td></tr>
       <tr><td>動態改耗電/發電</td><td><code>power.PowerOutput = value</code></td><td>耗電負值、發電正值</td></tr>
-      <tr><td>取設定的基礎值</td><td><code>props.PowerConsumption</code> / <code>basePowerConsumption</code></td><td>從 CompProperties_Power 讀</td></tr>
+      <tr><td>取設定的基礎值</td><td><code>props.basePowerConsumption</code></td><td>從 CompProperties_Power 讀（無 PowerConsumption 屬性）</td></tr>
     </table>
 
     <div class="callout callout-tip">

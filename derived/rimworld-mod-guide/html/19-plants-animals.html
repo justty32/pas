@@ -75,7 +75,7 @@
     </div>
     <div class="callout callout-info">
       <strong>對應的 C# 類別位置</strong>
-      <code>Verse.Plant</code>、<code>Verse.PlantProperties</code>、<code>RimWorld.RaceProperties</code>、
+      <code>Verse.Plant</code>、<code>RimWorld.PlantProperties</code>、<code>RimWorld.RaceProperties</code>、
       <code>Verse.PawnKindDef</code>、<code>RimWorld.TrainableDef</code>、<code>RimWorld.CompMilkable</code>
       皆在 <code>Assembly-CSharp.dll</code>，可用 dnSpy/ILSpy 反編譯對照欄位。
     </div>
@@ -89,7 +89,7 @@
 
     <p>
       植物是 <code>category = Plant</code> 的 ThingDef。所有植物特有欄位集中在 <code>&lt;plant&gt;</code> 節點，
-      對應 C# 的 <code>Verse.PlantProperties</code>（即 <code>thingDef.plant</code>）。下面定義一種可種植的藥草。
+      對應 C# 的 <code>RimWorld.PlantProperties</code>（即 <code>thingDef.plant</code>）。下面定義一種可種植的藥草。
     </p>
 
     <pre><code><span class="cm">&lt;!-- Defs/ThingDefs_Plants/MyMod_Plants.xml --&gt;</span>
@@ -527,7 +527,7 @@
 <span class="ty">Pawn_TrainingTracker</span> training = animal.training;
 
 <span class="cm">// 該技能是否已完全學會</span>
-<span class="ty">bool</span> canRelease = training.<span class="nm">HasLearned</span>(TrainableDefOf.Release);
+<span class="ty">bool</span> canRelease = training.<span class="nm">HasLearned</span>(<span class="ty">DefDatabase</span>&lt;<span class="ty">TrainableDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"Release"</span>)); <span class="cm">// TrainableDefOf 僅快取 Tameness/Obedience</span>
 
 <span class="cm">// 是否被勾選為「要訓練」</span>
 <span class="ty">bool</span> wanted = training.<span class="nm">GetWanted</span>(TrainableDefOf.Obedience);

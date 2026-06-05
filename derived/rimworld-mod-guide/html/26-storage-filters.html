@@ -501,7 +501,7 @@ f.<span class="nm">SetDisallowAll</span>();                          <span class
     <p>
       凡是「一個 def + 一個數量」的清單（建築造價、配方產出、貿易包內容）都用
       <code>ThingDefCountClass</code>（欄位 <code>thingDef</code> 與 <code>count</code>）。它的 XML 寫法很特別：
-      用 <strong>屬性式</strong> <code>&lt;li&gt;ThingDefName&gt;Count&lt;/li&gt;</code> 形式（自訂解析），而非巢狀子節點。
+      以 <strong>defName 當標籤</strong>的子節點形式 <code>&lt;Steel&gt;75&lt;/Steel&gt;</code>（標籤名即 ThingDef 的 defName，內容為數量）。
     </p>
 
     <h3>XML：建築造價</h3>
@@ -509,9 +509,9 @@ f.<span class="nm">SetDisallowAll</span>();                          <span class
   &lt;<span class="xml-tag">defName</span>&gt;MyMod_OreRack&lt;/<span class="xml-tag">defName</span>&gt;
   ...
   &lt;<span class="xml-tag">costList</span>&gt;
-    <span class="cm">&lt;!-- 格式：&lt;li&gt;ThingDef&gt;數量&lt;/li&gt; --&gt;</span>
-    &lt;<span class="xml-tag">li</span>&gt;Steel&gt;75&lt;/<span class="xml-tag">li</span>&gt;
-    &lt;<span class="xml-tag">li</span>&gt;ComponentIndustrial&gt;2&lt;/<span class="xml-tag">li</span>&gt;
+    <span class="cm">&lt;!-- 格式：&lt;DefName&gt;數量&lt;/DefName&gt;，標籤名即 defName --&gt;</span>
+    &lt;<span class="xml-tag">Steel</span>&gt;75&lt;/<span class="xml-tag">Steel</span>&gt;
+    &lt;<span class="xml-tag">ComponentIndustrial</span>&gt;2&lt;/<span class="xml-tag">ComponentIndustrial</span>&gt;
   &lt;/<span class="xml-tag">costList</span>&gt;
 &lt;/<span class="xml-tag">ThingDef</span>&gt;</pre>
 
