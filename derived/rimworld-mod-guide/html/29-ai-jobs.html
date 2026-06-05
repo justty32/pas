@@ -63,7 +63,7 @@
   <div class="section">
     <div class="section-title">§1 整條鏈總覽：從 tick 到 Toil</div>
 
-    <p>RimWorld 沒有「指揮系統」這種東西。每個 Pawn 身上掛著一個 <code>Verse.AI.Pawn_JobTracker</code>（即 <code>pawn.jobs</code>），它在每個 tick 檢查「我現在有沒有事做」。當前一個 Job 結束、被打斷、或根本沒有 Job 時，它會去拉一棵 <code>Verse.AI.ThinkTreeDef</code> 編譯成的思維樹，由樹從上往下「拉取」(pull) 出下一個該做的 <code>Verse.AI.Job</code>。換句話說：<strong>工作不是推給小人的，是小人主動從思維樹裡撈出來的。</strong></p>
+    <p>RimWorld 沒有「指揮系統」這種東西。每個 Pawn 身上掛著一個 <code>Verse.AI.Pawn_JobTracker</code>（即 <code>pawn.jobs</code>），它在每個 tick 檢查「我現在有沒有事做」。當前一個 Job 結束、被打斷、或根本沒有 Job 時，它會去拉一棵 <code>Verse.ThinkTreeDef</code> 編譯成的思維樹，由樹從上往下「拉取」(pull) 出下一個該做的 <code>Verse.AI.Job</code>。換句話說：<strong>工作不是推給小人的，是小人主動從思維樹裡撈出來的。</strong></p>
 
     <p>這條鏈分成五個層次，職責切得很乾淨。先看資料如何流動：</p>
 
@@ -179,7 +179,7 @@
   <div class="section">
     <div class="section-title">§2 JobDef：工作的靜態身分證</div>
 
-    <p><code>Verse.AI.JobDef</code> 是純資料 Def，描述一種工作「是什麼」，但不描述「怎麼做」。怎麼做交給 <code>driverClass</code> 指向的 <code>JobDriver</code>。一個 JobDef 通常對應一個 JobDriver。香草遊戲的 JobDef 都集中在 <code>Defs/JobDefs/</code>。</p>
+    <p><code>Verse.JobDef</code> 是純資料 Def，描述一種工作「是什麼」，但不描述「怎麼做」。怎麼做交給 <code>driverClass</code> 指向的 <code>JobDriver</code>。一個 JobDef 通常對應一個 JobDriver。香草遊戲的 JobDef 都集中在 <code>Defs/JobDefs/</code>。</p>
 
     <h3>核心欄位一覽</h3>
 
@@ -270,9 +270,11 @@
 
     <h3>建立 Job 物件（C# 端）</h3>
 
-    <p>有了 JobDef，在 C# 用 <code>Verse.AI.JobMaker.MakeJob</code> 建立實際的 Job 實例。不要直接 <code>new Job(...)</code>——RimWorld 1.x 起一律走 <code>JobMaker</code> 物件池：</p>
+    <p>有了 JobDef，在 C# 用 <code>Verse.JobMaker.MakeJob</code> 建立實際的 Job 實例。不要直接 <code>new Job(...)</code>——RimWorld 1.x 起一律走 <code>JobMaker</code> 物件池：</p>
 
-<pre><span class="kw">using</span> Verse.AI;
+<pre><span class="kw">using</span> Verse;       <span class="cm">// JobMaker</span>
+<span class="kw">using</span> Verse.AI;    <span class="cm">// Job、JobTag</span>
+<span class="kw">using</span> RimWorld;    <span class="cm">// JobDefOf</span>
 
 <span class="cm">// 三種常見建法</span>
 Job job1 = JobMaker.<span class="nm">MakeJob</span>(MyMod_JobDefOf.MyMod_RefuelCustomMachine, targetThing);
@@ -618,7 +620,7 @@ pawn.jobs.<span class="nm">TryTakeOrderedJob</span>(job1, JobTag.Misc);</pre>
   <div class="section">
     <div class="section-title">§5 ThinkTree 與 ThinkNode：決策樹本身</div>
 
-    <p>前面說的 WorkGiver / JobGiver 都掛在 <code>Verse.AI.ThinkTreeDef</code> 編成的決策樹上。香草最重要的兩棵是 <code>Humanlike</code>（人類主樹）與 <code>Humanlike_PostMentalState</code>。樹由一層層 <code>ThinkNode</code> 組成，從根往下走，第一個能吐出 Job 的節點獲勝。</p>
+    <p>前面說的 WorkGiver / JobGiver 都掛在 <code>Verse.ThinkTreeDef</code> 編成的決策樹上。香草最重要的兩棵是 <code>Humanlike</code>（人類主樹）與 <code>Humanlike_PostMentalState</code>。樹由一層層 <code>ThinkNode</code> 組成，從根往下走，第一個能吐出 Job 的節點獲勝。</p>
 
     <h3>常見 ThinkNode 類型</h3>
 
@@ -688,26 +690,26 @@ pawn.jobs.<span class="nm">TryTakeOrderedJob</span>(job1, JobTag.Misc);</pre>
   <span class="xml-tag">&lt;/thinkRoot&gt;</span>
 <span class="xml-tag">&lt;/ThinkTreeDef&gt;</span></pre>
 
-    <h3>用 PatchOperation 插入自訂 ThinkNode</h3>
+    <h3>用 insertTag 插入自訂 ThinkNode（相容做法）</h3>
 
-    <p>絕對<strong>不要</strong>整棵複製 vanilla 樹再改——相容性會死。用 <code>PatchOperationAdd</code> 或專用的 <code>PatchOperationInsertThinkNode</code>（RimWorld 自帶）把節點插到指定位置。最穩的做法是替香草樹的子節點加上 <code>insertTag</code>，再用 insert patch 對準該 tag 插入：</p>
+    <p>絕對<strong>不要</strong>整棵複製 vanilla 樹再改——相容性會死。RimWorld 內建的相容插入機制是：另外宣告一棵<strong>獨立的 <code>ThinkTreeDef</code></strong>，在它身上設 <code>insertTag</code> 與 <code>insertPriority</code>（這兩個欄位定義在 <code>Verse.ThinkTreeDef</code> 上）。香草主樹裡的 <code>Verse.AI.ThinkNode_SubtreesByTag</code> 節點會在執行期把所有 <code>insertTag</code> 相符的子樹依 <code>insertPriority</code> 拉進來：</p>
 
-<pre><span class="cm">&lt;!-- Patches/InsertMyJobGiver.xml --&gt;</span>
-<span class="xml-tag">&lt;Patch&gt;</span>
-  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class=</span><span class="xml-val">"PatchOperationInsertThinkNode"</span><span class="xml-tag">&gt;</span>
-    <span class="cm">&lt;!-- 對哪棵樹的哪個父節點動手 --&gt;</span>
-    <span class="xml-tag">&lt;parentNode&gt;</span>/ThinkTreeDef[defName="Humanlike"]/thinkRoot<span class="xml-tag">&lt;/parentNode&gt;</span>
-    <span class="cm">&lt;!-- 數字越小越早被嘗試（越高優先） --&gt;</span>
-    <span class="xml-tag">&lt;insertPriority&gt;</span>50<span class="xml-tag">&lt;/insertPriority&gt;</span>
-    <span class="xml-tag">&lt;subnodes&gt;</span>
-      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalColonist"</span><span class="xml-tag">&gt;</span>
-        <span class="xml-tag">&lt;subNodes&gt;</span>
-          <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"MyMod.JobGiver_DoSpecialChore"</span> <span class="xml-tag">/&gt;</span>
-        <span class="xml-tag">&lt;/subNodes&gt;</span>
-      <span class="xml-tag">&lt;/li&gt;</span>
-    <span class="xml-tag">&lt;/subnodes&gt;</span>
-  <span class="xml-tag">&lt;/Operation&gt;</span>
-<span class="xml-tag">&lt;/Patch&gt;</span></pre>
+<pre><span class="cm">&lt;!-- Defs/ThinkTrees/MyInsertedSubtree.xml --&gt;</span>
+<span class="xml-tag">&lt;ThinkTreeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_SpecialChoreSubtree<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- 對準香草樹中某個 ThinkNode_SubtreesByTag 的 insertTag --&gt;</span>
+  <span class="xml-tag">&lt;insertTag&gt;</span>Humanlike_PreMain<span class="xml-tag">&lt;/insertTag&gt;</span>
+  <span class="cm">&lt;!-- 數字越大越早被嘗試（越高優先） --&gt;</span>
+  <span class="xml-tag">&lt;insertPriority&gt;</span>50<span class="xml-tag">&lt;/insertPriority&gt;</span>
+  <span class="xml-tag">&lt;thinkRoot</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalColonist"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;subNodes&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"MyMod.JobGiver_DoSpecialChore"</span> <span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/subNodes&gt;</span>
+  <span class="xml-tag">&lt;/thinkRoot&gt;</span>
+<span class="xml-tag">&lt;/ThinkTreeDef&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>沒有 PatchOperationInsertThinkNode 這種東西</strong>香草只有通用的 <code>PatchOperationAdd</code> / <code>PatchOperationInsert</code> 等（皆在 <code>Verse</code>），並沒有 think-node 專用的 PatchOperation。要在指定 xpath 位置硬插節點可用 <code>PatchOperationAdd</code>，但首選仍是上面的 <code>insertTag</code> 子樹機制，相容性最好。<code>insertTag</code> 必須對準香草樹中既有的 <code>ThinkNode_SubtreesByTag</code> 標籤。</div>
 
     <h3>自訂 JobGiver（非玩家可見的念頭）</h3>
 
@@ -800,7 +802,7 @@ pawn.jobs.<span class="nm">TryTakeOrderedJob</span>(job1, JobTag.Misc);</pre>
 
     <h3>MentalStateDef 簡述</h3>
 
-    <p><code>RimWorld.MentalStateDef</code> 定義一種精神狀態：用哪個 <code>stateClass</code>（<code>MentalState</code> 子類）、持續時間、是否攻擊、結束條件等。觸發通常由 <code>MentalBreakDef</code>（心情崩潰類型，見第 20 章）呼叫 <code>pawn.mindState.mentalStateHandler.TryStartMentalState(def)</code>：</p>
+    <p><code>Verse.MentalStateDef</code> 定義一種精神狀態：用哪個 <code>stateClass</code>（<code>MentalState</code> 子類）、持續時間、是否攻擊、結束條件等。觸發通常由 <code>MentalBreakDef</code>（心情崩潰類型，見第 20 章）呼叫 <code>pawn.mindState.mentalStateHandler.TryStartMentalState(def)</code>：</p>
 
 <pre><span class="cm">&lt;!-- 自訂精神狀態：到處砸東西 --&gt;</span>
 <span class="xml-tag">&lt;MentalStateDef&gt;</span>

@@ -111,7 +111,7 @@
 
     <h3>C# 守門：ModLister.RoyaltyInstalled</h3>
     <p>
-      程式碼路徑（patch、comp、ITab、gizmo）一律先檢查 <code>RimWorld.ModLister.RoyaltyInstalled</code>。
+      程式碼路徑（patch、comp、ITab、gizmo）一律先檢查 <code>Verse.ModLister.RoyaltyInstalled</code>。
       這是一個布林快取，內部讀 <code>ModsConfig.IsActive(...)</code>，呼叫成本極低，可放在熱路徑。
     </p>
 
@@ -194,15 +194,14 @@
       <tr><td><code>seniority</code></td><td>int</td><td>爵位在鏈上的排序鍵，越大越高</td></tr>
       <tr><td><code>favorCost</code></td><td>int</td><td>從前一級升到本級所需 royal favor</td></tr>
       <tr><td><code>minExpectation</code></td><td>ExpectationDef</td><td>期望底線，影響「期望」需求 → 心情</td></tr>
-      <tr><td><code>requiredApparel</code></td><td>List&lt;RoyalTitleApparelRequirement&gt;</td><td>強制服裝（依身體部位 / bodyType）</td></tr>
-      <tr><td><code>requiredMinPsylink</code></td><td>int</td><td>持有此爵位需具備的最低 psylink（原版 0）</td></tr>
-      <tr><td><code>roomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>通用房間要求（多半留空，改用下面兩個）</td></tr>
+      <tr><td><code>requiredApparel</code></td><td>List&lt;ApparelRequirement&gt;</td><td>強制服裝（依身體部位 / bodyType）</td></tr>
+      <tr><td><code>maxPsylinkLevel</code></td><td>int</td><td>此爵位允許的最高 psylink 等級（原版隨爵位提升）</td></tr>
       <tr><td><code>bedroomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>對 Bedroom 角色房間的要求</td></tr>
       <tr><td><code>throneRoomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>對 ThroneRoom 角色房間的要求</td></tr>
       <tr><td><code>disabledWorkTags</code></td><td>WorkTags（flags）</td><td>此爵位以上拒絕的工作標籤</td></tr>
       <tr><td><code>permits</code></td><td>List&lt;RoyalTitlePermitDef&gt;</td><td>解鎖的戰術許可（見 §4）</td></tr>
       <tr><td><code>grantedAbilities</code></td><td>List&lt;AbilityDef&gt;</td><td>直接授予的能力 / 超能</td></tr>
-      <tr><td><code>changeHeirQuest</code></td><td>QuestScriptDef</td><td>更換繼承人時觸發的任務腳本</td></tr>
+      <tr><td><code>changeHeirQuestPoints</code></td><td>int</td><td>更換繼承人任務的威脅點數（Awardable 爵位必填）</td></tr>
       <tr><td><code>tags</code></td><td>List&lt;string&gt;</td><td>授爵獎勵分流用標籤（如 <code>Combatant</code>、<code>Sustaining</code>）</td></tr>
     </table>
 
@@ -219,7 +218,7 @@
     <span class="xml-tag">&lt;label&gt;</span>先鋒<span class="xml-tag">&lt;/label&gt;</span>
     <span class="xml-tag">&lt;seniority&gt;</span><span class="nu">450</span><span class="xml-tag">&lt;/seniority&gt;</span>
     <span class="xml-tag">&lt;favorCost&gt;</span><span class="nu">120</span><span class="xml-tag">&lt;/favorCost&gt;</span>   <span class="cm">&lt;!-- Knight→Vanguard 的價格 --&gt;</span>
-    <span class="xml-tag">&lt;changeHeirQuest&gt;</span>ChangeRoyalHeir<span class="xml-tag">&lt;/changeHeirQuest&gt;</span>
+    <span class="xml-tag">&lt;changeHeirQuestPoints&gt;</span><span class="nu">800</span><span class="xml-tag">&lt;/changeHeirQuestPoints&gt;</span>  <span class="cm">&lt;!-- 換繼承人任務威脅點數；Awardable 爵位必填 --&gt;</span>
 
     <span class="cm">&lt;!-- 期望底線：拉到 High（房間/環境須更體面）--&gt;</span>
     <span class="xml-tag">&lt;minExpectation&gt;</span>High<span class="xml-tag">&lt;/minExpectation&gt;</span>
@@ -244,7 +243,7 @@
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoomRequirement_Impressiveness"</span><span class="xml-tag">&gt;</span>
         <span class="xml-tag">&lt;impressiveness&gt;</span><span class="nu">60</span><span class="xml-tag">&lt;/impressiveness&gt;</span>
       <span class="xml-tag">&lt;/li&gt;</span>
-      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoomRequirement_HasAssignedBedThingCount"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoomRequirement_ThingCount"</span><span class="xml-tag">&gt;</span>
         <span class="xml-tag">&lt;thingDef&gt;</span>RoyalBed<span class="xml-tag">&lt;/thingDef&gt;</span>
         <span class="xml-tag">&lt;count&gt;</span><span class="nu">1</span><span class="xml-tag">&lt;/count&gt;</span>
       <span class="xml-tag">&lt;/li&gt;</span>
@@ -292,7 +291,7 @@
       <tr><td><code>GainFavor(Faction, int)</code></td><td>增加 favor，並可能觸發「可晉升」提示</td></tr>
       <tr><td><code>TryUpdateTitle(Faction, bool sendLetter)</code></td><td>依目前 favor 自動把爵位升到該升的等級</td></tr>
       <tr><td><code>GetPermitPoints(Faction)</code></td><td>該派系下的許可點數（見 §4）</td></tr>
-      <tr><td><code>MaxAllowedPsylinkLevel</code></td><td>爵位允許的最高 psylink 等級（見 §5）</td></tr>
+      <tr><td><code>GetTitleAwardedWhenUpdating(Faction, int)</code></td><td>給定 favor 數時，這條鏈會升到哪一級爵位</td></tr>
     </table>
 
     <h3>範例：賦予爵位並結算後果</h3>
@@ -311,7 +310,7 @@
 
         <span class="cm">// grantRewards: true → 一併授予 grantedAbilities / permits 與 psylink</span>
         pawn.royalty.SetTitle(empire, title, grantRewards: <span class="kw">true</span>,
-                              sendLetter: <span class="kw">true</span>, rewardDetails: <span class="kw">true</span>);
+                              rewardsOnlyForNewestTitle: <span class="kw">false</span>, sendLetter: <span class="kw">true</span>);
 
         <span class="cm">// 設定/補足對應的 favor，避免 UI 顯示成「欠費晉升」</span>
         <span class="kw">int</span> needed = title.favorCost;
@@ -367,7 +366,7 @@
     <table>
       <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
       <tr><td><code>workerClass</code></td><td>Type</td><td>執行行為的 <code>RoyalTitlePermitWorker</code> 子類</td></tr>
-      <tr><td><code>permitPointsToUnlock</code></td><td>int</td><td>解鎖此許可需要花的許可點數</td></tr>
+      <tr><td><code>permitPointCost</code></td><td>int</td><td>解鎖此許可需要花的許可點數</td></tr>
       <tr><td><code>minTitle</code></td><td>RoyalTitleDef</td><td>需要的最低爵位</td></tr>
       <tr><td><code>cooldownDays</code></td><td>float</td><td>使用後的冷卻（天）</td></tr>
       <tr><td><code>faction</code></td><td>FactionDef</td><td>提供此援助的派系（通常 Empire）</td></tr>
@@ -403,7 +402,7 @@
     <span class="xml-tag">&lt;label&gt;</span>戰場號令<span class="xml-tag">&lt;/label&gt;</span>
     <span class="xml-tag">&lt;description&gt;</span>對一塊區域發布號令，使範圍內的友軍在短時間內提升移動與射擊速度。<span class="xml-tag">&lt;/description&gt;</span>
     <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.RoyalTitlePermitWorker_RallyCall<span class="xml-tag">&lt;/workerClass&gt;</span>
-    <span class="xml-tag">&lt;permitPointsToUnlock&gt;</span><span class="nu">1</span><span class="xml-tag">&lt;/permitPointsToUnlock&gt;</span>
+    <span class="xml-tag">&lt;permitPointCost&gt;</span><span class="nu">1</span><span class="xml-tag">&lt;/permitPointCost&gt;</span>
     <span class="xml-tag">&lt;minTitle&gt;</span>MyMod_Vanguard<span class="xml-tag">&lt;/minTitle&gt;</span>
     <span class="xml-tag">&lt;cooldownDays&gt;</span><span class="nu">1.0</span><span class="xml-tag">&lt;/cooldownDays&gt;</span>
     <span class="xml-tag">&lt;faction&gt;</span>Empire<span class="xml-tag">&lt;/faction&gt;</span>
@@ -411,9 +410,10 @@
   <span class="xml-tag">&lt;/RoyalTitlePermitDef&gt;</span>
 <span class="xml-tag">&lt;/Defs&gt;</span></pre>
 
-    <p>對應的 Worker。重點是覆寫 <code>GetGizmo</code>（產生指令按鈕、塞冷卻 / 點選邏輯）與目標選定後的執行。</p>
+    <p>對應的 Worker。重點是覆寫 <code>GetRoyalAidOptions</code>（產生援助選單項、進入點選目標模式）與目標選定後的 <code>OrderForceTarget</code> 執行。注意 <code>faction</code> 不在基底——基底只存 <code>caller</code> / <code>map</code> / <code>free</code>，所以本類要自己留一個 <code>faction</code> 欄位並在啟動 targeting 時存下來（原版 <code>RoyalTitlePermitWorker_OrbitalStrike</code> 就是這個寫法）。</p>
 
-    <pre><span class="kw">using</span> System.Collections.Generic;
+    <pre><span class="kw">using</span> System;
+<span class="kw">using</span> System.Collections.Generic;
 <span class="kw">using</span> RimWorld;
 <span class="kw">using</span> Verse;
 <span class="kw">using</span> UnityEngine;
@@ -424,19 +424,45 @@
     {
         <span class="kw">private const</span> <span class="ty">float</span> Radius = <span class="nu">9.9f</span>;
 
-        <span class="cm">// 玩家點地後呼叫，targetInfo 是落點</span>
+        <span class="cm">// 本類自己持有 faction：基底只存 caller / map / free（皆 protected），faction 不在基底</span>
+        <span class="kw">private</span> <span class="ty">Faction</span> faction;
+
+        <span class="cm">// 援助選單入口：玩家在爵位援助選單選此項 → 進入點選目標模式</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">FloatMenuOption</span>&gt; <span class="nm">GetRoyalAidOptions</span>(<span class="ty">Map</span> map, <span class="ty">Pawn</span> pawn, <span class="ty">Faction</span> faction)
+        {
+            <span class="kw">if</span> (<span class="nm">AidDisabled_NewTemp</span>(map, pawn, faction, <span class="kw">out</span> <span class="ty">string</span> reason, temperatureMatters: <span class="kw">false</span>))
+            {
+                <span class="kw">yield return new</span> <span class="ty">FloatMenuOption</span>(def.LabelCap + <span class="st">": "</span> + reason, <span class="kw">null</span>);
+                <span class="kw">yield break</span>;
+            }
+            <span class="ty">string</span> desc = def.LabelCap + <span class="st">": "</span>;
+            <span class="ty">Action</span> action = <span class="kw">null</span>;
+            <span class="kw">if</span> (<span class="nm">FillAidOption</span>(pawn, faction, <span class="kw">ref</span> desc, <span class="kw">out</span> <span class="ty">bool</span> free))
+                action = () =&gt; <span class="nm">BeginTargeting</span>(pawn, faction, map, free);
+            <span class="kw">yield return new</span> <span class="ty">FloatMenuOption</span>(desc, action, faction.def.FactionIcon, faction.Color);
+        }
+
+        <span class="cm">// 存好基底欄位 + 自家 faction，啟動 Targeter（玩家點地後回呼 OrderForceTarget）</span>
+        <span class="kw">private void</span> <span class="nm">BeginTargeting</span>(<span class="ty">Pawn</span> caller, <span class="ty">Faction</span> faction, <span class="ty">Map</span> map, <span class="ty">bool</span> free)
+        {
+            targetingParameters = <span class="kw">new</span> <span class="ty">TargetingParameters</span> { canTargetLocations = <span class="kw">true</span> };
+            <span class="kw">base</span>.caller = caller;
+            <span class="kw">base</span>.map    = map;
+            <span class="kw">base</span>.free   = free;
+            <span class="kw">this</span>.faction = faction;
+            <span class="ty">Find</span>.Targeter.BeginTargeting(<span class="kw">this</span>);
+        }
+
+        <span class="cm">// 玩家點地後回呼，target 是落點（caller / map 此時已由 BeginTargeting 設好）</span>
         <span class="kw">public override void</span> <span class="nm">OrderForceTarget</span>(<span class="ty">LocalTargetInfo</span> target)
         {
-            <span class="ty">Map</span> map = caster.Map;
-            <span class="kw">if</span> (map == <span class="kw">null</span>) <span class="kw">return</span>;
-
             <span class="kw">foreach</span> (<span class="ty">IntVec3</span> cell <span class="kw">in</span> <span class="ty">GenRadial</span>.RadialCellsAround(target.Cell, Radius, useCenter: <span class="kw">true</span>))
             {
                 <span class="kw">if</span> (!cell.InBounds(map)) <span class="kw">continue</span>;
                 <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> cell.GetThingList(map))
                 {
                     <span class="kw">if</span> (t <span class="kw">is</span> <span class="ty">Pawn</span> p &amp;&amp; !p.Dead &amp;&amp;
-                        p.Faction == caster.Faction &amp;&amp; p.RaceProps.Humanlike)
+                        p.Faction == caller.Faction &amp;&amp; p.RaceProps.Humanlike)
                     {
                         <span class="ty">Hediff</span> h = <span class="ty">HediffMaker</span>.MakeHediff(
                             <span class="ty">DefDatabase</span>&lt;<span class="ty">HediffDef</span>&gt;.GetNamed(<span class="st">"MyMod_RallyBuff"</span>), p);
@@ -445,14 +471,17 @@
                 }
             }
 
-            <span class="cm">// 啟動冷卻：寫進該 pawn 對該 faction 的許可冷卻表</span>
-            caster.royalty.GetPermit(def, faction)?.Notify_Used();
             <span class="ty">FleckMaker</span>.Static(target.Cell, map, <span class="ty">FleckDefOf</span>.PsycastSkipFlashEntry, <span class="nu">2f</span>);
-            <span class="kw">base</span>.OrderForceTarget(target);
+
+            <span class="cm">// 啟動冷卻 + 扣 favor：faction 正是 BeginTargeting 存下的那個</span>
+            caller.royalty.GetPermit(def, faction)?.Notify_Used();
+            <span class="kw">if</span> (!free)
+                caller.royalty.TryRemoveFavor(faction, def.royalAid.favorCost);
         }
 
-        <span class="cm">// 額外的可用性檢查（沒裝 DLC / 沒爵位時不顯示）</span>
-        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">FloatMenuOption</span>&gt; <span class="nm">GetTargetingOptions(...)</span> { <span class="kw">yield break</span>; }
+        <span class="cm">// 額外命中檢查（基底已提供 ValidateTarget，可在此擋掉非法落點）</span>
+        <span class="kw">public override</span> <span class="ty">bool</span> <span class="nm">ValidateTarget</span>(<span class="ty">LocalTargetInfo</span> target, <span class="ty">bool</span> showMessages = <span class="kw">true</span>)
+            =&gt; <span class="kw">base</span>.ValidateTarget(target, showMessages);
     }
 }</pre>
 
@@ -472,14 +501,14 @@
     <p>
       Royalty 的超能（psycast）建立在<a href="24-abilities-psycasts.html">第 24 章</a>的 Ability 框架上，
       本章只聚焦「<strong>能力從哪來、爵位如何提升 psylink</strong>」。psylink 是 pawn 的「超能等級」，
-      由一個特殊 hediff <code>Hediff_Psylink</code>（<code>RimWorld</code>）承載，等級越高能用的超能越強。
+      由一個特殊 hediff <code>Hediff_Psylink</code>（<code>Verse</code>）承載，等級越高能用的超能越強。
     </p>
 
     <h3>psylink 的取得途徑</h3>
     <div class="g3">
       <div class="card card-accent-purple">
         <h3>爵位授予</h3>
-        <p>晉升到帶 reward 的爵位時，授爵流程可給一級 psylink。上限受 <code>Pawn_RoyaltyTracker.MaxAllowedPsylinkLevel</code> 約束。</p>
+        <p>晉升到帶 reward 的爵位時，授爵流程可給一級 psylink。上限受 <code>RoyalTitleDef.MaxAllowedPsylinkLevel(FactionDef)</code> 約束。</p>
       </div>
       <div class="card card-accent-cyan">
         <h3>儀式 / 樹靈</h3>
@@ -514,9 +543,10 @@
 }</pre>
 
     <div class="callout callout-warn">
-      <strong>psylink 等級被爵位上限夾住</strong>
-      <code>Pawn.ChangePsylinkLevel</code> 不會無視 <code>MaxAllowedPsylinkLevel</code>。若你給的等級超過爵位允許值，
-      多出的部分會被忽略（甚至可能因「過度 psylink」產生負面想法）。要先升爵位、再升 psylink，或用獨立來源繞過爵位限制。
+      <strong>ChangePsylinkLevel 只夾全域上限，不檢查爵位上限</strong>
+      原始碼裡 <code>Pawn.ChangePsylinkLevel</code> →  <code>Hediff_Psylink.ChangeLevel</code> 只把增量夾在 <code>PsychicAmplifier.maxSeverity</code>（全域 psylink 上限）之內，
+      <strong>並不會主動檢查 <code>RoyalTitleDef.MaxAllowedPsylinkLevel</code></strong>。爵位上限是由授爵流程 / psytrainer 等「來源端」把關，而非這個方法。
+      所以直接呼叫它能讓 pawn 的 psylink 超過其爵位允許值（之後可能因「psylink 高於爵位」產生負面想法）。設計上仍建議先升爵位、再升 psylink。
     </div>
 
     <h3>neural heat（精神熵）與 psyfocus 速覽</h3>
@@ -560,10 +590,9 @@
     <pre><span class="cm">// QuestScriptDef 內，給某 pawn 帝國榮譽的 QuestPart（概念示意，實際多用 .quest 腳本節點）</span>
 <span class="kw">var</span> part = <span class="kw">new</span> <span class="ty">QuestPart_GiveRoyalFavor</span>();
 part.faction        = <span class="ty">Faction</span>.OfEmpire;
-part.favorType      = <span class="ty">RoyalFavorTypeDefOf</span>?.Empire ?? <span class="kw">null</span>;  <span class="cm">// favor 類型</span>
-part.giveToAccepter = <span class="kw">true</span>;          <span class="cm">// 給接任務的 pawn</span>
+part.giveToAccepter = <span class="kw">true</span>;          <span class="cm">// 給接任務的 pawn（true 時不必設 giveTo）</span>
 part.amount         = <span class="nu">12</span>;
-part.inSignalEnable = <span class="st">"Quest.Completed"</span>;
+part.inSignal       = <span class="st">"Quest.Completed"</span>;  <span class="cm">// 收到此 signal 時發 favor</span>
 quest.AddPart(part);</pre>
 
     <div class="callout callout-tip">
@@ -619,10 +648,10 @@ quest.AddPart(part);</pre>
       <tr><th>呼叫</th><th>回傳 / 作用</th></tr>
       <tr><td><code>pawn.royalty.HasAnyTitleIn(Faction.OfEmpire)</code></td><td>是否對帝國持爵</td></tr>
       <tr><td><code>pawn.royalty.GetCurrentTitle(faction)</code></td><td>當前 RoyalTitleDef</td></tr>
-      <tr><td><code>pawn.royalty.CanRequireApparel(...)</code></td><td>該爵位是否強制服裝（服裝義務判定）</td></tr>
-      <tr><td><code>pawn.royalty.AllowApparelRequirements</code></td><td>是否啟用服裝要求檢查</td></tr>
+      <tr><td><code>title.requiredApparel</code>（非空）</td><td>該爵位是否強制服裝（服裝義務判定）</td></tr>
+      <tr><td><code>pawn.royalty.allowApparelRequirements</code></td><td>是否啟用服裝要求檢查（public 欄位，小寫開頭）</td></tr>
       <tr><td><code>pawn.royalty.GetFavor(faction)</code></td><td>當前 royal favor</td></tr>
-      <tr><td><code>RoyalTitleUtility.GetTitleAwardableBy(...)</code></td><td>依 favor 推算可授的爵位</td></tr>
+      <tr><td><code>pawn.royalty.GetTitleAwardedWhenUpdating(faction, favor)</code></td><td>依 favor 推算會升到的爵位</td></tr>
       <tr><td><code>title.GetLabelFor(pawn)</code> / <code>GetLabelCapFor(pawn)</code></td><td>取得（性別正確的）爵位顯示名</td></tr>
     </table>
 
@@ -645,20 +674,20 @@ quest.AddPart(part);</pre>
     forceGenerateNewPawn: <span class="kw">true</span>)
 {
     <span class="cm">// ↓ 這些欄位只在裝了 Royalty 時有意義</span>
-    ForcedCustomTitle = knight,                 <span class="cm">// 強制給定爵位</span>
+    FixedTitle = knight,                        <span class="cm">// 強制給定爵位（ctor 參數 fixedTitle）</span>
     MinChanceToRedressWorldPawn = <span class="nu">1f</span>,
 
     <span class="cm">// 想連 psylink 一起：用對應欄位（版本間欄位名可能不同，去 dnSpy 對照）</span>
 };
 
 <span class="ty">Pawn</span> noble = <span class="ty">PawnGenerator</span>.GeneratePawn(req);
-<span class="cm">// 若 ForcedCustomTitle 那條因版本不可用，退而求其次：生完再 SetTitle</span>
+<span class="cm">// 若 FixedTitle 那條因版本不可用，退而求其次：生完再 SetTitle</span>
 <span class="kw">if</span> (noble.royalty?.GetCurrentTitle(empire) == <span class="kw">null</span>)
     noble.royalty?.SetTitle(empire, knight, grantRewards: <span class="kw">true</span>);</pre>
 
     <div class="callout callout-warn">
       <strong>PawnGenerationRequest 欄位在版本間會變</strong>
-      Royalty 相關欄位（如 <code>ForcedCustomTitle</code>、psylink 強制值）名稱 / 是否存在隨版本變動。
+      Royalty 相關欄位（如 <code>FixedTitle</code>、psylink 強制值）名稱 / 是否存在隨版本變動。
       務必用 dnSpy 對著你目標版本的 <code>Verse.PawnGenerationRequest</code> 結構確認，別照抄舊教學的欄位名（見<a href="11-pawn-generation.html">第 11 章</a>）。
     </div>
 
@@ -683,7 +712,7 @@ quest.AddPart(part);</pre>
         <span class="kw">foreach</span> (<span class="ty">RoomRequirement</span> r <span class="kw">in</span> t.throneRoomRequirements)
         {
             <span class="kw">bool</span> met = r.Met(room, pawn);
-            <span class="ty">Log</span>.Message($<span class="st">"王座室要求 {r.Label(pawn)} = {met}"</span>);
+            <span class="ty">Log</span>.Message($<span class="st">"王座室要求 {r.LabelCap(room)} = {met}"</span>);
         }
     }
 }</pre>

@@ -76,7 +76,7 @@
 <div class="hero">
   <h1>地圖生成 (Map Generation)</h1>
   <p>從 MapGeneratorDef 流水線到自訂 GenStep、噪聲地形與程序化結構生成。</p>
-  <span class="badge">RimWorld 1.5 · Verse / RimWorld.Planet</span>
+  <span class="badge">RimWorld 1.6 · Verse / RimWorld.Planet</span>
 </div>
 
 <div class="container">
@@ -151,10 +151,10 @@
       （例如「撒植物」需要先有「地形」與「肥沃度」）。因此 <strong>order 不是裝飾，而是正確性的一部分</strong>。
     </div>
 
-    <h3>標準地圖（Base）的 MapGeneratorDef</h3>
-    <p>遊戲核心定義在 <code>Core/Defs/MapGeneratorDefs/MapGenerators.xml</code>，玩家殖民地圖用 <code>Base</code>：</p>
+    <h3>標準地圖（Base_Player）的 MapGeneratorDef</h3>
+    <p>遊戲核心定義在 <code>Core/Defs/MapGeneratorDefs/MapGenerators.xml</code>，玩家殖民地圖用 <code>Base_Player</code>（派系基地用 <code>Base_Faction</code>，對應 <code>MapGeneratorDefOf.Base_Player</code> / <code>Base_Faction</code>）：</p>
     <pre><span class="xml-tag">&lt;MapGeneratorDef&gt;</span>
-  <span class="xml-tag">&lt;defName&gt;</span>Base<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Base_Player<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="xml-tag">&lt;genSteps&gt;</span>
     <span class="xml-tag">&lt;li&gt;</span>ElevationFertility<span class="xml-tag">&lt;/li&gt;</span>
     <span class="xml-tag">&lt;li&gt;</span>Terrain<span class="xml-tag">&lt;/li&gt;</span>
@@ -177,12 +177,12 @@
   <div class="section" id="builtin">
     <div class="section-title">2 · 內建 GenStep 巡覽</div>
 
-    <p>理解內建 GenStep 是模仿與插隊的前提。下面是 <code>Base</code> 流水線上幾個關鍵的執行階段（依典型 order）：</p>
+    <p>理解內建 GenStep 是模仿與插隊的前提。下面是 <code>Base_Player</code> 流水線上幾個關鍵的執行階段（依典型 order）：</p>
 
     <div class="pipeline">
       <div class="stage"><span class="ord">order 100</span><span class="nm">GenStep_ElevationFertility</span><br>產生高度/肥沃度噪聲圖</div>
       <div class="stage"><span class="ord">order 200</span><span class="nm">GenStep_Terrain</span><br>依高度/肥沃度鋪地形</div>
-      <div class="stage"><span class="ord">order 230</span><span class="nm">GenStep_Caves</span><br>用噪聲挖洞穴空間</div>
+      <div class="stage"><span class="ord">order 230</span><span class="nm">GenStep_RocksFromGrid</span><br>依噪聲鋪岩牆並挖洞穴空間</div>
       <div class="stage"><span class="ord">order 240</span><span class="nm">GenStep_RockChunks</span><br>散落岩石碎塊</div>
       <div class="stage"><span class="ord">order 400</span><span class="nm">GenStep_ScatterThings</span><br>通用物件散佈</div>
       <div class="stage"><span class="ord">order 500+</span><span class="nm">GenStep_Plants / Animals</span><br>動植物刷出</div>
@@ -201,9 +201,9 @@
         <td><code>map.terrainGrid</code></td>
       </tr>
       <tr>
-        <td><code>GenStep_Caves</code></td>
-        <td>在岩石區域內用第二層噪聲挖出「洞穴」通道（自然形成可探索的地下空間）。</td>
-        <td>洞穴 grid（影響後續 RockChunks / 礦脈的可放置區）</td>
+        <td><code>GenStep_RocksFromGrid</code></td>
+        <td>依高度 grid 鋪天然岩牆，並在岩石區域內用第二層噪聲挖出「洞穴」通道（自然形成可探索的地下空間）。</td>
+        <td><code>map.edificeGrid</code>（岩牆）＋洞穴 grid（影響後續 RockChunks / 礦脈的可放置區）</td>
       </tr>
       <tr>
         <td><code>GenStep_RockChunks</code></td>
@@ -273,8 +273,8 @@
             <span class="kw">int</span> clusters = clusterCount.<span class="nm">RandomInRange</span>;
             <span class="kw">for</span> (<span class="kw">int</span> c = <span class="nu">0</span>; c &lt; clusters; c++)
             {
-                <span class="cm">// 找一個合法的起點：在岩石牆相鄰處、未被霧遮、可站立</span>
-                <span class="kw">if</span> (!<span class="ty">CellFinder</span>.<span class="nm">TryFindRandomCell</span>(map, IsGoodSeedCell, <span class="kw">out</span> <span class="ty">IntVec3</span> seed))
+                <span class="cm">// 找一個合法的起點：TryFindRandomCell 的 validator 是 Predicate&lt;IntVec3&gt;，故用 lambda 捕捉 map</span>
+                <span class="kw">if</span> (!<span class="ty">CellFinder</span>.<span class="nm">TryFindRandomCell</span>(map, c =&gt; IsGoodSeedCell(c, map), <span class="kw">out</span> <span class="ty">IntVec3</span> seed))
                     <span class="kw">continue</span>;
 
                 GrowCluster(map, seed, clusterSize.<span class="nm">RandomInRange</span>);
@@ -336,15 +336,15 @@
     <div class="callout callout-warn">
       <strong>把 GenStep 接進流水線的兩種方式</strong>
       <ol style="margin:0.4rem 0 0; padding-left:1.2rem">
-        <li><strong>新建 MapGeneratorDef</strong>：複製 <code>Base</code> 並在 <code>&lt;genSteps&gt;</code> 加入你的 defName——適合做全新地圖類型。</li>
-        <li><strong>Harmony / XML PatchOperation 注入既有流水線</strong>：用 <code>PatchOperationAdd</code> 把 <code>&lt;li&gt;ScatterMineralRich&lt;/li&gt;</code> 加進現有 <code>Base</code> 的 <code>&lt;genSteps&gt;</code>——適合「在所有地圖都生效」。</li>
+        <li><strong>新建 MapGeneratorDef</strong>：複製 <code>Base_Player</code> 並在 <code>&lt;genSteps&gt;</code> 加入你的 defName——適合做全新地圖類型。</li>
+        <li><strong>Harmony / XML PatchOperation 注入既有流水線</strong>：用 <code>PatchOperationAdd</code> 把 <code>&lt;li&gt;ScatterMineralRich&lt;/li&gt;</code> 加進現有 <code>Base_Player</code> 的 <code>&lt;genSteps&gt;</code>——適合「在所有地圖都生效」。</li>
       </ol>
     </div>
 
-    <h3>用 XML PatchOperation 注入 Base 流水線</h3>
+    <h3>用 XML PatchOperation 注入 Base_Player 流水線</h3>
     <pre><span class="xml-tag">&lt;Patch&gt;</span>
   <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
-    <span class="xml-tag">&lt;xpath&gt;</span>/Defs/MapGeneratorDef[defName="Base"]/genSteps<span class="xml-tag">&lt;/xpath&gt;</span>
+    <span class="xml-tag">&lt;xpath&gt;</span>/Defs/MapGeneratorDef[defName="Base_Player"]/genSteps<span class="xml-tag">&lt;/xpath&gt;</span>
     <span class="xml-tag">&lt;value&gt;</span>
       <span class="xml-tag">&lt;li&gt;</span>ScatterMineralRich<span class="xml-tag">&lt;/li&gt;</span>
     <span class="xml-tag">&lt;/value&gt;</span>
@@ -413,7 +413,7 @@ map.<span class="nm">terrainGrid</span>.<span class="nm">SetTerrain</span>(cell,
   <div class="section" id="spawn">
     <div class="section-title">5 · 程式化放置物件</div>
 
-    <p>在 GenStep 內放東西，圍繞三組工具：<code>GenSpawn</code>（怎麼放）、<code>CellFinder</code>（放哪裡）、<code>ScatterThingsUtility</code> 與相關散佈基底（批量放）。</p>
+    <p>在 GenStep 內放東西，圍繞三組工具：<code>GenSpawn</code>（怎麼放）、<code>CellFinder</code>（放哪裡）、<code>GenPlace</code> 與 <code>GenStep_Scatterer</code> 散佈基底（批量放）。</p>
 
     <div class="g2">
       <div class="card card-accent-green">
@@ -452,7 +452,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
 }
 
 <span class="cm">// 在某中心點附近找（半徑內、可達）</span>
-<span class="kw">if</span> (<span class="ty">CellFinder</span>.<span class="nm">TryFindRandomCellNear</span>(center, map, radius: <span class="nu">8</span>,
+<span class="kw">if</span> (<span class="ty">CellFinder</span>.<span class="nm">TryFindRandomCellNear</span>(center, map, squareRadius: <span class="nu">8</span>,
         validator: c =&gt; c.<span class="nm">Standable</span>(map), <span class="kw">out</span> <span class="ty">IntVec3</span> near))
 {
     <span class="cm">// ...</span>
@@ -464,7 +464,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
     <h3>批量散佈：GenStep_Scatterer 家族</h3>
     <p>
       與其自己寫迴圈，更常見是<strong>繼承 <code>GenStep_Scatterer</code></strong>（<code>GenStep_ScatterThings</code> 的父類別），
-      只覆寫「能不能放這裡」與「放什麼」。父類別已處理 <code>count</code>、<code>clusterSize</code>、最小間距、嘗試上限等樣板邏輯。
+      只覆寫「能不能放這裡」與「放什麼」。父類別已處理 <code>count</code>、<code>countPer10kCellsRange</code>、<code>minSpacing</code>（最小間距）、嘗試上限等樣板邏輯。（<code>clusterSize</code> 是 <code>GenStep_ScatterThings</code> 才有的欄位，<code>GenStep_Scatterer</code> 本身沒有。）
     </p>
     <pre><span class="kw">public class</span> <span class="ty">GenStep_ScatterMyDebris</span> : <span class="ty">GenStep_Scatterer</span>
 {
@@ -487,22 +487,24 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
         <span class="ty">GenSpawn</span>.<span class="nm">Spawn</span>(debrisDef, c, map);
     }
 }</pre>
-    <pre><span class="cm">&lt;!-- 對應 GenStepDef：count / 群集大小由父類別欄位接收 --&gt;</span>
+    <pre><span class="cm">&lt;!-- 對應 GenStepDef：count（單一 int）與密度由 GenStep_Scatterer 父類別欄位接收 --&gt;</span>
 <span class="xml-tag">&lt;GenStepDef&gt;</span>
   <span class="xml-tag">&lt;defName&gt;</span>ScatterMyDebris<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="xml-tag">&lt;order&gt;</span><span class="xml-val">420</span><span class="xml-tag">&lt;/order&gt;</span>
   <span class="xml-tag">&lt;genStep</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyMod.GenStep_ScatterMyDebris"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;debrisDef&gt;</span>ChunkSlagSteel<span class="xml-tag">&lt;/debrisDef&gt;</span>
-    <span class="xml-tag">&lt;count&gt;</span><span class="xml-val">30~50</span><span class="xml-tag">&lt;/count&gt;</span>
-    <span class="xml-tag">&lt;clusterSize&gt;</span><span class="xml-val">3~6</span><span class="xml-tag">&lt;/clusterSize&gt;</span>
+    <span class="cm">&lt;!-- count 是 int（&lt;0 時改用 countPer10kCellsRange 依地圖大小換算） --&gt;</span>
+    <span class="xml-tag">&lt;count&gt;</span><span class="xml-val">40</span><span class="xml-tag">&lt;/count&gt;</span>
+    <span class="cm">&lt;!-- minSpacing 是父類別既有的 float 欄位，控制散點最小間距 --&gt;</span>
+    <span class="xml-tag">&lt;minSpacing&gt;</span><span class="xml-val">5</span><span class="xml-tag">&lt;/minSpacing&gt;</span>
   <span class="xml-tag">&lt;/genStep&gt;</span>
 <span class="xml-tag">&lt;/GenStepDef&gt;</span></pre>
 
     <div class="callout callout-tip">
-      <strong>ScatterThingsUtility</strong>
-      若只是想在某些 cell 周邊「智慧地」放下一批 thing（自動處理堆疊上限、相鄰格分配），
-      可直接呼叫 <code>ScatterThingsUtility.ScatterThingsAround(...)</code>，省去自己分配堆疊的麻煩——
-      <code>GenStep_ScatterThings</code> 內部就是用它把超過單格 stackLimit 的數量攤到鄰格。
+      <strong>GenPlace.TryPlaceThing</strong>
+      若只是想在某個 cell 周邊「智慧地」放下一批 thing（自動處理堆疊上限、相鄰格分配），
+      可直接呼叫 <code>GenPlace.TryPlaceThing(thing, center, map, ThingPlaceMode.Near, ...)</code>，省去自己分配堆疊的麻煩——
+      <code>GenStep_ScatterThings.ScatterAt</code> 內部就是用 <code>ThingPlaceMode.Near</code> 把超過單格 stackLimit 的數量攤到鄰格。
     </div>
   </div>
 
@@ -593,7 +595,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
     <span class="ty">NoiseDebugUI</span>.<span class="nm">StoreNoiseRender</span>(noise, <span class="st">"MyElevation"</span>); <span class="cm">// 選用：Debug 視覺化</span>
 
     <span class="cm">// 4) 取得（或建立）一張 float grid，逐格寫入噪聲值</span>
-    <span class="ty">MapGenFloatGrid</span> elevation = <span class="ty">MapGenerator</span>.<span class="nm">FloatGridNamed</span>(<span class="st">"Elevation"</span>, map);
+    <span class="ty">MapGenFloatGrid</span> elevation = <span class="ty">MapGenerator</span>.<span class="nm">FloatGridNamed</span>(<span class="st">"Elevation"</span>);
     <span class="kw">foreach</span> (<span class="ty">IntVec3</span> c <span class="kw">in</span> map.<span class="nm">AllCells</span>)
     {
         <span class="kw">double</span> v = noise.<span class="nm">GetValue</span>(c.x, c.y, c.z); <span class="cm">// c.y 通常為 0（2D 地圖）</span>
@@ -603,7 +605,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
 
     <div class="callout callout-tip">
       <strong>MapGenFloatGrid 是 GenStep 間的「黑板」</strong>
-      <code>MapGenerator.FloatGridNamed("Elevation"/"Fertility"/"Caves", map)</code> 取得的是
+      <code>MapGenerator.FloatGridNamed("Elevation"/"Fertility"/"Caves")</code> 取得的是
       <em>跨 GenStep 共享、僅在生成期存在</em>的暫存格網。你的 GenStep 可以讀前面寫的高度圖、
       也可以覆寫它影響後面的 GenStep——這是和原版地形系統互動的正規管道。
     </div>
@@ -665,7 +667,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
     <div class="g2">
       <div class="card card-accent-purple">
         <h3>BaseGen / SymbolResolver（原版）</h3>
-        <p>把「生成一座據點」拆成階層化的 <em>符號（symbol）</em>：<code>"settlement"</code> → <code>"edificeWalls"</code> + <code>"interior_threats"</code> ... 每個符號對應一個 <code>SymbolResolver</code> 子類別，在指定矩形區（<code>ResolveParams.rect</code>）內解析出實際內容，並可遞迴 push 更細的符號。</p>
+        <p>把「生成一座據點」拆成階層化的 <em>符號（symbol）</em>：<code>"settlement"</code> → <code>"edgeWalls"</code> + <code>"interior_threats"</code> ... 每個符號對應一個 <code>SymbolResolver</code> 子類別，在指定矩形區（<code>ResolveParams.rect</code>）內解析出實際內容，並可遞迴 push 更細的符號。</p>
       </div>
       <div class="card card-accent-cyan">
         <h3>KCSG（Custom Structure Generation）</h3>
@@ -690,10 +692,10 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
     {
         <span class="ty">Map</span> map = <span class="ty">BaseGen</span>.globalSettings.map;
 
-        <span class="cm">// 外牆：交給原版的 "edificeWalls" 符號</span>
+        <span class="cm">// 外牆：交給原版的 "edgeWalls" 符號（SymbolResolver_EdgeWalls）</span>
         <span class="ty">ResolveParams</span> walls = rp;
         walls.<span class="nm">wallStuff</span> = <span class="ty">ThingDefOf</span>.Steel;
-        <span class="ty">BaseGen</span>.symbolStack.<span class="nm">Push</span>(<span class="st">"edificeWalls"</span>, walls);
+        <span class="ty">BaseGen</span>.symbolStack.<span class="nm">Push</span>(<span class="st">"edgeWalls"</span>, walls);
 
         <span class="cm">// 在中央放一個自訂物件</span>
         <span class="ty">IntVec3</span> center = rp.rect.<span class="nm">CenterCell</span>;
@@ -741,7 +743,7 @@ steel.<span class="nm">stackCount</span> = <span class="nu">75</span>;
         在 <code>Terrain</code> 之前找岩石、在 <code>Plants</code> 之後改肥沃度，都會「程式正確但結果空白」。
       </p>
       <pre><span class="cm">// 自檢：在 Generate 開頭印出當前已存在的前置產物</span>
-<span class="kw">var</span> elev = <span class="ty">MapGenerator</span>.<span class="nm">FloatGridNamed</span>(<span class="st">"Elevation"</span>, map);
+<span class="kw">var</span> elev = <span class="ty">MapGenerator</span>.<span class="nm">FloatGridNamed</span>(<span class="st">"Elevation"</span>);
 <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] order 執行中，Elevation 中心值={elev[map.Center]}"</span>);
 <span class="cm">// 若值為 0/未初始化 → 你跑得太早，調大 order</span></pre>
     </div>

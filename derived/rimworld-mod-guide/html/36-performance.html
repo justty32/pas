@@ -198,8 +198,7 @@
             {
                 _lastScanTick = now;
                 <span class="cm">// 用引擎現成的空間查詢，避免自己掃全地圖的 LINQ</span>
-                _enemyNearbyCached = parent.Map
-                    .<span class="nm">GetComponent</span>&lt;<span class="ty">AttackTargetsCache</span>&gt;() != <span class="kw">null</span>
+                _enemyNearbyCached = parent.Map.attackTargetsCache != <span class="kw">null</span>
                     &amp;&amp; <span class="ty">GenHostility</span>.<span class="nm">AnyHostileActiveThreatTo</span>(parent.Map, parent.Faction);
             }
             <span class="kw">return</span> _enemyNearbyCached;
@@ -358,7 +357,7 @@ sw.<span class="nm">Stop</span>();
       別把昂貴的判斷或 LINQ 放在每次都會跑的 prefix 開頭。
     </p>
 
-    <pre><span class="at">[HarmonyPatch(typeof(Pawn), nameof(Pawn.Tick))]</span>
+    <pre><span class="at">[HarmonyPatch(typeof(Pawn), "Tick")]</span>  <span class="cm">// Pawn.Tick 是 protected，須用字串名而非 nameof()</span>
 <span class="kw">static</span> <span class="kw">class</span> <span class="ty">Pawn_Tick_Patch</span>
 {
     <span class="kw">static</span> <span class="kw">void</span> <span class="nm">Postfix</span>(<span class="ty">Pawn</span> __instance)

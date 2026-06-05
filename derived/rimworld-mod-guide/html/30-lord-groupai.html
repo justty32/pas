@@ -221,9 +221,10 @@
     <pre><span class="ty">StateGraph</span> graph = <span class="kw">new</span> <span class="ty">StateGraph</span>();
 
 <span class="cm">// 兩個狀態</span>
-<span class="ty">LordToil</span> stage  = graph.<span class="nm">AttachSubgraph</span>(...) <span class="cm">/* 或自訂 LordToil 直接 new */</span>;
+<span class="ty">LordToil</span> stage  = <span class="kw">new</span> <span class="ty">LordToil_DefendPoint</span>(stageLoc);  <span class="cm">// 直接 new 一個內建 LordToil</span>
+graph.<span class="nm">AddToil</span>(stage);
 <span class="ty">LordToil</span> assault = <span class="kw">new</span> <span class="ty">LordToil_AssaultColony</span>();
-graph.lordToils.<span class="nm">Add</span>(assault);
+graph.<span class="nm">AddToil</span>(assault);
 
 <span class="cm">// 一條轉移：聚集完成 → 進攻</span>
 <span class="ty">Transition</span> t = <span class="kw">new</span> <span class="ty">Transition</span>(stage, assault);
@@ -291,7 +292,7 @@ graph.<span class="nm">AddTransition</span>(t);</pre>
       <tr><th>值</th><th>語意</th></tr>
       <tr><td><code>Killed</code></td><td>死亡——計入「死傷」類 Trigger。</td></tr>
       <tr><td><code>Incapped</code></td><td>倒地失能。</td></tr>
-      <tr><td><code>MadePrisoner</code> / <code>Captured</code></td><td>被俘。</td></tr>
+      <tr><td><code>MadePrisoner</code></td><td>被俘。</td></tr>
       <tr><td><code>ExitedMap</code></td><td>正常離圖（撤退完成、訪客離開）。</td></tr>
       <tr><td><code>ChangedFaction</code></td><td>叛變/招降。</td></tr>
       <tr><td><code>LeftVoluntarily</code></td><td>自願脫隊。</td></tr>
@@ -408,17 +409,17 @@ graph.<span class="nm">AddTransition</span>(t);</pre>
       最後重新呼叫 <code>CreateGraph()</code> 重建狀態圖。若你只寫了帶參數的建構子，載入舊存檔會直接拋例外（<code>MissingMethodException</code> / 反射失敗）。
     </div>
 
-    <h3>StartingToil 與 toilsByDef</h3>
+    <h3>StartingToil</h3>
     <p>
       <code>graph.AddToil(toil)</code> 加入的<strong>第一個</strong> toil 自動成為 <code>StartingToil</code>（Lord 建立後的初始狀態）。
-      若要明確指定，可設 <code>graph.StartingToil = someToil;</code>。
-      另外 Lord 提供 <code>lord.toilsByDef</code>（其實是查 graph 中具名 toil 的映射）方便在轉移 preAction 或外部 signal 裡用語意名稱跳轉。
+      若要明確指定，可設 <code>graph.StartingToil = someToil;</code>（setter 會把該 toil 移到 <code>lordToils</code> 的索引 0）。
+      要在外部 signal 或 preAction 裡切換到特定狀態，自己保留 toil 變數的參照，再用 <code>lord.GotoToil(toil)</code> 跳轉即可。
     </p>
     <pre><span class="cm">// 明確指定起始狀態（不依賴加入順序）</span>
 graph.StartingToil = stage;
 
-<span class="cm">// 也可以掛「全域逃跑」toil：當整群人都該逃時自動進入</span>
-<span class="cm">// LordJob.AddFleeToil() 之類的 helper 在部分內建 job 內被覆寫使用</span></pre>
+<span class="cm">// 「全域逃跑」toil 由引擎自動掛：當 LordJob.AddFleeToil 屬性為 true（預設）、</span>
+<span class="cm">// 且派系會逃時，Lord.SetJob 會自動補一個 LordToil_PanicFlee 與對應轉移</span></pre>
 
     <div class="callout callout-tip">
       <strong>善用內建 LordToil 拼裝</strong>
@@ -485,7 +486,7 @@ graph.StartingToil = stage;
       <tr><td><code>DutyDefOf.Idle</code></td><td>原地/小範圍閒晃</td><td>集結、典禮觀眾、訪客待機</td></tr>
       <tr><td><code>DutyDefOf.TravelOrLeave</code></td><td>朝目標移動，否則離開</td><td>商隊、過境</td></tr>
       <tr><td><code>DutyDefOf.Escort</code></td><td>護衛某個 focus pawn</td><td>護衛任務</td></tr>
-      <tr><td><code>DutyDefOf.SabotageHostile</code> / Steal</td><td>破壞/偷竊</td><td>機械叢集、竊盜團</td></tr>
+      <tr><td><code>DutyDefOf.Steal</code></td><td>偷竊</td><td>竊盜團</td></tr>
     </table>
 
     <h3>duty 怎麼被思維樹消費（銜接第 29 章 §6）</h3>
@@ -614,7 +615,6 @@ graph.StartingToil = stage;
       <tr><td><code>Trigger_PawnCannotReachMapEdge</code></td><td>有成員找不到出口（被圍困）</td><td>輪詢</td></tr>
       <tr><td><code>Trigger_BecameNonHostileToPlayer</code></td><td>派系關係轉為非敵對（招安）</td><td>輪詢</td></tr>
       <tr><td><code>Trigger_Memo</code></td><td>收到指定字串的 memo signal</td><td>signal</td></tr>
-      <tr><td><code>Trigger_PawnExitedMap</code></td><td>有成員離圖</td><td>signal</td></tr>
       <tr><td><code>Trigger_OnClamor</code></td><td>聽到喧鬧（爆炸、開門被吵醒）</td><td>signal</td></tr>
       <tr><td><code>Trigger_UrgentlyHungry</code></td><td>成員飢餓緊急（長期駐留群）</td><td>輪詢</td></tr>
     </table>

@@ -91,8 +91,8 @@
         </tr>
         <tr>
           <td>可被消滅派系</td>
-          <td><code>def.canBeGroupSource</code>＋無 required 數量</td>
-          <td>失去所有 Settlement 後可被 <code>FactionManager.Remove</code> 清掉（或標記 <code>defeated</code>）。常見於可被玩家征服的小型部落。</td>
+          <td>無 required 數量、非 permanentEnemy</td>
+          <td>失去所有 Settlement／成員後被標記 <code>defeated</code>，最終由 <code>FactionManager</code> 內部回收（<code>Remove</code> 為 private，外部不可直接呼叫）。常見於可被玩家征服的小型部落。</td>
         </tr>
         <tr>
           <td>隱藏派系（hidden）</td>
@@ -136,15 +136,15 @@
       </thead>
       <tbody>
         <tr><td><code>isPlayer</code></td><td><code>bool</code></td><td>是否為玩家派系。自訂派系一律 false（玩家派系只有內建 PlayerColony / PlayerTribe）。</td></tr>
-        <tr><td><code>permanentEnemy</code></td><td><code>bool</code></td><td>永遠敵對、不可談和。設 true 時 <code>startingGoodwill</code> 會被忽略，外交頁不顯示談判按鈕。</td></tr>
+        <tr><td><code>permanentEnemy</code></td><td><code>bool</code></td><td>永遠敵對、不可談和。設 true 時起始好感強制為 -100、<code>naturalEnemy</code> 被蓋過，外交頁不顯示談判按鈕。</td></tr>
         <tr><td><code>permanentEnemyToEveryoneExceptPlayer</code></td><td><code>bool</code></td><td>對所有人敵對，但仍可與玩家建立關係（用於「人人喊打但你能拉攏」的勢力）。</td></tr>
-        <tr><td><code>naturalColonyEnemy</code></td><td><code>bool</code></td><td>傾向與玩家敵對的「自然敵人」（海盜系常設）。影響起始關係偏向與某些事件選取。</td></tr>
+        <tr><td><code>naturalEnemy</code></td><td><code>bool</code></td><td>傾向與玩家敵對的「自然敵人」（海盜系常設）。設 true 時起始好感為 -80（敵對開局），影響某些事件選取。</td></tr>
         <tr><td><code>categoryTag</code></td><td><code>string</code></td><td>分類標籤（如 <code>Pirate</code>、<code>Outlander</code>、<code>Tribe</code>），決定某些事件/任務的派系篩選。</td></tr>
         <tr><td><code>pawnGroupMakers</code></td><td><code>List&lt;PawnGroupMaker&gt;</code></td><td>核心欄位：定義此派系如何組隊（突襲、貿易商、訪客）。詳見下方。</td></tr>
-        <tr><td><code>pawnSingleNameKindDef</code> / <code>basicMemberKind</code></td><td><code>PawnKindDef</code></td><td>派系領袖／基本成員的 PawnKind 模板（銜接第 11 章）。</td></tr>
+        <tr><td><code>basicMemberKind</code></td><td><code>PawnKindDef</code></td><td>派系基本成員的 PawnKind 模板（銜接第 11 章）。</td></tr>
         <tr><td><code>apparelStuffFilter</code></td><td><code>ThingFilter</code></td><td>限制此派系成員可穿戴的材質（如部落只用皮革/木材）。</td></tr>
         <tr><td><code>techLevel</code></td><td><code>TechLevel</code></td><td>科技等級（Neolithic / Medieval / Industrial / Spacer 等），影響裝備、貿易品、AI。</td></tr>
-        <tr><td><code>startingGoodwill</code></td><td><code>IntRange</code></td><td>世界生成時與玩家的起始好感隨機範圍（例 <code>-100~-80</code> 為敵對開局）。</td></tr>
+        <tr><td><code>naturalEnemy</code> / <code>permanentEnemy</code></td><td><code>bool</code></td><td>起始好感不是 XML 欄位，而由這兩個旗標推導：<code>permanentEnemy</code> → -100、<code>naturalEnemy</code> → -80、皆無 → 0（中立）。見 <code>Faction.TryMakeInitialRelationsWith</code>。</td></tr>
         <tr><td><code>canSiege</code> / <code>canStageAttacks</code></td><td><code>bool</code></td><td>是否能發動圍攻 / 能否作為主動攻擊來源。隱藏派系常 false。</td></tr>
         <tr><td><code>settlementGenerationWeight</code></td><td><code>float</code></td><td>世界生成時撒據點的權重。0 代表不在世界地圖上有據點。</td></tr>
         <tr><td><code>requiredCountAtGameStart</code></td><td><code>int</code></td><td>新世界至少生成幾個此派系的 Faction 實例。</td></tr>
@@ -155,7 +155,7 @@
     </table>
 
     <h3>PawnGroupMaker：突襲與來訪組成的引擎</h3>
-    <p><code>RimWorld.PawnGroupMaker</code> 是「給定一筆點數預算（points），產出一組 Pawn」的規則。每個 <code>kindDef</code> 帶權重 <code>selectionWeight</code> 與成本（取自 <code>PawnKindDef.combatPower</code>）。突襲系統會反覆抽 kindDef、直到耗盡 points 預算。<code>kindCategory</code> 區分這套規則用於哪種場合：</p>
+    <p><code>RimWorld.PawnGroupMaker</code> 是「給定一筆點數預算（points），產出一組 Pawn」的規則。每個 <code>kindDef</code> 帶權重 <code>selectionWeight</code> 與成本（取自 <code>PawnKindDef.combatPower</code>）。突襲系統會反覆抽 kindDef、直到耗盡 points 預算。每個 PawnGroupMaker 的 <code>kindDef</code>（型別 <code>PawnGroupKindDef</code>）區分這套規則用於哪種場合：</p>
 
     <div class="g3">
       <div class="card card-accent-red">
@@ -182,16 +182,13 @@
     <span class="xml-tag">&lt;label&gt;</span>自由商會<span class="xml-tag">&lt;/label&gt;</span>
     <span class="xml-tag">&lt;description&gt;</span>一群以貿易維生的中立商人聯盟，沒有固定意識形態，只認利潤。<span class="xml-tag">&lt;/description&gt;</span>
     <span class="xml-tag">&lt;categoryTag&gt;</span>Outlander<span class="xml-tag">&lt;/categoryTag&gt;</span>
-    <span class="xml-tag">&lt;pawnSingleNamePrefix&gt;</span>商會<span class="xml-tag">&lt;/pawnSingleNamePrefix&gt;</span>
+    <span class="xml-tag">&lt;pawnsPlural&gt;</span>商會成員<span class="xml-tag">&lt;/pawnsPlural&gt;</span>
     <span class="xml-tag">&lt;listOrderPriority&gt;</span>40<span class="xml-tag">&lt;/listOrderPriority&gt;</span>
 
-    <span class="cm">&lt;!-- 起始中立、可被拉攏，故 startingGoodwill 偏正 --&gt;</span>
-    <span class="xml-tag">&lt;startingGoodwill&gt;</span>
-      <span class="xml-tag">&lt;min&gt;</span>-10<span class="xml-tag">&lt;/min&gt;</span>
-      <span class="xml-tag">&lt;max&gt;</span>40<span class="xml-tag">&lt;/max&gt;</span>
-    <span class="xml-tag">&lt;/startingGoodwill&gt;</span>
+    <span class="cm">&lt;!-- 起始中立、可被拉攏：沒有 startingGoodwill 欄位，靠下列旗標 --&gt;</span>
+    <span class="cm">&lt;!-- naturalEnemy=false + permanentEnemy=false ⇒ 起始好感 0（中立） --&gt;</span>
     <span class="xml-tag">&lt;mustStartOneEnemy&gt;</span>false<span class="xml-tag">&lt;/mustStartOneEnemy&gt;</span>
-    <span class="xml-tag">&lt;naturalColonyEnemy&gt;</span>false<span class="xml-tag">&lt;/naturalColonyEnemy&gt;</span>
+    <span class="xml-tag">&lt;naturalEnemy&gt;</span>false<span class="xml-tag">&lt;/naturalEnemy&gt;</span>
     <span class="xml-tag">&lt;permanentEnemy&gt;</span>false<span class="xml-tag">&lt;/permanentEnemy&gt;</span>
 
     <span class="xml-tag">&lt;techLevel&gt;</span>Industrial<span class="xml-tag">&lt;/techLevel&gt;</span>
@@ -333,22 +330,27 @@
     </div>
 
     <h3>設定為「絕對狀態」</h3>
-    <p>若要強制設成同盟/敵對（而非微調），用 <code>Faction.TrySetRelationKind</code>：</p>
-<pre><span class="cm">// 直接設為敵對（內部會把 goodwill 拉到敵對門檻以下）</span>
-guild.<span class="nm">TrySetRelationKind</span>(
-    <span class="ty">Faction</span>.OfPlayer,
-    <span class="ty">FactionRelationKind</span>.Hostile,
-    canSendLetter: <span class="kw">true</span>,
-    reason: <span class="kw">null</span>);</pre>
+    <p>使用 goodwill 的派系（自訂派系皆是）<strong>沒有 <code>TrySetRelationKind</code> 這個方法</strong>——關係種類永遠由 goodwill 推導，所以「硬切換」其實是把 goodwill 一次拉過門檻。例如要立即翻臉，可用 <code>GoodwillToMakeHostile</code> 算出所需負增量再交給 <code>TryAffectGoodwillWith</code>：</p>
+<pre><span class="cm">// 直接設為敵對：算出把 goodwill 拉到 -75 以下所需的增量</span>
+<span class="ty">Faction</span> player = <span class="ty">Faction</span>.OfPlayer;
+<span class="kw">int</span> delta = player.<span class="nm">GoodwillToMakeHostile</span>(guild);   <span class="cm">// 例：-75 - 現有goodwill</span>
+player.<span class="nm">TryAffectGoodwillWith</span>(
+    guild, delta,
+    canSendMessage: <span class="kw">true</span>,
+    canSendHostilityLetter: <span class="kw">true</span>,
+    reason: <span class="kw">null</span>);
+
+<span class="cm">// 註：SetRelationDirect 只適用「不使用 goodwill」的派系，</span>
+<span class="cm">// 對 goodwill 派系呼叫它只會 Log.Error 並被忽略。</span></pre>
 
     <table>
       <thead>
         <tr><th>方法</th><th>適用情境</th></tr>
       </thead>
       <tbody>
-        <tr><td><code>TryAffectGoodwillWith(±delta)</code></td><td>漸進式調整（任務獎懲、賄賂、誤傷）。最常用。</td></tr>
-        <tr><td><code>TrySetRelationKind(kind)</code></td><td>劇情需要「立刻翻臉/結盟」時的硬切換。</td></tr>
-        <tr><td><code>SetRelationDirect / SetRelation</code></td><td>底層；初始化或特殊情形才用，會略過部分通知邏輯。</td></tr>
+        <tr><td><code>TryAffectGoodwillWith(±delta)</code></td><td>漸進式調整（任務獎懲、賄賂、誤傷）。最常用，也是「硬切換」的實作途徑（搭配 <code>GoodwillToMakeHostile</code> 等）。</td></tr>
+        <tr><td><code>SetRelationDirect(other, kind)</code></td><td>僅限「不使用 goodwill」的派系直接設定 kind；對 goodwill 派系會被拒絕（Log.Error）。</td></tr>
+        <tr><td><code>SetRelation(FactionRelation)</code></td><td>底層；初始化／特殊情形才用，直接塞入一個關係物件。</td></tr>
       </tbody>
     </table>
   </div>
@@ -359,18 +361,18 @@ guild.<span class="nm">TrySetRelationKind</span>(
   <div class="section">
     <div class="section-title">§4 派系生成與世界：撒據點與舊存檔後補</div>
 
-    <p>世界生成階段，<code>RimWorld.FactionGenerator</code> 依各 FactionDef 的 <code>requiredCountAtGameStart</code> / <code>maxCountAtGameStart</code> 實體化出 Faction（呼叫 <code>FactionGenerator.NewGeneratedFaction</code>），再由 <code>FactionManager.Add</code> 註冊。接著世界地圖生成器依 <code>settlementGenerationWeight</code> 為這些派系撒 <code>RimWorld.Planet.Settlement</code>（一種 <code>WorldObject</code>，銜接第 13 章）。</p>
+    <p>世界生成階段，<code>RimWorld.FactionGenerator</code> 依各 FactionDef 的 <code>requiredCountAtGameStart</code> / <code>maxCountAtGameStart</code> 實體化出 Faction（呼叫 <code>FactionGenerator.NewGeneratedFaction</code>，入口為 <code>FactionGenerator.GenerateFactionsIntoWorldLayer</code>），再由 <code>FactionManager.Add</code> 註冊。接著世界地圖生成器依 <code>settlementGenerationWeight</code> 為這些派系撒 <code>RimWorld.Planet.Settlement</code>（一種 <code>WorldObject</code>，銜接第 13 章）。</p>
 
     <h3>生成流程</h3>
     <ol class="steps">
-      <li><code>FactionGenerator.GenerateFactionsIntoWorld(parms)</code>：遍歷所有非隱藏、required&gt;0 的 FactionDef，產生對應數量的 Faction 實例。</li>
-      <li>對每個新 Faction，依 <code>startingGoodwill</code> 隨機初始化與玩家及彼此的關係。</li>
+      <li><code>FactionGenerator.GenerateFactionsIntoWorldLayer(layer, factions)</code>：遍歷所有非隱藏、required&gt;0 的 FactionDef，產生對應數量的 Faction 實例。</li>
+      <li>對每個新 Faction，呼叫 <code>TryMakeInitialRelationsWith</code>，依 <code>permanentEnemy</code>/<code>naturalEnemy</code> 推導與玩家及彼此的起始關係。</li>
       <li>世界生成把據點撒在地圖上（依 settlementGenerationWeight 與 tile 適居性）。</li>
       <li>隱藏派系（機械蟲、無主動物）由 <code>FactionGenerator</code> 以固定邏輯補上，不吃 settlementGenerationWeight。</li>
     </ol>
 
     <div class="callout callout-danger">
-      <strong>致命陷阱：加派系後讀舊存檔會缺實例。</strong><code>GenerateFactionsIntoWorld</code> 只在「新世界」跑一次。玩家把你的 mod 加進既有存檔時，世界早就生成完畢，你的 FactionDef 不會有任何 Faction 實例——任何 <code>FirstFactionOfDef</code> 都回傳 null，依賴它的事件全部失效。
+      <strong>致命陷阱：加派系後讀舊存檔會缺實例。</strong><code>GenerateFactionsIntoWorldLayer</code> 只在「新世界」跑一次。玩家把你的 mod 加進既有存檔時，世界早就生成完畢，你的 FactionDef 不會有任何 Faction 實例——任何 <code>FirstFactionOfDef</code> 都回傳 null，依賴它的事件全部失效。
     </div>
 
     <h3>解法：載入既有存檔時後補生成</h3>
@@ -408,7 +410,7 @@ guild.<span class="nm">TrySetRelationKind</span>(
 
     <span class="kw">private static void</span> <span class="nm">TryGenerateSettlementFor</span>(<span class="ty">Faction</span> faction)
     {
-        <span class="kw">if</span> (!<span class="ty">TileFinder</span>.<span class="nm">TryFindNewSiteTile</span>(<span class="kw">out</span> <span class="kw">int</span> tile))
+        <span class="kw">if</span> (!<span class="ty">TileFinder</span>.<span class="nm">TryFindNewSiteTile</span>(<span class="kw">out</span> <span class="ty">PlanetTile</span> tile))
             <span class="kw">return</span>;
 
         <span class="ty">Settlement</span> s = (<span class="ty">Settlement</span>)<span class="ty">WorldObjectMaker</span>
@@ -473,8 +475,8 @@ guild.<span class="nm">TrySetRelationKind</span>(
     <span class="cm">&lt;!-- 綁定到本派系：只有此 FactionDef 的商隊會用 --&gt;</span>
     <span class="xml-tag">&lt;faction&gt;</span>MyMod_FreeGuild<span class="xml-tag">&lt;/faction&gt;</span>
     <span class="xml-tag">&lt;stockGenerators&gt;</span>
-      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_BuyCategory"</span><span class="xml-tag">&gt;</span>
-        <span class="xml-tag">&lt;categories&gt;</span><span class="xml-tag">&lt;li&gt;</span>Foods<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_Category"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;categoryDef&gt;</span>FoodMeals<span class="xml-tag">&lt;/categoryDef&gt;</span>
       <span class="xml-tag">&lt;/li&gt;</span>
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_Tag"</span><span class="xml-tag">&gt;</span>
         <span class="xml-tag">&lt;tradeTag&gt;</span>WeaponRanged<span class="xml-tag">&lt;/tradeTag&gt;</span>
@@ -526,7 +528,7 @@ guild.<span class="nm">TrySetRelationKind</span>(
       </thead>
       <tbody>
         <tr><td>呼叫貿易船</td><td>有軌道貿易商在範圍</td><td><code>TradeShip</code> / <code>PassingShipManager</code></td></tr>
-        <tr><td>請求商隊到訪</td><td>非敵對派系</td><td><code>FactionDialogMaker.RequestTraderEnter</code></td></tr>
+        <tr><td>請求商隊到訪</td><td>非敵對且 <code>def.canRequestTraders</code></td><td><code>FactionDialogMaker.RequestTraderOption</code></td></tr>
         <tr><td>請求軍援</td><td><span class="tag tag-green">Ally</span> 且有冷卻額度</td><td><code>FactionDialogMaker.RequestMilitaryAidOption</code></td></tr>
         <tr><td>賄賂提升好感</td><td>非永久敵</td><td>扣 silver → <code>TryAffectGoodwillWith</code></td></tr>
       </tbody>
@@ -544,11 +546,11 @@ guild.<span class="nm">TrySetRelationKind</span>(
   <span class="cm">&lt;!-- 先省略 ... 在 success 分支中 --&gt;</span>
 <span class="xml-tag">&lt;/QuestNode&gt;</span>
 
-<span class="cm">&lt;!-- 用 QuestPart 改好感（多透過 reward 或 node 包裝） --&gt;</span>
-<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_GoodwillChange"</span><span class="xml-tag">&gt;</span>
+<span class="cm">&lt;!-- 用 QuestNode 改好感（內部建立 QuestPart_FactionGoodwillChange） --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_ChangeFactionGoodwill"</span><span class="xml-tag">&gt;</span>
   <span class="xml-tag">&lt;faction&gt;</span>$askerFaction<span class="xml-tag">&lt;/faction&gt;</span>
   <span class="xml-tag">&lt;change&gt;</span>12<span class="xml-tag">&lt;/change&gt;</span>
-  <span class="xml-tag">&lt;canSendHostilityLetter&gt;</span>false<span class="xml-tag">&lt;/canSendHostilityLetter&gt;</span>
+  <span class="xml-tag">&lt;canSendLetter&gt;</span>false<span class="xml-tag">&lt;/canSendLetter&gt;</span>
 <span class="xml-tag">&lt;/li&gt;</span></pre>
 
     <p>在 C# 端，任務獎勵 <code>RimWorld.Reward_Goodwill</code> 也是直接走 <code>TryAffectGoodwillWith</code>。所以無論 XML 或 C#，最終都收斂到同一個 API——這也是為什麼建議你所有改關係的程式碼都統一走它。</p>
@@ -577,11 +579,11 @@ guild.<span class="nm">TrySetRelationKind</span>(
     <div class="g2">
       <div class="card card-accent-green">
         <h3>一定友好（開局盟友）</h3>
-        <p>把 <code>startingGoodwill</code> 設成 <code>75~100</code>，並設 <code>mustStartOneEnemy=false</code>、<code>naturalColonyEnemy=false</code>。注意 ≥75 開局就會直接是 Ally。</p>
+        <p>沒有「正向起始好感」欄位可設——起始好感最高只到 0（中立）。要保證友好，需在世界生成後用 <code>TryAffectGoodwillWith</code> 把好感推過 +75，或掛 <code>GoodwillSituationDef</code> 提供正向 <code>naturalGoodwillOffset</code>。設 <code>mustStartOneEnemy=false</code>、<code>naturalEnemy=false</code> 確保不會開局敵對。</p>
       </div>
       <div class="card card-accent-red">
         <h3>一定敵對（宿敵）</h3>
-        <p>設 <code>permanentEnemy=true</code>。它強制敵對、不可談判、忽略 startingGoodwill。若只想「開局敵對但可被拉攏」，改用 <code>startingGoodwill</code> <code>-100~-80</code> 而非 permanentEnemy。</p>
+        <p>設 <code>permanentEnemy=true</code>（強制敵對、不可談判，起始好感 -100）。若只想「開局敵對但可被拉攏」，改設 <code>naturalEnemy=true</code>（起始 -80），而非 permanentEnemy。</p>
       </div>
     </div>
 
@@ -593,7 +595,7 @@ guild.<span class="nm">TrySetRelationKind</span>(
       </thead>
       <tbody>
         <tr><td><code>maxPawnCostPerTotalPointsCurve</code></td><td><code>SimpleCurve</code></td><td>限制「單一 pawn 成本佔總 points 的比例上限」隨總點數變化。低點數時禁止出現太貴的單位（避免開局遇到重裝兵）。</td></tr>
-        <tr><td><code>pointsCurve</code> / <code>raidCommonalityFromPointsCurve</code></td><td><code>SimpleCurve</code></td><td>影響此派系被選為突襲來源的頻率隨威脅點數變化（高難度才常派精兵）。</td></tr>
+        <tr><td><code>raidCommonalityFromPointsCurve</code></td><td><code>SimpleCurve</code></td><td>影響此派系被選為突襲來源的頻率隨威脅點數變化（高難度才常派精兵）。</td></tr>
       </tbody>
     </table>
 
@@ -656,8 +658,8 @@ guild.<span class="nm">TrySetRelationKind</span>(
         <p>多個 FactionDef 用相近 <code>colorSpectrum</code> 會讓世界地圖與外交頁難以分辨。給每個自訂派系一段明確區隔的色相，並避開內建派系常用色（海盜紅、部落綠、外地人藍）。</p>
       </div>
       <div class="card card-accent-red">
-        <h3>permanentEnemy 與 startingGoodwill 矛盾</h3>
-        <p>同時設 <code>permanentEnemy=true</code> 與正向 <code>startingGoodwill</code> 是無效的——permanentEnemy 直接覆蓋，startingGoodwill 被忽略。想「開局敵對但可挽回」，不要用 permanentEnemy，改用負的 startingGoodwill。</p>
+        <h3>permanentEnemy 蓋過其他起始旗標</h3>
+        <p>起始好感由 <code>TryMakeInitialRelationsWith</code> 推導：<code>permanentEnemy</code> 直接回 -100 並蓋過 <code>naturalEnemy</code>。想「開局敵對但可挽回」，不要用 permanentEnemy，改設 <code>naturalEnemy=true</code>（起始 -80，可被拉回中立／同盟）。</p>
       </div>
     </div>
 
@@ -700,7 +702,7 @@ guild.<span class="nm">TrySetRelationKind</span>(
         <tr><th>要做的事</th><th>正確做法</th></tr>
       </thead>
       <tbody>
-        <tr><td>改好感</td><td><code>TryAffectGoodwillWith</code>（漸進）/ <code>TrySetRelationKind</code>（硬切）。永不直接寫 <code>baseGoodwill</code>。</td></tr>
+        <tr><td>改好感</td><td><code>TryAffectGoodwillWith</code>（漸進；硬切換搭 <code>GoodwillToMakeHostile</code> 等算增量）。永不直接寫 <code>baseGoodwill</code>。</td></tr>
         <tr><td>取派系實例</td><td><code>FirstFactionOfDef</code> + null 檢查；舊檔用 §4 後補生成。</td></tr>
         <tr><td>列舉派系</td><td><code>AllFactionsVisible</code> 並過濾 <code>IsPlayer / defeated / temporary</code>。</td></tr>
         <tr><td>調突襲強度</td><td>優先調 groupMaker 與 PawnKind combatPower，曲線只作微調。</td></tr>

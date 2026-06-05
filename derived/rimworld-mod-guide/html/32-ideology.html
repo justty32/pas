@@ -170,10 +170,10 @@
       <tr><td><code>category</code></td><td><code>MemeCategory</code></td><td><code>Structure</code> 或 <code>Normal</code>；Structure 每個 Ideo 只能有一個</td></tr>
       <tr><td><code>impact</code></td><td>int</td><td>對 Ideo 多樣性的「重量」，影響隨機生成器的選用機率</td></tr>
       <tr><td><code>requireOne</code></td><td>List&lt;List&lt;PreceptDef&gt;&gt;</td><td>選了此 meme，每個內層清單至少要採用一個 precept</td></tr>
-      <tr><td><code>preceptsToAdd</code></td><td>List&lt;PreceptDef&gt;</td><td>採用此 meme 時自動加入的 precept</td></tr>
+      <tr><td><code>selectOneOrNone</code></td><td><code>PreceptsWithNoneChance</code></td><td>從一組 precept 擇一或全不採用（生成器加權）</td></tr>
       <tr><td><code>exclusionTags</code></td><td>List&lt;string&gt;</td><td>同 tag 的 meme 互斥（避免「食人」與「動物連結·素食」共存）</td></tr>
-      <tr><td><code>generalRules</code></td><td><code>RulePackDef</code></td><td>敘事文法：產生信仰名稱、教義段落的詞彙規則</td></tr>
-      <tr><td><code>renderOrderPriority</code></td><td>int</td><td>UI 排序權重</td></tr>
+      <tr><td><code>generalRules</code></td><td><code>RulePack</code>（內嵌，非 RulePackDef）</td><td>敘事文法：產生信仰名稱、教義段落的詞彙規則</td></tr>
+      <tr><td><code>renderOrder</code></td><td>int</td><td>UI 排序權重</td></tr>
     </table>
 
     <h3>範例：自訂一個「工匠崇拜」Structure meme</h3>
@@ -195,13 +195,12 @@
     <span class="xml-tag">&lt;category&gt;</span>Structure<span class="xml-tag">&lt;/category&gt;</span>
     <span class="xml-tag">&lt;impact&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/impact&gt;</span>
 
-    <span class="cm">&lt;!-- 採用此 meme 時自動帶上的 precept --&gt;</span>
-    <span class="xml-tag">&lt;preceptsToAdd&gt;</span>
-      <span class="xml-tag">&lt;li&gt;</span>MyMod_Smithy_Veneration<span class="xml-tag">&lt;/li&gt;</span>
-    <span class="xml-tag">&lt;/preceptsToAdd&gt;</span>
-
-    <span class="cm">&lt;!-- 在「成衣 / 製造」issue 上，至少要從這組挑一個 precept --&gt;</span>
+    <span class="cm">&lt;!-- requireOne：每個內層清單至少要採用一個 precept（含「神聖工作台」軸的崇拜立場） --&gt;</span>
     <span class="xml-tag">&lt;requireOne&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>MyMod_Smithy_Veneration<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 在「成衣 / 製造」issue 上，至少要從這組挑一個 precept --&gt;</span>
       <span class="xml-tag">&lt;li&gt;</span>
         <span class="xml-tag">&lt;li&gt;</span>MyMod_Production_Handmade_Required<span class="xml-tag">&lt;/li&gt;</span>
         <span class="xml-tag">&lt;li&gt;</span>MyMod_Production_Handmade_Preferred<span class="xml-tag">&lt;/li&gt;</span>
@@ -226,10 +225,11 @@
 <span class="xml-tag">&lt;/Defs&gt;</span></pre>
 
     <div class="callout callout-tip">
-      <strong>requireOne 是「約束求解」，不是「自動加入」</strong>
-      <code>preceptsToAdd</code> 會無條件塞進去；<code>requireOne</code> 只是告訴生成器「這幾組各挑一個」。
-      若玩家在自訂 Ideo 介面手動移除了 requireOne 涵蓋的 precept，遊戲會跳警告但仍允許——
-      所以別把 requireOne 當成硬性保證，真正要「一定存在」的請用 <code>preceptsToAdd</code>。
+      <strong>requireOne 是「約束求解」，不是「無條件加入」</strong>
+      <code>requireOne</code> 告訴生成器「這幾組各挑一個」，<code>selectOneOrNone</code> 則是「擇一或全不選」。
+      MemeDef <strong>沒有</strong>「無條件塞入某 precept」的欄位（源碼中不存在 <code>preceptsToAdd</code> 之類欄位）；
+      要保證某戒律幾乎必存在，就把它放進一個只含該 precept 的 <code>requireOne</code> 內層清單。
+      但玩家在自訂 Ideo 介面仍可手動移除，遊戲會跳警告而非強制，所以別當成絕對保證。
     </div>
 
     <div class="callout callout-warn">
@@ -275,7 +275,7 @@
       <tr><td><code>requiredMemes</code></td><td>硬性：沒這些 meme 不能採用此 precept</td></tr>
       <tr><td><code>conflictingMemes</code></td><td>有這些 meme 時不可採用</td></tr>
       <tr><td><code>comps</code></td><td>戒律行為的核心：<code>PreceptComp_*</code> 清單，掛心情/自我表達等效果</td></tr>
-      <tr><td><code>preceptInstanceDef</code></td><td>把抽象 precept 綁到某個具體目標（如「崇拜某 ThingDef」）</td></tr>
+      <tr><td><code>grantedAbilities</code></td><td><code>List&lt;AbilityDef&gt;</code>：此 precept（通常為 role）賦予的能力（見 §4）</td></tr>
       <tr><td><code>ritualPatternBase</code></td><td>若此 precept 是 ritual，指向 RitualPatternDef（見 §5）</td></tr>
       <tr><td><code>preceptClass</code></td><td>執行期 instance 類別，預設 <code>RimWorld.Precept</code>，role/ritual 用子類</td></tr>
     </table>
@@ -284,14 +284,15 @@
     <p>
       戒律的效果幾乎都靠 <code>comps</code> 表達，最常見的是
       <code>PreceptComp_SituationalThought</code>（情境心情，例如「身處有某設施的房間」）與
-      <code>PreceptComp_UnaccompaniedThought</code> / 事件驅動的 thought。
-      這些 comp 內引用的 <code>ThoughtDef</code> 必須是
-      <strong>Ideology 專屬的 <code>Thought_Situational</code> / <code>Thought_Memory</code> 子型別並設定
-      <code>requiredTraits</code> / <code>nullifyingTraits</code> 或 <code>requiredMemes</code></strong>，
-      以確保只對信徒生效（見 §8 陷阱）。
+      記憶型的 <code>PreceptComp_SelfTookMemoryThought</code> / <code>PreceptComp_KnowsMemoryThought</code>（事件驅動）。
+      這些 comp 內引用的 <code>ThoughtDef</code> 多以
+      <code>Thought_Situational</code> / <code>Thought_Memory</code> 為 thoughtClass。
+      「只對信徒生效」<strong>不是</strong>靠 ThoughtDef 上的 meme 欄位（ThoughtDef 沒有 <code>requiredMemes</code>），
+      而是靠 <code>ThoughtWorker_Precept</code> 系列 worker 自帶的「該 pawn 是否採用此 precept」判斷（見 §8 陷阱）；
+      ThoughtDef 另有 <code>requiredTraits</code> / <code>nullifyingTraits</code> / <code>nullifyingPrecepts</code> 可細調。
     </p>
 
-    <h3>範例 A：崇拜某個 ThingDef（preceptInstanceDef）</h3>
+    <h3>範例 A：崇拜某個 ThingDef（情境心情 + 自訂 worker）</h3>
     <p>
       我們要做「崇拜深度鑽井」——信徒在能看見深度鑽井的房間裡會獲得正面心情。
       這牽涉一個 <code>IssueDef</code>（崇拜對象軸）+ 一個 <code>PreceptDef</code>，以及一個情境 <code>ThoughtDef</code>。
@@ -332,10 +333,9 @@
 <span class="xml-tag">&lt;Defs&gt;</span>
   <span class="xml-tag">&lt;ThoughtDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;defName&gt;</span>MyMod_NearSacredSmithy<span class="xml-tag">&lt;/defName&gt;</span>
-    <span class="cm">&lt;!-- 情境思想，需在房間內偵測到指定建築 --&gt;</span>
+    <span class="cm">&lt;!-- 情境思想；信徒過濾與「房間內有鍛造台」判斷都寫在自訂 worker 內 --&gt;</span>
     <span class="xml-tag">&lt;thoughtClass&gt;</span>Thought_Situational<span class="xml-tag">&lt;/thoughtClass&gt;</span>
-    <span class="xml-tag">&lt;workerClass&gt;</span>ThoughtWorker_PreceptNearBuilding<span class="xml-tag">&lt;/workerClass&gt;</span>
-    <span class="xml-tag">&lt;buildingDef&gt;</span>FueledSmithy<span class="xml-tag">&lt;/buildingDef&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.ThoughtWorker_PreceptNearSmithy<span class="xml-tag">&lt;/workerClass&gt;</span>
     <span class="xml-tag">&lt;stages&gt;</span>
       <span class="xml-tag">&lt;li&gt;</span>
         <span class="xml-tag">&lt;label&gt;</span>身處神聖之鍛造<span class="xml-tag">&lt;/label&gt;</span>
@@ -346,10 +346,12 @@
 <span class="xml-tag">&lt;/Defs&gt;</span></pre>
 
     <div class="callout callout-info">
-      <strong>ThoughtWorker 是真實 API</strong>
-      <code>ThoughtWorker_PreceptNearBuilding</code>（namespace <code>RimWorld</code>）就是原版「崇拜建築」戒律的 worker，
-      它讀 <code>thought.buildingDef</code> 並掃描房間。若你的「崇拜對象」不是建築（例如崇拜某動物或地形），
-      就需要自己寫 <code>ThoughtWorker_Precept</code> 子類；別硬塞不相容的 worker。
+      <strong>沒有「讀 buildingDef 掃房間」的現成 precept worker</strong>
+      原版的 precept 情境 worker 都是 <code>RimWorld.ThoughtWorker_Precept_*</code> 系列（如
+      <code>ThoughtWorker_Precept_AltarSharing</code>、<code>ThoughtWorker_Precept_IndoorLight</code>），
+      <strong>各自硬編好條件，沒有通用的 <code>ThoughtWorker_PreceptNearBuilding</code>，<code>ThoughtDef</code> 也沒有 <code>buildingDef</code> 欄位</strong>。
+      「房間內有某建築 → 加心情」要自己寫一個 <code>ThoughtWorker_Precept</code> 子類（在房間掃 <code>Building</code>）。
+      順帶一提，原版「信仰需要某建築存在」是另一條路徑（<code>IdeoBuildingPresenceDemand</code> / 祭壇系統），與此處的情境心情無關。
     </div>
 
     <h3>範例 B：禁用某類武器（WeaponPreference 風格）</h3>
@@ -425,7 +427,7 @@
       <tr><td><code>roleApparelRequirements</code></td><td>擔任此角色時的服裝硬性需求（接第 17 章服裝層）</td></tr>
       <tr><td><code>roleRequiredWorkTags</code> / <code>roleDisabledWorkTags</code></td><td>指派資格 / 上任後的工作限制</td></tr>
       <tr><td><code>leaderRole</code></td><td>布林，標記此角色為「信仰領袖」（影響某些典禮資格）</td></tr>
-      <tr><td><code>grantedAbilities</code> (via roleEffect)</td><td>透過 <code>RoleEffect_AbilityAvailable</code> 賦予 AbilityDef（接第 24 章）</td></tr>
+      <tr><td><code>grantedAbilities</code></td><td><code>List&lt;AbilityDef&gt;</code>：直接在 PreceptDef 上列出此角色賦予的能力（接第 24 章）；非 roleEffect</td></tr>
     </table>
 
     <h3>範例：定義「大鐵匠」領袖角色並賦予能力</h3>
@@ -453,11 +455,13 @@
       <span class="xml-tag">&lt;/li&gt;</span>
     <span class="xml-tag">&lt;/roleApparelRequirements&gt;</span>
 
-    <span class="cm">&lt;!-- 角色效果：賦予一個 AbilityDef + 提供 stat 加成 --&gt;</span>
+    <span class="cm">&lt;!-- 賦予能力：直接列在 PreceptDef 的 grantedAbilities（不是 roleEffect） --&gt;</span>
+    <span class="xml-tag">&lt;grantedAbilities&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_BlessTheForge<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/grantedAbilities&gt;</span>
+
+    <span class="cm">&lt;!-- 角色效果：提供 stat 加成 --&gt;</span>
     <span class="xml-tag">&lt;roleEffects&gt;</span>
-      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoleEffect_AbilityAvailable"</span><span class="xml-tag">&gt;</span>
-        <span class="xml-tag">&lt;abilityDef&gt;</span>MyMod_BlessTheForge<span class="xml-tag">&lt;/abilityDef&gt;</span>
-      <span class="xml-tag">&lt;/li&gt;</span>
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoleEffect_PawnStatFactor"</span><span class="xml-tag">&gt;</span>
         <span class="xml-tag">&lt;statDef&gt;</span>GeneralLaborSpeed<span class="xml-tag">&lt;/statDef&gt;</span>
         <span class="xml-tag">&lt;modifier&gt;</span><span class="xml-val">1.15</span><span class="xml-tag">&lt;/modifier&gt;</span>
@@ -541,8 +545,9 @@
 <span class="xml-tag">&lt;Defs&gt;</span>
   <span class="xml-tag">&lt;RitualBehaviorDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastBehavior<span class="xml-tag">&lt;/defName&gt;</span>
-    <span class="cm">&lt;!-- worker 可用原版聚會型 worker，或自寫子類 --&gt;</span>
-    <span class="xml-tag">&lt;workerClass&gt;</span>RitualBehaviorWorker_Default<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="cm">&lt;!-- 預設用基底 worker（已是非抽象可直接用），需自訂階段邏輯才繼承它 --&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>RitualBehaviorWorker<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="cm">&lt;!-- durationTicks 是 IntRange，單值會解析為 min=max --&gt;</span>
     <span class="xml-tag">&lt;durationTicks&gt;</span><span class="xml-val">5000</span><span class="xml-tag">&lt;/durationTicks&gt;</span>
 
     <span class="cm">&lt;!-- 典禮角色：召集人（領袖）+ 一般參與者 --&gt;</span>
@@ -609,14 +614,20 @@
     <p>最後用 RitualPatternDef + PreceptDef 把三者綁起來：</p>
     <pre><span class="cm">&lt;!-- Defs/RitualPatternDefs/Pattern_ForgeFeast.xml --&gt;</span>
 <span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="cm">&lt;!-- 目標過濾器是「獨立的 Def」，由 RitualPatternDef 以 defName 參照 --&gt;</span>
+  <span class="cm">&lt;!-- workerClass 指向真實類別 RitualObligationTargetWorker_ThingDef（注意是 ...Worker_，不是 ...Filter_） --&gt;</span>
+  <span class="xml-tag">&lt;RitualObligationTargetFilterDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastTarget<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>RitualObligationTargetWorker_ThingDef<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;thingDefs&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Ideo_Altar<span class="xml-tag">&lt;/li&gt;</span>  <span class="cm">&lt;!-- 在祭壇旁舉行 --&gt;</span>
+    <span class="xml-tag">&lt;/thingDefs&gt;</span>
+  <span class="xml-tag">&lt;/RitualObligationTargetFilterDef&gt;</span>
+
   <span class="xml-tag">&lt;RitualPatternDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastPattern<span class="xml-tag">&lt;/defName&gt;</span>
     <span class="xml-tag">&lt;ritualBehavior&gt;</span>MyMod_ForgeFeastBehavior<span class="xml-tag">&lt;/ritualBehavior&gt;</span>
-    <span class="xml-tag">&lt;ritualObligationTargetFilter</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RitualObligationTargetFilter_ThingDef"</span><span class="xml-tag">&gt;</span>
-      <span class="xml-tag">&lt;thingDefs&gt;</span>
-        <span class="xml-tag">&lt;li&gt;</span>Ideo_Altar<span class="xml-tag">&lt;/li&gt;</span>  <span class="cm">&lt;!-- 在祭壇旁舉行 --&gt;</span>
-      <span class="xml-tag">&lt;/thingDefs&gt;</span>
-    <span class="xml-tag">&lt;/ritualObligationTargetFilter&gt;</span>
+    <span class="xml-tag">&lt;ritualObligationTargetFilter&gt;</span>MyMod_ForgeFeastTarget<span class="xml-tag">&lt;/ritualObligationTargetFilter&gt;</span>
     <span class="xml-tag">&lt;ritualOutcomeEffect&gt;</span>MyMod_ForgeFeastOutcome<span class="xml-tag">&lt;/ritualOutcomeEffect&gt;</span>
   <span class="xml-tag">&lt;/RitualPatternDef&gt;</span>
 
@@ -634,7 +645,7 @@
 
     <div class="callout callout-info">
       <strong>能用原版 worker 就別自寫</strong>
-      <code>RitualBehaviorWorker_Default</code> 與 <code>RitualOutcomeEffectWorker_FromQuality</code>
+      基底的 <code>RitualBehaviorWorker</code>（非抽象，可直接當 workerClass）與 <code>RitualOutcomeEffectWorker_FromQuality</code>
       已能滿足絕大多數「聚會 + 講道 + 品質換心情」的需求。只有要插入自訂階段邏輯
       （例如典禮中段必須擊殺某目標）時才繼承
       <code>RimWorld.RitualBehaviorWorker</code> 覆寫 <code>Tick</code> / <code>ExpectedDuration</code>。
@@ -664,8 +675,8 @@
       <div class="card card-accent-blue">
         <h3>StyleCategoryDef</h3>
         <p>一個「風格家族」（如 <code>Spikecore</code> 尖刺風、<code>Animalist</code> 動物風）。
-          內含 <code>thingDefStyles</code> 把 ThingDef 對映到 ThingStyleDef，並可帶
-          <code>fixedIdeoColor</code> / <code>iconsForRandomization</code>。</p>
+          內含 <code>thingDefStyles</code>（<code>List&lt;ThingDefStyle&gt;</code>）把 ThingDef 對映到 ThingStyleDef，
+          並可帶 <code>iconPath</code>、<code>fixedIdeoOnly</code>、<code>addDesignators</code> 等。</p>
       </div>
       <div class="card card-accent-purple">
         <h3>ThingStyleDef</h3>
@@ -689,7 +700,6 @@
   <span class="xml-tag">&lt;StyleCategoryDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeStyle<span class="xml-tag">&lt;/defName&gt;</span>
     <span class="xml-tag">&lt;label&gt;</span>鍛造風<span class="xml-tag">&lt;/label&gt;</span>
-    <span class="xml-tag">&lt;fixedIdeoColor&gt;</span>(0.55, 0.30, 0.10)<span class="xml-tag">&lt;/fixedIdeoColor&gt;</span>
     <span class="xml-tag">&lt;thingDefStyles&gt;</span>
       <span class="xml-tag">&lt;li&gt;</span>
         <span class="xml-tag">&lt;thingDef&gt;</span>DiningChair<span class="xml-tag">&lt;/thingDef&gt;</span>
@@ -707,9 +717,10 @@
     </p>
 
     <div class="callout callout-warn">
-      <strong>ideoColor 與貼圖染色</strong>
-      <code>fixedIdeoColor</code> 會被套到信仰旗幟、某些 UI 與可染色物件上。若你的 ThingStyleDef
-      貼圖本身已上好色，請確認對應 ThingDef 的 <code>colorGenerator</code> / mask 設定不會把它再染一次，
+      <strong>ideo 顏色與貼圖染色</strong>
+      信仰主色不在 StyleCategoryDef 上，而是 <code>Ideo.colorDef</code>（<code>ColorDef</code>），會套到旗幟、某些 UI 與可染色物件。
+      <code>ThingStyleDef</code> 本身有一個 <code>color</code> 欄位可給該風格物件上色；若貼圖已上好色，
+      請確認對應 ThingDef 的 <code>colorGenerator</code> / mask 設定不會把它再染一次，
       否則會出現顏色疊加錯亂（詳見第 8 章貼圖 mask 章節）。
     </div>
   </div>
@@ -734,9 +745,9 @@
       <tr><td><code>ideo.RolesListForReading</code></td><td>此 Ideo 全部角色 precept（唯讀）</td></tr>
       <tr><td><code>ideo.memes</code></td><td>此 Ideo 的 meme 清單（<code>List&lt;MemeDef&gt;</code>）</td></tr>
       <tr><td><code>ideo.PreceptsListForReading</code></td><td>全部 precept instance（唯讀）</td></tr>
-      <tr><td><code>ideo.certaintyForReading</code> / <code>tracker.Certainty</code></td><td>pawn 的信仰堅定度（0–1）</td></tr>
+      <tr><td><code>pawn.ideo.Certainty</code>（<code>Pawn_IdeoTracker.Certainty</code>）</td><td>pawn 的信仰堅定度（0–1）；堅定度掛在 pawn 的 tracker 上，<strong>Ideo 本身沒有 certainty 欄位</strong></td></tr>
       <tr><td><code>Find.IdeoManager.IdeosListForReading</code></td><td>遊戲中所有 Ideo</td></tr>
-      <tr><td><code>IdeoUtility.*</code></td><td>常用靜態輔助（如 <code>IdeoUtility.IdeoChangeToWeights</code> 等）</td></tr>
+      <tr><td><code>IdeoUtility.*</code></td><td>常用靜態輔助（如 <code>IdeoUtility.IdeoChangeToWeight(pawn, ideo)</code> 等）</td></tr>
     </table>
 
     <h3>範例：只對「採用了某 precept 的信徒」加心情</h3>

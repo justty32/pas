@@ -93,7 +93,7 @@
 
     <h3>Capacity 是怎麼算出來的</h3>
 
-    <p><code>RimWorld.PawnCapacityDef</code>（如 <code>Consciousness</code>、<code>Moving</code>、<code>Manipulation</code>、<code>Sight</code>、<code>BloodPumping</code>）代表一種「身體能力」，數值是 0~1+ 的百分比。它<strong>不是儲存值，而是即時推算</strong>的：每個 capacity 有一個 <code>RimWorld.PawnCapacityWorker</code>，遍歷身體部位的健康狀況與所有 hediff 的 <code>capMods</code>，乘算出最終百分比。</p>
+    <p><code>Verse.PawnCapacityDef</code>（如 <code>Consciousness</code>、<code>Moving</code>、<code>Manipulation</code>、<code>Sight</code>、<code>BloodPumping</code>）代表一種「身體能力」，數值是 0~1+ 的百分比。它<strong>不是儲存值，而是即時推算</strong>的：每個 capacity 有一個 <code>Verse.PawnCapacityWorker</code>，遍歷身體部位的健康狀況與所有 hediff 的 <code>capMods</code>，乘算出最終百分比。</p>
 
     <ul>
       <li><strong>部位健康貢獻</strong>：例如 <code>Moving</code> 由雙腿的剩餘 efficiency 決定，砍掉一條腿就掉一半。</li>
@@ -274,7 +274,7 @@
       </thead>
       <tbody>
         <tr><td><code>HediffComp_SeverityPerDay</code></td><td>每天線性增減 severity</td><td><code>severityPerDay</code></td></tr>
-        <tr><td><code>HediffComp_Immunizable</code></td><td>疾病模型：severity 與 immunity 賽跑</td><td><code>severityPerDaySick</code>、<code>immunityPerDaySick</code></td></tr>
+        <tr><td><code>HediffComp_Immunizable</code></td><td>疾病模型：severity 與 immunity 賽跑</td><td><code>severityPerDayNotImmune</code>、<code>immunityPerDaySick</code></td></tr>
         <tr><td><code>HediffComp_TendDuration</code></td><td>治療有效時長與治療後 severity 變化</td><td><code>baseTendDurationHours</code>、<code>severityPerDayTended</code></td></tr>
         <tr><td><code>HediffComp_Disappears</code></td><td>真實時間倒數後自我移除</td><td><code>disappearsAfterTicks</code></td></tr>
         <tr><td><code>HediffComp_GetsPermanent</code></td><td>傷口痊癒後可能轉為永久傷疤</td><td><code>permanentLabel</code>、<code>becomePermanentChanceFactor</code></td></tr>
@@ -290,7 +290,7 @@
       <li><code>CompPostTick(ref float severityAdjustment)</code>：每 tick 呼叫；<strong>不要直接改 parent.Severity</strong>，而是把這 tick 想增減的量累加到 <code>severityAdjustment</code>，引擎統一結算（避免多 comp 互踩，見 §8）。</li>
       <li><code>CompTended(float quality, float maxQuality, int batchPosition)</code>：被治療時呼叫，<code>quality</code> 是 0~1 治療品質。</li>
       <li><code>CompPostInjuryHeal(float amount)</code>：關聯傷口痊癒一定量時。</li>
-      <li><code>CompPostMerged()</code> / <code>CompShouldRemove</code>：合併同類 hediff、是否該移除。</li>
+      <li><code>CompPostMerged(Hediff other)</code> / <code>CompShouldRemove</code>：合併同類 hediff、是否該移除。</li>
       <li><code>CompExposeData()</code>：用 <code>Scribe_Values.Look</code> 等存讀自訂欄位。</li>
       <li><code>CompDebugString()</code>：在 Dev mode 的 hediff inspect 顯示除錯字串。</li>
     </ul>
@@ -475,7 +475,7 @@ pawn.TakeDamage(dinfo);</pre>
     <div class="g2">
       <div class="card card-accent-red">
         <h3>severity 線（病情）</h3>
-        <p>由 <code>HediffComp_Immunizable</code> 的 <code>severityPerDaySick</code> 推升。當 immunity ≥ severity 時引擎改用 <code>severityPerDayImmune</code>（通常為負）讓病情衰退。</p>
+        <p>由 <code>HediffComp_Immunizable</code> 的 <code>severityPerDayNotImmune</code> 推升。當免疫達到 1.0（<code>FullyImmune</code>）時引擎改用 <code>severityPerDayImmune</code>（通常為負）讓病情衰退。</p>
       </div>
       <div class="card card-accent-cyan">
         <h3>immunity 線（抵抗力）</h3>
@@ -500,14 +500,14 @@ pawn.TakeDamage(dinfo);</pre>
 
     <h3>拆解：瘟疫（Plague）</h3>
 
-    <p>內建 <code>HediffDef Plague</code> 是理解此機制的最佳範本。其 <code>HediffComp_Immunizable</code> 設定大致為：<code>severityPerDaySick</code> 正值（病情自然惡化）、<code>immunityPerDaySick</code> 正值（生病就累積免疫）、<code>severityPerDayImmune</code> 負值（免疫超車後病情消退）。stages 分「未察覺 / 輕微 / 嚴重 / 極度（lifeThreatening + deathMtbDays）」。玩家體感的「能不能扛過瘟疫」本質上就是「免疫曲線能否在 severity 撞線前超車」——而藥物與醫者品質就是調這條曲線斜率的旋鈕。</p>
+    <p>內建 <code>HediffDef Plague</code> 是理解此機制的最佳範本。其 <code>HediffComp_Immunizable</code> 設定大致為：<code>severityPerDayNotImmune</code> 正值（病情自然惡化）、<code>immunityPerDaySick</code> 正值（生病就累積免疫）、<code>severityPerDayImmune</code> 負值（免疫超車後病情消退）。stages 分「未察覺 / 輕微 / 嚴重 / 極度（lifeThreatening + deathMtbDays）」。玩家體感的「能不能扛過瘟疫」本質上就是「免疫曲線能否在 severity 撞線前超車」——而藥物與醫者品質就是調這條曲線斜率的旋鈕。</p>
 
     <table>
       <thead>
         <tr><th>欄位</th><th>意義</th><th>調高的後果</th></tr>
       </thead>
       <tbody>
-        <tr><td><code>severityPerDaySick</code></td><td>生病期間病情爬升速率</td><td>更兇、更難扛</td></tr>
+        <tr><td><code>severityPerDayNotImmune</code></td><td>生病期間病情爬升速率</td><td>更兇、更難扛</td></tr>
         <tr><td><code>immunityPerDaySick</code></td><td>生病期間免疫累積速率</td><td>更容易自癒</td></tr>
         <tr><td><code>severityPerDayImmune</code></td><td>免疫領先後病情衰退速率</td><td>痊癒更快</td></tr>
         <tr><td><code>immunityPerDayNotSick</code></td><td>潛伏期免疫累積（通常 0 或負）</td><td>影響「染病前是否已有抗體」</td></tr>
@@ -525,7 +525,7 @@ pawn.TakeDamage(dinfo);</pre>
   <div class="section">
     <div class="section-title">§6 手術即配方（Surgery = RecipeDef）</div>
 
-    <p>RimWorld 沒有獨立的「手術系統」——手術就是一條<strong>掛在身體部位上的 <code>RimWorld.RecipeDef</code></strong>。它和工作台配方共用同一套 RecipeDef 結構，差別只在：<code>workerClass</code> 是 <code>Recipe_Surgery</code> 的子類、<code>targetsBodyParts</code> 為 true、並透過 <code>recipeUsers</code> 或 <code>ThingDef.recipes</code> 綁到「會接受此手術的 pawn 種類」。手術成功與否、失敗後果，都由 RecipeDef 欄位與 worker 決定。</p>
+    <p>RimWorld 沒有獨立的「手術系統」——手術就是一條<strong>掛在身體部位上的 <code>Verse.RecipeDef</code></strong>。它和工作台配方共用同一套 RecipeDef 結構，差別只在：<code>workerClass</code> 是 <code>Recipe_Surgery</code> 的子類、<code>targetsBodyPart</code> 為 true、並透過 <code>recipeUsers</code> 或 <code>ThingDef.recipes</code> 綁到「會接受此手術的 pawn 種類」。手術成功與否、失敗後果，都由 RecipeDef 欄位與 worker 決定。</p>
 
     <h3>手術相關 RecipeDef 欄位</h3>
 
@@ -592,7 +592,7 @@ pawn.TakeDamage(dinfo);</pre>
   <span class="xml-tag">&lt;defName&gt;</span>MyMod_InstallHydraulicLeg<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="xml-tag">&lt;label&gt;</span>安裝液壓義腿<span class="xml-tag">&lt;/label&gt;</span>
   <span class="xml-tag">&lt;workerClass&gt;</span>Recipe_InstallArtificialBodyPart<span class="xml-tag">&lt;/workerClass&gt;</span>
-  <span class="xml-tag">&lt;targetsBodyParts&gt;</span>true<span class="xml-tag">&lt;/targetsBodyParts&gt;</span>
+  <span class="xml-tag">&lt;targetsBodyPart&gt;</span>true<span class="xml-tag">&lt;/targetsBodyPart&gt;</span>
   <span class="xml-tag">&lt;anesthetize&gt;</span>true<span class="xml-tag">&lt;/anesthetize&gt;</span>
   <span class="xml-tag">&lt;surgerySuccessChanceFactor&gt;</span>1.0<span class="xml-tag">&lt;/surgerySuccessChanceFactor&gt;</span>
   <span class="xml-tag">&lt;deathOnFailedSurgeryChance&gt;</span>0.02<span class="xml-tag">&lt;/deathOnFailedSurgeryChance&gt;</span>
@@ -658,8 +658,8 @@ pawn.TakeDamage(dinfo);</pre>
 <span class="kw">bool</span> hasArtificial = pawn.health.hediffSet
     .HasDirectlyAddedPartFor(leftLeg);
 
-<span class="cm">// 某部位當前的綜合效率（含義體加成 / 傷病扣減）</span>
-<span class="kw">float</span> eff = pawn.health.hediffSet
+<span class="cm">// 某部位當前的剩餘血量 HP（扣除傷口 Severity；缺失部位回 0）</span>
+<span class="kw">float</span> hp = pawn.health.hediffSet
     .GetPartHealth(leftLeg);</pre>
 
     <h3>capMods 正向加成的「超人義肢」</h3>

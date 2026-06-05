@@ -71,7 +71,7 @@
       </div>
       <div class="card card-accent-green">
         <h3>容量層</h3>
-        <p>能控制多少機械？由 <strong>bandwidth</strong>（頻寬）統計值決定：機械師本身提供基礎頻寬，<code>Building_MechBandNode</code> 與身體部件再加成。每隻機械吃掉 <code>bandwidthCost</code>。</p>
+        <p>能控制多少機械？由 <strong>bandwidth</strong>（<code>StatDefOf.MechBandwidth</code> 統計值）決定：機械師本身提供基礎頻寬，band node（<code>CompBandNode</code>）與身體部件再加成。每隻機械吃掉 <code>StatDefOf.BandwidthCost</code>。</p>
       </div>
       <div class="card card-accent-purple">
         <h3>實體層</h3>
@@ -86,7 +86,7 @@
       <strong>反編譯定位</strong>
       用 dnSpy 開 <code>Assembly-CSharp.dll</code>，主要鎖定 namespace <code>RimWorld</code> 下的
       <code>Pawn_MechanitorTracker</code>、<code>MechanitorUtility</code>、<code>CompMechCarrier</code>、
-      <code>CompMechGestator</code>（孵化器 comp）、<code>Building_MechBandNode</code>、
+      <code>Building_MechGestator</code>（孵化器，孵化盒 comp 為 <code>CompMechGestatorTank</code>）、<code>CompBandNode</code>（頻寬節點 comp）、
       <code>MechWorkModeDefOf</code>，以及 <code>Verse</code> 下的 <code>RaceProperties</code>、<code>Pawn</code>。
       所有 def 型別（<code>MechWeightClassDef</code>、<code>MechWorkModeDef</code>）也在 <code>RimWorld</code>。
     </div>
@@ -151,7 +151,9 @@
   <span class="xml-tag">&lt;defName&gt;</span>MyMod_Workshop<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="cm">&lt;!-- 只有 Biotech 在時，才賦予這個建築 mech 加成的 comp --&gt;</span>
   <span class="xml-tag">&lt;comps&gt;</span>
-    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_MechBandNode"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_BandNode"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;hediff&gt;</span>BandNode<span class="xml-tag">&lt;/hediff&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
   <span class="xml-tag">&lt;/comps&gt;</span>
 <span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
 
@@ -177,7 +179,8 @@
 
     <p>
       一個普通 pawn 要成為機械師，必須先擁有 <strong>mechlink</strong>——一個植入式 Hediff
-      （def 名 <code>MechlinkHediff</code>，可由手術 recipe <code>InstallMechlink</code> 安裝，串第 28 章「健康醫療」）。
+      （def 名 <code>MechlinkImplant</code>，hediff 類別 <code>Hediff_Mechlink</code>；由可用物品 <code>Mechlink</code> 透過
+      <code>CompUseEffect_InstallImplantMechlink</code> 植入，而非外科手術 recipe）。
       mechlink 一旦存在，遊戲就會為該 pawn 配置一個 <code>RimWorld.Pawn_MechanitorTracker</code>，
       之後可由 <code>pawn.mechanitor</code> 取得。
     </p>
@@ -185,7 +188,7 @@
     <div class="g2">
       <div class="card card-accent-blue">
         <h3>取得身份</h3>
-        <p>手術安裝 mechlink（消耗物品 <code>Mechlink</code>），或角色生成時帶 mechanitor 特性。<code>MechanitorUtility.IsMechanitor(pawn)</code> 是最權威的判斷。</p>
+        <p>使用物品 <code>Mechlink</code> 植入 mechlink，或角色生成時即帶有。<code>MechanitorUtility.IsMechanitor(pawn)</code> 是最權威的判斷。</p>
       </div>
       <div class="card card-accent-green">
         <h3>tracker 物件</h3>
@@ -196,11 +199,11 @@
     <h3>tracker 的關鍵成員</h3>
     <table>
       <tr><th>成員</th><th>型別</th><th>意義</th></tr>
-      <tr><td><code>ControlledPawns</code></td><td><code>List&lt;Pawn&gt;</code></td><td>此機械師目前控制（overseeing）的所有機械</td></tr>
+      <tr><td><code>ControlledPawns</code></td><td><code>List&lt;Pawn&gt;</code></td><td>實際生效（頻寬足以涵蓋）的機械子集；超出頻寬的會被排除</td></tr>
       <tr><td><code>TotalBandwidth</code></td><td><code>int</code></td><td>可用頻寬上限（基礎 + 建築 + 部件加成）</td></tr>
       <tr><td><code>UsedBandwidth</code></td><td><code>int</code></td><td>已被 ControlledPawns 占用的頻寬（各機械 bandwidthCost 加總）</td></tr>
-      <tr><td><code>CanControlMechs</code></td><td><code>bool</code></td><td>是否處於可下令狀態（昏迷／在世界圖等會變 false）</td></tr>
-      <tr><td><code>OverseenPawns</code></td><td>同 ControlledPawns</td><td>不同版本命名略異，反編譯時兩者都查</td></tr>
+      <tr><td><code>CanControlMechs</code></td><td><code>AcceptanceReport</code></td><td>是否處於可下令狀態（昏迷／在世界圖／囚禁／精神崩潰會回傳失敗原因字串，可隱式轉 bool）</td></tr>
+      <tr><td><code>OverseenPawns</code></td><td><code>List&lt;Pawn&gt;</code></td><td>此機械師<strong>所有</strong>已指派的機械（由 Overseer relation 計算）；<code>ControlledPawns</code> 是其中受頻寬上限約束、實際生效的子集</td></tr>
     </table>
 
     <h3>判斷與列舉機械師控制的機械</h3>
@@ -227,7 +230,7 @@
         <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">return</span>;
         <span class="kw">foreach</span> (<span class="ty">Pawn</span> mech <span class="kw">in</span> t.<span class="nm">ControlledPawns</span>)
         {
-            <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"{mech.LabelShort}  cost={mech.def.race.bandwidthCost}  weight={mech.def.race.mechWeightClass}"</span>);
+            <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"{mech.LabelShort}  cost={mech.GetStatValue(StatDefOf.BandwidthCost)}  weight={mech.def.race.mechWeightClass}"</span>);
         }
     }
 }</pre>
@@ -241,20 +244,22 @@
     <pre><span class="cm">// 取得某隻機械目前的 overseer（可能為 null＝無主，會 feral 化）</span>
 <span class="ty">Pawn</span> overseer = mech.<span class="nm">GetOverseer</span>();
 
-<span class="cm">// 將機械指派給某機械師（會占用對方頻寬）</span>
-<span class="cm">// 內部會檢查頻寬是否足夠；超載時遊戲會拒絕或標記失控（見 §8）</span>
-mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded</span>(mech);   <span class="cm">// 版本相依，部分版本經由 OverseerSubject 設定</span>
+<span class="cm">// 指派關係的底層是一條 Overseer 的 PawnRelation（PawnRelationDefOf.Overseer），</span>
+<span class="cm">// 機械師→機械方向；遊戲據此計算 OverseenPawns 與頻寬占用（見 §8）</span>
+mech.<span class="nm">relations</span>.<span class="nm">AddDirectRelation</span>(<span class="ty">PawnRelationDefOf</span>.<span class="nm">Overseer</span>, mechanitor);
 
-<span class="cm">// 較穩定的做法：透過機械自身的 comp 設定 overseer</span>
-<span class="kw">var</span> overseerComp = mech.<span class="ty">GetComp</span>&lt;<span class="ty">CompCanBeMechOverseer</span>&gt;(); <span class="cm">// 機械師端</span>
-<span class="cm">// 機械端則是 mech.overseerSubject（OverseerSubject）持有指派狀態</span></pre>
+<span class="cm">// 實務上更高階：把機械指派進機械師的某個控制群（內部會設好關係與 work mode）</span>
+mechanitor.<span class="nm">mechanitor</span>.<span class="nm">AssignPawnControlGroup</span>(mech);
+
+<span class="cm">// 機械端的指派狀態由 CompOverseerSubject 持有，經屬性 mech.OverseerSubject 取得</span>
+<span class="ty">CompOverseerSubject</span> subject = mech.<span class="nm">OverseerSubject</span>;</pre>
 
     <div class="callout callout-warn">
       <strong>命名因版本而異</strong>
-      指派／解除 overseer 的確切方法名在 1.4 → 1.5 之間動過數次（如
-      <code>Notify_MechAdded</code> / <code>SetOverseer</code> / <code>OverseerSubject.SetOverseer</code>）。
-      不要硬背名字，<strong>實際開 dnSpy 看你的目標版本</strong>。穩定不變的是兩個概念：
-      機械有 <code>overseerSubject</code>、機械師有 <code>mechanitor</code> tracker，兩者互指。
+      指派／解除 overseer 的高階入口在版本間動過（控制群 <code>AssignPawnControlGroup</code> /
+      <code>MechanitorControlGroup.Assign</code> 等）。不要硬背高階方法名，<strong>實際開 dnSpy 看你的目標版本</strong>。
+      穩定不變的是底層機制：指派以 <code>PawnRelationDefOf.Overseer</code> 這條 PawnRelation 表示，
+      機械側由 <code>CompOverseerSubject</code>（屬性 <code>mech.OverseerSubject</code>）持有狀態、機械師側由 <code>mechanitor</code> tracker 管理。
     </div>
   </div>
 
@@ -284,11 +289,11 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
       <tr><td><code>intelligence</code></td><td>機械通常為 <code>ToolUser</code>（能做部分工作）；純戰鬥機械可 <code>Animal</code> 級</td></tr>
       <tr><td><code>mechEnabledWorkTypes</code></td><td>此機械可承擔的 <code>WorkTypeDef</code> 列表（如 Cleaning、Hauling）。空＝純戰鬥</td></tr>
       <tr><td><code>mechWeightClass</code></td><td>指向 <code>MechWeightClassDef</code></td></tr>
-      <tr><td><code>bandwidthCost</code></td><td>占用機械師多少頻寬（核心平衡旋鈕）</td></tr>
       <tr><td><code>mechFixedSkillLevel</code></td><td>機械做工作時固定的技能等級（無法成長）</td></tr>
       <tr><td><code>fleshType</code></td><td>應為 <code>Mechanoid</code>（影響傷害、修復而非治療）</td></tr>
-      <tr><td><code>needsRest</code> / <code>foodType</code></td><td>機械不睡眠、不吃食物；以「能量」comp 取代（見 §4）</td></tr>
+      <tr><td><code>needsRest</code> / <code>foodType</code></td><td>機械不睡眠、不吃食物；以「能量」need 取代（見 §4）</td></tr>
     </table>
+    <p><strong>注意</strong>：頻寬成本<strong>不是</strong> <code>RaceProperties</code> 欄位，而是 Stat <code>StatDefOf.BandwidthCost</code>（XML 寫在 <code>&lt;statBases&gt;</code> 的 <code>&lt;BandwidthCost&gt;</code>，C# 端以 <code>pawn.GetStatValue(StatDefOf.BandwidthCost)</code> 讀取）。</p>
 
     <h3>自訂一隻新機械：race ThingDef</h3>
     <pre><span class="cm">&lt;!-- Biotech/Defs/ThingDefs_Races/Mech_MyMod.xml --&gt;</span>
@@ -302,6 +307,8 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
       <span class="xml-tag">&lt;MarketValue&gt;</span><span class="xml-val">900</span><span class="xml-tag">&lt;/MarketValue&gt;</span>
       <span class="xml-tag">&lt;MoveSpeed&gt;</span><span class="xml-val">3.6</span><span class="xml-tag">&lt;/MoveSpeed&gt;</span>
       <span class="xml-tag">&lt;ToxicEnvironmentResistance&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/ToxicEnvironmentResistance&gt;</span>
+      <span class="cm">&lt;!-- 頻寬成本是 Stat（StatDefOf.BandwidthCost），非 race 欄位 --&gt;</span>
+      <span class="xml-tag">&lt;BandwidthCost&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/BandwidthCost&gt;</span>
     <span class="xml-tag">&lt;/statBases&gt;</span>
 
     <span class="xml-tag">&lt;race&gt;</span>
@@ -310,9 +317,8 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
       <span class="xml-tag">&lt;needsRest&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/needsRest&gt;</span>
       <span class="xml-tag">&lt;foodType&gt;</span>None<span class="xml-tag">&lt;/foodType&gt;</span>
 
-      <span class="cm">&lt;!-- 機械師相關 --&gt;</span>
+      <span class="cm">&lt;!-- 機械師相關（bandwidthCost 不在這裡，見上方 statBases） --&gt;</span>
       <span class="xml-tag">&lt;mechWeightClass&gt;</span>Light<span class="xml-tag">&lt;/mechWeightClass&gt;</span>
-      <span class="xml-tag">&lt;bandwidthCost&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/bandwidthCost&gt;</span>
       <span class="xml-tag">&lt;mechFixedSkillLevel&gt;</span><span class="xml-val">8</span><span class="xml-tag">&lt;/mechFixedSkillLevel&gt;</span>
 
       <span class="cm">&lt;!-- 可承擔的工作（空則純戰鬥） --&gt;</span>
@@ -330,7 +336,8 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
     <span class="cm">&lt;!-- 能量 comp：取代睡眠/吃飯（見 §4） --&gt;</span>
     <span class="xml-tag">&lt;comps&gt;</span>
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Rechargeable"</span><span class="xml-tag">&gt;</span>
-        <span class="xml-tag">&lt;maxEnergy&gt;</span><span class="xml-val">100</span><span class="xml-tag">&lt;/maxEnergy&gt;</span>
+        <span class="cm">&lt;!-- Rechargeable 只有 ticksToRecharge（充電所需 tick），能量本身由 Need_MechEnergy 管 --&gt;</span>
+        <span class="xml-tag">&lt;ticksToRecharge&gt;</span><span class="xml-val">10000</span><span class="xml-tag">&lt;/ticksToRecharge&gt;</span>
       <span class="xml-tag">&lt;/li&gt;</span>
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_OverseerSubject"</span><span class="xml-tag">&gt;</span>
         <span class="xml-tag">&lt;delayUntilFeralCheck&gt;</span><span class="xml-val">60000</span><span class="xml-tag">&lt;/delayUntilFeralCheck&gt;</span> <span class="cm">&lt;!-- 失去 overseer 後多久檢查失控 --&gt;</span>
@@ -373,15 +380,15 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
     <div class="section-title">§4 · 製造機械：孵化槽、配方與能量回充</div>
 
     <p>
-      玩家製造機械的流程：在 <strong>mech gestator</strong>（孵化槽，含 <code>CompMechGestator</code>）下達一個
+      玩家製造機械的流程：在 <strong>mech gestator</strong>（孵化槽，類別 <code>Building_MechGestator</code>，繼承自 <code>Building_WorkTableAutonomous</code>）下達一個
       <strong>gestation cycle</strong>（孵化配方，<code>RecipeDef</code>），消耗材料與電力，
-      經過數個由 <code>CompMechGestator</code> 驅動的週期後，從關聯的孵化盒（gestation processor）產出一隻機械。
+      經過數個週期後（bill 為 <code>Bill_Mech</code>），從關聯的孵化盒（gestation processor，comp <code>CompMechGestatorTank</code>）產出一隻機械。
     </p>
 
     <div class="g3">
       <div class="card card-accent-orange">
         <h3>① 孵化槽</h3>
-        <p>建築 ThingDef + <code>CompProperties_MechGestator</code>。耗電、需機械師站位輸入養分（mech 用的「nutrition」其實是工人投放的原料）。</p>
+        <p>建築 ThingDef，thingClass 為 <code>Building_MechGestator</code>（孵化盒 comp 為 <code>CompProperties_MechGestatorTank</code>）。耗電、需機械師站位輸入原料。</p>
       </div>
       <div class="card card-accent-blue">
         <h3>② 孵化配方</h3>
@@ -459,9 +466,9 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
 
     <span class="kw">public static bool</span> <span class="nm">IsSelfShutdown</span>(<span class="ty">Pawn</span> mech)
     {
-        <span class="cm">// 自我關機以 Hediff 表現；def 名見 HediffDefOf（Biotech 區）</span>
-        <span class="kw">return</span> mech.<span class="nm">health</span>?.<span class="nm">hediffSet</span>?.<span class="nm">HasHediff</span>(<span class="ty">HediffDefOf</span>.<span class="nm">MechCharged</span> == <span class="kw">null</span> ? <span class="kw">null</span> : <span class="kw">null</span>) ?? <span class="kw">false</span>;
-        <span class="cm">// 實務：用 mech.Downed 搭配能量 need == 0 判斷較穩，避免硬編 Hediff 名</span>
+        <span class="cm">// 自我關機並非以 Hediff 表現（HediffDefOf 只暴露 MechlinkImplant，無「電量耗盡」項）。</span>
+        <span class="cm">// 用核心擴充方法 Pawn.IsSelfShutdown()（RestUtility），內部判斷 needs.energy 的 SelfShutdown job。</span>
+        <span class="kw">return</span> mech.<span class="ty">IsSelfShutdown</span>();
     }
 }</pre>
 
@@ -495,11 +502,12 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
 
 <span class="kw">public static class</span> <span class="ty">MechCommands</span>
 {
-    <span class="cm">// 設定一隻機械的 work mode</span>
+    <span class="cm">// work mode 掛在「控制群」而非單一機械的 comp 上：</span>
+    <span class="cm">// 取得機械所屬控制群（MechanitorControlGroup）再呼叫 SetWorkMode</span>
     <span class="kw">public static void</span> <span class="nm">SetMode</span>(<span class="ty">Pawn</span> mech, <span class="ty">MechWorkModeDef</span> mode)
     {
-        <span class="kw">var</span> comp = mech.<span class="ty">GetComp</span>&lt;<span class="ty">CompMechWorkModes</span>&gt;();
-        comp?.<span class="nm">SetWorkMode</span>(mode);   <span class="cm">// 方法名以反編譯為準</span>
+        <span class="kw">var</span> group = mech.<span class="nm">GetMechControlGroup</span>();   <span class="cm">// MechanitorUtility 擴充方法</span>
+        group?.<span class="nm">SetWorkMode</span>(mode);
     }
 
     <span class="kw">public static void</span> <span class="nm">SendToWork</span>(<span class="ty">Pawn</span> mech)
@@ -521,40 +529,47 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
   <span class="xml-tag">&lt;costPerPawn&gt;</span><span class="xml-val">10</span><span class="xml-tag">&lt;/costPerPawn&gt;</span>
   <span class="xml-tag">&lt;maxPawnsToSpawn&gt;</span><span class="xml-val">6</span><span class="xml-tag">&lt;/maxPawnsToSpawn&gt;</span>
   <span class="xml-tag">&lt;spawnPawnKind&gt;</span>Mech_WarUrchin<span class="xml-tag">&lt;/spawnPawnKind&gt;</span>
-  <span class="xml-tag">&lt;maxToFill&gt;</span><span class="xml-val">6</span><span class="xml-tag">&lt;/maxToFill&gt;</span>
+  <span class="xml-tag">&lt;maxIngredientCount&gt;</span><span class="xml-val">60</span><span class="xml-tag">&lt;/maxIngredientCount&gt;</span>   <span class="cm">&lt;!-- 庫存材料上限（非 maxToFill） --&gt;</span>
+  <span class="xml-tag">&lt;startingIngredientCount&gt;</span><span class="xml-val">60</span><span class="xml-tag">&lt;/startingIngredientCount&gt;</span>
 <span class="xml-tag">&lt;/li&gt;</span></pre>
     <pre><span class="cm">// 程式化釋放／回收（gizmo 背後就是這些）</span>
 <span class="kw">var</span> carrier = warQueen.<span class="ty">GetComp</span>&lt;<span class="ty">CompMechCarrier</span>&gt;();
-<span class="kw">if</span> (carrier != <span class="kw">null</span> &amp;&amp; carrier.<span class="nm">CanSpawn</span>)
+<span class="kw">if</span> (carrier != <span class="kw">null</span> &amp;&amp; carrier.<span class="nm">CanSpawn</span>.<span class="nm">Accepted</span>)   <span class="cm">// CanSpawn 是 AcceptanceReport，非 bool</span>
 {
     carrier.<span class="nm">TrySpawnPawns</span>();   <span class="cm">// 釋放小型機械（受庫存與成本限制）</span>
 }</pre>
 
-    <h3>頻寬節點：<code>Building_MechBandNode</code></h3>
+    <h3>頻寬節點：<code>CompBandNode</code></h3>
     <p>
-      機械師的基礎頻寬有限。<strong>mech band node</strong> 是耗電建築，啟用後為其範圍內（或全域，視版本）
-      的機械師增加 <code>TotalBandwidth</code>。它串第 18 章「建築電力」——斷電就失去加成，可能立刻造成頻寬超載。
+      機械師的基礎頻寬有限。<strong>band node</strong> 是耗電建築（香草 ThingDef <code>BandNode</code>，
+      comp 為 <code>CompBandNode</code> / <code>CompProperties_BandNode</code>，<strong>沒有專屬 thingClass</strong>）。
+      它不是「自動全域加成」：機械師必須先把節點 <strong>調諧（tune）給自己</strong>（<code>CompBandNode.tunedTo</code>）。
+      每一座「已調諧且供電」的節點，會在該機械師身上掛一個 <code>Hediff_BandNode</code>，透過 <code>StatDefOf.MechBandwidth</code>
+      的 statOffset <strong>固定 +1</strong> 頻寬（每座 +1，非可調的 <code>bandwidthGain</code>）。串第 18 章——斷電即失去加成，可能立刻造成頻寬超載。
     </p>
-    <pre><span class="cm">&lt;!-- 建築：頻寬節點 --&gt;</span>
+    <pre><span class="cm">&lt;!-- 建築：頻寬節點（沿用香草 BandNode 的 comp 結構） --&gt;</span>
 <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
   <span class="xml-tag">&lt;defName&gt;</span>MyMod_BandNodeMk2<span class="xml-tag">&lt;/defName&gt;</span>
-  <span class="xml-tag">&lt;thingClass&gt;</span>Building_MechBandNode<span class="xml-tag">&lt;/thingClass&gt;</span>
+  <span class="cm">&lt;!-- 無專屬 thingClass：行為由 CompBandNode 提供 --&gt;</span>
   <span class="xml-tag">&lt;comps&gt;</span>
     <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
       <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
       <span class="xml-tag">&lt;basePowerConsumption&gt;</span><span class="xml-val">400</span><span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
     <span class="xml-tag">&lt;/li&gt;</span>
-    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_MechBandNode"</span><span class="xml-tag">&gt;</span>
-      <span class="xml-tag">&lt;bandwidthGain&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/bandwidthGain&gt;</span>   <span class="cm">&lt;!-- 每座 +3 頻寬 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_BandNode"</span><span class="xml-tag">&gt;</span>
+      <span class="cm">&lt;!-- 每座已調諧節點固定 +1 MechBandwidth；加成量在 Hediff_BandNode 內寫死，無 bandwidthGain 欄位 --&gt;</span>
+      <span class="xml-tag">&lt;hediff&gt;</span>BandNode<span class="xml-tag">&lt;/hediff&gt;</span>
+      <span class="xml-tag">&lt;retuneDays&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/retuneDays&gt;</span>
+      <span class="xml-tag">&lt;tuneSeconds&gt;</span><span class="xml-val">5</span><span class="xml-tag">&lt;/tuneSeconds&gt;</span>
     <span class="xml-tag">&lt;/li&gt;</span>
   <span class="xml-tag">&lt;/comps&gt;</span>
 <span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
 
     <div class="callout callout-tip">
       <strong>頻寬 = 殖民地的 mech 上限旋鈕</strong>
-      若你的 mod 想讓玩家養更大的機械軍團，調整方向有三：降低機械的 <code>bandwidthCost</code>、
-      提高 band node 的 <code>bandwidthGain</code>、或加入提升基礎頻寬的身體部件 Hediff。
-      最後一種最「劇情友善」（升級 mechlink）。
+      若你的 mod 想讓玩家養更大的機械軍團，調整方向有三：降低機械的 <code>BandwidthCost</code> stat、
+      提高 band node hediff（<code>BandNode</code>）的 <code>MechBandwidth</code> statOffset（band node 本身每座固定 +1，要加碼得改 hediff 的 stage statOffset）、
+      或加入提升 <code>MechBandwidth</code> 基礎值的身體部件 Hediff。最後一種最「劇情友善」（升級 mechlink）。
     </div>
   </div>
 
@@ -628,7 +643,7 @@ mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded<
       <tr><th>API</th><th>用途</th></tr>
       <tr><td><code>pawn.mechanitor</code></td><td>取得 <code>Pawn_MechanitorTracker</code>（非機械師為 null）</td></tr>
       <tr><td><code>MechanitorUtility.IsMechanitor(pawn)</code></td><td>權威判斷是否為機械師</td></tr>
-      <tr><td><code>MechanitorUtility.EverControllableMech(thingDef)</code></td><td>判斷某 race 是否能被機械師控制</td></tr>
+      <tr><td><code>MechanitorUtility.EverControllable(Pawn mech)</code></td><td>判斷某機械是否可被機械師控制（內部即 <code>mech.OverseerSubject != null</code>）</td></tr>
       <tr><td><code>mech.GetOverseer()</code></td><td>取得機械目前的 overseer（機械師），無則 null</td></tr>
       <tr><td><code>tracker.ControlledPawns</code></td><td>該機械師控制的機械清單</td></tr>
       <tr><td><code>tracker.TotalBandwidth / UsedBandwidth</code></td><td>頻寬上限／已用</td></tr>

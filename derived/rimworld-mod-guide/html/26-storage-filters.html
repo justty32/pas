@@ -52,7 +52,7 @@
 <div class="hero">
   <h1>儲存、分類與篩選</h1>
   <p>ThingCategoryDef 樹狀分類、ThingFilter 與 StorageSettings、繼承 Building_Storage 自訂儲存建築、物品堆疊、ThingRequest + ListerThings 查詢，以及 SpecialThingFilterDef 與常見坑。</p>
-  <span class="badge">RimWorld 1.5 · Verse / RimWorld · Storage, Categories &amp; Filters</span>
+  <span class="badge">RimWorld 1.6 · Verse / RimWorld · Storage, Categories &amp; Filters</span>
 </div>
 
 <div class="container">
@@ -208,8 +208,8 @@
       <tr><td>整類允許</td><td><code>SetAllow(ThingCategoryDef, bool)</code></td><td>勾整個分類（含子類遞迴展開）</td></tr>
       <tr><td>單品允許</td><td><code>SetAllow(ThingDef, bool)</code></td><td>勾單一物品</td></tr>
       <tr><td>特殊篩選</td><td><code>SetAllow(SpecialThingFilterDef, bool)</code></td><td>如「允許腐敗 / 允許汙染」</td></tr>
-      <tr><td>品質範圍</td><td><code>allowedQualities</code> (QualityRange)</td><td>武器/衣物等有品質者</td></tr>
-      <tr><td>耐久範圍</td><td><code>allowedHitPointsPercents</code> (FloatRange)</td><td>0~1，過濾破損品</td></tr>
+      <tr><td>品質範圍</td><td><code>AllowedQualityLevels</code> (QualityRange)</td><td>武器/衣物等有品質者（屬性，私有欄位為 allowedQualities）</td></tr>
+      <tr><td>耐久範圍</td><td><code>AllowedHitPointsPercents</code> (FloatRange)</td><td>0~1，過濾破損品（屬性，私有欄位為 allowedHitPointsPercents）</td></tr>
       <tr><td>最終結果</td><td><code>AllowedThingDefs</code> / <code>allowedDefs</code></td><td>攤平後的允許集合（唯讀枚舉）</td></tr>
     </table>
 
@@ -226,10 +226,11 @@ f.<span class="nm">SetAllow</span>(<span class="ty">ThingCategoryDefOf</span>.Fo
 f.<span class="nm">SetAllow</span>(<span class="ty">ThingDefOf</span>.MealNutrientPaste, <span class="kw">false</span>);
 
 <span class="cm">// 3) 特殊篩選：不允許腐敗中的食物</span>
-f.<span class="nm">SetAllow</span>(<span class="ty">SpecialThingFilterDefOf</span>.AllowRotten, <span class="kw">false</span>);
+<span class="cm">// 注意：AllowRotten 不在 SpecialThingFilterDefOf，須用 Named 取得</span>
+f.<span class="nm">SetAllow</span>(<span class="ty">SpecialThingFilterDef</span>.<span class="nm">Named</span>(<span class="st">"AllowRotten"</span>), <span class="kw">false</span>);
 
-<span class="cm">// 4) 品質 / 耐久範圍（對有品質的物品才有意義）</span>
-f.allowedHitPointsPercents = <span class="kw">new</span> <span class="ty">FloatRange</span>(<span class="nu">0.5f</span>, <span class="nu">1f</span>);
+<span class="cm">// 4) 品質 / 耐久範圍（對有品質的物品才有意義；用公開屬性，私有欄位不可直接賦值）</span>
+f.<span class="nm">AllowedHitPointsPercents</span> = <span class="kw">new</span> <span class="ty">FloatRange</span>(<span class="nu">0.5f</span>, <span class="nu">1f</span>);
 
 <span class="cm">// 5) 查詢：某 Thing 是否被允許</span>
 <span class="kw">bool</span> ok = f.<span class="nm">Allows</span>(someThing);          <span class="cm">// 綜合所有維度</span>

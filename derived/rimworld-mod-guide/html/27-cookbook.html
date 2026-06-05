@@ -101,7 +101,7 @@
 <div class="hero">
   <h1>實用程式碼速查 (Code Cookbook)</h1>
   <p>即查即用的 C# 片段大全——每段 3–10 行，複製貼上就能跑。</p>
-  <span class="badge">9 大分類 · 60+ snippet · RimWorld 1.5 / Verse + RimWorld 命名空間</span>
+  <span class="badge">9 大分類 · 60+ snippet · RimWorld 1.6 / Verse + RimWorld 命名空間</span>
 </div>
 
 <div class="container">
@@ -353,7 +353,7 @@ pawn.pather.StopDead();  <span class="cm">// 取消正在走的路徑</span></pr
       <div class="recipe">
         <div class="recipe-desc"><b>找一個落腳/可放置的格</b></div>
 <pre><span class="ty">CellFinder</span>.TryFindRandomCellNear(
-    center, map, radius: <span class="nu">4</span>,
+    center, map, squareRadius: <span class="nu">4</span>,
     c =&gt; c.Standable(map),
     <span class="kw">out</span> <span class="ty">IntVec3</span> result);</pre>
       </div>
@@ -452,15 +452,18 @@ pawn.pather.StopDead();  <span class="cm">// 取消正在走的路徑</span></pr
 
       <div class="recipe">
         <div class="recipe-desc"><b>延遲執行</b>（N tick 後跑一段程式）</div>
-<pre><span class="kw">long</span> fireAt = <span class="ty">Find</span>.TickManager.TicksGame + <span class="nu">300</span>;
-<span class="ty">Find</span>.TickManager.later.ScheduleCallback(
-    () =&gt; <span class="ty">Log</span>.Message(<span class="st">"5 秒後執行"</span>), <span class="nu">300</span>);</pre>
+<pre><span class="cm">// RimWorld 無內建回呼排程器；存目標 tick，在 Tick 迴圈比對</span>
+<span class="kw">int</span> fireAt = <span class="ty">Find</span>.TickManager.TicksGame + <span class="nu">300</span>;
+<span class="cm">// …於 CompTick / MapComponentTick 中：</span>
+<span class="kw">if</span> (<span class="ty">Find</span>.TickManager.TicksGame &gt;= fireAt) {
+    <span class="ty">Log</span>.Message(<span class="st">"5 秒後執行"</span>);
+}</pre>
       </div>
 
       <div class="recipe">
         <div class="recipe-desc"><b>tick 迴圈內的週期判斷</b>（每 N tick 一次）</div>
-<pre><span class="cm">// 放在 CompTick / TickRare 裡</span>
-<span class="kw">if</span> (now.IsHashIntervalTick(<span class="nu">250</span>)) {
+<pre><span class="cm">// 放在 CompTick / TickRare 裡（擴充方法掛在 Thing 上，非 int）</span>
+<span class="kw">if</span> (parent.IsHashIntervalTick(<span class="nu">250</span>)) {
     <span class="cm">// 每 250 tick 觸發一次（已自動錯開負載）</span>
 }</pre>
       </div>
@@ -643,7 +646,7 @@ m.Invoke(instance, <span class="kw">new object</span>[] { <span class="nu">42</s
 </div>
 
 <footer>
-  RimWorld Modding 指南 · 實用程式碼速查 · 對應 RimWorld 1.5（Verse / RimWorld / Verse.AI / HarmonyLib）
+  RimWorld Modding 指南 · 實用程式碼速查 · 對應 RimWorld 1.6（Verse / RimWorld / Verse.AI / HarmonyLib）
 </footer>
 
 </body>

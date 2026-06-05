@@ -190,7 +190,7 @@ room.<span class="nm">Temperature</span> += change;</pre>
     </div>
 
     <h3>CompHeatPusher：無腦推熱</h3>
-    <p><code>RimWorld.CompHeatPusher</code>（與帶電版 <code>CompHeatPusherPowered</code>）每 tick 對所在房間推固定熱量，直到房間溫度達 <code>heatPushMaxTemperature</code> 為止。柴爐、營火、太陽燈的副熱、化學燃料發電機都用它。它<strong>沒有目標溫度概念</strong>，只會單向加熱（heatPerSecond 設負值即可單向降溫，但極少這樣用）。</p>
+    <p><code>Verse.CompHeatPusher</code>（與帶電版 <code>Verse.CompHeatPusherPowered</code>）每 tick 對所在房間推固定熱量，直到房間溫度達 <code>heatPushMaxTemperature</code> 為止。柴爐、營火、太陽燈的副熱、化學燃料發電機都用它。它<strong>沒有目標溫度概念</strong>，只會單向加熱（heatPerSecond 設負值即可單向降溫，但極少這樣用）。</p>
 
     <table>
       <tr><th>欄位</th><th>說明</th></tr>
@@ -314,7 +314,7 @@ room.<span class="nm">Temperature</span> += change;</pre>
   <div class="section">
     <div class="section-title">§4 氣體系統（GasType / GasGrid / 毒氣 Hediff / 污染）</div>
 
-    <p>RimWorld 1.5 的地圖氣體用一張統一網格管理。三種「環境氣體」共享同一個 <code>Verse.GasGrid</code>，逐 tick 在格子間擴散、消散。</p>
+    <p>RimWorld 1.6 的地圖氣體用一張統一網格管理。三種「環境氣體」共享同一個 <code>Verse.GasGrid</code>，逐 tick 在格子間擴散、消散。</p>
 
     <h3>GasType：三種氣體</h3>
     <table>
@@ -351,7 +351,7 @@ room.<span class="nm">Temperature</span> += change;</pre>
 }</pre>
 
     <div class="callout callout-info">
-      <strong>GenGas 與便捷工具</strong>原版用 <code>Verse.GenGas</code> 處理煙霧等臨時氣體的散佈邏輯；而對毒氣與 ToxGas 的高層操作多半透過 <code>map.gasGrid</code>。要在地圖一片區域瞬間鋪滿毒氣（如毒氣彈爆炸），原版有 <code>SkyfallerMaker</code> / 爆炸 <code>DamageDef</code> 帶 <code>postExplosionGasType</code> 的路徑，比手動逐格 AddGas 更省事。</div>
+      <strong>GasGrid 與便捷工具</strong>三種環境氣體的散佈與密度全部由 <code>Verse.GasGrid</code>（<code>map.gasGrid</code>）統一處理，逐格操作走 <code>AddGas</code> / <code>DensityAt</code> / <code>AnyGasAt</code>。要在地圖一片區域瞬間鋪滿毒氣（如毒氣彈爆炸），原版用 <code>GenExplosion.DoExplosion</code> 帶 <code>postExplosionGasType</code>（並由 <code>postExplosionGasRadiusOverride</code> / <code>postExplosionGasAmount</code> 控制範圍與量）的路徑，比手動逐格 AddGas 更省事。</div>
 
     <h4>爆炸後留毒氣：純 XML</h4>
     <pre><span class="cm">&lt;!-- 一個爆炸後在落點周圍噴 ToxGas 的彈藥 ProjectileDef --&gt;</span>
@@ -359,7 +359,6 @@ room.<span class="nm">Temperature</span> += change;</pre>
   <span class="xml-tag">&lt;damageDef&gt;</span>Bomb<span class="xml-tag">&lt;/damageDef&gt;</span>
   <span class="xml-tag">&lt;explosionRadius&gt;</span>2.9<span class="xml-tag">&lt;/explosionRadius&gt;</span>
   <span class="xml-tag">&lt;postExplosionGasType&gt;</span>ToxGas<span class="xml-tag">&lt;/postExplosionGasType&gt;</span>
-  <span class="xml-tag">&lt;postExplosionGasRadiusOverride&gt;</span>3.9<span class="xml-tag">&lt;/postExplosionGasRadiusOverride&gt;</span>
 <span class="xml-tag">&lt;/projectile&gt;</span></pre>
 
     <h3>毒氣對 pawn：tox buildup hediff</h3>
@@ -372,7 +371,7 @@ room.<span class="nm">Temperature</span> += change;</pre>
 <span class="xml-tag">&lt;ThingDef&gt;</span>
   <span class="xml-tag">&lt;defName&gt;</span>MyReactor<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="xml-tag">&lt;comps&gt;</span>
-    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Pollution"</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_PolluteOverTime"</span>
         <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
       <span class="xml-tag">&lt;cellsToPollutePerDay&gt;</span>3<span class="xml-tag">&lt;/cellsToPollutePerDay&gt;</span>
     <span class="xml-tag">&lt;/li&gt;</span>
@@ -411,7 +410,7 @@ roofs.<span class="nm">SetRoof</span>(cell, <span class="ty">RoofDefOf</span>.<s
 roofs.<span class="nm">SetRoof</span>(cell, <span class="kw">null</span>);                    <span class="cm">// 拆除屋頂</span></pre>
 
     <h3>屋頂建造 / 拆除 area</h3>
-    <p>玩家不是逐格蓋屋頂，而是劃定<strong>「建造屋頂區」(BuildRoofArea)</strong>與<strong>「拆除屋頂區」(NoRoofArea)</strong>兩張 area（<code>Verse.Area_BuildRoof</code> / <code>Area_NoRoof</code>，存於 <code>map.areaManager</code>）。殖民者在有牆支撐的範圍內把標記區內的格子蓋上 <code>RoofConstructed</code>。要在 mod 中程式化指定屋頂區：</p>
+    <p>玩家不是逐格蓋屋頂，而是劃定<strong>「建造屋頂區」(BuildRoofArea)</strong>與<strong>「拆除屋頂區」(NoRoofArea)</strong>兩張 area（<code>RimWorld.Area_BuildRoof</code> / <code>RimWorld.Area_NoRoof</code>，存於 <code>map.areaManager</code>）。殖民者在有牆支撐的範圍內把標記區內的格子蓋上 <code>RoofConstructed</code>。要在 mod 中程式化指定屋頂區：</p>
 
     <pre><span class="ty">Area_BuildRoof</span> buildRoof = map.<span class="nm">areaManager</span>.<span class="nm">BuildRoof</span>;
 buildRoof[cell] = <span class="kw">true</span>;          <span class="cm">// 標記此格「應蓋屋頂」</span>
@@ -420,7 +419,7 @@ buildRoof[cell] = <span class="kw">true</span>;          <span class="cm">// 標
 noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標記此格「應拆屋頂」</span></pre>
 
     <h3>屋頂塌陷：RoofCollapseUtility</h3>
-    <p>屋頂需要鄰近的<strong>支撐物（牆、柱、岩石）</strong>。當支撐被拆除/摧毀，無支撐的屋頂會塌陷砸傷下方一切。支撐距離由 <code>Verse.RoofCollapseUtility.RoofMaxSupportDistance</code>（原版約 6 格）決定——任何屋頂格若在該距離內找不到支撐就會被列入塌陷。判定由 <code>RoofCollapseCheckerUtility</code> / <code>RoofCollapserImmediate</code> 執行。</p>
+    <p>屋頂需要鄰近的<strong>支撐物（牆、柱、岩石）</strong>。當支撐被拆除/摧毀，無支撐的屋頂會塌陷砸傷下方一切。支撐距離由 <code>Verse.RoofCollapseUtility.RoofMaxSupportDistance</code>（原版約 6 格）決定——任何屋頂格若在該距離內找不到支撐就會被列入塌陷。判定由 <code>RoofCollapseCellsFinder</code> / <code>RoofCollapserImmediate</code> 執行。</p>
 
     <table>
       <tr><th>型別 / 成員</th><th>用途</th></tr>
@@ -455,10 +454,9 @@ noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標
       <tr><td><code>windSpeedFactor</code></td><td>風速倍率（影響風力發電、火勢蔓延）。</td></tr>
       <tr><td><code>accuracyMultiplier</code></td><td>命中率倍率（霧/雨降低遠程命中，串第15章）。</td></tr>
       <tr><td><code>moveSpeedMultiplier</code></td><td>露天移動速度倍率（暴雪減速）。</td></tr>
-      <tr><td><code>exposeWeather</code></td><td>是否讓露天 pawn「暴露在天氣中」（影響心情/體溫）。</td></tr>
-      <tr><td><code>overlayClasses</code></td><td>畫面覆蓋特效（雨幕、雪幕、霧）的 <code>SkyOverlay</code> 類別清單。</td></tr>
+      <tr><td><code>overlayClasses</code></td><td>畫面覆蓋特效（雨幕、雪幕、霧）的 <code>SkyOverlay</code> 類別清單（<code>List&lt;Type&gt;</code>）。</td></tr>
       <tr><td><code>skyColorsNightMid / Day / Dusk</code></td><td>各時段天空配色（<code>SkyColorSet</code>），決定畫面氛圍與環境光。</td></tr>
-      <tr><td><code>commonalityRainfall</code> / <code>temperatureRange</code></td><td>此天氣可出現的降雨/溫度條件（生物群系/季節篩選）。</td></tr>
+      <tr><td><code>commonalityRainfallFactor</code> / <code>temperatureRange</code></td><td>降雨量加權曲線（<code>SimpleCurve</code>）與此天氣可出現的溫度區間（生物群系/季節篩選）。</td></tr>
     </table>
 
     <pre><span class="xml-tag">&lt;WeatherDef&gt;</span>
@@ -469,7 +467,6 @@ noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標
   <span class="xml-tag">&lt;windSpeedFactor&gt;</span>2.2<span class="xml-tag">&lt;/windSpeedFactor&gt;</span>
   <span class="xml-tag">&lt;accuracyMultiplier&gt;</span>0.5<span class="xml-tag">&lt;/accuracyMultiplier&gt;</span>
   <span class="xml-tag">&lt;moveSpeedMultiplier&gt;</span>0.85<span class="xml-tag">&lt;/moveSpeedMultiplier&gt;</span>
-  <span class="xml-tag">&lt;exposeWeather&gt;</span>true<span class="xml-tag">&lt;/exposeWeather&gt;</span>
   <span class="xml-tag">&lt;perceivePriority&gt;</span>1<span class="xml-tag">&lt;/perceivePriority&gt;</span>
   <span class="xml-tag">&lt;windSpeedOffset&gt;</span>1.2<span class="xml-tag">&lt;/windSpeedOffset&gt;</span>
   <span class="xml-tag">&lt;overlayClasses&gt;</span>
@@ -485,7 +482,7 @@ noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標
 <span class="xml-tag">&lt;/WeatherDef&gt;</span></pre>
 
     <h3>WeatherManager：當前天氣與過渡</h3>
-    <p><code>RimWorld.WeatherManager</code>（<code>map.weatherManager</code>）持有 <code>curWeather</code> / <code>lastWeather</code> 與兩者間的混合度 <code>curWeatherAge</code>。天氣切換不是瞬間的——它在兩個 WeatherDef 間平滑插值天空配色、降雨幕等。下一個天氣由 <code>WeatherDecider</code> 根據各 WeatherDef 的 <code>TransitionCommonality</code> 與當前條件（季節、降雨量、溫度範圍）加權隨機選出。</p>
+    <p><code>RimWorld.WeatherManager</code>（<code>map.weatherManager</code>）持有 <code>curWeather</code> / <code>lastWeather</code> 與兩者間的混合度 <code>curWeatherAge</code>。天氣切換不是瞬間的——它在兩個 WeatherDef 間平滑插值天空配色、降雨幕等。下一個天氣由 <code>WeatherDecider</code> 根據生物群系的 <code>baseWeatherCommonalities</code>（<code>WeatherCommonalityRecord.commonality</code>）再乘上 <code>commonalityRainfallFactor</code> 與當前條件（季節、降雨量、溫度範圍）加權隨機選出。</p>
 
     <pre><span class="cm">// 讀取與強制天氣</span>
 <span class="ty">WeatherDef</span> now = map.<span class="nm">weatherManager</span>.<span class="nm">curWeather</span>;
@@ -495,7 +492,7 @@ noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標
 map.<span class="nm">weatherManager</span>.<span class="nm">TransitionTo</span>(<span class="ty">DefDatabase</span>&lt;<span class="ty">WeatherDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"AshStorm"</span>));</pre>
 
     <h3>GameConditionDef：覆蓋全圖的事件狀態</h3>
-    <p><code>RimWorld.GameConditionDef</code> + 對應的 <code>GameCondition</code> 子類（<code>RimWorld.GameCondition_*</code>）構成「有時限的全圖環境效果」。它由 <code>GameConditionManager</code>（每張地圖一個 + 一個世界層級的）管理。許多事件（Incident，串第12章）的本體就是「註冊一個 GameCondition」：</p>
+    <p><code>Verse.GameConditionDef</code> + 對應的 <code>RimWorld.GameCondition</code> 子類（<code>RimWorld.GameCondition_*</code>）構成「有時限的全圖環境效果」。它由 <code>GameConditionManager</code>（每張地圖一個 + 一個世界層級的）管理。許多事件（Incident，串第12章）的本體就是「註冊一個 GameCondition」：</p>
 
     <table>
       <tr><th>GameCondition 子類</th><th>效果</th></tr>
@@ -542,7 +539,7 @@ map.<span class="nm">weatherManager</span>.<span class="nm">TransitionTo</span>(
     <p>要由事件觸發它，寫一個 <code>IncidentWorker</code>（串第12章）在 <code>TryExecuteWorker</code> 內 <code>RegisterCondition</code>（見 §7），或在既有 <code>IncidentWorker_MakeGameCondition</code> 的 IncidentDef 上指定 <code>gameCondition</code> 欄位即可，後者完全免 C#。</p>
 
     <div class="callout callout-info">
-      <strong>TransitionCommonality 不是出現機率本身</strong><code>WeatherDef.commonality</code> / <code>WeatherDecider</code> 的權重會被當下的季節溫度範圍、降雨量需求過濾後才生效。你的自訂天氣若 <code>temperatureRange</code> 設得很窄或與生物群系不符，可能永遠抽不到。debug 時用 <code>map.weatherManager.TransitionTo</code> 直接驗證視覺與數值，再回頭調權重。</div>
+      <strong>commonality 不是出現機率本身</strong>生物群系 <code>baseWeatherCommonalities</code> 中的 <code>commonality</code> / <code>WeatherDecider</code> 的權重會被當下的季節溫度範圍、降雨量需求過濾後才生效。你的自訂天氣若 <code>temperatureRange</code> 設得很窄或與生物群系不符，可能永遠抽不到。debug 時用 <code>map.weatherManager.TransitionTo</code> 直接驗證視覺與數值，再回頭調權重。</div>
   </div>
 
   <!-- ══════════ §7 C# 速查 ══════════ -->
@@ -573,7 +570,7 @@ map.<span class="nm">weatherManager</span>.<span class="nm">TransitionTo</span>(
 <span class="ty">GameConditionManager</span> mgr = map.<span class="nm">gameConditionManager</span>;
 <span class="ty">GameConditionDef</span> def = <span class="ty">DefDatabase</span>&lt;<span class="ty">GameConditionDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"ChillFog"</span>);
 
-<span class="ty">GameCondition</span> cond = <span class="ty">GameConditionMaker</span>.<span class="nm">MakeCondition</span>(def, durationTicks: <span class="nu">60000</span> * <span class="nu">2</span>);
+<span class="ty">GameCondition</span> cond = <span class="ty">GameConditionMaker</span>.<span class="nm">MakeCondition</span>(def, duration: <span class="nu">60000</span> * <span class="nu">2</span>);
 mgr.<span class="nm">RegisterCondition</span>(cond);
 
 <span class="cm">// 查詢與提前結束</span>
