@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PAS — Project Analysis System 導覽</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero{text-align:center;padding:56px 0 40px;border-bottom:1px solid var(--border);margin-bottom:36px;}
+.hero h1{font-size:3.4rem;font-weight:800;letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--orange) 0%,var(--yellow) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero .sub{font-size:1.05rem;color:var(--muted);margin-top:12px;max-width:680px;margin-left:auto;margin-right:auto;}
+.hero .sub2{font-size:.82rem;color:var(--dim);margin-top:8px;font-style:italic;}
+.badge-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;}
+
+.nav-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:900px){.nav-cards{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.nav-cards{grid-template-columns:1fr;}}
+
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:18px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s;}
+.nav-card:hover{border-color:var(--orange);text-decoration:none;transform:translateY(-2px);}
+.nav-card .nc-top{display:flex;align-items:center;gap:10px;}
+.nav-card .nc-icon{font-size:1.5rem;}
+.nav-card h3{font-size:.92rem;font-weight:700;color:var(--text);}
+.nav-card p{font-size:.76rem;color:var(--muted);flex:1;line-height:1.55;}
+.nav-card .nc-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;}
+
+.intro{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:22px 26px;margin-bottom:36px;font-size:.9rem;
+  color:var(--text);border-left:4px solid var(--orange);line-height:1.9;}
+.intro strong{color:var(--orange);}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;}
+.stat{text-align:center;}
+.stat .n{font-size:1.6rem;font-weight:800;color:var(--orange);}
+.stat .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);
+  text-align:center;color:var(--dim);font-size:.78rem;}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">PAS</span>
+  <a href="index.html" class="active">導覽首頁</a>
+  <a href="readme.md">工作區說明</a>
+  <a href="index.md">分析索引</a>
+</nav>
+
+<div style="max-width:1180px;margin:0 auto;">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>PAS</h1>
+  <p class="sub">Project Analysis System — 對外部專案進行結構化分析、衍生開發與 Patch 製作的工作空間</p>
+  <p class="sub2">— 各專案 HTML 導覽層的總入口 —</p>
+  <div class="badge-row">
+    <span class="badge badge-orange">Analysis</span>
+    <span class="badge badge-green">Create</span>
+    <span class="badge badge-blue">Patch</span>
+    <span class="badge badge-gray">繁體中文</span>
+  </div>
+</div>
+
+<!-- Intro -->
+<div class="intro">
+  此頁是 <strong>PAS 工作空間</strong>所有 HTML 導覽層的總入口。各專案的分析內容真相層仍是
+  <code>.md</code> 文件，HTML 僅作索引與呈現。點選下方卡片進入各專案的分析首頁。
+  <div class="stat-row">
+    <div class="stat"><div class="n">14</div><div class="l">分析專案</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">衍生專案</div></div>
+    <div class="stat"><div class="n">60+</div><div class="l">HTML 頁面</div></div>
+  </div>
+</div>
+
+<!-- Analysis projects -->
+<div class="section">
+  <div class="section-title">分析專案 · Analysis</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="analysis/rimworld/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🏘️</span><h3>RimWorld</h3></div>
+      <p>1.6 殖民地模擬遊戲的 C# Mod 開發分析：AI、派系、地圖系統與豐富開發教學。</p>
+      <div class="nc-meta"><span class="badge badge-green">C#</span><span class="badge badge-gray">Architecture+Tutorial</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/OpenNefia/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🧝</span><h3>OpenNefia</h3></div>
+      <p>Elona 開源重製引擎（C# .NET 8.0）。ECS + IoC + YAML 資料驅動原型；含 C++ 重寫計畫。</p>
+      <div class="nc-meta"><span class="badge badge-green">C#</span><span class="badge badge-gray">14 篇架構</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/opennefia-cpp/html/index.html">
+      <div class="nc-top"><span class="nc-icon">⚙️</span><h3>opennefia-cpp</h3></div>
+      <p>godot-free 純 C++20 引擎核心重寫的事後架構分析。ECS + 原型 + 序列化 + 地圖邏輯。</p>
+      <div class="nc-meta"><span class="badge badge-blue">C++20</span><span class="badge badge-gray">衍生分析</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/c-mera/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🔧</span><h3>C-Mera</h3></div>
+      <p>Common Lisp 驅動的 S-運算式 → C/C++/CUDA/GLSL 源到源編譯器，AST 轉換與宏系統。</p>
+      <div class="nc-meta"><span class="badge badge-orange">Common Lisp</span><span class="badge badge-gray">Architecture</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/cultivation-world-simulator/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🧘</span><h3>修仙世界模擬器</h3></div>
+      <p>LLM 全員驅動的修仙世界自演化模擬器。Python/FastAPI + Vue3/PixiJS，20 相位回合循環。</p>
+      <div class="nc-meta"><span class="badge badge-blue">Python</span><span class="badge badge-purple">LLM</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/Godot-Game-Template/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🎮</span><h3>Godot-Game-Template</h3></div>
+      <p>Maaack 模板：2D/3D 通用選單/無障礙框架。邏輯與呈現分離，4 autoload 設定持久化。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.6</span><span class="badge badge-gray">Level 1-3</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/godot-gametemplate/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🎯</span><h3>Godot-GameTemplate</h3></div>
+      <p>高度解耦的俯視角射擊框架，資源驅動 AI 與 Shader 轉場。已對照源碼核對 L1-6。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.6</span><span class="badge badge-gray">Level 1-6</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/TakinGodotTemplate/html/index.html">
+      <div class="nc-top"><span class="nc-icon">📦</span><h3>TakinGodotTemplate</h3></div>
+      <p>Takin 起手模板：16 autoload 骨幹，plugin Wrapper 化、SignalBus 解耦、約定式自動註冊。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.4</span><span class="badge badge-gray">Level 1-3</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/godot-demo-projects/html/index.html">
+      <div class="nc-top"><span class="nc-icon">📚</span><h3>godot-demo-projects</h3></div>
+      <p>官方範例集合：13 分類、137 個 project.godot 編目，深入剖析平台跳躍/狀態機/Compute/WS。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.6</span><span class="badge badge-gray">編目</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/godot-open-rpg/html/index.html">
+      <div class="nc-top"><span class="nc-icon">⚔️</span><h3>godot-open-rpg</h3></div>
+      <p>GDQuest 回合制 JRPG 教學示範，Signal Bus + Resource 驅動，兩階段回合制戰鬥。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.6</span><span class="badge badge-gray">Level 1-4</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/godot-tactical-rpg/html/index.html">
+      <div class="nc-top"><span class="nc-icon">♟️</span><h3>godot-tactical-rpg</h3></div>
+      <p>戰棋 RPG 範本（3D 場地 + 2D billboard）。Model/Module/Service 三層、射線格子化、BFS 移動。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.3</span><span class="badge badge-gray">Level 1-3</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/Cogito/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🔦</span><h3>Cogito</h3></div>
+      <p>第一人稱沉浸模擬框架：組件式互動、Grid 物品欄、NPC 狀態機、Wieldable 基類、存讀檔。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.4</span><span class="badge badge-gray">Level 1</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/Freedom-Hunter/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🗡️</span><h3>Freedom-Hunter</h3></div>
+      <p>仿 Monster Hunter 動作 RPG：ENet 多人、Entity 狀態機、怪物 AI 導航、銳利度武器系統。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.3</span><span class="badge badge-gray">Level 1-2</span></div>
+    </a>
+
+    <a class="nav-card" href="analysis/WuXiaAndJiangHu_Godot/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🥋</span><h3>武俠和江湖</h3></div>
+      <p>LPC MUD 武俠遊戲移植至 Godot 4.0：類別繼承層級、Daemon 系統、Mixin、AP/DP/PP 戰鬥。</p>
+      <div class="nc-meta"><span class="badge badge-green">Godot 4.0</span><span class="badge badge-gray">Level 1-2</span></div>
+    </a>
+
+  </div>
+</div>
+
+<!-- Derived projects -->
+<div class="section">
+  <div class="section-title">衍生專案 · Create</div>
+  <div class="nav-cards">
+
+    <a class="nav-card" href="derived/rimworld-mod-guide/html/index.html">
+      <div class="nc-top"><span class="nc-icon">📖</span><h3>RimWorld Modding 指南</h3></div>
+      <p>C# 工程師入門指南：環境、XML Defs、Harmony、UI Widgets、圖形音效、基因任務等 27 篇。</p>
+      <div class="nc-meta"><span class="badge badge-green">C#</span><span class="badge badge-purple">教學指南</span></div>
+    </a>
+
+    <a class="nav-card" href="derived/cws-no-llm/html/index.html">
+      <div class="nc-top"><span class="nc-icon">🤖</span><h3>cws-no-llm</h3></div>
+      <p>修仙世界模擬器的去 LLM 衍生版：以規則式 AI 引擎取代 LLM 決策，含設計與任務拆解。</p>
+      <div class="nc-meta"><span class="badge badge-blue">Python</span><span class="badge badge-purple">衍生</span></div>
+    </a>
+
+  </div>
+</div>
+
+<footer>
+  PAS · Project Analysis System &nbsp;|&nbsp; 內容真相層為各目錄下的 <code>.md</code> 文件，HTML 為導覽呈現層
+</footer>
+
+</div><!-- /max-width -->
+</body>
+</html>
