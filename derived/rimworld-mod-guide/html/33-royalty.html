@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皇室與榮譽（Royalty DLC） — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html" class="active">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>皇室與榮譽（Royalty DLC）</h1>
+  <p>Royalty 引入帝國這個特殊派系、可晉升的爵位、隨爵位解鎖的特權與要求，以及超能（psycast）的榮譽來源。本章拆解 RoyalTitleDef 與許可體系。</p>
+  <span class="badge">Chapter 33 · Royalty &amp; Honor</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §1 DLC 守門與帝國派系 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="dlc-guard">
+    <div class="section-title">§1 DLC 守門與帝國派系（Empire）</div>
+
+    <p>
+      Royalty 的所有內容都掛在 <code>Ludeon.RimWorld.Royalty</code> 這個 DLC package 底下。
+      你的 mod 若想「在有 Royalty 時加料、沒有時也能正常載入」，必須做兩層守門：
+      <strong>XML 層用 <code>MayRequire</code></strong>（防止缺 Def 時整份 Def 報紅、被丟棄），
+      <strong>C# 層用 <code>ModLister.RoyaltyInstalled</code></strong>（防止存取不存在的型別 / 欄位導致 <code>NullReferenceException</code> 或硬崩潰）。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <h3>Empire 派系</h3>
+        <p>一個特殊的 <code>FactionDef</code>（defName <code>Empire</code>），玩家無法宣戰殲滅，固定友好/中立，且是唯一能授爵的派系。串接<a href="31-factions.html">第 31 章</a>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Royal Favor（榮譽）</h3>
+        <p>一種「對帝國的貨幣」，存在每個 pawn 身上（<code>pawn.royalty.GetFavor(faction)</code>），用來換爵位、換許可點數，可由任務 / 交付物資 / 禮物賺取。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>RoyalTitleDef</h3>
+        <p>階梯式爵位定義，從 Freeholder 到 High Stellarch。爵位帶來特權，也帶來房間 / 服裝 / 期望的義務。</p>
+      </div>
+    </div>
+
+    <h3>XML 守門：MayRequire</h3>
+    <p>
+      當你的 PawnKind、Quest、Scenario 等 Def 內引用了 Royalty 專屬的 Def（如某個 <code>RoyalTitleDef</code>），
+      在引用節點加上 <code>MayRequire="Ludeon.RimWorld.Royalty"</code>。若 DLC 不存在，<code>Verse.DirectXmlLoader</code> /
+      <code>DirectXmlCrossRefLoader</code> 會<strong>靜默略過</strong>該節點，而不是整份 Def 解析失敗。
+    </p>
+
+    <pre><span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;PawnKindDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Noble<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>流亡貴族<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;race&gt;</span>Human<span class="xml-tag">&lt;/race&gt;</span>
+    <span class="cm">&lt;!-- 只有裝了 Royalty 才會帶這個爵位欄位；缺 DLC 時整段被略過，pawn 仍正常生成 --&gt;</span>
+    <span class="xml-tag">&lt;titleRequired</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>Knight<span class="xml-tag">&lt;/titleRequired&gt;</span>
+  <span class="xml-tag">&lt;/PawnKindDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>MayRequire 的兩種寫法</strong>
+      單一 DLC 用 <code>MayRequire="Ludeon.RimWorld.Royalty"</code>；需要「同時裝多個」用 <code>MayRequire="A,B"</code>（逗號＝AND）；
+      「任一裝即可」用 <code>MayRequireAnyOf="A,B"</code>。packageId 大小寫不敏感，但建議照官方原樣寫。
+    </div>
+
+    <h3>C# 守門：ModLister.RoyaltyInstalled</h3>
+    <p>
+      程式碼路徑（patch、comp、ITab、gizmo）一律先檢查 <code>RimWorld.ModLister.RoyaltyInstalled</code>。
+      這是一個布林快取，內部讀 <code>ModsConfig.IsActive(...)</code>，呼叫成本極低，可放在熱路徑。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">RoyaltyGate</span>
+{
+    <span class="cm">// 在任何碰 royalty 型別/欄位的程式前先擋一次</span>
+    <span class="kw">public static</span> <span class="ty">bool</span> <span class="nm">CanUseRoyalty</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.RoyaltyInstalled) <span class="kw">return</span> <span class="kw">false</span>;
+        <span class="cm">// pawn.royalty 在缺 DLC 時可能為 null（Pawn_RoyaltyTracker 不一定被建立）</span>
+        <span class="kw">return</span> pawn?.royalty != <span class="kw">null</span>;
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>絕對不要把 Royalty 型別寫進「總是執行」的靜態建構式或 StaticConstructorOnStartup</strong>
+      只要 JIT 觸碰到那個型別的中繼資料，缺 DLC 時就會 <code>TypeLoadException</code>。把 royalty 邏輯隔離到獨立類別、由守門方法呼叫，
+      讓 CLR 在守門失敗時根本不去載入那個型別（見<a href="07-advanced.html">第 7 章</a>的「型別隔離」模式）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §2 RoyalTitleDef -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="title-def">
+    <div class="section-title">§2 RoyalTitleDef：階梯式爵位</div>
+
+    <p>
+      <code>RimWorld.RoyalTitleDef</code> 描述「一個爵位」。同一個帝國的所有爵位透過 <code>seniority</code>（資歷數值）排成一條鏈，
+      <code>RoyalTitlePermitDef</code> 與晉升流程都以 seniority 比大小。原版帝國的爵位鏈大致如下：
+    </p>
+
+    <table>
+      <tr><th>defName</th><th>seniority</th><th>favorCost（累積）</th><th>典型解鎖</th></tr>
+      <tr><td><code>Freeholder</code></td><td>100</td><td>20</td><td>無特殊要求，入門爵位</td></tr>
+      <tr><td><code>Yeoman</code></td><td>200</td><td>80</td><td>第一級 psylink、簡單臥室要求</td></tr>
+      <tr><td><code>Acolyte</code></td><td>300</td><td>200</td><td>psylink、臥室升級</td></tr>
+      <tr><td><code>Knight</code></td><td>400</td><td>400</td><td>禁止部分粗活（disabledWorkTags）、獨立臥室</td></tr>
+      <tr><td><code>Praetor</code></td><td>500</td><td>700</td><td>更高服裝/房間要求、援軍許可</td></tr>
+      <tr><td><code>Baron</code></td><td>600</td><td>1200</td><td>需要 throne room（王座室）、貴族服裝</td></tr>
+      <tr><td><code>Count</code> … <code>High Stellarch</code></td><td>700+</td><td>更高</td><td>套房、宴會廳、隨從、最高 psylink</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>favorCost 是「該級的價格」，不是累積總和</strong>
+      <code>RoyalTitleDef.favorCost</code> 指的是「從前一級升到本級需要的 favor」。上表「累積」欄是我整理的近似總成本，
+      實際以遊戲內 <code>RoyalTitleUtility</code> 計算為準。自訂爵位時，favorCost 要和它在 seniority 鏈上的位置匹配，否則晉升曲線會斷裂。
+    </div>
+
+    <h3>爵位的雙面性：特權 vs 義務</h3>
+    <p>RoyalTitleDef 同時掛著「給你的好處」與「對你的要求」。這是設計爵位 mod 時最該先想清楚的張力：</p>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>特權（解鎖 / 加成）</h3>
+        <ul>
+          <li><code>permits</code> / <code>grantedAbilities</code>：許可與超能</li>
+          <li>晉升 psylink 等級（透過 <code>psylinkLevel</code> 配合 reward）</li>
+          <li>可穿戴帝國高級服裝而不被當作不合身分</li>
+          <li>呼叫帝國援軍 / 砲擊（見 §4）</li>
+        </ul>
+      </div>
+      <div class="card card-accent-red">
+        <h3>義務（要求 / 懲罰）</h3>
+        <ul>
+          <li><code>minExpectation</code>：拉高期望底線，房間 / 環境不達標 → 持續扣心情</li>
+          <li><code>requiredApparel</code> / <code>apparelRequirements</code>：必須穿指定服裝</li>
+          <li><code>bedroomRequirements</code> / <code>throneRoomRequirements</code>：房間角色與印象品質門檻</li>
+          <li><code>disabledWorkTags</code>：高爵位拒絕做粗活（清潔、搬運等）</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>核心欄位速查</h3>
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>意義</th></tr>
+      <tr><td><code>seniority</code></td><td>int</td><td>爵位在鏈上的排序鍵，越大越高</td></tr>
+      <tr><td><code>favorCost</code></td><td>int</td><td>從前一級升到本級所需 royal favor</td></tr>
+      <tr><td><code>minExpectation</code></td><td>ExpectationDef</td><td>期望底線，影響「期望」需求 → 心情</td></tr>
+      <tr><td><code>requiredApparel</code></td><td>List&lt;RoyalTitleApparelRequirement&gt;</td><td>強制服裝（依身體部位 / bodyType）</td></tr>
+      <tr><td><code>requiredMinPsylink</code></td><td>int</td><td>持有此爵位需具備的最低 psylink（原版 0）</td></tr>
+      <tr><td><code>roomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>通用房間要求（多半留空，改用下面兩個）</td></tr>
+      <tr><td><code>bedroomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>對 Bedroom 角色房間的要求</td></tr>
+      <tr><td><code>throneRoomRequirements</code></td><td>List&lt;RoomRequirement&gt;</td><td>對 ThroneRoom 角色房間的要求</td></tr>
+      <tr><td><code>disabledWorkTags</code></td><td>WorkTags（flags）</td><td>此爵位以上拒絕的工作標籤</td></tr>
+      <tr><td><code>permits</code></td><td>List&lt;RoyalTitlePermitDef&gt;</td><td>解鎖的戰術許可（見 §4）</td></tr>
+      <tr><td><code>grantedAbilities</code></td><td>List&lt;AbilityDef&gt;</td><td>直接授予的能力 / 超能</td></tr>
+      <tr><td><code>changeHeirQuest</code></td><td>QuestScriptDef</td><td>更換繼承人時觸發的任務腳本</td></tr>
+      <tr><td><code>tags</code></td><td>List&lt;string&gt;</td><td>授爵獎勵分流用標籤（如 <code>Combatant</code>、<code>Sustaining</code>）</td></tr>
+    </table>
+
+    <h3>自訂一個新爵位</h3>
+    <p>
+      下例在原版帝國的 Knight 與 Praetor 之間插入一個自訂爵位 <code>MyMod_Vanguard</code>（先鋒）。
+      重點：<code>seniority</code> 取 450（落在 Knight 400 與 Praetor 500 之間），favorCost 取兩者間的值，並掛上一個許可。
+    </p>
+
+    <pre><span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RoyalTitleDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Vanguard<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>先鋒<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;seniority&gt;</span><span class="nu">450</span><span class="xml-tag">&lt;/seniority&gt;</span>
+    <span class="xml-tag">&lt;favorCost&gt;</span><span class="nu">120</span><span class="xml-tag">&lt;/favorCost&gt;</span>   <span class="cm">&lt;!-- Knight→Vanguard 的價格 --&gt;</span>
+    <span class="xml-tag">&lt;changeHeirQuest&gt;</span>ChangeRoyalHeir<span class="xml-tag">&lt;/changeHeirQuest&gt;</span>
+
+    <span class="cm">&lt;!-- 期望底線：拉到 High（房間/環境須更體面）--&gt;</span>
+    <span class="xml-tag">&lt;minExpectation&gt;</span>High<span class="xml-tag">&lt;/minExpectation&gt;</span>
+
+    <span class="cm">&lt;!-- 拒絕粗活：清潔、搬運、植栽 --&gt;</span>
+    <span class="xml-tag">&lt;disabledWorkTags&gt;</span>Cleaning, Hauling, PlantWork<span class="xml-tag">&lt;/disabledWorkTags&gt;</span>
+
+    <span class="cm">&lt;!-- 強制服裝：軀幹須穿帝國制服系列其中之一 --&gt;</span>
+    <span class="xml-tag">&lt;requiredApparel&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;bodyPartGroupsMatchAny&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Torso<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/bodyPartGroupsMatchAny&gt;</span>
+        <span class="xml-tag">&lt;requiredTags&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>RoyalTier3<span class="xml-tag">&lt;/li&gt;</span>  <span class="cm">&lt;!-- 對應 apparel 的 tradeTags/tags --&gt;</span>
+        <span class="xml-tag">&lt;/requiredTags&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/requiredApparel&gt;</span>
+
+    <span class="cm">&lt;!-- 臥室要求：印象品質 + 必備家具 --&gt;</span>
+    <span class="xml-tag">&lt;bedroomRequirements&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoomRequirement_Impressiveness"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;impressiveness&gt;</span><span class="nu">60</span><span class="xml-tag">&lt;/impressiveness&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoomRequirement_HasAssignedBedThingCount"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;thingDef&gt;</span>RoyalBed<span class="xml-tag">&lt;/thingDef&gt;</span>
+        <span class="xml-tag">&lt;count&gt;</span><span class="nu">1</span><span class="xml-tag">&lt;/count&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/bedroomRequirements&gt;</span>
+
+    <span class="cm">&lt;!-- 解鎖一個自訂許可（見 §4）--&gt;</span>
+    <span class="xml-tag">&lt;permits&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_Permit_RallyCall<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/permits&gt;</span>
+
+    <span class="cm">&lt;!-- 直接授予的超能（可選）--&gt;</span>
+    <span class="xml-tag">&lt;grantedAbilities&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Skip<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/grantedAbilities&gt;</span>
+  <span class="xml-tag">&lt;/RoyalTitleDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>怎麼把新爵位接進帝國的鏈？</strong>
+      原版的爵位鏈不是寫死在 RoyalTitleDef，而是由 <code>FactionDef.royalTitleTags</code> + <code>RoyalTitlePermitDef</code> 的 faction 過濾共同決定哪些 RoyalTitleDef 屬於 Empire。
+      最穩做法：用 <strong>XML PatchOperation</strong>（<a href="02-xml-defs.html">第 2 章</a>）把你的新爵位需要的標籤補進去，或直接 patch <code>FactionDef</code> 的 <code>RoyalImpliedDef</code> 生成設定，
+      避免「定義了爵位卻無法在帝國授爵 UI 看到」。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §3 取得與管理爵位 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="royalty-tracker">
+    <div class="section-title">§3 取得與管理爵位（Pawn_RoyaltyTracker）</div>
+
+    <p>
+      執行期的爵位狀態存在 <code>RimWorld.Pawn_RoyaltyTracker</code>，由 <code>pawn.royalty</code> 取得。
+      它是「per-pawn、per-faction」的——同一個 pawn 理論上能同時對不同派系持有爵位（原版只有帝國一個來源）。
+    </p>
+
+    <h3>常用 API</h3>
+    <table>
+      <tr><th>成員</th><th>說明</th></tr>
+      <tr><td><code>GetCurrentTitle(Faction)</code></td><td>取得對某派系的當前 <code>RoyalTitleDef</code>（無則 null）</td></tr>
+      <tr><td><code>HasAnyTitleIn(Faction)</code></td><td>是否對該派系持有任何爵位</td></tr>
+      <tr><td><code>AllTitlesForReading</code></td><td>所有 <code>RoyalTitle</code> 物件（含 faction、def、receivedFavor）唯讀清單</td></tr>
+      <tr><td><code>SetTitle(Faction, RoyalTitleDef, bool grantRewards, ...)</code></td><td>直接設定爵位；grantRewards 決定是否一併給超能 / 許可</td></tr>
+      <tr><td><code>GetFavor(Faction)</code> / <code>SetFavor(...)</code></td><td>讀 / 寫對該派系的 royal favor</td></tr>
+      <tr><td><code>GainFavor(Faction, int)</code></td><td>增加 favor，並可能觸發「可晉升」提示</td></tr>
+      <tr><td><code>TryUpdateTitle(Faction, bool sendLetter)</code></td><td>依目前 favor 自動把爵位升到該升的等級</td></tr>
+      <tr><td><code>GetPermitPoints(Faction)</code></td><td>該派系下的許可點數（見 §4）</td></tr>
+      <tr><td><code>MaxAllowedPsylinkLevel</code></td><td>爵位允許的最高 psylink 等級（見 §5）</td></tr>
+    </table>
+
+    <h3>範例：賦予爵位並結算後果</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">TitleOps</span>
+{
+    <span class="cm">// 直接把某 pawn 提升到指定帝國爵位（例如劇情獎勵）</span>
+    <span class="kw">public static void</span> <span class="nm">GrantTitle</span>(<span class="ty">Pawn</span> pawn, <span class="ty">RoyalTitleDef</span> title)
+    {
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.RoyaltyInstalled || pawn?.royalty == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="ty">Faction</span> empire = <span class="ty">Faction</span>.OfEmpire;          <span class="cm">// 內建快捷取得帝國派系</span>
+        <span class="kw">if</span> (empire == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// grantRewards: true → 一併授予 grantedAbilities / permits 與 psylink</span>
+        pawn.royalty.SetTitle(empire, title, grantRewards: <span class="kw">true</span>,
+                              sendLetter: <span class="kw">true</span>, rewardDetails: <span class="kw">true</span>);
+
+        <span class="cm">// 設定/補足對應的 favor，避免 UI 顯示成「欠費晉升」</span>
+        <span class="kw">int</span> needed = title.favorCost;
+        <span class="kw">if</span> (pawn.royalty.GetFavor(empire) &lt; needed)
+            pawn.royalty.SetFavor(empire, needed);
+
+        <span class="ty">Messages</span>.Message($<span class="st">"{pawn.LabelShort} 已晉升為 {title.GetLabelCapFor(pawn)}"</span>,
+                         pawn, <span class="ty">MessageTypeDefOf</span>.PositiveEvent);
+    }
+
+    <span class="cm">// 用 favor 推動「能升就升」，交給遊戲決定升到哪一級</span>
+    <span class="kw">public static void</span> <span class="nm">PayFavorAndPromote</span>(<span class="ty">Pawn</span> pawn, <span class="kw">int</span> amount)
+    {
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.RoyaltyInstalled || pawn?.royalty == <span class="kw">null</span>) <span class="kw">return</span>;
+        <span class="ty">Faction</span> empire = <span class="ty">Faction</span>.OfEmpire;
+        pawn.royalty.GainFavor(empire, amount);
+        pawn.royalty.TryUpdateTitle(empire, sendLetter: <span class="kw">true</span>);
+    }
+}</pre>
+
+    <h3>爵位 → 期望 → 心情的因果鏈</h3>
+    <p>
+      <code>minExpectation</code> 把該 pawn 的「期望」需求底線往上抬（<code>RimWorld.ExpectationDef</code>，由 <code>ExpectationsUtility.CurrentExpectationFor(pawn)</code> 取兩者較大值決定）。
+      期望越高，<strong>房間 / 環境 / 食物 / 娛樂達不到時的負面想法越強</strong>，這條鏈最終落在<a href="20-needs-mood-thoughts.html">第 20 章</a>的 thought 系統。
+    </p>
+
+    <ul>
+      <li><strong>房間不達標</strong>：產生 <code>ThoughtDef</code> <code>RoyalTitleTooLowForBedroom</code> / <code>...ForThroneroom</code> 系列負面想法。</li>
+      <li><strong>未穿指定服裝</strong>：產生「未穿著符合身分的服裝」想法（<code>RoyalNoApparel</code> 類）。</li>
+      <li><strong>期望落差</strong>：期望需求本身轉成 <code>Need_Mood</code> 上的持續扣分。</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>授爵不是「純加分」</strong>
+      你的 mod 若大方亂發高爵位，玩家會收到一個又貴又愛抱怨的 pawn：要蓋王座室、要穿貴族裝、不肯掃地。
+      設計獎勵時務必把「義務成本」算進去——這正是 Royalty 的核心玩法張力。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §4 RoyalTitlePermitDef -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="permits">
+    <div class="section-title">§4 RoyalTitlePermitDef：戰術許可</div>
+
+    <p>
+      「許可（Permit）」是爵位附帶的<strong>主動戰術能力</strong>：呼叫帝國砲擊、空投物資、召喚援軍小隊等。
+      與超能不同，許可不耗 psyfocus，而是消耗「許可點數（permit points）」並走自己的冷卻。
+      定義型別是 <code>RimWorld.RoyalTitlePermitDef</code>，實際行為由 <code>RimWorld.RoyalTitlePermitWorker</code> 子類執行。
+    </p>
+
+    <h3>RoyalTitlePermitDef 核心欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>workerClass</code></td><td>Type</td><td>執行行為的 <code>RoyalTitlePermitWorker</code> 子類</td></tr>
+      <tr><td><code>permitPointsToUnlock</code></td><td>int</td><td>解鎖此許可需要花的許可點數</td></tr>
+      <tr><td><code>minTitle</code></td><td>RoyalTitleDef</td><td>需要的最低爵位</td></tr>
+      <tr><td><code>cooldownDays</code></td><td>float</td><td>使用後的冷卻（天）</td></tr>
+      <tr><td><code>faction</code></td><td>FactionDef</td><td>提供此援助的派系（通常 Empire）</td></tr>
+      <tr><td><code>royalAid</code></td><td>RoyalAidDef-like</td><td>援助內容（援軍 pawnKinds、數量、favor 花費）</td></tr>
+      <tr><td><code>prerequisite</code></td><td>RoyalTitlePermitDef</td><td>前置許可（形成許可樹）</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>permit points 從哪來？</strong>
+      每升一級爵位會給固定的許可點數（透過 <code>Pawn_RoyaltyTracker.GetPermitPoints(faction)</code> 累計），
+      玩家在「許可」分頁花點數解鎖樹狀許可。點數有限，所以許可之間是「取捨」而非「全拿」。
+    </div>
+
+    <h3>內建許可 Worker 一覽（常見可繼承 / 參考）</h3>
+    <table>
+      <tr><th>Worker</th><th>效果</th></tr>
+      <tr><td><code>RoyalTitlePermitWorker_CallAid</code></td><td>呼叫帝國援軍（落地一支小隊協助）</td></tr>
+      <tr><td><code>RoyalTitlePermitWorker_OrbitalStrike</code></td><td>呼叫軌道砲擊（轟炸 / 燃燒指定區域）</td></tr>
+      <tr><td><code>RoyalTitlePermitWorker_DropResources</code></td><td>帝國空投物資（如砲彈、藥物）</td></tr>
+      <tr><td><code>RoyalTitlePermitWorker_Targeted</code></td><td>需要點選目標的許可基底類</td></tr>
+    </table>
+
+    <h3>自訂一個許可：召喚號令（友軍臨時加速）</h3>
+    <p>
+      下面做一個非援軍型的許可 <code>MyMod_Permit_RallyCall</code>——對一塊區域施放，給範圍內友軍一個短暫的移動 / 戰鬥 buff（套用一個 <code>HediffDef</code>）。
+      因為要點選目標，繼承 <code>RoyalTitlePermitWorker_Targeted</code>。
+    </p>
+
+    <pre><span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"utf-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RoyalTitlePermitDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Permit_RallyCall<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>戰場號令<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>對一塊區域發布號令，使範圍內的友軍在短時間內提升移動與射擊速度。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>MyMod.RoyalTitlePermitWorker_RallyCall<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;permitPointsToUnlock&gt;</span><span class="nu">1</span><span class="xml-tag">&lt;/permitPointsToUnlock&gt;</span>
+    <span class="xml-tag">&lt;minTitle&gt;</span>MyMod_Vanguard<span class="xml-tag">&lt;/minTitle&gt;</span>
+    <span class="xml-tag">&lt;cooldownDays&gt;</span><span class="nu">1.0</span><span class="xml-tag">&lt;/cooldownDays&gt;</span>
+    <span class="xml-tag">&lt;faction&gt;</span>Empire<span class="xml-tag">&lt;/faction&gt;</span>
+    <span class="xml-tag">&lt;uiPosition&gt;</span><span class="nu">(2, 1)</span><span class="xml-tag">&lt;/uiPosition&gt;</span>  <span class="cm">&lt;!-- 在許可樹 UI 的座標 --&gt;</span>
+  <span class="xml-tag">&lt;/RoyalTitlePermitDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>對應的 Worker。重點是覆寫 <code>GetGizmo</code>（產生指令按鈕、塞冷卻 / 點選邏輯）與目標選定後的執行。</p>
+
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> UnityEngine;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">RoyalTitlePermitWorker_RallyCall</span> : <span class="ty">RoyalTitlePermitWorker_Targeted</span>
+    {
+        <span class="kw">private const</span> <span class="ty">float</span> Radius = <span class="nu">9.9f</span>;
+
+        <span class="cm">// 玩家點地後呼叫，targetInfo 是落點</span>
+        <span class="kw">public override void</span> <span class="nm">OrderForceTarget</span>(<span class="ty">LocalTargetInfo</span> target)
+        {
+            <span class="ty">Map</span> map = caster.Map;
+            <span class="kw">if</span> (map == <span class="kw">null</span>) <span class="kw">return</span>;
+
+            <span class="kw">foreach</span> (<span class="ty">IntVec3</span> cell <span class="kw">in</span> <span class="ty">GenRadial</span>.RadialCellsAround(target.Cell, Radius, useCenter: <span class="kw">true</span>))
+            {
+                <span class="kw">if</span> (!cell.InBounds(map)) <span class="kw">continue</span>;
+                <span class="kw">foreach</span> (<span class="ty">Thing</span> t <span class="kw">in</span> cell.GetThingList(map))
+                {
+                    <span class="kw">if</span> (t <span class="kw">is</span> <span class="ty">Pawn</span> p &amp;&amp; !p.Dead &amp;&amp;
+                        p.Faction == caster.Faction &amp;&amp; p.RaceProps.Humanlike)
+                    {
+                        <span class="ty">Hediff</span> h = <span class="ty">HediffMaker</span>.MakeHediff(
+                            <span class="ty">DefDatabase</span>&lt;<span class="ty">HediffDef</span>&gt;.GetNamed(<span class="st">"MyMod_RallyBuff"</span>), p);
+                        p.health.AddHediff(h);
+                    }
+                }
+            }
+
+            <span class="cm">// 啟動冷卻：寫進該 pawn 對該 faction 的許可冷卻表</span>
+            caster.royalty.GetPermit(def, faction)?.Notify_Used();
+            <span class="ty">FleckMaker</span>.Static(target.Cell, map, <span class="ty">FleckDefOf</span>.PsycastSkipFlashEntry, <span class="nu">2f</span>);
+            <span class="kw">base</span>.OrderForceTarget(target);
+        }
+
+        <span class="cm">// 額外的可用性檢查（沒裝 DLC / 沒爵位時不顯示）</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">FloatMenuOption</span>&gt; <span class="nm">GetTargetingOptions(...)</span> { <span class="kw">yield break</span>; }
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>找對基底類的捷徑</strong>
+      在 dnSpy 裡搜 <code>RoyalTitlePermitWorker</code>，看哪個原版許可（如 <code>OrbitalStrike</code>）的 Worker 行為最接近你要的，直接繼承它並覆寫關鍵方法，
+      比從抽象基底硬刻 gizmo / targeting 省一大半工。所有 Worker 都在 <code>RimWorld</code> 命名空間。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §5 Psycast 與榮譽 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="psycast-honor">
+    <div class="section-title">§5 Psycast 與榮譽（psylink 的來源）</div>
+
+    <p>
+      Royalty 的超能（psycast）建立在<a href="24-abilities-psycasts.html">第 24 章</a>的 Ability 框架上，
+      本章只聚焦「<strong>能力從哪來、爵位如何提升 psylink</strong>」。psylink 是 pawn 的「超能等級」，
+      由一個特殊 hediff <code>Hediff_Psylink</code>（<code>RimWorld</code>）承載，等級越高能用的超能越強。
+    </p>
+
+    <h3>psylink 的取得途徑</h3>
+    <div class="g3">
+      <div class="card card-accent-purple">
+        <h3>爵位授予</h3>
+        <p>晉升到帶 reward 的爵位時，授爵流程可給一級 psylink。上限受 <code>Pawn_RoyaltyTracker.MaxAllowedPsylinkLevel</code> 約束。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>儀式 / 樹靈</h3>
+        <p>透過 psytrainer（藥物式 ThingDef）或在古樹（anima tree）旁的冥想儀式（Ideology 串接）提升 psylink。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>PsicastingTradition</h3>
+        <p>儀式的傳統 / 流派（如 <code>PsicastingTradition</code> 相關設定）影響冥想加速與超能風格，多由 RitualDef 配置。</p>
+      </div>
+    </div>
+
+    <h3>從 C# 提升 psylink</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static void</span> <span class="nm">BumpPsylink</span>(<span class="ty">Pawn</span> pawn, <span class="kw">int</span> levels = <span class="nu">1</span>)
+{
+    <span class="kw">if</span> (!<span class="ty">ModLister</span>.RoyaltyInstalled || pawn?.health == <span class="kw">null</span>) <span class="kw">return</span>;
+
+    <span class="cm">// 找現有 psylink hediff；沒有就建一個</span>
+    <span class="ty">Hediff_Psylink</span> link = pawn.GetMainPsylinkSource();
+    <span class="kw">if</span> (link == <span class="kw">null</span>)
+    {
+        <span class="cm">// source = null → 視為「非爵位來源」的 psylink 增益</span>
+        pawn.ChangePsylinkLevel(levels, sendLetter: <span class="kw">true</span>);
+    }
+    <span class="kw">else</span>
+    {
+        <span class="cm">// ChangePsylinkLevel 內部會夾在 MaxAllowedPsylinkLevel 之內</span>
+        pawn.ChangePsylinkLevel(levels, sendLetter: <span class="kw">true</span>);
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>psylink 等級被爵位上限夾住</strong>
+      <code>Pawn.ChangePsylinkLevel</code> 不會無視 <code>MaxAllowedPsylinkLevel</code>。若你給的等級超過爵位允許值，
+      多出的部分會被忽略（甚至可能因「過度 psylink」產生負面想法）。要先升爵位、再升 psylink，或用獨立來源繞過爵位限制。
+    </div>
+
+    <h3>neural heat（精神熵）與 psyfocus 速覽</h3>
+    <p>超能機制兩個資源，由 <code>RimWorld.Pawn_PsychicEntropyTracker</code>（<code>pawn.psychicEntropy</code>）管理：</p>
+    <ul>
+      <li><strong>psyfocus（精神專注）</strong>：施放超能的「彈藥」，靠冥想 / 古樹回充；空了就放不出大招。</li>
+      <li><strong>neural heat（精神熵 / 神經熱）</strong>：施放累積的「熱量」，超過上限 → 進入 psychic breakdown（短暫失能 + 心情）。</li>
+    </ul>
+
+    <table>
+      <tr><th>成員（pawn.psychicEntropy.*）</th><th>用途</th></tr>
+      <tr><td><code>CurrentPsyfocus</code></td><td>當前 psyfocus（0–1）</td></tr>
+      <tr><td><code>EntropyValue</code> / <code>MaxEntropy</code></td><td>當前 / 上限神經熱</td></tr>
+      <tr><td><code>TryAddEntropy(float, ...)</code></td><td>施放後加熱；回傳是否成功（會否超載）</td></tr>
+      <tr><td><code>OffsetPsyfocusDirectly(float)</code></td><td>直接增減 psyfocus（補給 / 消耗）</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>本章只談來源，機制看第 24 章</strong>
+      自訂超能的 <code>AbilityDef</code> 結構、<code>CompAbilityEffect</code> 效果、目標選擇與 psyfocus 消耗綁定，都在<a href="24-abilities-psycasts.html">第 24 章</a>。
+      本章負責回答「這個超能要靠爵位 / psylink 等級幾才解鎖、榮譽怎麼換」。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §6 帝國互動玩法 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="empire-interactions">
+    <div class="section-title">§6 帝國互動玩法</div>
+
+    <p>
+      帝國不是擺設派系，而是一條完整的「榮譽經濟」。你的 mod 要嵌進去，得理解 favor 怎麼進、爵位怎麼出問題、放棄爵位的代價。
+    </p>
+
+    <h3>榮譽任務（串第 22 章）</h3>
+    <p>
+      帝國透過 <code>QuestScriptDef</code> 派發任務（護送貴族、提供住宿、完成戰役），完成後獎勵 royal favor。
+      自訂任務獎勵 favor 時，用 <code>QuestPart_GiveRoyalFavor</code>（<code>RimWorld</code>）或在 quest script 內呼叫對應的 reward node。
+    </p>
+
+    <pre><span class="cm">// QuestScriptDef 內，給某 pawn 帝國榮譽的 QuestPart（概念示意，實際多用 .quest 腳本節點）</span>
+<span class="kw">var</span> part = <span class="kw">new</span> <span class="ty">QuestPart_GiveRoyalFavor</span>();
+part.faction        = <span class="ty">Faction</span>.OfEmpire;
+part.favorType      = <span class="ty">RoyalFavorTypeDefOf</span>?.Empire ?? <span class="kw">null</span>;  <span class="cm">// favor 類型</span>
+part.giveToAccepter = <span class="kw">true</span>;          <span class="cm">// 給接任務的 pawn</span>
+part.amount         = <span class="nu">12</span>;
+part.inSignalEnable = <span class="st">"Quest.Completed"</span>;
+quest.AddPart(part);</pre>
+
+    <div class="callout callout-tip">
+      <strong>用 .quest XML 腳本，而非硬寫 QuestPart</strong>
+      RimWorld 推薦用 <code>QuestScriptDef</code> 的宣告式腳本（<a href="22-quests.html">第 22 章</a>）描述獎勵流程，可讀性與相容性都更好。
+      上面的 C# 只是讓你看清 favor 是透過哪個 QuestPart 實際發出去的。
+    </div>
+
+    <h3>貴族來訪與身分衝突</h3>
+    <table>
+      <tr><th>情境</th><th>機制</th><th>後果</th></tr>
+      <tr><td>貴族來訪 / 借宿</td><td>帝國發起的 quest / lord job</td><td>招待得好 → goodwill / favor；怠慢 → 關係下滑</td></tr>
+      <tr><td>高爵位 pawn 受傷致殘</td><td>義體 / 缺肢與爵位形象</td><td>帝國一般容忍，但部分劇情會對「不體面」反應</td></tr>
+      <tr><td>精神崩潰 / 暴走</td><td><code>MentalState</code> 觸發（第 20 章）</td><td>高期望讓崩潰更易發生（房間不達標 → 期望落差）</td></tr>
+      <tr><td>頭骨 / 移除腦下垂體</td><td>器官摘除影響 psylink 來源</td><td>失去 psycaster 身分 / 能力，爵位可能不再匹配</td></tr>
+    </table>
+
+    <h3>放棄爵位的後果</h3>
+    <p>
+      玩家可以主動讓 pawn 放棄帝國爵位（UI 的「renounce title」）。這在程式上走 <code>Pawn_RoyaltyTracker</code> 的退爵流程，
+      會對帝國造成顯著的 <strong>goodwill 衝擊</strong>（派系關係下滑，可能轉敵對），並讓該 pawn 失去爵位帶來的許可 / psylink 上限。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>放棄 / 被剝奪的代價</h3>
+        <ul>
+          <li>帝國 goodwill 大幅下降（可能宣戰）</li>
+          <li>失去該爵位的 permits 與 psylink 上限</li>
+          <li>其他持爵 pawn 可能連帶受波及（劇情）</li>
+          <li>產生負面想法（喪失身分 / 屈辱）</li>
+        </ul>
+      </div>
+      <div class="card card-accent-green">
+        <h3>設計建議</h3>
+        <ul>
+          <li>把「放棄爵位」做成有意義的抉擇而非無痛操作</li>
+          <li>mod 若強制移除爵位，記得同步處理 goodwill 與心情</li>
+          <li>提供回頭路（重新賺 favor 復爵）增加深度</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §7 C# API 速查 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="api-cheatsheet">
+    <div class="section-title">§7 C# API 速查</div>
+
+    <h3>爵位 / favor 判斷</h3>
+    <table>
+      <tr><th>呼叫</th><th>回傳 / 作用</th></tr>
+      <tr><td><code>pawn.royalty.HasAnyTitleIn(Faction.OfEmpire)</code></td><td>是否對帝國持爵</td></tr>
+      <tr><td><code>pawn.royalty.GetCurrentTitle(faction)</code></td><td>當前 RoyalTitleDef</td></tr>
+      <tr><td><code>pawn.royalty.CanRequireApparel(...)</code></td><td>該爵位是否強制服裝（服裝義務判定）</td></tr>
+      <tr><td><code>pawn.royalty.AllowApparelRequirements</code></td><td>是否啟用服裝要求檢查</td></tr>
+      <tr><td><code>pawn.royalty.GetFavor(faction)</code></td><td>當前 royal favor</td></tr>
+      <tr><td><code>RoyalTitleUtility.GetTitleAwardableBy(...)</code></td><td>依 favor 推算可授的爵位</td></tr>
+      <tr><td><code>title.GetLabelFor(pawn)</code> / <code>GetLabelCapFor(pawn)</code></td><td>取得（性別正確的）爵位顯示名</td></tr>
+    </table>
+
+    <h3>生成「帶爵位」的 pawn</h3>
+    <p>
+      <code>Verse.PawnGenerationRequest</code> 有專門欄位讓你直接生出有爵位的 pawn，不用生完再手動 SetTitle。
+      這在做帝國貴族、護送對象、援軍隊長時很有用。
+    </p>
+
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="ty">Faction</span> empire = <span class="ty">Faction</span>.OfEmpire;
+<span class="ty">RoyalTitleDef</span> knight = <span class="ty">DefDatabase</span>&lt;<span class="ty">RoyalTitleDef</span>&gt;.GetNamed(<span class="st">"Knight"</span>);
+
+<span class="kw">var</span> req = <span class="kw">new</span> <span class="ty">PawnGenerationRequest</span>(
+    kind: <span class="ty">PawnKindDefOf</span>.Empire_Fighter_Trooper,   <span class="cm">// 帝國兵種（Royalty 提供）</span>
+    faction: empire,
+    context: <span class="ty">PawnGenerationContext</span>.NonPlayer,
+    forceGenerateNewPawn: <span class="kw">true</span>)
+{
+    <span class="cm">// ↓ 這些欄位只在裝了 Royalty 時有意義</span>
+    ForcedCustomTitle = knight,                 <span class="cm">// 強制給定爵位</span>
+    MinChanceToRedressWorldPawn = <span class="nu">1f</span>,
+
+    <span class="cm">// 想連 psylink 一起：用對應欄位（版本間欄位名可能不同，去 dnSpy 對照）</span>
+};
+
+<span class="ty">Pawn</span> noble = <span class="ty">PawnGenerator</span>.GeneratePawn(req);
+<span class="cm">// 若 ForcedCustomTitle 那條因版本不可用，退而求其次：生完再 SetTitle</span>
+<span class="kw">if</span> (noble.royalty?.GetCurrentTitle(empire) == <span class="kw">null</span>)
+    noble.royalty?.SetTitle(empire, knight, grantRewards: <span class="kw">true</span>);</pre>
+
+    <div class="callout callout-warn">
+      <strong>PawnGenerationRequest 欄位在版本間會變</strong>
+      Royalty 相關欄位（如 <code>ForcedCustomTitle</code>、psylink 強制值）名稱 / 是否存在隨版本變動。
+      務必用 dnSpy 對著你目標版本的 <code>Verse.PawnGenerationRequest</code> 結構確認，別照抄舊教學的欄位名（見<a href="11-pawn-generation.html">第 11 章</a>）。
+    </div>
+
+    <h3>ThroneDef 與房間角色（RoomRoleDef）</h3>
+    <p>
+      王座室的判定核心是<strong>房間角色</strong>：<code>RimWorld.RoomRoleDef</code> <code>ThroneRoom</code> 由 <code>RoomRoleWorker_ThroneRoom</code> 判定，
+      條件是房間內有一個被指派的王座（<code>ThingDef</code> 帶 <code>Building_Throne</code> / 對應 comp，定義可視為 ThroneDef 角色）。
+      Bedroom 角色同理由 <code>RoomRoleWorker_Bedroom</code> 判定。
+    </p>
+
+    <pre><span class="cm">// 判斷某房間是不是合格的王座室、印象品質夠不夠</span>
+<span class="ty">Room</span> room = pawn.GetRoom();
+<span class="kw">if</span> (room != <span class="kw">null</span>)
+{
+    <span class="ty">RoomRoleDef</span> role = room.Role;                  <span class="cm">// e.g. RoomRoleDefOf.ThroneRoom</span>
+    <span class="kw">bool</span> isThrone = role == <span class="ty">RoomRoleDefOf</span>.ThroneRoom;
+    <span class="ty">float</span> impress = room.GetStat(<span class="ty">RoomStatDefOf</span>.Impressiveness);
+
+    <span class="ty">RoyalTitleDef</span> t = pawn.royalty?.GetCurrentTitle(<span class="ty">Faction</span>.OfEmpire);
+    <span class="kw">if</span> (t != <span class="kw">null</span> &amp;&amp; t.throneRoomRequirements != <span class="kw">null</span>)
+    {
+        <span class="kw">foreach</span> (<span class="ty">RoomRequirement</span> r <span class="kw">in</span> t.throneRoomRequirements)
+        {
+            <span class="kw">bool</span> met = r.Met(room, pawn);
+            <span class="ty">Log</span>.Message($<span class="st">"王座室要求 {r.Label(pawn)} = {met}"</span>);
+        }
+    }
+}</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- §8 陷阱 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">§8 陷阱與最佳實務</div>
+
+    <div class="callout callout-danger">
+      <strong>陷阱 1：未裝 DLC 直接崩潰</strong>
+      最常見的災難。只要 C# 在沒守門的情況下觸碰 <code>RoyalTitleDef</code>、<code>Pawn_RoyaltyTracker</code>、<code>Hediff_Psylink</code> 等型別，
+      缺 DLC 時就 <code>TypeLoadException</code> / NRE。鐵則：所有 royalty 程式碼先過 <code>ModLister.RoyaltyInstalled</code>，並把這些型別關進獨立類別（§1）。
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>陷阱 2：服裝要求三方打架（爵位 × 第 17 章裝備 × 第 32 章思想）</strong>
+      爵位 <code>requiredApparel</code> 要求穿 A，Ideology（<a href="32-ideology.html">第 32 章</a>）的 precept 可能要求穿 B 或裸體，
+      你自訂的 <code>ApparelRequirement</code>（<a href="17-apparel-equipment.html">第 17 章</a>）又要求 C——三者衝突時 pawn 怎麼穿都會掉心情。
+      設計爵位服裝時，盡量用<strong>寬鬆的 tag 匹配</strong>（<code>requiredTags</code> 給多個可選項），別綁死單一 ThingDef。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>陷阱 3：roomRequirements 太苛 → 永久負心情</strong>
+      把 <code>impressiveness</code> / <code>space</code> 門檻設得超高，玩家前期根本蓋不出來，結果是「升爵反而長期扣心情」。
+      用 <code>RoomRequirement</code> 的各子類（Impressiveness / NoBeauty 之類）時，數值要對照原版同級爵位，並考慮玩家所處階段。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>陷阱 4：favorCost 失衡破壞晉升曲線</strong>
+      新爵位的 <code>favorCost</code> 與 <code>seniority</code> 不匹配，會讓晉升「跳級太快」或「卡死賺不夠」。
+      插入自訂爵位前，先把整條鏈的 (seniority, favorCost) 列成表（§2），確認你的新點落在曲線上而非離群。
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>陷阱 5：改 RoyalTitleDef 影響既有存檔</strong>
+      存檔裡的 <code>RoyalTitle</code> 物件保存的是 <strong>RoyalTitleDef 的 defName 參照 + 已收 favor 數</strong>，不是欄位快照。
+      所以你改 favorCost / minExpectation 後，<strong>讀檔時會立即套用新值</strong>——可能讓原本「達標」的房間突然變不達標、或 pawn 期望暴漲。
+      若你<strong>移除或改名</strong>了某個被存檔引用的 RoyalTitleDef，讀檔會出現 cross-ref 解析失敗（爵位變 null），務必保留舊 defName 或提供遷移 patch。
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>最佳實務小結</strong>
+      <ul>
+        <li>守門兩層：XML <code>MayRequire</code> + C# <code>ModLister.RoyaltyInstalled</code>，型別隔離。</li>
+        <li>新爵位先畫 (seniority, favorCost, minExpectation) 對照表，落在原版曲線上。</li>
+        <li>服裝要求用寬鬆 tag，避開與 Ideology / 自訂 apparel 的死結。</li>
+        <li>房間要求對照原版同級，別讓升爵變成永久心情懲罰。</li>
+        <li>不要無痛亂發高爵位：義務成本是玩法核心，不是 bug。</li>
+        <li>改 / 刪既有 RoyalTitleDef 前想清楚存檔相容性，必要時保留舊 defName。</li>
+      </ul>
+    </div>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>關聯章節</h3>
+        <p><a href="24-abilities-psycasts.html">第 24 章</a> 超能機制、<a href="31-factions.html">第 31 章</a> 帝國派系、<a href="22-quests.html">第 22 章</a> 榮譽任務。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>心情 / 服裝</h3>
+        <p><a href="20-needs-mood-thoughts.html">第 20 章</a> 期望→想法、<a href="17-apparel-equipment.html">第 17 章</a> 服裝、<a href="32-ideology.html">第 32 章</a> 思想衝突。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>反編譯入口</h3>
+        <p>dnSpy 搜 <code>RimWorld.RoyalTitleDef</code>、<code>Pawn_RoyaltyTracker</code>、<code>RoyalTitlePermitWorker</code> 對著目標版本驗證欄位。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 33 皇室與榮譽（Royalty DLC） · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

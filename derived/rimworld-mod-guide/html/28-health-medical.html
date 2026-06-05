@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康與醫療系統 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html" class="active">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>健康與醫療系統</h1>
+  <p>Hediff 是 RimWorld 一切「身體狀態」的統一抽象——傷口、疾病、義體、藥效、成癮全是它。掌握 Hediff/HediffComp/手術，就掌握了角色身體的可編程介面。</p>
+  <span class="badge">Chapter 28 · Health &amp; Medical</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1 健康模型總覽
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 健康模型總覽：從 Pawn 到 Capacity</div>
+
+    <p>RimWorld 把角色身體建模成一條清晰的物件鏈：每個 <code>Verse.Pawn</code> 持有一個 <code>Verse.Pawn_HealthTracker</code>（欄位 <code>pawn.health</code>），其中最核心的子物件是 <code>Verse.HediffSet</code>（<code>pawn.health.hediffSet</code>）。<strong>HediffSet 就是「這具身體目前發生的所有事情」的集合</strong>——它內部維護一個 <code>List&lt;Hediff&gt;</code>，而幾乎所有你能想到的身體狀態，從一道刀傷、一場瘟疫、一條義肢到一次酒精微醺，全部都是這個列表裡的一個 <code>Verse.Hediff</code> 物件。</p>
+
+    <p>理解這條鏈是本章一切操作的前提。你不會直接「設定角色的移動速度」，而是「在身體上掛一個會影響 Moving capacity 的 Hediff」。整個系統是<strong>宣告式</strong>的：你描述狀態，引擎推算後果。</p>
+
+    <pre><span class="ty">Pawn</span>
+ └─ <span class="nm">health</span> : <span class="ty">Pawn_HealthTracker</span>          <span class="cm">// 健康總管：管理 hediff、capacity、生死</span>
+     ├─ <span class="nm">hediffSet</span> : <span class="ty">HediffSet</span>          <span class="cm">// 所有狀態的集合（真相層）</span>
+     │   ├─ <span class="nm">hediffs</span> : <span class="ty">List&lt;Hediff&gt;</span>     <span class="cm">// 傷口 / 疾病 / 義體 / 藥效 …</span>
+     │   └─ <span class="nm">pawn.RaceProps.body</span> : <span class="ty">BodyDef</span> <span class="cm">// 身體部位樹（HumanlikeBody 等）</span>
+     ├─ <span class="nm">capacities</span> : <span class="ty">PawnCapacitiesHandler</span> <span class="cm">// 由 hediff 推算出的能力百分比快取</span>
+     ├─ <span class="nm">summaryHealth</span> : <span class="ty">SummaryHealthHandler</span> <span class="cm">// 整體健康 0~1 的摘要</span>
+     └─ <span class="nm">immunity</span> : <span class="ty">ImmunityHandler</span>     <span class="cm">// 疾病免疫進度（見 §5）</span></pre>
+
+    <h3>BodyDef 與 BodyPartRecord 樹</h3>
+
+    <p>每個種族在 <code>RaceProperties.body</code> 指向一個 <code>Verse.BodyDef</code>（人類是 <code>Human</code>）。BodyDef 在載入時會被展開成一棵 <code>Verse.BodyPartRecord</code> 樹——這是<strong>實體化的部位實例</strong>，與只是定義的 <code>BodyPartDef</code> 不同。樹的根是 <code>Torso</code>（軀幹），往下掛 <code>Neck → Head</code>、<code>LeftShoulder → LeftArm → LeftHand → 各手指</code> 等。每個 <code>Hediff</code> 透過 <code>hediff.Part</code> 欄位綁到樹上的某個節點；<code>Part == null</code> 代表「全身性」狀態（如瘟疫、酒醉）。</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>BodyPartDef（定義）</h3>
+        <p>純資料：部位的名稱、<code>hitPoints</code> 比例、<code>frostbiteVulnerability</code>、可裝載的 <code>tags</code>（如 <code>ManipulationLimbCore</code>）。同一個 def 可在樹上出現多次（左右手）。dnSpy 定位：<code>Verse.BodyPartDef</code>。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>BodyPartRecord（實例）</h3>
+        <p>樹上的實際節點，有 <code>parent</code> / <code>parts</code>（子節點）、<code>coverageAbs</code>（被命中機率權重）、<code>height</code>（Top/Middle/Bottom，影響命中分佈）。Hediff 綁定的是它，不是 def。</p>
+      </div>
+    </div>
+
+    <h3>Capacity 是怎麼算出來的</h3>
+
+    <p><code>RimWorld.PawnCapacityDef</code>（如 <code>Consciousness</code>、<code>Moving</code>、<code>Manipulation</code>、<code>Sight</code>、<code>BloodPumping</code>）代表一種「身體能力」，數值是 0~1+ 的百分比。它<strong>不是儲存值，而是即時推算</strong>的：每個 capacity 有一個 <code>RimWorld.PawnCapacityWorker</code>，遍歷身體部位的健康狀況與所有 hediff 的 <code>capMods</code>，乘算出最終百分比。</p>
+
+    <ul>
+      <li><strong>部位健康貢獻</strong>：例如 <code>Moving</code> 由雙腿的剩餘 efficiency 決定，砍掉一條腿就掉一半。</li>
+      <li><strong>Hediff capMods</strong>：stage 上宣告的 <code>PawnCapacityModifier</code> 會直接加減或設下限（見 §2）。</li>
+      <li><strong>層級依賴</strong>：<code>Consciousness</code> 是「總開關」——它低落時幾乎所有其他 capacity 都會被連動壓低，因為清醒度是大腦運作的基礎。</li>
+    </ul>
+
+    <div class="callout callout-info">
+      <strong>查值的正確入口</strong>讀某個能力百分比請用 <code>pawn.health.capacities.GetLevel(PawnCapacityDefOf.Moving)</code>，而非自己加總 hediff。<code>PawnCapacitiesHandler</code> 內部有快取與 dirty 機制，掛/移除 hediff 時會自動失效重算，你只要負責改變 hediff。
+    </div>
+
+    <pre><span class="cm">// 讀取角色目前的移動能力（0 = 完全不能動，1 = 正常，&gt;1 = 義肢超人）</span>
+<span class="kw">float</span> moving = pawn.health.capacities.GetLevel(<span class="ty">PawnCapacityDefOf</span>.Moving);
+
+<span class="cm">// 整體健康摘要（血條那條的依據）</span>
+<span class="kw">float</span> summary = pawn.health.summaryHealth.SummaryHealthPercent; <span class="cm">// 0~1</span>
+
+<span class="cm">// 判斷是否還活著、有沒有倒下</span>
+<span class="kw">if</span> (pawn.health.capacities.GetLevel(<span class="ty">PawnCapacityDefOf</span>.Consciousness) &lt; <span class="nu">0.3f</span>)
+    <span class="cm">// 意識過低，pawn 會 downed</span></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2 HediffDef 完整 XML
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 HediffDef 完整 XML</div>
+
+    <p><code>Verse.HediffDef</code> 是 hediff 的資料藍圖。它最重要的設計概念是 <strong>severity（嚴重度）與 stages（階段）的對應</strong>：hediff 的 severity 是一個連續浮點數，而 <code>stages</code> 是一串依 <code>minSeverity</code> 排序的離散區間；引擎依當前 severity 落在哪個區間，套用該 <code>HediffStage</code> 的所有效果。這讓「同一個病隨時間惡化」變成純資料描述。</p>
+
+    <h3>HediffDef 頂層欄位速查</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>hediffClass</code></td><td><code>Type</code></td><td>對應的 C# 類別，預設 <code>Verse.HediffWithComps</code>（支援 comps）；傷口用 <code>Hediff_Injury</code>、成癮用 <code>Hediff_Addiction</code></td></tr>
+        <tr><td><code>isBad</code></td><td><code>bool</code></td><td>true 代表負面狀態（UI 紅字、會被治療優先處理）；增益藥效設 false</td></tr>
+        <tr><td><code>tendable</code></td><td><code>bool</code></td><td>能否被「治療（Tend）」；感染、出血等設 true</td></tr>
+        <tr><td><code>initialSeverity</code></td><td><code>float</code></td><td>首次加掛時的 severity，預設 0.5</td></tr>
+        <tr><td><code>maxSeverity</code></td><td><code>float</code></td><td>severity 上限（comp 加 severity 不會超過此值）</td></tr>
+        <tr><td><code>lethalSeverity</code></td><td><code>float</code></td><td>達到此 severity 即觸發死亡（-1 表示永不致死）</td></tr>
+        <tr><td><code>scenarioCanAdd</code></td><td><code>bool</code></td><td>能否在劇本編輯器中加入起始 pawn</td></tr>
+        <tr><td><code>defaultLabelColor</code></td><td><code>Color</code></td><td>health 面板中此 hediff 的文字顏色</td></tr>
+        <tr><td><code>comps</code></td><td><code>List&lt;HediffCompProperties&gt;</code></td><td>掛載的行為元件（見 §3），需 <code>hediffClass</code> 繼承自 <code>HediffWithComps</code></td></tr>
+        <tr><td><code>stages</code></td><td><code>List&lt;HediffStage&gt;</code></td><td>依 severity 切分的效果階段</td></tr>
+      </tbody>
+    </table>
+
+    <h3>HediffStage 欄位速查</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>效果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>minSeverity</code></td><td><code>float</code></td><td>進入此 stage 的 severity 門檻（升冪排列，引擎取符合的最後一個）</td></tr>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>此階段顯示名稱（如「輕微」「嚴重」），UI 顯示為 <code>主名稱 (label)</code></td></tr>
+        <tr><td><code>painOffset</code> / <code>painFactor</code></td><td><code>float</code></td><td>對全身 Pain 的加值 / 乘值（Pain 過高會 downed）</td></tr>
+        <tr><td><code>capMods</code></td><td><code>List&lt;PawnCapacityModifier&gt;</code></td><td>修改某 capacity：<code>offset</code> 加減、<code>setMax</code> 設上限、<code>postFactor</code> 乘算</td></tr>
+        <tr><td><code>statOffsets</code> / <code>statFactors</code></td><td><code>List&lt;StatModifier&gt;</code></td><td>直接修改 pawn 的 StatDef（如 <code>WorkSpeedGlobal</code>、<code>MoveSpeed</code>）</td></tr>
+        <tr><td><code>becomeVisible</code></td><td><code>bool</code></td><td>此階段才在 health 面板顯示（潛伏期疾病設 false）</td></tr>
+        <tr><td><code>lifeThreatening</code></td><td><code>bool</code></td><td>標記為危及生命，醫療 AI 會緊急處理</td></tr>
+        <tr><td><code>deathMtbDays</code></td><td><code>float</code></td><td>進入此階段後的「平均致死天數」（機率性死亡，比 lethalSeverity 柔和）</td></tr>
+        <tr><td><code>vomitMtbDays</code></td><td><code>float</code></td><td>嘔吐的平均間隔天數</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>capMods 三種寫法的差別</strong><code>offset</code> 是加減（<code>-0.5</code> 扣半）；<code>setMax</code> 把該 capacity 上限壓到某值（<code>0</code> 等於直接讓該能力歸零，常用於癱瘓）；<code>postFactor</code> 在所有 offset 算完後乘上去。需要「砍腿後無論其他多好都只能爬」用 <code>setMax</code>；需要「拖慢一點」用 <code>offset</code>。
+    </div>
+
+    <h3>範例 A：自訂「感染性傷口」（負面、會惡化、可治療）</h3>
+
+    <pre><span class="xml-tag">&lt;HediffDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_RustInfection<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>鏽蝕感染<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;hediffClass&gt;</span>HediffWithComps<span class="xml-tag">&lt;/hediffClass&gt;</span>
+  <span class="xml-tag">&lt;defaultLabelColor&gt;</span>(0.7, 0.4, 0.2)<span class="xml-tag">&lt;/defaultLabelColor&gt;</span>
+  <span class="xml-tag">&lt;isBad&gt;</span>true<span class="xml-tag">&lt;/isBad&gt;</span>
+  <span class="xml-tag">&lt;tendable&gt;</span>true<span class="xml-tag">&lt;/tendable&gt;</span>
+  <span class="xml-tag">&lt;initialSeverity&gt;</span>0.001<span class="xml-tag">&lt;/initialSeverity&gt;</span>
+  <span class="xml-tag">&lt;lethalSeverity&gt;</span>1.0<span class="xml-tag">&lt;/lethalSeverity&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="cm">&lt;!-- 未治療時每天 +0.1，治療後改為衰退（見 §3） --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"HediffCompProperties_Immunizable"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;severityPerDayNotImmune&gt;</span>0.1<span class="xml-tag">&lt;/severityPerDayNotImmune&gt;</span>
+      <span class="xml-tag">&lt;immunityPerDayNotSick&gt;</span>0<span class="xml-tag">&lt;/immunityPerDayNotSick&gt;</span>
+      <span class="xml-tag">&lt;immunityPerDaySick&gt;</span>0.18<span class="xml-tag">&lt;/immunityPerDaySick&gt;</span>
+      <span class="xml-tag">&lt;severityPerDayNotImmuneRandomFactor&gt;</span>0.85~1.15<span class="xml-tag">&lt;/severityPerDayNotImmuneRandomFactor&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"HediffCompProperties_TendDuration"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;baseTendDurationHours&gt;</span>24<span class="xml-tag">&lt;/baseTendDurationHours&gt;</span>
+      <span class="xml-tag">&lt;severityPerDayTended&gt;</span>-0.4<span class="xml-tag">&lt;/severityPerDayTended&gt;</span>
+      <span class="xml-tag">&lt;showTendQuality&gt;</span>true<span class="xml-tag">&lt;/showTendQuality&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>初期<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;becomeVisible&gt;</span>false<span class="xml-tag">&lt;/becomeVisible&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;minSeverity&gt;</span>0.333<span class="xml-tag">&lt;/minSeverity&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>蔓延<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;painOffset&gt;</span>0.1<span class="xml-tag">&lt;/painOffset&gt;</span>
+      <span class="xml-tag">&lt;capMods&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;capacity&gt;</span>Manipulation<span class="xml-tag">&lt;/capacity&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>-0.1<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capMods&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;minSeverity&gt;</span>0.667<span class="xml-tag">&lt;/minSeverity&gt;</span>
+      <span class="xml-tag">&lt;label&gt;</span>敗血<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;lifeThreatening&gt;</span>true<span class="xml-tag">&lt;/lifeThreatening&gt;</span>
+      <span class="xml-tag">&lt;painOffset&gt;</span>0.25<span class="xml-tag">&lt;/painOffset&gt;</span>
+      <span class="xml-tag">&lt;capMods&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;capacity&gt;</span>Consciousness<span class="xml-tag">&lt;/capacity&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>-0.3<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capMods&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/HediffDef&gt;</span></pre>
+
+    <h3>範例 B：自訂「持續性增益藥效」（正面、會自然消退）</h3>
+
+    <pre><span class="xml-tag">&lt;HediffDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_NaniteBoost<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>奈米強化<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;hediffClass&gt;</span>HediffWithComps<span class="xml-tag">&lt;/hediffClass&gt;</span>
+  <span class="xml-tag">&lt;isBad&gt;</span>false<span class="xml-tag">&lt;/isBad&gt;</span>
+  <span class="xml-tag">&lt;maxSeverity&gt;</span>1.0<span class="xml-tag">&lt;/maxSeverity&gt;</span>
+  <span class="xml-tag">&lt;initialSeverity&gt;</span>1.0<span class="xml-tag">&lt;/initialSeverity&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="cm">&lt;!-- 每天衰退；歸零自動移除 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"HediffCompProperties_SeverityPerDay"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;severityPerDay&gt;</span>-0.5<span class="xml-tag">&lt;/severityPerDay&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;statOffsets&gt;</span>
+        <span class="xml-tag">&lt;WorkSpeedGlobal&gt;</span>0.15<span class="xml-tag">&lt;/WorkSpeedGlobal&gt;</span>
+      <span class="xml-tag">&lt;/statOffsets&gt;</span>
+      <span class="xml-tag">&lt;capMods&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;capacity&gt;</span>Moving<span class="xml-tag">&lt;/capacity&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>0.15<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capMods&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/HediffDef&gt;</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>severityPerDay 為負且無 stage 門檻時的歸零行為</strong><code>HediffComp_SeverityPerDay</code> 把 severity 降到 0 後，hediff 並不會自動消失，除非你另外掛 <code>HediffCompProperties_Disappears</code>，或 hediffClass 本身在 severity≤0 時自我移除。增益藥效最穩的做法是搭配 <code>Disappears</code> 用真實時間倒數，或在 §3 的自訂 comp 裡於 severity≤0 時呼叫 <code>pawn.health.RemoveHediff(parent)</code>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3 HediffComp 體系
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 HediffComp 體系</div>
+
+    <p>HediffComp 是把<strong>行為</strong>掛到 hediff 上的元件系統，和 ThingComp 的設計如出一轍：每個 comp 由一對類別組成——<code>Verse.HediffCompProperties</code>（XML 資料）+ <code>Verse.HediffComp</code>（C# 邏輯）。XML 中 <code>&lt;comps&gt;</code> 每個 <code>&lt;li Class="..."&gt;</code> 指向一個 properties 類，引擎在建立 hediff 時依此實例化對應的 comp，並把 properties 指派到 <code>comp.props</code>。前提：hediffClass 必須繼承 <code>HediffWithComps</code>，否則 comps 完全被忽略。</p>
+
+    <h3>常用內建 Comp</h3>
+
+    <table>
+      <thead>
+        <tr><th>Comp（properties）</th><th>作用</th><th>關鍵欄位</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>HediffComp_SeverityPerDay</code></td><td>每天線性增減 severity</td><td><code>severityPerDay</code></td></tr>
+        <tr><td><code>HediffComp_Immunizable</code></td><td>疾病模型：severity 與 immunity 賽跑</td><td><code>severityPerDaySick</code>、<code>immunityPerDaySick</code></td></tr>
+        <tr><td><code>HediffComp_TendDuration</code></td><td>治療有效時長與治療後 severity 變化</td><td><code>baseTendDurationHours</code>、<code>severityPerDayTended</code></td></tr>
+        <tr><td><code>HediffComp_Disappears</code></td><td>真實時間倒數後自我移除</td><td><code>disappearsAfterTicks</code></td></tr>
+        <tr><td><code>HediffComp_GetsPermanent</code></td><td>傷口痊癒後可能轉為永久傷疤</td><td><code>permanentLabel</code>、<code>becomePermanentChanceFactor</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>HediffComp 生命週期掛勾</h3>
+
+    <p>覆寫這些虛擬方法就能介入 hediff 的一生。最常用的是 <code>CompPostTick</code>（每 tick，注意效能）與 <code>CompExposeData</code>（存讀檔）。</p>
+
+    <ul>
+      <li><code>CompPostMake()</code>：comp 建立後初始化（一次）。</li>
+      <li><code>CompPostTick(ref float severityAdjustment)</code>：每 tick 呼叫；<strong>不要直接改 parent.Severity</strong>，而是把這 tick 想增減的量累加到 <code>severityAdjustment</code>，引擎統一結算（避免多 comp 互踩，見 §8）。</li>
+      <li><code>CompTended(float quality, float maxQuality, int batchPosition)</code>：被治療時呼叫，<code>quality</code> 是 0~1 治療品質。</li>
+      <li><code>CompPostInjuryHeal(float amount)</code>：關聯傷口痊癒一定量時。</li>
+      <li><code>CompPostMerged()</code> / <code>CompShouldRemove</code>：合併同類 hediff、是否該移除。</li>
+      <li><code>CompExposeData()</code>：用 <code>Scribe_Values.Look</code> 等存讀自訂欄位。</li>
+      <li><code>CompDebugString()</code>：在 Dev mode 的 hediff inspect 顯示除錯字串。</li>
+    </ul>
+
+    <h3>實作：自訂 HediffComp（依環境溫度動態增減 severity）</h3>
+
+    <p>下面這個 comp 模擬「鏽蝕感染在寒冷環境惡化較慢、炎熱環境惡化較快」，並在被治療時記錄品質、severity 歸零自我移除，所有自訂狀態都正確存檔。</p>
+
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="cm">// 1) Properties：對應 XML &lt;li Class="MyMod.HediffCompProperties_TempReactive"&gt;</span>
+<span class="kw">public class</span> <span class="ty">HediffCompProperties_TempReactive</span> : <span class="ty">HediffCompProperties</span>
+{
+    <span class="kw">public float</span> baseSeverityPerDay = <span class="nu">0.1f</span>;
+    <span class="kw">public float</span> hotMultiplier      = <span class="nu">2f</span>;   <span class="cm">// 30°C 以上加速</span>
+    <span class="kw">public float</span> coldMultiplier     = <span class="nu">0.5f</span>; <span class="cm">// 0°C 以下減速</span>
+
+    <span class="kw">public</span> <span class="nm">HediffCompProperties_TempReactive</span>()
+    {
+        compClass = <span class="kw">typeof</span>(<span class="ty">HediffComp_TempReactive</span>);
+    }
+}
+
+<span class="cm">// 2) Comp：實際每 tick 邏輯</span>
+<span class="kw">public class</span> <span class="ty">HediffComp_TempReactive</span> : <span class="ty">HediffComp</span>
+{
+    <span class="kw">private float</span> lastTendQuality = <span class="nu">-1f</span>; <span class="cm">// 需要存檔的自訂狀態</span>
+
+    <span class="cm">// 強型別存取 props，省去到處轉型</span>
+    <span class="kw">public</span> <span class="ty">HediffCompProperties_TempReactive</span> Props
+        =&gt; (<span class="ty">HediffCompProperties_TempReactive</span>)props;
+
+    <span class="at">public override void</span> <span class="nm">CompPostTick</span>(<span class="kw">ref float</span> severityAdjustment)
+    {
+        <span class="cm">// 每天才需要算一次，這裡用每 200 tick 折算成「每天份額」</span>
+        <span class="kw">if</span> (!Pawn.IsHashIntervalTick(<span class="nu">200</span>)) <span class="kw">return</span>;
+
+        <span class="kw">float</span> temp = Pawn.AmbientTemperature;
+        <span class="kw">float</span> mult = <span class="nu">1f</span>;
+        <span class="kw">if</span> (temp &gt; <span class="nu">30f</span>) mult = Props.hotMultiplier;
+        <span class="kw">else if</span> (temp &lt; <span class="nu">0f</span>) mult = Props.coldMultiplier;
+
+        <span class="cm">// 200 tick = 200/60000 天；把每日量折算到此 tick 區間</span>
+        <span class="kw">float</span> perTick = Props.baseSeverityPerDay * mult * (<span class="nu">200f</span> / <span class="nu">60000f</span>);
+
+        <span class="cm">// 不直接改 Severity，累加到 out 參數讓引擎結算</span>
+        severityAdjustment += perTick;
+
+        <span class="cm">// severity 歸零 → 自我移除（增益/可痊癒類常見）</span>
+        <span class="kw">if</span> (parent.Severity + perTick &lt;= <span class="nu">0f</span>)
+            Pawn.health.RemoveHediff(parent);
+    }
+
+    <span class="at">public override void</span> <span class="nm">CompTended</span>(<span class="kw">float</span> quality, <span class="kw">float</span> maxQuality, <span class="kw">int</span> batchPosition = <span class="nu">0</span>)
+    {
+        lastTendQuality = quality;
+        <span class="cm">// 高品質治療立刻壓低嚴重度</span>
+        parent.Severity -= quality * <span class="nu">0.1f</span>;
+    }
+
+    <span class="at">public override void</span> <span class="nm">CompExposeData</span>()
+    {
+        <span class="ty">Scribe_Values</span>.Look(<span class="kw">ref</span> lastTendQuality, <span class="st">"lastTendQuality"</span>, <span class="nu">-1f</span>);
+    }
+
+    <span class="at">public override string</span> <span class="nm">CompDebugString</span>()
+        =&gt; <span class="st">$"tempReactive: lastTendQuality={lastTendQuality:F2}"</span>;
+}</pre>
+
+    <p>對應 XML 掛載：</p>
+
+    <pre><span class="xml-tag">&lt;comps&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyMod.HediffCompProperties_TempReactive"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;baseSeverityPerDay&gt;</span>0.1<span class="xml-tag">&lt;/baseSeverityPerDay&gt;</span>
+    <span class="xml-tag">&lt;hotMultiplier&gt;</span>2<span class="xml-tag">&lt;/hotMultiplier&gt;</span>
+    <span class="xml-tag">&lt;coldMultiplier&gt;</span>0.5<span class="xml-tag">&lt;/coldMultiplier&gt;</span>
+  <span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/comps&gt;</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>CompPostTick 是熱路徑</strong>每個 hediff 的每個 comp 每 tick 都會被呼叫一次。殖民地有上百個 pawn、每人多個 hediff 時，這是巨大的呼叫量。務必用 <code>Pawn.IsHashIntervalTick(N)</code> 把昂貴計算節流到每 N tick，並用該區間折算每日量；切勿在 PostTick 裡做 LINQ、字串拼接或 def 查找。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4 加掛/移除 Hediff 的 C# API
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 加掛 / 移除 Hediff 的 C# API</div>
+
+    <p>絕大多數 mod 不會手刻 <code>new Hediff()</code>，而是走工廠：<code>Verse.HediffMaker.MakeHediff(HediffDef, Pawn, BodyPartRecord)</code> 建立物件，再交給 <code>pawn.health.AddHediff</code> 掛上。AddHediff 會處理合併（同 def 同部位的可疊加 hediff）、觸發 <code>PostAdd</code>、刷新 capacity 快取等，是唯一正確入口。</p>
+
+    <h3>加掛：全身 vs 指定部位</h3>
+
+    <pre><span class="cm">// (a) 加一個全身性 hediff（Part 留 null）</span>
+<span class="ty">Hediff</span> boost = <span class="ty">HediffMaker</span>.MakeHediff(MyDefOf.MyMod_NaniteBoost, pawn);
+boost.Severity = <span class="nu">1f</span>;
+pawn.health.AddHediff(boost);
+
+<span class="cm">// (b) 對特定 BodyPartRecord 下藥——先從身體樹找出該部位</span>
+<span class="ty">BodyPartRecord</span> leftLeg = pawn.RaceProps.body
+    .GetPartsWithDef(<span class="ty">BodyPartDefOf</span>.Leg)
+    .FirstOrDefault();
+
+<span class="kw">if</span> (leftLeg != <span class="kw">null</span>)
+{
+    <span class="ty">Hediff</span> infection = <span class="ty">HediffMaker</span>.MakeHediff(
+        MyDefOf.MyMod_RustInfection, pawn, leftLeg);
+    pawn.health.AddHediff(infection);
+}
+
+<span class="cm">// (c) 1.5 的 AddHediff 也接受 (HediffDef, BodyPartRecord) 重載，</span>
+<span class="cm">//     內部自動 MakeHediff，適合不需先設 severity 的情況</span>
+pawn.health.AddHediff(MyDefOf.MyMod_RustInfection, leftLeg);</pre>
+
+    <h3>查詢：是否已有某 hediff</h3>
+
+    <pre><span class="cm">// 取第一個指定 def 的 hediff（沒有則回 null）</span>
+<span class="ty">Hediff</span> existing = pawn.health.hediffSet
+    .GetFirstHediffOfDef(MyDefOf.MyMod_NaniteBoost);
+
+<span class="cm">// 只想知道有沒有</span>
+<span class="kw">bool</span> hasIt = pawn.health.hediffSet
+    .HasHediff(MyDefOf.MyMod_RustInfection);
+
+<span class="cm">// 取得泛型化的特定 Hediff 子類（如自訂 Hediff_MyDisease）</span>
+<span class="kw">var</span> disease = pawn.health.hediffSet
+    .GetFirstHediffOfDef(MyDefOf.MyDisease) <span class="kw">as</span> <span class="ty">Hediff_MyDisease</span>;
+
+<span class="cm">// 「加一層或疊加」的慣用法：有就加 severity，沒有就建立</span>
+<span class="kw">if</span> (existing != <span class="kw">null</span>)
+    existing.Severity += <span class="nu">0.5f</span>;
+<span class="kw">else</span>
+    pawn.health.AddHediff(MyDefOf.MyMod_NaniteBoost);</pre>
+
+    <h3>移除</h3>
+
+    <pre><span class="cm">// 直接移除一個 hediff 物件</span>
+<span class="ty">Hediff</span> h = pawn.health.hediffSet.GetFirstHediffOfDef(MyDefOf.MyMod_NaniteBoost);
+<span class="kw">if</span> (h != <span class="kw">null</span>)
+    pawn.health.RemoveHediff(h);
+
+<span class="cm">// 較柔的做法：把 severity 降到 0 讓內建機制自然清理（若有 Disappears/自移除）</span></pre>
+
+    <table>
+      <thead>
+        <tr><th>API</th><th>命名空間 / 型別</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>HediffMaker.MakeHediff</code></td><td><code>Verse.HediffMaker</code></td><td>工廠建立 hediff 實例（含 comp）</td></tr>
+        <tr><td><code>AddHediff</code></td><td><code>Verse.Pawn_HealthTracker</code></td><td>掛上 hediff，處理合併與快取刷新</td></tr>
+        <tr><td><code>RemoveHediff</code></td><td><code>Verse.Pawn_HealthTracker</code></td><td>移除並觸發 PostRemoved</td></tr>
+        <tr><td><code>GetFirstHediffOfDef</code></td><td><code>Verse.HediffSet</code></td><td>查指定 def 的第一個 hediff</td></tr>
+        <tr><td><code>HasHediff</code></td><td><code>Verse.HediffSet</code></td><td>布林判斷是否存在</td></tr>
+        <tr><td><code>GetPartsWithDef</code></td><td><code>Verse.BodyDef</code></td><td>找出身體樹中所有符合 BodyPartDef 的部位</td></tr>
+      </tbody>
+    </table>
+
+    <h3>傷害如何變成 injury hediff</h3>
+
+    <p>你很少自己掛 <code>Hediff_Injury</code>——它由戰鬥管線產生。流程是 <code>Thing.TakeDamage(DamageInfo)</code> → <code>DamageDef.workerClass</code> 對應的 <code>Verse.DamageWorker</code>（如 <code>DamageWorker_AddInjury</code>）→ 選定命中的 <code>BodyPartRecord</code> → 建立 <code>Hediff_Injury</code> 並 <code>AddHediff</code>。詳見 <a href="15-combat-damage.html">第 15 章 戰鬥傷害</a>。若你只是想「直接讓某部位受傷」而不走整條戰鬥管線，可手動建構 <code>DamageInfo</code> 再呼叫 <code>pawn.TakeDamage</code>：</p>
+
+    <pre><span class="ty">var</span> dinfo = <span class="kw">new</span> <span class="ty">DamageInfo</span>(
+    <span class="ty">DamageDefOf</span>.Cut,            <span class="cm">// 傷害類型</span>
+    amount: <span class="nu">12f</span>,
+    armorPenetration: <span class="nu">0.2f</span>,
+    angle: <span class="nu">-1f</span>,
+    instigator: attacker,
+    hitPart: leftLeg);            <span class="cm">// 指定命中部位（null 則隨機）</span>
+pawn.TakeDamage(dinfo);</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5 免疫與疾病進程
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 免疫與疾病進程</div>
+
+    <p>RimWorld 疾病的精髓是一場<strong>賽跑</strong>：疾病的 <code>severity</code> 一路爬向致死，而 pawn 的 <code>immunity</code>（免疫度）也一路爬向 1.0；誰先到終點誰贏。severity 先達 <code>lethalSeverity</code>（或 stage 的 <code>deathMtbDays</code> 命中）→ 死亡；immunity 先達 1.0 → severity 開始衰退、痊癒。這兩條曲線分別由 <code>HediffComp_Immunizable</code> 與 <code>Verse.ImmunityHandler</code> 驅動。</p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>severity 線（病情）</h3>
+        <p>由 <code>HediffComp_Immunizable</code> 的 <code>severityPerDaySick</code> 推升。當 immunity ≥ severity 時引擎改用 <code>severityPerDayImmune</code>（通常為負）讓病情衰退。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>immunity 線（抵抗力）</h3>
+        <p>由 <code>ImmunityHandler</code> 維護，每個疾病一筆 <code>ImmunityRecord</code>。生病期間用 <code>immunityPerDaySick</code> 累積；治療品質越高，累積越快。</p>
+      </div>
+    </div>
+
+    <h3>tend quality 如何介入</h3>
+
+    <p>治療（Tend）不直接「降低 severity」，而是<strong>同時</strong>：(1) 由 <code>HediffComp_TendDuration</code> 在一段時間內提供 severity 修正；(2) 提升免疫累積效率。治療品質 <code>quality</code> 受醫者 <code>MedicalTendQuality</code> stat、所用藥物的 <code>MedicalQualityMax</code>、床位的醫療加成共同決定。對致命疾病，「先用好藥好醫者把免疫拉到領先」往往比硬扛更關鍵。</p>
+
+    <pre><span class="cm">// 程式化查詢某疾病的免疫進度（0~1）</span>
+<span class="kw">float</span> imm = pawn.health.immunity.GetImmunity(MyDefOf.MyDisease);
+
+<span class="cm">// 比較免疫與病情，判斷這場仗誰領先</span>
+<span class="ty">Hediff</span> dis = pawn.health.hediffSet.GetFirstHediffOfDef(MyDefOf.MyDisease);
+<span class="kw">if</span> (dis != <span class="kw">null</span>)
+{
+    <span class="kw">bool</span> winning = imm &gt;= dis.Severity;
+    <span class="cm">// winning == true → 免疫領先，病情即將反轉</span>
+}</pre>
+
+    <h3>拆解：瘟疫（Plague）</h3>
+
+    <p>內建 <code>HediffDef Plague</code> 是理解此機制的最佳範本。其 <code>HediffComp_Immunizable</code> 設定大致為：<code>severityPerDaySick</code> 正值（病情自然惡化）、<code>immunityPerDaySick</code> 正值（生病就累積免疫）、<code>severityPerDayImmune</code> 負值（免疫超車後病情消退）。stages 分「未察覺 / 輕微 / 嚴重 / 極度（lifeThreatening + deathMtbDays）」。玩家體感的「能不能扛過瘟疫」本質上就是「免疫曲線能否在 severity 撞線前超車」——而藥物與醫者品質就是調這條曲線斜率的旋鈕。</p>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>意義</th><th>調高的後果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>severityPerDaySick</code></td><td>生病期間病情爬升速率</td><td>更兇、更難扛</td></tr>
+        <tr><td><code>immunityPerDaySick</code></td><td>生病期間免疫累積速率</td><td>更容易自癒</td></tr>
+        <tr><td><code>severityPerDayImmune</code></td><td>免疫領先後病情衰退速率</td><td>痊癒更快</td></tr>
+        <tr><td><code>immunityPerDayNotSick</code></td><td>潛伏期免疫累積（通常 0 或負）</td><td>影響「染病前是否已有抗體」</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>免疫上限與獲得方式</strong>免疫最終由 <code>ImmunityHandler</code> 統一管理，且能透過「曾患病痊癒」保留部分抗體。若做新疾病，務必讓 immunity 與 severity 的斜率相對可控——immunity 太快疾病形同無害，太慢則必死，平衡點要靠實測（用 Dev mode 直接設 severity 觀察）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6 手術即配方
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 手術即配方（Surgery = RecipeDef）</div>
+
+    <p>RimWorld 沒有獨立的「手術系統」——手術就是一條<strong>掛在身體部位上的 <code>RimWorld.RecipeDef</code></strong>。它和工作台配方共用同一套 RecipeDef 結構，差別只在：<code>workerClass</code> 是 <code>Recipe_Surgery</code> 的子類、<code>targetsBodyParts</code> 為 true、並透過 <code>recipeUsers</code> 或 <code>ThingDef.recipes</code> 綁到「會接受此手術的 pawn 種類」。手術成功與否、失敗後果，都由 RecipeDef 欄位與 worker 決定。</p>
+
+    <h3>手術相關 RecipeDef 欄位</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>workerClass</code></td><td><code>Recipe_Surgery</code> 子類，如 <code>Recipe_InstallArtificialBodyPart</code>、<code>Recipe_RemoveHediff</code>、<code>Recipe_AdministerIngestible</code></td></tr>
+        <tr><td><code>recipeUsers</code></td><td>哪些 ThingDef（種族）能執行此手術，如 <code>Human</code></td></tr>
+        <tr><td><code>appliedOnFixedBodyParts</code></td><td>此手術作用於哪些 <code>BodyPartDef</code>（如 <code>Leg</code>）</td></tr>
+        <tr><td><code>addsHediff</code></td><td>手術成功後在目標部位掛上的 hediff（義肢的 hediff）</td></tr>
+        <tr><td><code>surgerySuccessChanceFactor</code></td><td>成功率乘數（1 = 標準，&gt;1 較易成功）</td></tr>
+        <tr><td><code>deathOnFailedSurgeryChance</code></td><td>手術失敗時直接死亡的機率</td></tr>
+        <tr><td><code>ingredients</code> / <code>fixedIngredientFilter</code></td><td>所需材料（義體本體 + 藥物）</td></tr>
+        <tr><td><code>skillRequirements</code></td><td>執行者最低技能（通常 <code>Medicine</code>）</td></tr>
+        <tr><td><code>anesthetize</code></td><td>是否需要麻醉（多數侵入性手術為 true）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>範例：安裝自訂義肢的完整 XML</h3>
+
+    <p>三件套：(1) 義肢 hediff（裝上後給予 capMods）、(2) 義體 ThingDef（可被生產 / 交易的物品）、(3) 手術 RecipeDef（把物品變成身上的 hediff）。</p>
+
+    <pre><span class="cm">&lt;!-- (1) 義肢效果 hediff：裝在 Leg 上，移動力 +0.25 --&gt;</span>
+<span class="xml-tag">&lt;HediffDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_HydraulicLeg<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>液壓義腿<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;hediffClass&gt;</span>Hediff_Implant<span class="xml-tag">&lt;/hediffClass&gt;</span>
+  <span class="xml-tag">&lt;countsAsAddedPartOrImplant&gt;</span>true<span class="xml-tag">&lt;/countsAsAddedPartOrImplant&gt;</span>
+  <span class="xml-tag">&lt;isBad&gt;</span>false<span class="xml-tag">&lt;/isBad&gt;</span>
+  <span class="xml-tag">&lt;spawnThingOnRemoved&gt;</span>MyMod_HydraulicLegThing<span class="xml-tag">&lt;/spawnThingOnRemoved&gt;</span>
+  <span class="xml-tag">&lt;addedPartProps&gt;</span>
+    <span class="xml-tag">&lt;solid&gt;</span>true<span class="xml-tag">&lt;/solid&gt;</span>
+    <span class="xml-tag">&lt;partEfficiency&gt;</span>1.25<span class="xml-tag">&lt;/partEfficiency&gt;</span>
+  <span class="xml-tag">&lt;/addedPartProps&gt;</span>
+  <span class="xml-tag">&lt;stages&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;capMods&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>
+          <span class="xml-tag">&lt;capacity&gt;</span>Moving<span class="xml-tag">&lt;/capacity&gt;</span>
+          <span class="xml-tag">&lt;offset&gt;</span>0.25<span class="xml-tag">&lt;/offset&gt;</span>
+        <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/capMods&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/stages&gt;</span>
+<span class="xml-tag">&lt;/HediffDef&gt;</span>
+
+<span class="cm">&lt;!-- (2) 義體物品本身（可生產 / 安裝 / 移除後掉回） --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BodyPartArtificialBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_HydraulicLegThing<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>液壓義腿<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;techHediffsTags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Advanced<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/techHediffsTags&gt;</span>
+  <span class="xml-tag">&lt;statBases&gt;</span>
+    <span class="xml-tag">&lt;MarketValue&gt;</span>1200<span class="xml-tag">&lt;/MarketValue&gt;</span>
+    <span class="xml-tag">&lt;Mass&gt;</span>5<span class="xml-tag">&lt;/Mass&gt;</span>
+  <span class="xml-tag">&lt;/statBases&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="cm">&lt;!-- (3) 安裝手術 RecipeDef --&gt;</span>
+<span class="xml-tag">&lt;RecipeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_InstallHydraulicLeg<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>安裝液壓義腿<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;workerClass&gt;</span>Recipe_InstallArtificialBodyPart<span class="xml-tag">&lt;/workerClass&gt;</span>
+  <span class="xml-tag">&lt;targetsBodyParts&gt;</span>true<span class="xml-tag">&lt;/targetsBodyParts&gt;</span>
+  <span class="xml-tag">&lt;anesthetize&gt;</span>true<span class="xml-tag">&lt;/anesthetize&gt;</span>
+  <span class="xml-tag">&lt;surgerySuccessChanceFactor&gt;</span>1.0<span class="xml-tag">&lt;/surgerySuccessChanceFactor&gt;</span>
+  <span class="xml-tag">&lt;deathOnFailedSurgeryChance&gt;</span>0.02<span class="xml-tag">&lt;/deathOnFailedSurgeryChance&gt;</span>
+  <span class="xml-tag">&lt;addsHediff&gt;</span>MyMod_HydraulicLeg<span class="xml-tag">&lt;/addsHediff&gt;</span>
+  <span class="xml-tag">&lt;skillRequirements&gt;</span>
+    <span class="xml-tag">&lt;Medicine&gt;</span>5<span class="xml-tag">&lt;/Medicine&gt;</span>
+  <span class="xml-tag">&lt;/skillRequirements&gt;</span>
+  <span class="xml-tag">&lt;workAmount&gt;</span>3000<span class="xml-tag">&lt;/workAmount&gt;</span>
+  <span class="xml-tag">&lt;ingredients&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;filter&gt;</span>
+        <span class="xml-tag">&lt;thingDefs&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>MyMod_HydraulicLegThing<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/thingDefs&gt;</span>
+      <span class="xml-tag">&lt;/filter&gt;</span>
+      <span class="xml-tag">&lt;count&gt;</span>1<span class="xml-tag">&lt;/count&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;filter&gt;</span>
+        <span class="xml-tag">&lt;categories&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Medicine<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;/filter&gt;</span>
+      <span class="xml-tag">&lt;count&gt;</span>2<span class="xml-tag">&lt;/count&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/ingredients&gt;</span>
+  <span class="xml-tag">&lt;appliedOnFixedBodyParts&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Leg<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/appliedOnFixedBodyParts&gt;</span>
+  <span class="xml-tag">&lt;recipeUsers&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Human<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/recipeUsers&gt;</span>
+<span class="xml-tag">&lt;/RecipeDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>Recipe_InstallArtificialBodyPart 自動做了什麼</strong>它會在安裝前先<strong>移除目標部位上原有的傷病與舊義體</strong>（包含被它取代的整個子樹），再掛上 <code>addsHediff</code>。所以裝義腿會自動清掉那條腿上的所有傷口——你不必手動處理。若要做「不取代而是附加」的植入物（如義眼增益），請改用 <code>Hediff_Implant</code> + 對應 worker，並注意 <code>countsAsAddedPartOrImplant</code> 的語意。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>recipeUsers vs ThingDef.recipes</strong>把手術掛到種族有兩種路徑：在 RecipeDef 寫 <code>recipeUsers</code>（推薦，集中管理），或反過來在種族 ThingDef 的 <code>&lt;recipes&gt;</code> 列出 recipe defName。兩者擇一即可，<strong>不要兩邊都寫</strong>否則重複。要替既有種族（如香草 Human）追加手術，用 <code>recipeUsers</code> 或 XML PatchOperation 較乾淨。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7 義體與身體部位置換
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 義體與身體部位置換</div>
+
+    <p>義體系統建立在 §1 的身體樹之上。當一個部位「缺失」（被打掉、被手術移除），引擎在 <code>hediffSet</code> 為它掛一個 <code>Hediff_MissingPart</code>；裝上義體則是掛一個 <code>countsAsAddedPartOrImplant=true</code> 的 hediff（如 <code>Hediff_AddedPart</code> / <code>Hediff_Implant</code>），引擎據此把該部位視為「已被人工部位佔據」，並用 <code>addedPartProps.partEfficiency</code> 取代原生效率。</p>
+
+    <h3>查詢身體部位狀態的 API</h3>
+
+    <pre><span class="cm">// 所有「還在、沒缺失」的部位</span>
+<span class="ty">IEnumerable&lt;BodyPartRecord&gt;</span> intact =
+    pawn.health.hediffSet.GetNotMissingParts();
+
+<span class="cm">// 只要某種 tag（如可裝義眼的部位）</span>
+<span class="kw">var</span> sightParts = pawn.health.hediffSet
+    .GetNotMissingParts(tag: <span class="ty">BodyPartTagDefOf</span>.SightSource);
+
+<span class="cm">// 某部位是否已被人工部位佔據</span>
+<span class="kw">bool</span> hasArtificial = pawn.health.hediffSet
+    .HasDirectlyAddedPartFor(leftLeg);
+
+<span class="cm">// 某部位當前的綜合效率（含義體加成 / 傷病扣減）</span>
+<span class="kw">float</span> eff = pawn.health.hediffSet
+    .GetPartHealth(leftLeg);</pre>
+
+    <h3>capMods 正向加成的「超人義肢」</h3>
+
+    <p>讓義肢比原生更強有兩條互補管道：</p>
+
+    <ol class="steps">
+      <li><strong>partEfficiency &gt; 1</strong>（在 hediff 的 <code>addedPartProps</code>）：直接提升該部位本身的效率，連帶推升依賴此部位的 capacity。例如 <code>partEfficiency 1.25</code> 的義腿讓 Moving 提升。</li>
+      <li><strong>stage capMods offset</strong>：對特定 capacity 額外加值，可疊在 partEfficiency 之上做「精準加成」。</li>
+    </ol>
+
+    <h3>bodyPartTags 與採用者</h3>
+
+    <p><code>BodyPartTagDef</code>（如 <code>ManipulationLimbCore</code>、<code>SightSource</code>、<code>BreathingSource</code>、<code>MovingLimbCore</code>）是 capacity 計算「哪些部位算數」的索引。當你做全新部位或全新種族時，給部位掛上正確的 tag，capacity worker 才知道要把它納入運算。例如某 capacity 的 worker 會 <code>GetNotMissingParts(tag: ...)</code> 找出貢獻部位再加總效率。</p>
+
+    <div class="callout callout-info">
+      <strong>spawnThingOnRemoved 的雙向性</strong>義體 hediff 上的 <code>spawnThingOnRemoved</code> 讓「手術移除義體時掉回物品」成立，使義體可回收再利用。而 ThingDef 的 <code>techHediffsTags</code> 則控制此物品能透過哪些手術安裝（標籤需與 recipe 對應）。兩者搭配才構成完整的「安裝 ⇄ 移除」循環。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8 陷阱與除錯
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 陷阱與除錯</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>同 tick 多 comp 競寫 severity</h3>
+        <p>多個 comp 在 <code>CompPostTick</code> 直接寫 <code>parent.Severity</code> 會互相覆蓋、結果不確定。正確做法是<strong>全部寫進 <code>ref severityAdjustment</code></strong>，由引擎在所有 comp 跑完後一次性套用，順序無關、可累加。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>spawn 前 AddHediff 的順序問題</h3>
+        <p>在 pawn 還沒 <code>Spawned</code>（如 PawnGenerator 中途）時掛 hediff，某些依賴 map / position 的 comp（如讀 <code>AmbientTemperature</code>）會拿到無效值或丟例外。把這類加掛延後到 <code>pawn.SpawnSetup</code> 之後，或在 comp 內先檢查 <code>Pawn.Spawned</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>capMods vs statOffsets 用錯層級</h3>
+        <p><code>capMods</code> 改的是 <strong>PawnCapacityDef</strong>（Moving/Manipulation…，會層層連動）；<code>statOffsets</code> 改的是 <strong>StatDef</strong>（WorkSpeedGlobal/MoveSpeed…，最終派生值）。想影響「能不能動」用 capMods；想直接調某個 stat 數字用 statOffsets。混用會得到非預期的疊乘。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>用 Dev mode「Add Hediff」測</h3>
+        <p>開發者模式 → 工具列「Add Hediff」可對任意 pawn 任意部位掛任意 hediff，並能即時拉 severity 觀察 stage 切換與 capacity 變化。這是驗證 §2 stage 門檻與 §5 免疫曲線最快的手段，免重啟。</p>
+      </div>
+    </div>
+
+    <h3>capMods 三寫法的數學差異（速記）</h3>
+
+    <table>
+      <thead>
+        <tr><th>寫法</th><th>結算位置</th><th>典型用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>offset</code></td><td>加總階段</td><td>輕度增減（拖慢、加快）</td></tr>
+        <tr><td><code>postFactor</code></td><td>offset 之後乘算</td><td>整體縮放（疲勞讓所有動作打折）</td></tr>
+        <tr><td><code>setMax</code></td><td>封頂</td><td>硬上限（癱瘓 setMax=0，無論其他加成都歸零）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>除錯檢查清單</h3>
+
+    <ol class="steps">
+      <li>hediff 沒效果？先確認 <code>hediffClass</code> 是 <code>HediffWithComps</code>（或其子類），否則 <code>&lt;comps&gt;</code> 被無視。</li>
+      <li>stage 沒切換？檢查 <code>minSeverity</code> 是否升冪排列；引擎取「符合條件的最後一個」stage。</li>
+      <li>capMods 無感？確認當前 severity 真的落在含該 capMods 的 stage（用 Dev mode 拉 severity 驗證）。</li>
+      <li>義肢裝不上？檢查 recipe 的 <code>appliedOnFixedBodyParts</code> 與目標部位 BodyPartDef 是否一致，以及 <code>recipeUsers</code> 是否含該種族。</li>
+      <li>存檔後自訂狀態消失？comp 一定要覆寫 <code>CompExposeData</code> 並用 <code>Scribe_*</code> 存欄位。</li>
+      <li>PostTick 造成卡頓？用 <code>IsHashIntervalTick</code> 節流，並把 def 查找移到 <code>CompPostMake</code> 快取。</li>
+    </ol>
+
+    <div class="callout callout-danger">
+      <strong>不要在 CompPostTick 直接呼叫 RemoveHediff 而不收尾</strong>在遍歷 hediff 的 tick 迴圈中移除自己可能擾動列表。若要自移除，確認透過 <code>Pawn.health.RemoveHediff(parent)</code>（它內部安全處理），且該 tick 不再對 parent 做後續存取。更穩的替代是設 <code>parent.Severity = 0</code> 並依賴 <code>HediffComp_Disappears</code> 或 hediffClass 的自然清理。
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>務實心法</strong>能用 XML（HediffDef + stages + 內建 comp）表達的就別寫 C#；需要動態邏輯時優先寫 <code>HediffComp</code> 而非 Harmony patch——comp 與引擎生命週期整合、存檔自動、相容性最佳。Harmony 留給「改既有 hediff/手術行為」這類無法靠新增 def 達成的情境。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 28 健康與醫療系統 · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

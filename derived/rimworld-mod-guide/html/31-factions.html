@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>派系與外交關係 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html" class="active">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>派系與外交關係</h1>
+  <p>FactionDef 定義「世界上有哪些勢力」，FactionManager 管理它們的好感、戰爭與互動。本章聚焦如何新增派系、操控外交，以及派系如何驅動突襲與貿易。</p>
+  <span class="badge">Chapter 31 · Factions &amp; Diplomacy</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1  概念分層
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 概念分層：Def（模板）vs 執行期實例</div>
+
+    <p>派系系統與其他 RimWorld 子系統一樣，遵循「<strong>Def 是模板、執行期物件是實例</strong>」的二分。釐清這條界線是寫派系 mod 的第一課，否則你會把「該寫進 XML 的常數」與「該在 C# 操控的狀態」搞混。</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>FactionDef（模板）</h3>
+        <p>由 XML 定義，全域唯一、唯讀。描述「世界上『可能』存在這樣一種勢力」：科技等級、組隊規則、起始好感範圍、圖示、配色頻譜。型別為 <code>RimWorld.FactionDef</code>，由 <code>DefDatabase&lt;FactionDef&gt;</code> 持有。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Faction（執行期實例）</h3>
+        <p>世界生成時依 FactionDef 實體化出來的具體勢力，型別 <code>RimWorld.Faction</code>。它有名字、領袖、配色、以及對其他每個 Faction 的關係。存於存檔，由 <code>Find.FactionManager</code> 管理。一個 FactionDef 可被實體化成 0、1 或多個 Faction。</p>
+      </div>
+    </div>
+
+    <p>關鍵概念是：<strong>玩家殖民地本身也是一個 Faction</strong>。透過 <code>Faction.OfPlayer</code> 取得（其 FactionDef 為 <code>PlayerColony</code>，<code>isPlayer=true</code>）。外交頁上每一條「你 vs 某派系」的好感，其實就是玩家 Faction 與對方 Faction 之間的一條 <code>FactionRelation</code>。</p>
+
+    <h3>派系的三種「壽命」分類</h3>
+    <table>
+      <thead>
+        <tr><th>類型</th><th>判定欄位 / API</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>永久派系</td>
+          <td><code>def.requiredCountAtGameStart &gt; 0</code></td>
+          <td>世界生成時必定生成至少 N 個。例如海盜聯盟（Pirate）、機械蟲（Insect，隱藏）。即使所有據點被毀，Faction 物件仍存在於 FactionManager。</td>
+        </tr>
+        <tr>
+          <td>可被消滅派系</td>
+          <td><code>def.canBeGroupSource</code>＋無 required 數量</td>
+          <td>失去所有 Settlement 後可被 <code>FactionManager.Remove</code> 清掉（或標記 <code>defeated</code>）。常見於可被玩家征服的小型部落。</td>
+        </tr>
+        <tr>
+          <td>隱藏派系（hidden）</td>
+          <td><code>def.hidden == true</code></td>
+          <td>不顯示在外交頁，玩家無法與之談判。用於機械蟲群、瘋狂/無主動物（<code>AnimalsRoamer</code> 等）、墜落機械。它們仍是合法的攻擊來源 Faction。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>為何動物需要 Faction？</strong>RimWorld 的傷害／敵我判定建立在 Faction 關係上。瘋狂動物被歸進一個隱藏的「無主動物」派系並與玩家設為敵對，戰鬥系統才知道牠們會主動攻擊。這也是 hidden faction 存在的主要理由——提供敵我語意，但不汙染外交介面。
+    </div>
+
+    <h3>常用入口 API 速覽</h3>
+    <table>
+      <thead>
+        <tr><th>API</th><th>回傳</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Faction.OfPlayer</code></td><td><code>Faction</code></td><td>玩家殖民地派系（最常用）。</td></tr>
+        <tr><td><code>Faction.OfMechanoids</code> / <code>OfInsects</code></td><td><code>Faction</code></td><td>內建隱藏派系的捷徑屬性。</td></tr>
+        <tr><td><code>Find.FactionManager.AllFactions</code></td><td><code>List&lt;Faction&gt;</code></td><td>所有派系（含玩家、含隱藏）。</td></tr>
+        <tr><td><code>Find.FactionManager.AllFactionsVisible</code></td><td><code>IEnumerable&lt;Faction&gt;</code></td><td>排除 hidden，外交相關邏輯用這個。</td></tr>
+        <tr><td><code>Find.FactionManager.RandomEnemyFaction()</code></td><td><code>Faction</code></td><td>挑一個敵對派系（突襲常用）。</td></tr>
+        <tr><td><code>Find.FactionManager.FirstFactionOfDef(def)</code></td><td><code>Faction</code></td><td>依 FactionDef 取第一個實例。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2  FactionDef 關鍵欄位
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 FactionDef 關鍵欄位與完整範例</div>
+
+    <p>定義位於 <code>RimWorld.FactionDef</code>（繼承 <code>Verse.Def</code>）。欄位很多，下表挑出與 mod 製作最相關者。建議用 dnSpy 打開 <code>FactionDef</code> 對照 XML 名稱與型別。</p>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>isPlayer</code></td><td><code>bool</code></td><td>是否為玩家派系。自訂派系一律 false（玩家派系只有內建 PlayerColony / PlayerTribe）。</td></tr>
+        <tr><td><code>permanentEnemy</code></td><td><code>bool</code></td><td>永遠敵對、不可談和。設 true 時 <code>startingGoodwill</code> 會被忽略，外交頁不顯示談判按鈕。</td></tr>
+        <tr><td><code>permanentEnemyToEveryoneExceptPlayer</code></td><td><code>bool</code></td><td>對所有人敵對，但仍可與玩家建立關係（用於「人人喊打但你能拉攏」的勢力）。</td></tr>
+        <tr><td><code>naturalColonyEnemy</code></td><td><code>bool</code></td><td>傾向與玩家敵對的「自然敵人」（海盜系常設）。影響起始關係偏向與某些事件選取。</td></tr>
+        <tr><td><code>categoryTag</code></td><td><code>string</code></td><td>分類標籤（如 <code>Pirate</code>、<code>Outlander</code>、<code>Tribe</code>），決定某些事件/任務的派系篩選。</td></tr>
+        <tr><td><code>pawnGroupMakers</code></td><td><code>List&lt;PawnGroupMaker&gt;</code></td><td>核心欄位：定義此派系如何組隊（突襲、貿易商、訪客）。詳見下方。</td></tr>
+        <tr><td><code>pawnSingleNameKindDef</code> / <code>basicMemberKind</code></td><td><code>PawnKindDef</code></td><td>派系領袖／基本成員的 PawnKind 模板（銜接第 11 章）。</td></tr>
+        <tr><td><code>apparelStuffFilter</code></td><td><code>ThingFilter</code></td><td>限制此派系成員可穿戴的材質（如部落只用皮革/木材）。</td></tr>
+        <tr><td><code>techLevel</code></td><td><code>TechLevel</code></td><td>科技等級（Neolithic / Medieval / Industrial / Spacer 等），影響裝備、貿易品、AI。</td></tr>
+        <tr><td><code>startingGoodwill</code></td><td><code>IntRange</code></td><td>世界生成時與玩家的起始好感隨機範圍（例 <code>-100~-80</code> 為敵對開局）。</td></tr>
+        <tr><td><code>canSiege</code> / <code>canStageAttacks</code></td><td><code>bool</code></td><td>是否能發動圍攻 / 能否作為主動攻擊來源。隱藏派系常 false。</td></tr>
+        <tr><td><code>settlementGenerationWeight</code></td><td><code>float</code></td><td>世界生成時撒據點的權重。0 代表不在世界地圖上有據點。</td></tr>
+        <tr><td><code>requiredCountAtGameStart</code></td><td><code>int</code></td><td>新世界至少生成幾個此派系的 Faction 實例。</td></tr>
+        <tr><td><code>maxCountAtGameStart</code></td><td><code>int</code></td><td>上限。required 與 max 之間取隨機。</td></tr>
+        <tr><td><code>factionIconPath</code></td><td><code>string</code></td><td>外交頁與世界地圖圖示（Textures 路徑，銜接第 8 章）。</td></tr>
+        <tr><td><code>colorSpectrum</code></td><td><code>List&lt;Color&gt;</code></td><td>派系配色頻譜；實例化時從此漸層挑一色，避免兩派系撞色。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>PawnGroupMaker：突襲與來訪組成的引擎</h3>
+    <p><code>RimWorld.PawnGroupMaker</code> 是「給定一筆點數預算（points），產出一組 Pawn」的規則。每個 <code>kindDef</code> 帶權重 <code>selectionWeight</code> 與成本（取自 <code>PawnKindDef.combatPower</code>）。突襲系統會反覆抽 kindDef、直到耗盡 points 預算。<code>kindCategory</code> 區分這套規則用於哪種場合：</p>
+
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3>Combat</h3>
+        <p>突襲、圍攻的戰鬥隊伍。被 <code>IncidentWorker_RaidEnemy</code> 取用。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Trader</h3>
+        <p>貿易商隊組成（商人＋護衛＋馱獸）。被商隊到訪事件取用。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>Peaceful / Settlement</h3>
+        <p>友好訪客、據點駐守人口。決定玩家攻打據點時遇到誰。</p>
+      </div>
+    </div>
+
+    <h3>完整範例：自訂中立貿易派系</h3>
+    <p>下面定義一個工業級、預設中立、會派貿易商隊、可被拉攏為盟友的「自由商會」。</p>
+
+<pre><span class="cm">&lt;!-- Defs/FactionDefs/Factions_FreeGuild.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;FactionDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"FactionBase"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_FreeGuild<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>自由商會<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>一群以貿易維生的中立商人聯盟，沒有固定意識形態，只認利潤。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;categoryTag&gt;</span>Outlander<span class="xml-tag">&lt;/categoryTag&gt;</span>
+    <span class="xml-tag">&lt;pawnSingleNamePrefix&gt;</span>商會<span class="xml-tag">&lt;/pawnSingleNamePrefix&gt;</span>
+    <span class="xml-tag">&lt;listOrderPriority&gt;</span>40<span class="xml-tag">&lt;/listOrderPriority&gt;</span>
+
+    <span class="cm">&lt;!-- 起始中立、可被拉攏，故 startingGoodwill 偏正 --&gt;</span>
+    <span class="xml-tag">&lt;startingGoodwill&gt;</span>
+      <span class="xml-tag">&lt;min&gt;</span>-10<span class="xml-tag">&lt;/min&gt;</span>
+      <span class="xml-tag">&lt;max&gt;</span>40<span class="xml-tag">&lt;/max&gt;</span>
+    <span class="xml-tag">&lt;/startingGoodwill&gt;</span>
+    <span class="xml-tag">&lt;mustStartOneEnemy&gt;</span>false<span class="xml-tag">&lt;/mustStartOneEnemy&gt;</span>
+    <span class="xml-tag">&lt;naturalColonyEnemy&gt;</span>false<span class="xml-tag">&lt;/naturalColonyEnemy&gt;</span>
+    <span class="xml-tag">&lt;permanentEnemy&gt;</span>false<span class="xml-tag">&lt;/permanentEnemy&gt;</span>
+
+    <span class="xml-tag">&lt;techLevel&gt;</span>Industrial<span class="xml-tag">&lt;/techLevel&gt;</span>
+    <span class="xml-tag">&lt;backstoryFilters&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;categories&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>Offworld<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/backstoryFilters&gt;</span>
+
+    <span class="cm">&lt;!-- 世界地圖會撒據點 --&gt;</span>
+    <span class="xml-tag">&lt;requiredCountAtGameStart&gt;</span>1<span class="xml-tag">&lt;/requiredCountAtGameStart&gt;</span>
+    <span class="xml-tag">&lt;maxCountAtGameStart&gt;</span>2<span class="xml-tag">&lt;/maxCountAtGameStart&gt;</span>
+    <span class="xml-tag">&lt;settlementGenerationWeight&gt;</span>1.0<span class="xml-tag">&lt;/settlementGenerationWeight&gt;</span>
+    <span class="xml-tag">&lt;canSiege&gt;</span>false<span class="xml-tag">&lt;/canSiege&gt;</span>
+    <span class="xml-tag">&lt;canStageAttacks&gt;</span>true<span class="xml-tag">&lt;/canStageAttacks&gt;</span>
+    <span class="xml-tag">&lt;allowedArrivalTemperatureRange&gt;</span>-40~45<span class="xml-tag">&lt;/allowedArrivalTemperatureRange&gt;</span>
+
+    <span class="cm">&lt;!-- 圖示與配色 --&gt;</span>
+    <span class="xml-tag">&lt;factionIconPath&gt;</span>World/WorldObjects/Expanding/MyMod_FreeGuild<span class="xml-tag">&lt;/factionIconPath&gt;</span>
+    <span class="xml-tag">&lt;colorSpectrum&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>(0.85, 0.70, 0.20)<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>(0.90, 0.80, 0.35)<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/colorSpectrum&gt;</span>
+
+    <span class="cm">&lt;!-- 限制成員裝備材質：工業派系允許金屬與布料 --&gt;</span>
+    <span class="xml-tag">&lt;apparelStuffFilter&gt;</span>
+      <span class="xml-tag">&lt;categories&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Leathers<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Fabric<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/categories&gt;</span>
+    <span class="xml-tag">&lt;/apparelStuffFilter&gt;</span>
+
+    <span class="cm">&lt;!-- 組隊規則 --&gt;</span>
+    <span class="xml-tag">&lt;pawnGroupMakers&gt;</span>
+      <span class="cm">&lt;!-- 貿易商隊 --&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;kindDef&gt;</span>Trader<span class="xml-tag">&lt;/kindDef&gt;</span>
+        <span class="xml-tag">&lt;traders&gt;</span>
+          <span class="xml-tag">&lt;Town_Trader&gt;</span>10<span class="xml-tag">&lt;/Town_Trader&gt;</span>
+        <span class="xml-tag">&lt;/traders&gt;</span>
+        <span class="xml-tag">&lt;carriers&gt;</span>
+          <span class="xml-tag">&lt;Muffalo&gt;</span>10<span class="xml-tag">&lt;/Muffalo&gt;</span>
+          <span class="xml-tag">&lt;Dromedary&gt;</span>10<span class="xml-tag">&lt;/Dromedary&gt;</span>
+        <span class="xml-tag">&lt;/carriers&gt;</span>
+        <span class="xml-tag">&lt;guards&gt;</span>
+          <span class="xml-tag">&lt;Town_Guard&gt;</span>10<span class="xml-tag">&lt;/Town_Guard&gt;</span>
+        <span class="xml-tag">&lt;/guards&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 戰鬥隊（被拉到敵對時的突襲組成） --&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;kindDef&gt;</span>Combat<span class="xml-tag">&lt;/kindDef&gt;</span>
+        <span class="xml-tag">&lt;options&gt;</span>
+          <span class="xml-tag">&lt;Town_Guard&gt;</span>10<span class="xml-tag">&lt;/Town_Guard&gt;</span>
+          <span class="xml-tag">&lt;Mercenary_Gunner&gt;</span>6<span class="xml-tag">&lt;/Mercenary_Gunner&gt;</span>
+          <span class="xml-tag">&lt;Mercenary_Sniper&gt;</span>3<span class="xml-tag">&lt;/Mercenary_Sniper&gt;</span>
+        <span class="xml-tag">&lt;/options&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 友好訪客 --&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;kindDef&gt;</span>Peaceful<span class="xml-tag">&lt;/kindDef&gt;</span>
+        <span class="xml-tag">&lt;options&gt;</span>
+          <span class="xml-tag">&lt;Town_Pawn&gt;</span>10<span class="xml-tag">&lt;/Town_Pawn&gt;</span>
+          <span class="xml-tag">&lt;Town_Guard&gt;</span>5<span class="xml-tag">&lt;/Town_Guard&gt;</span>
+        <span class="xml-tag">&lt;/options&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/pawnGroupMakers&gt;</span>
+  <span class="xml-tag">&lt;/FactionDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>善用 ParentName="FactionBase"。</strong>核心 <code>FactionBase</code> 抽象 def 已填好一堆預設（領袖頭銜、relativeName 等）。繼承它能省掉大量樣板，只覆寫你關心的欄位。可在 <code>Core/Defs/FactionDefs/Factions_Misc.xml</code> 找到 <code>FactionBase</code> 與各內建派系作模板。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3  好感度與關係 API
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 好感度與關係：FactionRelation 與門檻機制</div>
+
+    <p>兩個 Faction 之間的關係由一個 <code>RimWorld.FactionRelation</code> 物件描述，掛在每個 Faction 內部的關係表上。它有兩個核心欄位：</p>
+
+    <ul>
+      <li><code>baseGoodwill</code>（int，範圍 -100~100）：好感數值。</li>
+      <li><code>kind</code>（<code>FactionRelationKind</code> 列舉）：<code>Hostile</code> / <code>Neutral</code> / <code>Ally</code>。它是由 goodwill 推導出來的「離散狀態」。</li>
+    </ul>
+
+    <h3>好感 → 關係種類的門檻</h3>
+    <table>
+      <thead>
+        <tr><th>goodwill 區間</th><th>FactionRelationKind</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>&lt;= -75</code></td><td><span class="tag tag-red">Hostile</span></td><td>敵對，會互相突襲。</td></tr>
+        <tr><td><code>-74 ~ +74</code></td><td><span class="tag tag-orange">Neutral</span></td><td>中立，可貿易、可談判。</td></tr>
+        <tr><td><code>&gt;= +75</code></td><td><span class="tag tag-green">Ally</span></td><td>同盟，可請求軍援、共同作戰。</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>門檻常數位於 <code>GoodwillSituation</code> / <code>Faction</code> 內。</strong>實作上由 <code>FactionRelation.CheckKindThresholds</code> 在 goodwill 變動後重算 kind，跨過 ±75 會觸發狀態切換並（依旗標）發出通知信。請務必透過官方 API 改 goodwill，別直接寫 <code>baseGoodwill</code>，否則 kind 不會自動更新、外交頁與戰鬥判定會錯亂。
+    </div>
+
+    <h3>讀取關係</h3>
+<pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="ty">Faction</span> player = <span class="ty">Faction</span>.OfPlayer;
+<span class="ty">Faction</span> guild  = <span class="ty">Find</span>.FactionManager
+    .<span class="nm">FirstFactionOfDef</span>(<span class="ty">FactionDefOf</span>.MyMod_FreeGuild);
+
+<span class="cm">// 取得關係物件</span>
+<span class="ty">FactionRelation</span> rel = player.<span class="nm">RelationWith</span>(guild);
+<span class="ty">Log</span>.<span class="nm">Message</span>($<span class="st">"goodwill={rel.baseGoodwill}, kind={rel.kind}"</span>);
+
+<span class="cm">// 便捷屬性：直接問「玩家對某派系」的關係種類</span>
+<span class="kw">if</span> (guild.<span class="nm">HostileTo</span>(player)) { <span class="cm">/* 敵對 */</span> }
+<span class="ty">FactionRelationKind</span> k = guild.<span class="nm">PlayerRelationKind</span>;   <span class="cm">// Hostile/Neutral/Ally</span>
+<span class="kw">int</span> gw = guild.<span class="nm">PlayerGoodwill</span>;                       <span class="cm">// -100~100</span></pre>
+
+    <h3>改變好感：永遠用 TryAffectGoodwillWith</h3>
+    <p><code>Faction.TryAffectGoodwillWith(other, goodwillChange, canSendMessage, canSendHostilityLetter, reason, lookTarget)</code> 是唯一正確的入口。它會：套用增量、夾在 -100~100、重算 kind、處理跨門檻的關係切換、（可選）發信通知、寫入歷史記錄供外交頁顯示「為何變動」。</p>
+
+<pre><span class="cm">// 賄賂讓商會更喜歡你（+15），並在外交頁標註原因</span>
+<span class="kw">bool</span> changed = guild.<span class="nm">TryAffectGoodwillWith</span>(
+    <span class="ty">Faction</span>.OfPlayer,
+    goodwillChange: <span class="nu">15</span>,
+    canSendMessage: <span class="kw">true</span>,
+    canSendHostilityLetter: <span class="kw">true</span>,
+    reason: <span class="ty">HistoryEventDefOf</span>.<span class="nm">UsedHarmfulAbility</span>,  <span class="cm">// 例；正向事件用對應 def</span>
+    lookTarget: <span class="kw">null</span>);
+
+<span class="cm">// 跨過 +75 時，changed 內部已自動切成 Ally 並發通知信</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>reason 參數在 1.5 是 <code>HistoryEventDef</code>。</strong>舊版（1.3 以前）是 string，網路上不少教學過時。1.4+ 之後外交歷史走 <code>RimWorld.HistoryEventDef</code> 系統（<code>Find.HistoryEventsManager</code>），goodwill 變動會記成可追溯的歷史事件，顯示在派系資訊面板的「最近事件」清單。傳 <code>null</code> 也合法，只是不留原因。
+    </div>
+
+    <h3>設定為「絕對狀態」</h3>
+    <p>若要強制設成同盟/敵對（而非微調），用 <code>Faction.TrySetRelationKind</code>：</p>
+<pre><span class="cm">// 直接設為敵對（內部會把 goodwill 拉到敵對門檻以下）</span>
+guild.<span class="nm">TrySetRelationKind</span>(
+    <span class="ty">Faction</span>.OfPlayer,
+    <span class="ty">FactionRelationKind</span>.Hostile,
+    canSendLetter: <span class="kw">true</span>,
+    reason: <span class="kw">null</span>);</pre>
+
+    <table>
+      <thead>
+        <tr><th>方法</th><th>適用情境</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>TryAffectGoodwillWith(±delta)</code></td><td>漸進式調整（任務獎懲、賄賂、誤傷）。最常用。</td></tr>
+        <tr><td><code>TrySetRelationKind(kind)</code></td><td>劇情需要「立刻翻臉/結盟」時的硬切換。</td></tr>
+        <tr><td><code>SetRelationDirect / SetRelation</code></td><td>底層；初始化或特殊情形才用，會略過部分通知邏輯。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4  派系生成與世界
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 派系生成與世界：撒據點與舊存檔後補</div>
+
+    <p>世界生成階段，<code>RimWorld.FactionGenerator</code> 依各 FactionDef 的 <code>requiredCountAtGameStart</code> / <code>maxCountAtGameStart</code> 實體化出 Faction（呼叫 <code>FactionGenerator.NewGeneratedFaction</code>），再由 <code>FactionManager.Add</code> 註冊。接著世界地圖生成器依 <code>settlementGenerationWeight</code> 為這些派系撒 <code>RimWorld.Planet.Settlement</code>（一種 <code>WorldObject</code>，銜接第 13 章）。</p>
+
+    <h3>生成流程</h3>
+    <ol class="steps">
+      <li><code>FactionGenerator.GenerateFactionsIntoWorld(parms)</code>：遍歷所有非隱藏、required&gt;0 的 FactionDef，產生對應數量的 Faction 實例。</li>
+      <li>對每個新 Faction，依 <code>startingGoodwill</code> 隨機初始化與玩家及彼此的關係。</li>
+      <li>世界生成把據點撒在地圖上（依 settlementGenerationWeight 與 tile 適居性）。</li>
+      <li>隱藏派系（機械蟲、無主動物）由 <code>FactionGenerator</code> 以固定邏輯補上，不吃 settlementGenerationWeight。</li>
+    </ol>
+
+    <div class="callout callout-danger">
+      <strong>致命陷阱：加派系後讀舊存檔會缺實例。</strong><code>GenerateFactionsIntoWorld</code> 只在「新世界」跑一次。玩家把你的 mod 加進既有存檔時，世界早就生成完畢，你的 FactionDef 不會有任何 Faction 實例——任何 <code>FirstFactionOfDef</code> 都回傳 null，依賴它的事件全部失效。
+    </div>
+
+    <h3>解法：載入既有存檔時後補生成</h3>
+    <p>標準作法是掛在 <code>FactionManager</code> 載入後的時機，檢查每個「應存在」的 FactionDef 是否有實例，缺了就補。可用 Harmony postfix（銜接第 3 章）勾 <code>Game.FinalizeInit</code> 或 <code>FactionManager.ExposeData</code> 之後：</p>
+
+<pre><span class="kw">using</span> <span class="ty">HarmonyLib</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">RimWorld</span>.<span class="ty">Planet</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="at">[HarmonyPatch(typeof(Game), nameof(Game.FinalizeInit))]</span>
+<span class="kw">public static class</span> <span class="ty">Patch_EnsureMyFactions</span>
+{
+    <span class="kw">public static void</span> <span class="nm">Postfix</span>()
+    {
+        <span class="ty">EnsureFactionExists</span>(<span class="ty">FactionDefOf</span>.MyMod_FreeGuild);
+    }
+
+    <span class="kw">private static void</span> <span class="nm">EnsureFactionExists</span>(<span class="ty">FactionDef</span> def)
+    {
+        <span class="cm">// 已有實例就跳過</span>
+        <span class="kw">if</span> (<span class="ty">Find</span>.FactionManager.<span class="nm">FirstFactionOfDef</span>(def) != <span class="kw">null</span>)
+            <span class="kw">return</span>;
+
+        <span class="cm">// 後補生成一個 Faction</span>
+        <span class="ty">Faction</span> faction = <span class="ty">FactionGenerator</span>.<span class="nm">NewGeneratedFaction</span>(
+            <span class="kw">new</span> <span class="ty">FactionGeneratorParms</span>(def));
+        faction.<span class="nm">ideos</span>?.<span class="nm">SetPrimary</span>(faction.<span class="nm">ideos</span>.PrimaryIdeo); <span class="cm">// 若啟用 Ideology</span>
+        <span class="ty">Find</span>.FactionManager.<span class="nm">Add</span>(faction);
+
+        <span class="cm">// 為它撒一個世界據點，讓它「真的存在於星球上」</span>
+        <span class="ty">TryGenerateSettlementFor</span>(faction);
+        <span class="ty">Log</span>.<span class="nm">Message</span>($<span class="st">"[MyMod] 後補生成派系 {def.defName}"</span>);
+    }
+
+    <span class="kw">private static void</span> <span class="nm">TryGenerateSettlementFor</span>(<span class="ty">Faction</span> faction)
+    {
+        <span class="kw">if</span> (!<span class="ty">TileFinder</span>.<span class="nm">TryFindNewSiteTile</span>(<span class="kw">out</span> <span class="kw">int</span> tile))
+            <span class="kw">return</span>;
+
+        <span class="ty">Settlement</span> s = (<span class="ty">Settlement</span>)<span class="ty">WorldObjectMaker</span>
+            .<span class="nm">MakeWorldObject</span>(<span class="ty">WorldObjectDefOf</span>.Settlement);
+        s.<span class="nm">SetFaction</span>(faction);
+        s.Tile = tile;
+        s.Name = <span class="ty">SettlementNameGenerator</span>
+            .<span class="nm">GenerateSettlementName</span>(s);
+        <span class="ty">Find</span>.WorldObjects.<span class="nm">Add</span>(s);
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>更輕量的替代：不要硬撒據點。</strong>如果你的派系只需要「能發突襲/能來貿易」而不要求世界地圖上有圖示，可以只 <code>FactionManager.Add</code> 一個無據點的 Faction（settlementGenerationWeight 設 0）。少了 TileFinder 的失敗風險，相容性更好。是否需要實體據點，取決於玩法是否允許玩家攻打它。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5  派系驅動的玩法
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 派系驅動的玩法：突襲、貿易、外交事件</div>
+
+    <p>派系不是裝飾品，它是 RimWorld 大量事件的「來源資料」。三條主要管線都從 Faction 取資料：</p>
+
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3>突襲</h3>
+        <p><code>IncidentWorker_RaidEnemy</code> 從敵對 faction 的 Combat <code>pawnGroupMaker</code> 依 points 組隊，再交給 Lord（第 30 章）執行 AI。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>貿易</h3>
+        <p>商隊到訪事件依 <code>TraderKindDef</code> 與 Trader <code>pawnGroupMaker</code> 產生會走進殖民地的商人。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>外交事件</h3>
+        <p>和平談判、賄賂、共同敵人結盟等，最終都呼叫 <code>TryAffectGoodwillWith</code> 改關係。</p>
+      </div>
+    </div>
+
+    <h3>突襲是怎麼選 faction 的</h3>
+    <p>當敘事引擎（第 12 章）決定要放一場 <code>ThreatBig</code> 突襲，<code>IncidentWorker_RaidEnemy.TryExecuteWorker</code> 大致流程：</p>
+    <ol class="steps">
+      <li>呼叫 <code>parms.faction</code>；若沒指定，用 <code>Find.FactionManager.RandomRaidableEnemyFaction()</code> 挑一個敵對且可突襲的派系。</li>
+      <li>用 <code>parms.points</code>（威脅點數，隨財富縮放）呼叫 <code>PawnGroupMakerUtility.GeneratePawns</code>，從該 faction 的 Combat groupMaker 組隊。</li>
+      <li>用 <code>RaidStrategyDef</code>（如 <code>ImmediateAttack</code>、<code>Siege</code>）與 <code>PawnsArrivalModeDef</code>（如 <code>EdgeWalkIn</code>、<code>EdgeDrop</code>）決定戰術與進場方式。</li>
+      <li>把生成的 pawns 交給對應的 <code>Lord</code> + <code>LordJob</code>（如 <code>LordJob_AssaultColony</code>）接管群體 AI。</li>
+    </ol>
+
+    <div class="callout callout-info">
+      <strong>所以「自訂突襲組成」其實是在編 pawnGroupMaker。</strong>你不需要重寫 IncidentWorker。只要在 FactionDef 的 Combat groupMaker 裡放對 PawnKindDef 與權重，這個派系突襲時自然就用那批兵。要更複雜的編隊（固定帶一個 boss）才需要自訂 <code>PawnGroupKindWorker</code> 或 patch。
+    </div>
+
+    <h3>讓自訂派系派出貿易商隊</h3>
+    <p>商隊到訪走 <code>IncidentDefOf.TraderCaravanArrival</code>（category <code>FactionArrival</code>）。它會挑一個有 Trader groupMaker 且非敵對的派系，並選一個 <code>TraderKindDef</code> 決定賣什麼。把 TraderKindDef 綁到你的派系：</p>
+
+<pre><span class="cm">&lt;!-- Defs/TraderKindDefs/TraderKinds_FreeGuild.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;TraderKindDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>Caravan_FreeGuild_General<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>自由商會綜合商隊<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="cm">&lt;!-- 綁定到本派系：只有此 FactionDef 的商隊會用 --&gt;</span>
+    <span class="xml-tag">&lt;faction&gt;</span>MyMod_FreeGuild<span class="xml-tag">&lt;/faction&gt;</span>
+    <span class="xml-tag">&lt;stockGenerators&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_BuyCategory"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;categories&gt;</span><span class="xml-tag">&lt;li&gt;</span>Foods<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/categories&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_Tag"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;tradeTag&gt;</span>WeaponRanged<span class="xml-tag">&lt;/tradeTag&gt;</span>
+        <span class="xml-tag">&lt;thingDefCountRange&gt;</span>3~6<span class="xml-tag">&lt;/thingDefCountRange&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"StockGenerator_Slaves"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;countRange&gt;</span>0~0<span class="xml-tag">&lt;/countRange&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/stockGenerators&gt;</span>
+  <span class="xml-tag">&lt;/TraderKindDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>另外確保 FactionDef 上有對應的商隊/軌道商人引用欄位（<code>caravanTraderKinds</code>、<code>visitorTraderKinds</code>、<code>baseTraderKinds</code>）。若不指定，系統會回退到 categoryTag 預設的商隊種類。</p>
+
+    <h3>外交事件：和平談判與共同敵人</h3>
+    <p>玩家透過通訊台請求和平、或任務系統觸發外交轉折時，本質都是改 goodwill。下面示範一個「停火協議」用的小工具方法：</p>
+
+<pre><span class="kw">public static class</span> <span class="ty">DiplomacyUtil</span>
+{
+    <span class="cm">// 賄賂談和：花 silver 換 goodwill，跨過門檻自動轉中立</span>
+    <span class="kw">public static bool</span> <span class="nm">TryBribeForPeace</span>(<span class="ty">Faction</span> target, <span class="kw">int</span> silver)
+    {
+        <span class="kw">if</span> (target == <span class="kw">null</span> || target.IsPlayer) <span class="kw">return false</span>;
+        <span class="kw">if</span> (target.def.permanentEnemy) <span class="kw">return false</span>; <span class="cm">// 永久敵不可談和</span>
+
+        <span class="cm">// 每 100 銀 +5 好感，但有上限避免一次買到同盟</span>
+        <span class="kw">int</span> delta = <span class="ty">Mathf</span>.<span class="nm">Min</span>(silver / <span class="nu">100</span> * <span class="nu">5</span>, <span class="nu">30</span>);
+        <span class="kw">return</span> target.<span class="nm">TryAffectGoodwillWith</span>(
+            <span class="ty">Faction</span>.OfPlayer, delta,
+            canSendMessage: <span class="kw">true</span>,
+            canSendHostilityLetter: <span class="kw">true</span>,
+            reason: <span class="kw">null</span>);
+    }
+}</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6  玩家對派系互動
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 玩家對派系互動：通訊台、任務、皇室</div>
+
+    <p>玩家主動與派系互動的入口集中在<strong>通訊台（comms console）</strong>。它由 <code>Building_CommsConsole</code> 提供，互動選項是一組 <code>RimWorld.ICommunicable</code>，每個 visible faction 都會生出一條 <code>FactionDialogMaker</code> 產生的對話樹。</p>
+
+    <h3>通訊台能做什麼</h3>
+    <table>
+      <thead>
+        <tr><th>互動</th><th>條件</th><th>底層</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>呼叫貿易船</td><td>有軌道貿易商在範圍</td><td><code>TradeShip</code> / <code>PassingShipManager</code></td></tr>
+        <tr><td>請求商隊到訪</td><td>非敵對派系</td><td><code>FactionDialogMaker.RequestTraderEnter</code></td></tr>
+        <tr><td>請求軍援</td><td><span class="tag tag-green">Ally</span> 且有冷卻額度</td><td><code>FactionDialogMaker.RequestMilitaryAidOption</code></td></tr>
+        <tr><td>賄賂提升好感</td><td>非永久敵</td><td>扣 silver → <code>TryAffectGoodwillWith</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>自訂派系自動就會出現在通訊台。</strong>只要不是 hidden、不是 permanentEnemy（無談判價值），<code>FactionDialogMaker</code> 會自動為它生對話選項——你通常不需要寫任何通訊台程式碼。要新增「自訂選項」才需要 patch <code>FactionDialogMaker.FactionDialogFor</code>。
+    </div>
+
+    <h3>透過任務給予/扣除 goodwill（銜接第 22 章）</h3>
+    <p>任務系統（Quest）是改派系關係最乾淨的方式，因為它把「獎懲」資料化在 <code>QuestScriptDef</code> 內，無需 Harmony。對應的 QuestNode 是 <code>QuestNode_GiveRewards</code> 與專門的 <code>QuestPart_FactionGoodwillChange</code>：</p>
+
+<pre><span class="cm">&lt;!-- QuestScriptDef 片段：任務成功時 +12 好感 --&gt;</span>
+<span class="xml-tag">&lt;QuestNode</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_End"</span><span class="xml-tag">&gt;</span>
+  <span class="cm">&lt;!-- 先省略 ... 在 success 分支中 --&gt;</span>
+<span class="xml-tag">&lt;/QuestNode&gt;</span>
+
+<span class="cm">&lt;!-- 用 QuestPart 改好感（多透過 reward 或 node 包裝） --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"QuestNode_GoodwillChange"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;faction&gt;</span>$askerFaction<span class="xml-tag">&lt;/faction&gt;</span>
+  <span class="xml-tag">&lt;change&gt;</span>12<span class="xml-tag">&lt;/change&gt;</span>
+  <span class="xml-tag">&lt;canSendHostilityLetter&gt;</span>false<span class="xml-tag">&lt;/canSendHostilityLetter&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+
+    <p>在 C# 端，任務獎勵 <code>RimWorld.Reward_Goodwill</code> 也是直接走 <code>TryAffectGoodwillWith</code>。所以無論 XML 或 C#，最終都收斂到同一個 API——這也是為什麼建議你所有改關係的程式碼都統一走它。</p>
+
+    <h3>皇室（Empire faction，銜接第 33 章）</h3>
+    <p>Royalty DLC 引入的帝國是一個特殊 Faction（FactionDef <code>Empire</code>，由 <code>Faction.OfEmpire</code> 取得）。它的「好感」之外還疊了一層<strong>榮譽（royal favor）與頭銜（RoyalTitle）</strong>系統，由 <code>Pawn_RoyaltyTracker</code> 管理。重點分工：</p>
+
+    <ul>
+      <li>對帝國的<strong>好感</strong>仍是標準 FactionRelation，影響突襲/貿易。</li>
+      <li><strong>榮譽點數</strong>是另一條軸，用來升頭銜、換 permits、psycasts，不等於 goodwill。</li>
+      <li>授予榮譽的入口是 <code>Pawn.royalty.GainFavor(Faction.OfEmpire, amount)</code>。</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>別把榮譽當好感改。</strong>新手常想用 <code>TryAffectGoodwillWith</code> 去「給玩家榮譽」，那是錯的——榮譽走 <code>Pawn_RoyaltyTracker.GainFavor</code>，且只在 Royalty DLC 啟用時存在。引用前要先 <code>ModsConfig.RoyaltyActive</code> 檢查，否則無 DLC 玩家會 crash。第 33 章會深入。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7  自訂派系常見需求
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 自訂派系常見需求：定向關係、突襲強度、專屬裝備</div>
+
+    <h3>需求 A：讓我的派系「一定友好」或「一定敵對」</h3>
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>一定友好（開局盟友）</h3>
+        <p>把 <code>startingGoodwill</code> 設成 <code>75~100</code>，並設 <code>mustStartOneEnemy=false</code>、<code>naturalColonyEnemy=false</code>。注意 ≥75 開局就會直接是 Ally。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>一定敵對（宿敵）</h3>
+        <p>設 <code>permanentEnemy=true</code>。它強制敵對、不可談判、忽略 startingGoodwill。若只想「開局敵對但可被拉攏」，改用 <code>startingGoodwill</code> <code>-100~-80</code> 而非 permanentEnemy。</p>
+      </div>
+    </div>
+
+    <h3>需求 B：調整突襲強度</h3>
+    <p>突襲規模由 <code>parms.points</code> 與 groupMaker 的「成本曲線」共同決定。兩條可調曲線在 FactionDef 上：</p>
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>效果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>maxPawnCostPerTotalPointsCurve</code></td><td><code>SimpleCurve</code></td><td>限制「單一 pawn 成本佔總 points 的比例上限」隨總點數變化。低點數時禁止出現太貴的單位（避免開局遇到重裝兵）。</td></tr>
+        <tr><td><code>pointsCurve</code> / <code>raidCommonalityFromPointsCurve</code></td><td><code>SimpleCurve</code></td><td>影響此派系被選為突襲來源的頻率隨威脅點數變化（高難度才常派精兵）。</td></tr>
+      </tbody>
+    </table>
+
+<pre><span class="cm">&lt;!-- 低點數時封鎖昂貴單位；高點數逐步放行 --&gt;</span>
+<span class="xml-tag">&lt;maxPawnCostPerTotalPointsCurve&gt;</span>
+  <span class="xml-tag">&lt;points&gt;</span>
+    <span class="cm">&lt;!-- (總points, 單pawn成本上限佔比) --&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>(0,    0.25)<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>(1000, 0.35)<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>(4000, 1.0)<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/points&gt;</span>
+<span class="xml-tag">&lt;/maxPawnCostPerTotalPointsCurve&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>更直接的「強度」旋鈕是 PawnKind 的 combatPower。</strong>突襲組隊把每個 PawnKindDef 的 <code>combatPower</code> 當「價格」。想讓你的派系整體更兇，與其調曲線，不如在 groupMaker 放更高權重的高 combatPower kind，或自訂專屬高階 PawnKindDef（第 11 章）。
+    </div>
+
+    <h3>需求 C：派系專屬 apparel / weapon</h3>
+    <p>讓某件裝備只在你的派系出現，組合兩個機制：</p>
+    <ol class="steps">
+      <li>在 ThingDef（武器/服裝）加 <code>tradeTags</code>，並在 groupMaker 的 PawnKindDef 的 <code>apparelTags</code> / <code>weaponTags</code> 引用該 tag——組隊時會優先配發帶對應 tag 的物品。</li>
+      <li>用 FactionDef 的 <code>apparelStuffFilter</code> 限制材質，營造「這派系只穿某種材料」的視覺辨識。</li>
+    </ol>
+
+<pre><span class="cm">&lt;!-- 專屬大衣：只有帶 FreeGuildGear tag 的 kind 會穿 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"ApparelMakeableBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Apparel_FreeGuildCoat<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>商會大衣<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;tradeTags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>FreeGuildGear<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/tradeTags&gt;</span>
+  <span class="cm">&lt;!-- 其餘 apparel 欄位省略 --&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="cm">&lt;!-- PawnKind 透過 apparelTags 拉進這件裝備 --&gt;</span>
+<span class="xml-tag">&lt;PawnKindDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>FreeGuild_Trooper<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;apparelTags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>FreeGuildGear<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/apparelTags&gt;</span>
+  <span class="xml-tag">&lt;apparelRequired&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Apparel_FreeGuildCoat<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/apparelRequired&gt;</span>
+<span class="xml-tag">&lt;/PawnKindDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>tradeTags 的雙重作用。</strong>同一個 tag 既能被 PawnKind 用來「配發」，也能被 TraderKindDef 的 <code>StockGenerator_Tag</code> 用來「上架販售」。一個 tag 就能讓專屬裝備既出現在敵人身上、又能在該派系商隊買到。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8  陷阱
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 陷阱與最佳實務</div>
+
+    <div class="g2">
+      <div class="card card-accent-orange">
+        <h3>派系顏色衝突</h3>
+        <p>多個 FactionDef 用相近 <code>colorSpectrum</code> 會讓世界地圖與外交頁難以分辨。給每個自訂派系一段明確區隔的色相，並避開內建派系常用色（海盜紅、部落綠、外地人藍）。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>permanentEnemy 與 startingGoodwill 矛盾</h3>
+        <p>同時設 <code>permanentEnemy=true</code> 與正向 <code>startingGoodwill</code> 是無效的——permanentEnemy 直接覆蓋，startingGoodwill 被忽略。想「開局敵對但可挽回」，不要用 permanentEnemy，改用負的 startingGoodwill。</p>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>舊存檔相容</h3>
+        <p>不要 patch 既有 FactionDef 的關鍵欄位來「改造」內建派系——會破壞舊檔。新增獨立 FactionDef + §4 的後補生成，是相容性最佳解。XML 引用其他 mod 的 def 時包 <code>MayRequire</code>，避免缺 mod 時 def 載入失敗。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>hidden faction 別進外交頁</h3>
+        <p>任何「敵我語意但不該被外交」的派系（蟲族、無主動物、純突襲來源）必設 <code>hidden=true</code>。否則玩家會在外交頁看到「機械蟲」並嘗試談判，造成混亂與潛在 null 問題。</p>
+      </div>
+    </div>
+
+    <h3>MayRequire 範例</h3>
+<pre><span class="cm">&lt;!-- 只有當某 DLC/mod 啟用時，才把這段 groupMaker 套進來 --&gt;</span>
+<span class="xml-tag">&lt;options&gt;</span>
+  <span class="xml-tag">&lt;Town_Guard&gt;</span>10<span class="xml-tag">&lt;/Town_Guard&gt;</span>
+  <span class="xml-tag">&lt;Mechanoid_Centipede</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>2<span class="xml-tag">&lt;/Mechanoid_Centipede&gt;</span>
+<span class="xml-tag">&lt;/options&gt;</span></pre>
+
+    <h3>遍歷派系時的安全寫法</h3>
+<pre><span class="cm">// ✗ 危險：AllFactions 含玩家與隱藏派系</span>
+<span class="kw">foreach</span> (<span class="ty">Faction</span> f <span class="kw">in</span> <span class="ty">Find</span>.FactionManager.AllFactions) { ... }
+
+<span class="cm">// ✓ 外交/突襲邏輯應排除玩家與隱藏</span>
+<span class="kw">foreach</span> (<span class="ty">Faction</span> f <span class="kw">in</span> <span class="ty">Find</span>.FactionManager.AllFactionsVisible)
+{
+    <span class="kw">if</span> (f.IsPlayer || f.defeated) <span class="kw">continue</span>;
+    <span class="cm">// 安全處理可互動的派系</span>
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>defeated 與 temporary 派系也要過濾。</strong>被消滅的派系（<code>f.defeated</code>）與臨時派系（任務生成、<code>f.temporary</code>）仍可能留在 AllFactions 內。突襲來源、貿易來源、外交對象的篩選都要排除它們，否則會選到「已不存在」的派系而事件靜默失敗。</p>
+    </div>
+
+    <h3>最佳實務速查</h3>
+    <table>
+      <thead>
+        <tr><th>要做的事</th><th>正確做法</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>改好感</td><td><code>TryAffectGoodwillWith</code>（漸進）/ <code>TrySetRelationKind</code>（硬切）。永不直接寫 <code>baseGoodwill</code>。</td></tr>
+        <tr><td>取派系實例</td><td><code>FirstFactionOfDef</code> + null 檢查；舊檔用 §4 後補生成。</td></tr>
+        <tr><td>列舉派系</td><td><code>AllFactionsVisible</code> 並過濾 <code>IsPlayer / defeated / temporary</code>。</td></tr>
+        <tr><td>調突襲強度</td><td>優先調 groupMaker 與 PawnKind combatPower，曲線只作微調。</td></tr>
+        <tr><td>新增派系</td><td>獨立 FactionDef（繼承 FactionBase），勿改既有派系。</td></tr>
+        <tr><td>DLC 內容</td><td>XML 用 <code>MayRequire</code>，C# 用 <code>ModsConfig.XxxActive</code> 守衛。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 31 派系與外交關係 · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

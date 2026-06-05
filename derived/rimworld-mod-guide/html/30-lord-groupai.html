@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群體 AI：Lord、LordToil、LordJob — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html" class="active">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>群體 AI：Lord、LordToil、LordJob</h1>
+  <p>單一小人由思維樹驅動；一「群」小人（突襲隊、訪客、典禮參與者）則由 Lord 這個隱形指揮官統御。Lord/LordToil/Trigger 是所有協調行為的引擎。</p>
+  <span class="badge">Chapter 30 · Lord &amp; Group AI</span>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h4>本頁目錄</h4>
+    <ol>
+      <li><a href="#why">§1 為何需要 Lord</a></li>
+      <li><a href="#roles">§2 三大角色：LordJob / LordToil / Transition+Trigger</a></li>
+      <li><a href="#make">§3 建立與管理 Lord（LordMaker / AddPawn / Notify_PawnLost）</a></li>
+      <li><a href="#customjob">§4 寫一個自訂 LordJob（CreateGraph）</a></li>
+      <li><a href="#duty">§5 LordToil 與 Duty（UpdateAllDuties / DutyDef）</a></li>
+      <li><a href="#builtin">§6 內建可複用的 LordJob 範例</a></li>
+      <li><a href="#triggers">§7 觸發器與事件（Trigger / Signal / IncidentWorker）</a></li>
+      <li><a href="#debug">§8 除錯與存檔重建</a></li>
+    </ol>
+  </div>
+
+  <!-- 概念導論 -->
+  <div class="section">
+    <div class="section-title">群體 AI 的全貌</div>
+    <p>
+      第 29 章講的是「一個 pawn 怎麼決定下一個 <code>Job</code>」——那是個體層級的 <code>Verse.AI.ThinkTree</code>。
+      但很多行為是<strong>群體層級</strong>的：突襲隊要先在地圖邊緣集結、一起推進、損失過半就一起撤退；訪客團要一起走進殖民地、待一陣子、再一起離開；典禮要所有參與者圍著篝火坐定。
+      這些「一群人共享一個劇本、彼此協調狀態」的需求，個體思維樹根本表達不出來——它沒有「全隊」這個概念。
+    </p>
+    <p>
+      RimWorld 用 <code>Verse.AI.Group.Lord</code> 解決這個問題。Lord 是一個掛在地圖上的<strong>隱形指揮官</strong>（沒有實體、不佔格、不會被攻擊），
+      內部是一台<strong>狀態機</strong>。它管理一群 pawn，並在每個狀態下對每個成員下達 <code>PawnDuty</code>（職責）。
+      個體思維樹再透過 <code>ThinkNode_Duty</code> 把這個 duty 翻譯成具體的 Job。換句話說：
+    </p>
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>Lord（指揮官）</h3>
+        <p>群體狀態機的<strong>執行期實例</strong>，掛在 <code>Map.lordManager.lords</code>。持有成員清單、當前 LordToil、Faction。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>LordJob（劇本）</h3>
+        <p>整段群體行為的<strong>定義 + 狀態圖</strong>。覆寫 <code>CreateGraph()</code> 產出一台 <code>StateGraph</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>LordToil（狀態）</h3>
+        <p>群體當下處於的<strong>一個狀態</strong>，負責對每個成員指派 <code>DutyDef</code>。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>關鍵命名空間</strong>
+      <code>Lord</code>、<code>LordJob</code>、<code>LordToil</code>、<code>LordMaker</code>、<code>StateGraph</code>、<code>Transition</code>、<code>Trigger</code> 全部在 <code>Verse.AI.Group</code>；
+      個別的內建 LordJob（如 <code>LordJob_AssaultColony</code>）與 LordToil（如 <code>LordToil_AssaultColony</code>）大多在 <code>RimWorld</code> 命名空間，但仍繼承自 <code>Verse.AI.Group</code> 的基底。
+      <code>PawnDuty</code> 與 <code>DutyDef</code> 在 <code>Verse.AI</code>；<code>pawn.mindState.duty</code> 是 pawn 與 Lord 之間的橋。
+    </div>
+  </div>
+
+  <!-- ═══ §1 為何需要 Lord ═══ -->
+  <div class="section" id="why">
+    <div class="section-title">§1 為何需要 Lord：個體思維樹的天花板</div>
+
+    <p>
+      回顧第 29 章：每個 pawn 每隔一段時間（或被打斷時）會跑一次 <code>Pawn_JobTracker.DetermineNextJob</code>，
+      由 <code>ThinkTreeDef</code> 決定下一個 <code>Job</code>。這個過程是<strong>純個體</strong>的——pawn A 不知道 pawn B 此刻在想什麼，更不可能讓十個人「同時」決定撤退。
+      你當然可以在每個 pawn 的思維樹裡塞條件，但要做到下面這些事，個體思維樹會立刻爆炸：
+    </p>
+    <ul>
+      <li><strong>共享的群體階段</strong>：整隊要先「集結」到位才能「進攻」，這個「到位了沒」必須有人統一判斷。</li>
+      <li><strong>群體層級的轉移條件</strong>：「死傷過半就全隊逃」——這需要一個能看見全隊存活率的觀察者。</li>
+      <li><strong>角色分工</strong>：典禮中有人是主持、有人是觀眾、有人演奏；突襲中有人攻擊、有人放火、有人守橋。</li>
+      <li><strong>外部事件響應</strong>：建築被破壞、有成員受傷、時間到了——這些 signal 要能改變整群人的行為。</li>
+    </ul>
+
+    <p>Lord 把上面這些全部收進一台狀態機。下面用表格把兩種 AI 的責任邊界劃清楚：</p>
+
+    <table class="param-table">
+      <tr><th>面向</th><th>個體 AI（第 29 章）</th><th>群體 AI（Lord，本章）</th></tr>
+      <tr><td>核心型別</td><td><code>ThinkTreeDef</code> / <code>ThinkNode</code> / <code>JobGiver</code></td><td><code>LordJob</code> / <code>StateGraph</code> / <code>LordToil</code></td></tr>
+      <tr><td>作用範圍</td><td>單一 pawn 的下一個 Job</td><td>一群 pawn 共享的階段與職責</td></tr>
+      <tr><td>掛載點</td><td><code>pawn.thinker</code>（每個 pawn 一份）</td><td><code>map.lordManager.lords</code>（每群一個 Lord）</td></tr>
+      <tr><td>狀態</td><td>幾乎無狀態（每次重新評估）</td><td>有狀態（當前 LordToil，可記憶）</td></tr>
+      <tr><td>協調能力</td><td>無——pawn 互不知情</td><td>有——統一指派 duty、統一轉移</td></tr>
+      <tr><td>轉移條件</td><td>思維樹節點的 <code>priority</code> / 條件</td><td><code>Transition</code> + <code>Trigger</code></td></tr>
+      <tr><td>輸出</td><td>直接是 <code>Job</code></td><td>是 <code>PawnDuty</code>（再由思維樹轉成 Job）</td></tr>
+      <tr><td>典型用途</td><td>吃飯、睡覺、工作、戰鬥反應</td><td>突襲、撤退、訪客、商隊、典禮、逃難</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>銜接點：duty 是兩者的接縫</strong>
+      Lord 不直接寫 <code>pawn.jobs.StartJob(...)</code>。它只設 <code>pawn.mindState.duty</code>，
+      然後依靠該 pawn 思維樹裡的 <code>ThinkNode_Duty</code> 把 duty 展開成 Job。所以群體 AI 與個體 AI 是<strong>分層協作</strong>，
+      不是互相取代——詳見 §5 與第 29 章 §6。
+    </div>
+
+    <h3>一張地圖上同時存在很多 Lord</h3>
+    <p>
+      不要把 Lord 想成「整張地圖一個」。突襲隊一個、第二波增援又一個、來訪商隊一個、正在舉行的典禮一個——
+      它們各自獨立、互不干涉，全部掛在 <code>Map.lordManager</code> 底下。一個 pawn 在任一時刻最多屬於一個 Lord
+      （以 <code>lord.ownedPawns</code> 記錄成員，pawn 端可用 <code>pawn.GetLord()</code> 反查）。
+    </p>
+    <pre><span class="cm">// 取得某 pawn 當前所屬的 Lord（沒有則回傳 null）</span>
+<span class="ty">Lord</span> lord = pawn.<span class="nm">GetLord</span>();   <span class="cm">// 擴充方法，等價於 map.lordManager.LordOf(pawn)</span>
+
+<span class="cm">// 列出地圖上所有 Lord</span>
+<span class="kw">foreach</span> (<span class="ty">Lord</span> l <span class="kw">in</span> map.lordManager.lords)
+{
+    <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"Lord faction={l.faction?.Name} job={l.LordJob.GetType().Name} pawns={l.ownedPawns.Count}"</span>);
+}</pre>
+  </div>
+
+  <!-- ═══ §2 三大角色 ═══ -->
+  <div class="section" id="roles">
+    <div class="section-title">§2 三大角色：LordJob / LordToil / Transition + Trigger</div>
+
+    <p>
+      理解 Lord 系統，關鍵是看清三個型別怎麼分工。下面先用一句話定位，再逐個展開。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>LordJob ＝ 劇本</h3>
+        <p>整段行為的定義。它的 <code>CreateGraph()</code> 回傳一台 <code>StateGraph</code>，裡面裝著所有 LordToil 與 Transition。一個 Lord 持有一個 LordJob。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>LordToil ＝ 當下狀態</h3>
+        <p>狀態圖的一個節點。進入時 <code>Init()</code>、停留時每 tick <code>LordToilTick()</code>，並負責 <code>UpdateAllDuties()</code> 給每個成員指派 duty。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>Transition ＋ Trigger ＝ 轉移</h3>
+        <p><code>Transition(from, to)</code> 連接兩個 LordToil；掛在它上面的 <code>Trigger</code> 判斷「什麼時候要轉」（受傷、時間到、損失過半…）。</p>
+      </div>
+    </div>
+
+    <h3>LordJob</h3>
+    <p>
+      <code>LordJob</code> 是抽象基底（<code>Verse.AI.Group.LordJob</code>）。你要做的群體行為，就是寫一個子類，覆寫 <code>CreateGraph()</code>。
+      Lord 建立時會呼叫一次 <code>CreateGraph()</code>，把回傳的 <code>StateGraph</code> 存起來，之後就靠它運轉。重要成員：
+    </p>
+    <table class="param-table">
+      <tr><th>成員</th><th>說明</th></tr>
+      <tr><td><code>StateGraph CreateGraph()</code></td><td><strong>必覆寫</strong>。建立並回傳狀態圖（含 LordToil 與 Transition）。</td></tr>
+      <tr><td><code>Lord lord</code></td><td>反指回持有它的 Lord（基底已注入，子類可直接用 <code>lord.ownedPawns</code> 等）。</td></tr>
+      <tr><td><code>bool LostImportantReferenceDuringLoading</code></td><td>存檔載入時若關鍵引用遺失（如目標已不存在），回傳 true 讓 Lord 被清掉。</td></tr>
+      <tr><td><code>void ExposeData()</code></td><td>序列化自己的欄位（攻擊目標、計時器等）。<strong>狀態圖不存檔</strong>，載入時重建——見 §8。</td></tr>
+      <tr><td><code>bool ShouldRemovePawn(...)</code></td><td>判斷某 pawn 是否該被踢出此 Lord（預設依死亡/離圖等）。</td></tr>
+      <tr><td><code>bool CanOpenAnyDoor</code> / <code>AddFleeToil</code></td><td>常見可覆寫的旗標，影響成員開門權、是否自動補一個逃跑狀態。</td></tr>
+    </table>
+
+    <h3>LordToil</h3>
+    <p>
+      <code>LordToil</code>（注意是 toil，借用 Job 系統的詞）代表群體當下的一個狀態。它最重要的職責是
+      <code>UpdateAllDuties()</code>——在進入狀態時、以及成員變動時被呼叫，為每個 <code>lord.ownedPawns</code> 設定 duty。生命週期：
+    </p>
+    <table class="param-table">
+      <tr><th>方法</th><th>時機</th><th>典型用途</th></tr>
+      <tr><td><code>Init()</code></td><td>剛進入此 toil（一次）</td><td>初始化計時器、播放音效、記錄起始狀態</td></tr>
+      <tr><td><code>UpdateAllDuties()</code></td><td>進入時 + 成員增減時</td><td>為每個 pawn 設 <code>mindState.duty</code>（核心）</td></tr>
+      <tr><td><code>LordToilTick()</code></td><td>停留期間每 tick</td><td>持續性邏輯（如逐 tick 檢查聚集度、推進進度）</td></tr>
+      <tr><td><code>Cleanup()</code></td><td>離開此 toil</td><td>釋放資源、停止音效</td></tr>
+      <tr><td><code>data</code> (LordToilData)</td><td>—</td><td>需要存檔的 toil 狀態放這裡（會被 ExposeData）</td></tr>
+    </table>
+
+    <h3>Transition 與 Trigger</h3>
+    <p>
+      <code>Transition</code> 是一條有向邊：<code>new Transition(sourceToil, targetToil)</code>。
+      你把一個或多個 <code>Trigger</code> 加到它身上（<code>transition.AddTrigger(...)</code>）；任一 Trigger 觸發，Lord 就從 source 切到 target。
+      還可加 <code>preActions</code>（轉移瞬間執行的動作，如清空計時、廣播訊息）。Trigger 是判斷邏輯，常見幾種會在 §7 列表，這裡先看連線形狀：
+    </p>
+    <pre><span class="ty">StateGraph</span> graph = <span class="kw">new</span> <span class="ty">StateGraph</span>();
+
+<span class="cm">// 兩個狀態</span>
+<span class="ty">LordToil</span> stage  = graph.<span class="nm">AttachSubgraph</span>(...) <span class="cm">/* 或自訂 LordToil 直接 new */</span>;
+<span class="ty">LordToil</span> assault = <span class="kw">new</span> <span class="ty">LordToil_AssaultColony</span>();
+graph.lordToils.<span class="nm">Add</span>(assault);
+
+<span class="cm">// 一條轉移：聚集完成 → 進攻</span>
+<span class="ty">Transition</span> t = <span class="kw">new</span> <span class="ty">Transition</span>(stage, assault);
+t.<span class="nm">AddTrigger</span>(<span class="kw">new</span> <span class="ty">Trigger_TicksPassed</span>(<span class="nu">2500</span>));        <span class="cm">// 等待約 40 秒</span>
+t.<span class="nm">AddPreAction</span>(<span class="kw">new</span> <span class="ty">TransitionAction_Message</span>(<span class="st">"突襲隊開始進攻！"</span>));
+graph.<span class="nm">AddTransition</span>(t);</pre>
+
+    <div class="callout callout-info">
+      <strong>狀態圖是「資料」，不是執行緒</strong>
+      StateGraph 只是節點 + 邊的集合；真正驅動它的是 <code>Lord.LordTick()</code>（由 <code>LordManager</code> 每 tick 呼叫）。
+      每 tick，Lord 會檢查當前 toil 出發的所有 Transition 的 Trigger，命中就轉移。
+    </div>
+  </div>
+
+  <!-- ═══ §3 建立 Lord ═══ -->
+  <div class="section" id="make">
+    <div class="section-title">§3 建立與管理 Lord（LordMaker / AddPawn / Notify_PawnLost）</div>
+
+    <p>
+      Lord 不是直接 <code>new</code> 出來的，而是透過工廠 <code>Verse.AI.Group.LordMaker</code>。最常用的入口：
+    </p>
+    <pre><span class="kw">public static</span> <span class="ty">Lord</span> <span class="nm">MakeNewLord</span>(
+    <span class="ty">Faction</span> faction,          <span class="cm">// 這群人屬於哪個派系（可 null，如野生動物群、機械群）</span>
+    <span class="ty">LordJob</span> lordJob,          <span class="cm">// 劇本（你的子類）</span>
+    <span class="ty">Map</span> map,                  <span class="cm">// 掛在哪張地圖</span>
+    <span class="ty">IEnumerable&lt;Pawn&gt;</span> startingPawns = <span class="kw">null</span>);  <span class="cm">// 初始成員（可後補）</span></pre>
+
+    <p>
+      它會建立 <code>Lord</code>、呼叫 <code>lordJob.CreateGraph()</code>、把 Lord 註冊進 <code>map.lordManager</code>，並把 <code>startingPawns</code> 一一 <code>AddPawn</code>。
+      典型用法（自己 spawn 一隊人然後組隊）：
+    </p>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI.Group;
+<span class="kw">using</span> RimWorld;
+
+<span class="cm">// 假設 pawns 已經 GenSpawn 到 map 上、屬於 enemyFaction</span>
+<span class="ty">List&lt;Pawn&gt;</span> pawns = ...;
+<span class="ty">Faction</span> enemyFaction = ...;
+<span class="ty">Map</span> map = ...;
+
+<span class="cm">// 1) 建立 LordJob（你的子類或內建）</span>
+<span class="ty">LordJob</span> lordJob = <span class="kw">new</span> <span class="ty">LordJob_AssaultColony</span>(enemyFaction);
+
+<span class="cm">// 2) 建立 Lord 並把整隊塞進去</span>
+<span class="ty">Lord</span> lord = <span class="ty">LordMaker</span>.<span class="nm">MakeNewLord</span>(enemyFaction, lordJob, map, pawns);
+
+<span class="cm">// 此後這群 pawn 的群體行為就由 lord 接管</span></pre>
+
+    <h3>成員的加入與離開</h3>
+    <p>
+      Lord 的成員清單是 <code>lord.ownedPawns</code>。動態增減用下面這組方法——它們會自動觸發當前 toil 的 <code>UpdateAllDuties()</code>，讓新人立刻拿到 duty：
+    </p>
+    <table class="param-table">
+      <tr><th>方法</th><th>作用</th></tr>
+      <tr><td><code>lord.AddPawn(pawn)</code></td><td>把 pawn 加入此 Lord；會設 <code>pawn.mindState.duty</code> 並呼叫 UpdateAllDuties。</td></tr>
+      <tr><td><code>lord.AddPawns(IEnumerable&lt;Pawn&gt;)</code></td><td>批次加入（內部逐一 AddPawn）。</td></tr>
+      <tr><td><code>lord.Notify_PawnLost(pawn, PawnLostCondition)</code></td><td>通知 Lord 某成員「失去」（死亡、被俘、離圖、叛變…）。Lord 會移出清單並可能觸發轉移。</td></tr>
+      <tr><td><code>lord.RemovePawn(pawn)</code></td><td>單純移出清單，不帶「失去原因」語意（較少直接用）。</td></tr>
+      <tr><td><code>lord.CurLordToil</code></td><td>讀當前 toil。</td></tr>
+      <tr><td><code>lord.GotoToil(toil)</code></td><td>強制切換到指定 toil（繞過 Transition，少用）。</td></tr>
+    </table>
+
+    <p><code>PawnLostCondition</code>（<code>Verse.AI.Group</code> 列舉）描述「怎麼失去的」，影響 Lord 是否視同傷亡、是否計入撤退判斷：</p>
+    <table class="param-table">
+      <tr><th>值</th><th>語意</th></tr>
+      <tr><td><code>Killed</code></td><td>死亡——計入「死傷」類 Trigger。</td></tr>
+      <tr><td><code>Incapped</code></td><td>倒地失能。</td></tr>
+      <tr><td><code>MadePrisoner</code> / <code>Captured</code></td><td>被俘。</td></tr>
+      <tr><td><code>ExitedMap</code></td><td>正常離圖（撤退完成、訪客離開）。</td></tr>
+      <tr><td><code>ChangedFaction</code></td><td>叛變/招降。</td></tr>
+      <tr><td><code>LeftVoluntarily</code></td><td>自願脫隊。</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>不要手動改 ownedPawns</strong>
+      請一律走 <code>AddPawn</code> / <code>Notify_PawnLost</code>。直接動 <code>lord.ownedPawns.Remove(...)</code> 會跳過 duty 重算與轉移檢查，
+      導致 pawn 卡在舊 duty 或 Lord 算錯存活率。RimWorld 內部各處（戰死、被俘、離圖）都是呼叫 <code>Notify_PawnLost</code> 來通知 Lord 的。
+    </div>
+
+    <h3>Lord 與 Faction 的關係</h3>
+    <p>
+      <code>lord.faction</code> 決定這群人對殖民地的敵友態度與 pawn 思維樹的解讀。三種常見組合：
+    </p>
+    <div class="g3">
+      <div class="card card-accent-red">
+        <h3>敵對派系</h3>
+        <p>突襲、圍攻、機械叢集。faction 與玩家為敵；成員思維樹會把「攻擊殖民地」類 duty 正常執行。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>友好/中立派系</h3>
+        <p>訪客、商隊、求援團。faction 友好；duty 多為移動、社交、交易、離開。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>無派系（null）</h3>
+        <p>野生動物遷徙、瘋狂動物群、某些異常實體。Lord 仍可協調移動，但無外交語意。</p>
+      </div>
+    </div>
+    <p>
+      生成敵對 pawn 通常配合 <code>RimWorld.PawnGroupMakerUtility.GeneratePawns(...)</code>（見第 11 章 Pawn 生成），
+      再用 <code>GenSpawn.Spawn</code> 放到地圖邊緣，最後 <code>MakeNewLord</code>。整個 raid 流程的核心就是這三步——這也是 §7 要講的 IncidentWorker 內幕。
+    </p>
+  </div>
+
+  <!-- ═══ §4 自訂 LordJob ═══ -->
+  <div class="section" id="customjob">
+    <div class="section-title">§4 寫一個自訂 LordJob：集結 → 攻擊 → 死傷過半則逃</div>
+
+    <p>
+      現在把前面拼起來，寫一個完整可用的自訂 LordJob 骨架。劇本：突襲隊先到一個集結點待命，等聚齊或時間到就轉入「攻擊據點」，
+      若損失達到一定比例就全隊「離圖逃跑」。這展示了 <code>CreateGraph()</code> 的標準寫法、Transition 的串接、以及 <code>ExposeData</code> 的存檔處理。
+    </p>
+
+    <h3>骨架程式碼</h3>
+    <pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+<span class="kw">using</span> Verse.AI.Group;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public class</span> <span class="ty">LordJob_StageThenAssault</span> : <span class="ty">LordJob</span>
+{
+    <span class="cm">// 需要存檔的欄位（攻擊集結點、損失閾值）</span>
+    <span class="kw">private</span> <span class="ty">IntVec3</span> stageLoc;
+    <span class="kw">private</span> <span class="ty">float</span> retreatThreshold = <span class="nu">0.5f</span>;
+
+    <span class="cm">// 無參數建構子是「存檔載入」用的——必須有！</span>
+    <span class="kw">public</span> <span class="nm">LordJob_StageThenAssault</span>() { }
+
+    <span class="kw">public</span> <span class="nm">LordJob_StageThenAssault</span>(<span class="ty">IntVec3</span> stageLoc, <span class="ty">float</span> retreatThreshold = <span class="nu">0.5f</span>)
+    {
+        <span class="kw">this</span>.stageLoc = stageLoc;
+        <span class="kw">this</span>.retreatThreshold = retreatThreshold;
+    }
+
+    <span class="kw">public override</span> <span class="ty">StateGraph</span> <span class="nm">CreateGraph</span>()
+    {
+        <span class="ty">StateGraph</span> graph = <span class="kw">new</span> <span class="ty">StateGraph</span>();
+
+        <span class="cm">// === 狀態 1：集結待命（圍著 stageLoc 防守，不主動進攻）===</span>
+        <span class="ty">LordToil_DefendPoint</span> stage = <span class="kw">new</span> <span class="ty">LordToil_DefendPoint</span>(stageLoc);
+        graph.<span class="nm">AddToil</span>(stage);   <span class="cm">// 第一個加入的 toil 預設為 StartingToil</span>
+
+        <span class="cm">// === 狀態 2：進攻殖民地 ===</span>
+        <span class="ty">LordToil_AssaultColony</span> assault = <span class="kw">new</span> <span class="ty">LordToil_AssaultColony</span>();
+        graph.<span class="nm">AddToil</span>(assault);
+
+        <span class="cm">// === 狀態 3：全隊離圖逃跑 ===</span>
+        <span class="ty">LordToil_ExitMap</span> exit = <span class="kw">new</span> <span class="ty">LordToil_ExitMap</span>(<span class="ty">LocomotionUrgency</span>.Jog, canDig: <span class="kw">false</span>);
+        graph.<span class="nm">AddToil</span>(exit);
+
+        <span class="cm">// --- 轉移 A：集結完成（時間到）→ 進攻 ---</span>
+        <span class="ty">Transition</span> toAssault = <span class="kw">new</span> <span class="ty">Transition</span>(stage, assault);
+        toAssault.<span class="nm">AddTrigger</span>(<span class="kw">new</span> <span class="ty">Trigger_TicksPassed</span>(<span class="nu">2500</span>));   <span class="cm">// 約 40 秒</span>
+        toAssault.<span class="nm">AddPreAction</span>(<span class="kw">new</span> <span class="ty">TransitionAction_Message</span>(
+            <span class="st">"敵軍開始進攻！"</span>, <span class="ty">MessageTypeDefOf</span>.ThreatBig));
+        graph.<span class="nm">AddTransition</span>(toAssault);
+
+        <span class="cm">// --- 轉移 B：死傷達閾值 → 逃跑（從「集結」與「進攻」都可觸發）---</span>
+        <span class="kw">foreach</span> (<span class="ty">LordToil</span> from <span class="kw">in</span> <span class="kw">new</span>[] { stage, assault })
+        {
+            <span class="ty">Transition</span> toFlee = <span class="kw">new</span> <span class="ty">Transition</span>(from, exit);
+            toFlee.<span class="nm">AddTrigger</span>(<span class="kw">new</span> <span class="ty">Trigger_FractionPawnsLost</span>(retreatThreshold));
+            toFlee.<span class="nm">AddPreAction</span>(<span class="kw">new</span> <span class="ty">TransitionAction_Message</span>(
+                <span class="st">"敵軍損失慘重，開始撤退！"</span>, <span class="ty">MessageTypeDefOf</span>.NeutralEvent));
+            graph.<span class="nm">AddTransition</span>(toFlee);
+        }
+
+        <span class="kw">return</span> graph;
+    }
+
+    <span class="cm">// 存檔：只存資料欄位，不存 StateGraph（載入後 CreateGraph 重建）</span>
+    <span class="kw">public override</span> <span class="kw">void</span> <span class="nm">ExposeData</span>()
+    {
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> stageLoc, <span class="st">"stageLoc"</span>);
+        <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> retreatThreshold, <span class="st">"retreatThreshold"</span>, <span class="nu">0.5f</span>);
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>無參數建構子是強制的</strong>
+      存檔載入時，<code>Scribe</code> 會先用<strong>無參數建構子</strong> new 出 LordJob，再呼叫 <code>ExposeData()</code> 還原欄位，
+      最後重新呼叫 <code>CreateGraph()</code> 重建狀態圖。若你只寫了帶參數的建構子，載入舊存檔會直接拋例外（<code>MissingMethodException</code> / 反射失敗）。
+    </div>
+
+    <h3>StartingToil 與 toilsByDef</h3>
+    <p>
+      <code>graph.AddToil(toil)</code> 加入的<strong>第一個</strong> toil 自動成為 <code>StartingToil</code>（Lord 建立後的初始狀態）。
+      若要明確指定，可設 <code>graph.StartingToil = someToil;</code>。
+      另外 Lord 提供 <code>lord.toilsByDef</code>（其實是查 graph 中具名 toil 的映射）方便在轉移 preAction 或外部 signal 裡用語意名稱跳轉。
+    </p>
+    <pre><span class="cm">// 明確指定起始狀態（不依賴加入順序）</span>
+graph.StartingToil = stage;
+
+<span class="cm">// 也可以掛「全域逃跑」toil：當整群人都該逃時自動進入</span>
+<span class="cm">// LordJob.AddFleeToil() 之類的 helper 在部分內建 job 內被覆寫使用</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>善用內建 LordToil 拼裝</strong>
+      你很少需要從零寫 LordToil。<code>LordToil_DefendPoint</code>、<code>LordToil_AssaultColony</code>、<code>LordToil_ExitMap</code>、
+      <code>LordToil_Travel</code>、<code>LordToil_Stage</code> 等都是現成的——多數自訂 LordJob 只是把這些既有 toil 用不同的 Transition 串起來。
+      先看內建 job 怎麼拼（§6），再決定要不要自己寫 toil。
+    </div>
+  </div>
+
+  <!-- ═══ §5 LordToil 與 Duty ═══ -->
+  <div class="section" id="duty">
+    <div class="section-title">§5 LordToil 與 Duty：UpdateAllDuties / DutyDef / ThinkNode_Duty</div>
+
+    <p>
+      LordToil 真正「指揮」pawn 的方式是設定 <code>pawn.mindState.duty</code>。
+      這個 duty 是一個 <code>Verse.AI.PawnDuty</code>，包著一個 <code>DutyDef</code> 與一些參數（焦點目標、半徑等）。
+      個體思維樹裡的 <code>ThinkNode_Duty</code> 看到這個 duty，就跳進對應的子思維樹去產生 Job。
+    </p>
+
+    <h3>UpdateAllDuties()：核心</h3>
+    <p>
+      每個 LordToil 覆寫 <code>UpdateAllDuties()</code>，遍歷 <code>lord.ownedPawns</code> 給每人指派 duty。最小自訂 toil 長這樣：
+    </p>
+    <pre><span class="kw">public class</span> <span class="ty">LordToil_GatherAroundFire</span> : <span class="ty">LordToil</span>
+{
+    <span class="kw">private</span> <span class="ty">IntVec3</span> fireSpot;
+
+    <span class="kw">public</span> <span class="nm">LordToil_GatherAroundFire</span>(<span class="ty">IntVec3</span> fireSpot)
+    {
+        <span class="kw">this</span>.fireSpot = fireSpot;
+    }
+
+    <span class="kw">public override</span> <span class="kw">void</span> <span class="nm">UpdateAllDuties</span>()
+    {
+        <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> lord.ownedPawns)
+        {
+            <span class="cm">// 給每個成員「在火堆附近閒晃 / 圍坐」的 duty</span>
+            p.mindState.duty = <span class="kw">new</span> <span class="ty">PawnDuty</span>(<span class="ty">DutyDefOf</span>.Idle, fireSpot, radius: <span class="nu">6f</span>);
+        }
+    }
+}</pre>
+
+    <p><code>PawnDuty</code> 常用建構參數與欄位：</p>
+    <table class="param-table">
+      <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>def</code></td><td>DutyDef</td><td>職責類型（決定走哪段思維樹）。</td></tr>
+      <tr><td><code>focus</code> / <code>focusSecond</code></td><td>LocalTargetInfo</td><td>主要/次要焦點目標（一個格子、一個 thing）。<strong>null 會出事</strong>——見 §8。</td></tr>
+      <tr><td><code>radius</code></td><td>float</td><td>圍繞 focus 的活動半徑（如防守、閒晃範圍）。</td></tr>
+      <tr><td><code>locomotion</code></td><td>LocomotionUrgency</td><td>移動急迫度（Walk / Jog / Sprint）。</td></tr>
+      <tr><td><code>canDig</code></td><td>DutyDef 設定</td><td>是否允許挖牆（圍攻常開）。</td></tr>
+    </table>
+
+    <h3>常見內建 DutyDef</h3>
+    <p>
+      <code>DutyDef</code> 定義在 XML（<code>RimWorld.DutyDefOf</code> 提供常用的強型別引用）。每個 DutyDef 內含
+      <code>thinkNode</code>——指向一段子思維樹，那才是 duty 真正展開成 Job 的地方。速查：
+    </p>
+    <table class="param-table">
+      <tr><th>DutyDef</th><th>行為</th><th>典型 LordToil</th></tr>
+      <tr><td><code>DutyDefOf.Defend</code></td><td>守在 focus 附近，反擊來犯者</td><td>LordToil_DefendPoint</td></tr>
+      <tr><td><code>DutyDefOf.AssaultColony</code></td><td>主動尋敵、攻擊殖民地目標</td><td>LordToil_AssaultColony</td></tr>
+      <tr><td><code>DutyDefOf.ExitMapBest</code></td><td>走最近/最安全的地圖邊離開</td><td>LordToil_ExitMap</td></tr>
+      <tr><td><code>DutyDefOf.ExitMapBestAndDefendSelf</code></td><td>離圖但被打會還手</td><td>撤退/驚走</td></tr>
+      <tr><td><code>DutyDefOf.Idle</code></td><td>原地/小範圍閒晃</td><td>集結、典禮觀眾、訪客待機</td></tr>
+      <tr><td><code>DutyDefOf.TravelOrLeave</code></td><td>朝目標移動，否則離開</td><td>商隊、過境</td></tr>
+      <tr><td><code>DutyDefOf.Escort</code></td><td>護衛某個 focus pawn</td><td>護衛任務</td></tr>
+      <tr><td><code>DutyDefOf.SabotageHostile</code> / Steal</td><td>破壞/偷竊</td><td>機械叢集、竊盜團</td></tr>
+    </table>
+
+    <h3>duty 怎麼被思維樹消費（銜接第 29 章 §6）</h3>
+    <p>
+      pawn 的 <code>ThinkTreeDef</code> 裡通常很靠前就有一個 <code>ThinkNode_Duty</code>。它讀 <code>pawn.mindState.duty.def.thinkNode</code>，
+      把控制權交給該 DutyDef 自帶的子思維樹。也就是說：<strong>Lord 設 duty → 思維樹的 ThinkNode_Duty 攔截 → 跑 DutyDef.thinkNode → 產生 Job</strong>。
+      下面是一個 DutyDef 的 XML 形狀（簡化）：
+    </p>
+    <pre><span class="xml-tag">&lt;DutyDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_GatherAroundFire<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thinkNode</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ThinkNode_Priority"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;subNodes&gt;</span>
+      <span class="cm">&lt;!-- 在 focus 附近找格子閒晃 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"JobGiver_WanderNearDutyLocation"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;ticksBetweenWandersRange&gt;</span>300~600<span class="xml-tag">&lt;/ticksBetweenWandersRange&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/subNodes&gt;</span>
+  <span class="xml-tag">&lt;/thinkNode&gt;</span>
+<span class="xml-tag">&lt;/DutyDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>分層的好處</strong>
+      因為 duty 只是「意圖」、思維樹才負責「怎麼做」，所以同一個 DutyDef 在不同 pawn（人類 vs 機械 vs 動物）身上會用各自的思維樹展開，
+      自動尊重各 pawn 的能力差異。你寫 LordToil 時只要表達「我要他幹嘛」，不必管「他怎麼幹」。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>UpdateAllDuties 不是每 tick 跑</strong>
+      它只在進入 toil、成員增減時被呼叫。若你的 duty focus 需要隨時間移動（如追著玩家跑的集結點），
+      要嘛在 <code>LordToilTick()</code> 裡定期手動重設 duty，要嘛用會自己追蹤目標的 DutyDef。別預期 UpdateAllDuties 會自動重跑。
+    </div>
+  </div>
+
+  <!-- ═══ §6 內建可複用 LordJob ═══ -->
+  <div class="section" id="builtin">
+    <div class="section-title">§6 內建可複用的 LordJob 範例</div>
+
+    <p>
+      動手寫之前，先盤點 RimWorld 內建的 LordJob——大多數需求都能直接用或子類化。下面挑最常被 mod 重用的幾個（皆在 <code>RimWorld</code> 命名空間，繼承 <code>Verse.AI.Group.LordJob</code>）。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>LordJob_AssaultColony</h3>
+        <p>標準突襲。成員直接 <code>AssaultColony</code>，可設定是否能搶東西、是否能綁架、損失過半是否撤退。建構子有多個 bool 旗標控制行為。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>LordJob_StageThenAttack</h3>
+        <p>先在某點集結一段時間再進攻——增援、伏擊常用。等同 §4 骨架的官方版。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>LordJob_VisitColony</h3>
+        <p>友好訪客團：走進殖民地、待一陣子（社交/閒晃）、再離開。可設停留時間與集合點。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>LordJob_Ritual</h3>
+        <p>Ideology 典禮的驅動者。依 <code>RitualBehaviorDef</code> 指派每個參與者的角色 duty（主持、觀眾、表演）。見第 32 章。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>LordJob_TradeWithColony</h3>
+        <p>商隊：抵達交易點、開放交易、結束後離開。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>LordJob_DefendBase / DefendPoint</h3>
+        <p>固守據點型（如出生點營地、機械叢集核心），被攻擊才反應。</p>
+      </div>
+    </div>
+
+    <h3>直接重用</h3>
+    <pre><span class="cm">// 突襲：能搶能綁，損失 50% 撤退（旗標依版本略有出入，請於 dnSpy 核對建構子簽章）</span>
+<span class="ty">LordJob</span> assault = <span class="kw">new</span> <span class="ty">LordJob_AssaultColony</span>(
+    assaulterFaction: enemyFaction,
+    canKidnap: <span class="kw">true</span>,
+    canTimeoutOrFlee: <span class="kw">true</span>,
+    sappers: <span class="kw">false</span>,
+    useAvoidGridSmart: <span class="kw">true</span>,
+    canSteal: <span class="kw">true</span>,
+    breachers: <span class="kw">false</span>,
+    canPickUpOpportunisticWeapons: <span class="kw">true</span>);
+
+<span class="ty">Lord</span> lord = <span class="ty">LordMaker</span>.<span class="nm">MakeNewLord</span>(enemyFaction, assault, map, pawns);</pre>
+
+    <h3>子類化擴充</h3>
+    <p>
+      若內建行為八成符合，只差一兩個轉移，最划算的做法是繼承並在 <code>CreateGraph()</code> 裡先 <code>base.CreateGraph()</code>、再補轉移。
+      但注意：很多內建 LordJob 的 <code>CreateGraph</code> 不是設計成可乾淨擴充的，常見做法反而是<strong>整段複製改寫</strong>。
+    </p>
+    <pre><span class="kw">public class</span> <span class="ty">LordJob_AssaultColony_BurnFirst</span> : <span class="ty">LordJob_AssaultColony</span>
+{
+    <span class="kw">public</span> <span class="nm">LordJob_AssaultColony_BurnFirst</span>() { }
+    <span class="kw">public</span> <span class="nm">LordJob_AssaultColony_BurnFirst</span>(<span class="ty">Faction</span> f) : <span class="kw">base</span>(f, <span class="kw">true</span>, <span class="kw">true</span>) { }
+
+    <span class="kw">public override</span> <span class="ty">StateGraph</span> <span class="nm">CreateGraph</span>()
+    {
+        <span class="ty">StateGraph</span> graph = <span class="kw">base</span>.<span class="nm">CreateGraph</span>();
+        <span class="cm">// 在 graph 上補一個「先放火」前置狀態與轉移……</span>
+        <span class="cm">// （實務上常因 base graph 的內部 toil 難以引用而改為整段重寫）</span>
+        <span class="kw">return</span> graph;
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>dnSpy 是你最好的範本庫</strong>
+      想做某種群體行為？先在 dnSpy 搜 <code>LordJob_</code>，找最接近的那個，讀它的 <code>CreateGraph</code>。
+      你會學到該用哪些 LordToil、哪些 Trigger、怎麼串。RimWorld 的群體 AI 幾乎全是這套積木拼出來的，照抄改參數即可。
+    </div>
+  </div>
+
+  <!-- ═══ §7 觸發器與事件 ═══ -->
+  <div class="section" id="triggers">
+    <div class="section-title">§7 觸發器與事件：Trigger 速查 / Signal / IncidentWorker</div>
+
+    <p>
+      Transition 何時觸發，全看掛在它上面的 <code>Trigger</code>。Trigger 有兩類判斷模型：
+      一是<strong>狀態輪詢</strong>（每 tick 由 <code>Lord</code> 問「現在該轉了嗎」），二是<strong>signal 驅動</strong>（外部事件丟一個 <code>TriggerSignal</code> 進來）。
+    </p>
+
+    <h3>常用 Trigger 速查</h3>
+    <table class="param-table">
+      <tr><th>Trigger</th><th>觸發條件</th><th>模型</th></tr>
+      <tr><td><code>Trigger_TicksPassed</code></td><td>進入當前 toil 後經過 N tick</td><td>輪詢</td></tr>
+      <tr><td><code>Trigger_TicksPassedAndNoRecentHarm</code></td><td>時間到且最近沒受傷</td><td>輪詢</td></tr>
+      <tr><td><code>Trigger_FractionPawnsLost</code></td><td>損失成員比例 ≥ 閾值</td><td>輪詢</td></tr>
+      <tr><td><code>Trigger_PawnHarmed</code></td><td>有成員受到傷害</td><td>signal</td></tr>
+      <tr><td><code>Trigger_PawnLost</code></td><td>有成員死亡/離隊</td><td>signal</td></tr>
+      <tr><td><code>Trigger_PawnCannotReachMapEdge</code></td><td>有成員找不到出口（被圍困）</td><td>輪詢</td></tr>
+      <tr><td><code>Trigger_BecameNonHostileToPlayer</code></td><td>派系關係轉為非敵對（招安）</td><td>輪詢</td></tr>
+      <tr><td><code>Trigger_Memo</code></td><td>收到指定字串的 memo signal</td><td>signal</td></tr>
+      <tr><td><code>Trigger_PawnExitedMap</code></td><td>有成員離圖</td><td>signal</td></tr>
+      <tr><td><code>Trigger_OnClamor</code></td><td>聽到喧鬧（爆炸、開門被吵醒）</td><td>signal</td></tr>
+      <tr><td><code>Trigger_UrgentlyHungry</code></td><td>成員飢餓緊急（長期駐留群）</td><td>輪詢</td></tr>
+    </table>
+
+    <h3>Signal 機制：外部事件如何影響 Lord</h3>
+    <p>
+      Signal 驅動的 Trigger 不會自己輪詢，而是等別人把訊號送進來。送法有兩種：
+    </p>
+    <ul>
+      <li><strong>系統級通知</strong>：傷害、死亡、開門等由引擎自動廣播。例如某 pawn 受傷時，<code>Pawn</code> / <code>DamageWorker</code> 路徑會呼叫
+          <code>lord.Notify_PawnDamaged(...)</code> / <code>lord.Notify_PawnLost(...)</code>，Lord 再轉成 <code>TriggerSignal</code> 餵給每條 Transition 的 Trigger。</li>
+      <li><strong>自訂 memo</strong>：你可以從任何地方呼叫 <code>lord.ReceiveMemo("MyEvent")</code>，配合 <code>Trigger_Memo("MyEvent")</code> 觸發自訂轉移——
+          這是 mod 讓「按鈕、研究完成、建築被毀」等任意事件改變群體行為的標準手段。</li>
+    </ul>
+    <pre><span class="cm">// 在任意位置丟一個 memo，讓掛了 Trigger_Memo("EnrageNow") 的轉移立刻觸發</span>
+lord.<span class="nm">ReceiveMemo</span>(<span class="st">"EnrageNow"</span>);
+
+<span class="cm">// 對應的轉移（在 CreateGraph 裡）</span>
+<span class="ty">Transition</span> enrage = <span class="kw">new</span> <span class="ty">Transition</span>(passive, berserk);
+enrage.<span class="nm">AddTrigger</span>(<span class="kw">new</span> <span class="ty">Trigger_Memo</span>(<span class="st">"EnrageNow"</span>));
+graph.<span class="nm">AddTransition</span>(enrage);</pre>
+
+    <p>
+      建築相關事件常見 <code>lord.Notify_BuildingDamaged(...)</code> / <code>Notify_BuildingLost(...)</code>——例如圍攻方的迫擊砲被打掉、
+      防守方的核心建築被破壞時，引擎會通知對應 Lord，讓「設施被毀就改打法」這類轉移生效。
+    </p>
+
+    <h3>IncidentWorker：raid 的內幕就是 spawn + MakeNewLord</h3>
+    <p>
+      第 12 章講過 <code>RimWorld.IncidentWorker</code>。一個敵襲事件（如 <code>IncidentWorker_RaidEnemy</code>）做的事，拆開來就是本章的東西：
+    </p>
+    <ol class="steps">
+      <li>用 <code>PawnGroupMakerUtility.GeneratePawns(...)</code> 依預算生成一隊敵人。</li>
+      <li>選定進場方式（地圖邊緣步行、空投、出生點）並 <code>GenSpawn.Spawn</code> 到地圖。</li>
+      <li>依 <code>RaidStrategyDef</code> 決定要用哪個 LordJob（突襲、圍攻、伏擊…）。</li>
+      <li>呼叫 <code>LordMaker.MakeNewLord(faction, lordJob, map, pawns)</code> 把他們組成一個 Lord。</li>
+      <li>送出 letter / message 通知玩家，事件結束。</li>
+    </ol>
+    <p>
+      也就是說，<code>RaidStrategyDef</code>（<code>RimWorld.RaidStrategyDef</code>）的 <code>workerClass</code> 內部會 <code>MakeLords(...)</code>，決定生成哪個 LordJob。
+      要做「全新的敵襲打法」，你新增一個 RaidStrategyDef + 一個 LordJob 子類即可，無需 Harmony patch incident 主流程。
+    </p>
+
+    <div class="callout callout-tip">
+      <strong>最小自訂 raid 配方</strong>
+      <code>新 LordJob 子類</code>（決定打法）→ <code>新 RaidStrategyDef</code>（XML，指向你的 LordJob 或自訂 worker）→
+      （可選）<code>新 IncidentDef / PawnGroupKindDef</code> 調整生成。整條鏈純資料 + 一個小 C# 類，是擴充敵襲最乾淨的路徑。
+    </div>
+  </div>
+
+  <!-- ═══ §8 除錯 ═══ -->
+  <div class="section" id="debug">
+    <div class="section-title">§8 除錯與存檔重建</div>
+
+    <h3>Dev mode 的 Lord 視覺化</h3>
+    <p>
+      開啟 Dev mode 後，最有用的是 <strong>Debug 繪圖開關</strong>。在 Debug 設定（齒輪）面板裡有幾個關鍵項：
+    </p>
+    <table class="param-table">
+      <tr><th>開關</th><th>看到什麼</th></tr>
+      <tr><td>Draw duties</td><td>每個 pawn 頭上畫出當前 duty 與 focus 連線——一眼看出誰在守哪、誰在攻誰。</td></tr>
+      <tr><td>Draw lords</td><td>把 Lord 的成員與當前 toil 標出來，確認分組是否正確。</td></tr>
+      <tr><td>Log duty changes / lord toil</td><td>在 toil 切換時輸出 log，追蹤狀態機是否如預期轉移。</td></tr>
+    </table>
+    <p>
+      程式碼層面，<code>lord.DebugString()</code>（或在 inspect 面板）可印出當前 toil、成員、各 Transition 的 Trigger 狀態，是排查「為什麼不轉移」的第一站。
+    </p>
+
+    <h3>常見故障與對策</h3>
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>群體卡在某 toil 不轉移</h3>
+        <p>檢查該 toil 出發的 Transition 是否真的有 Trigger、Trigger 條件是否永遠為 false（如 <code>Trigger_TicksPassed</code> 的 tick 從未被重置、<code>FractionPawnsLost</code> 閾值寫成 0 反而立刻轉走或寫成 1 永不觸發）。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>pawn 一直 Idle / 站著不動</h3>
+        <p>多半是 duty 的 <code>focus</code> 為 null，或 focus 指向不可達/已消失的目標，導致對應 JobGiver 回傳 null，pawn 退回 idle。給 duty 一律設有效 focus。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>UpdateAllDuties 沒重跑</h3>
+        <p>記得它只在進 toil / 成員增減時跑。需要隨時間更新的 duty（移動目標）要在 <code>LordToilTick()</code> 裡手動重設。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>載入存檔後 Lord 消失/報錯</h3>
+        <p>多為 LordJob 缺無參數建構子，或 <code>ExposeData</code> 漏存關鍵欄位導致 <code>LostImportantReferenceDuringLoading</code> 為 true 被清掉。</p>
+      </div>
+    </div>
+
+    <h3>存檔：StateGraph 不序列化，必須能重建</h3>
+    <p>
+      這是寫 LordJob 最容易踩的坑。RimWorld <strong>不存 StateGraph</strong>——它只存 LordJob 的資料欄位（透過 <code>ExposeData</code>），
+      載入時用無參數建構子 new 出 LordJob、ExposeData 還原欄位、再呼叫 <code>CreateGraph()</code> 重建整張圖。所以：
+    </p>
+    <ul>
+      <li><strong>CreateGraph 必須是純函式</strong>：只能依賴已 ExposeData 還原的欄位，不能依賴執行期才有的暫態資料。</li>
+      <li><strong>需要跨存檔記住的東西</strong>（攻擊目標、計時器基準、階段索引）必須放進<strong>欄位並 ExposeData</strong>，否則載入後歸零。</li>
+      <li><strong>引用 Thing/Pawn</strong> 用 <code>Scribe_References</code>；若該引用可能在載入時已不存在，於 <code>LostImportantReferenceDuringLoading</code> 回傳 true，讓 Lord 被乾淨清除而非崩潰。</li>
+    </ul>
+    <pre><span class="kw">private</span> <span class="ty">Thing</span> attackTarget;
+
+<span class="kw">public override</span> <span class="kw">bool</span> LostImportantReferenceDuringLoading
+{
+    <span class="kw">get</span> { <span class="kw">return</span> attackTarget == <span class="kw">null</span>; }   <span class="cm">// 目標沒了就讓 Lord 被移除</span>
+}
+
+<span class="kw">public override</span> <span class="kw">void</span> <span class="nm">ExposeData</span>()
+{
+    <span class="ty">Scribe_References</span>.<span class="nm">Look</span>(<span class="kw">ref</span> attackTarget, <span class="st">"attackTarget"</span>);
+}</pre>
+
+    <p>
+      LordToil 本身需要記憶的狀態（如「已經放了幾把火」）也不能直接放欄位——因為 toil 是 CreateGraph 重建出來的新實例。
+      要存的 toil 狀態放進 <code>LordToilData</code> 子類掛在 <code>toil.data</code>，它會被 Lord 一併 ExposeData，並在重建時按順序還原。
+    </p>
+
+    <div class="callout callout-danger">
+      <strong>測試一定要含「存檔→讀檔」這一步</strong>
+      很多 Lord bug 只在讀檔後才現形（圖重建出錯、欄位歸零、引用遺失）。
+      請務必在 Dev mode 觸發你的群體行為 → 中途存檔 → 讀回 → 確認狀態機接續正確。第 16 章的測試流程適用於此。
+    </div>
+
+    <div class="callout callout-info">
+      <strong>本章與相鄰章節的關係</strong>
+      個體層在第 29 章（AI 工作）；duty 銜接其 §6。敵襲生成在第 11 章（Pawn 生成）與第 12 章（事件敘事）。
+      典禮型 LordJob 延伸到第 32 章（思想體系）。把這幾章串起來，就能完整掌控 RimWorld 從「一個人」到「一群人」的所有行為。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 30 群體 AI：Lord、LordToil、LordJob · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

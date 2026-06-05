@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>機械師與機械族（Biotech DLC） — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html" class="active">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>機械師與機械族（Biotech DLC）</h1>
+  <p>Biotech 的機械師讓殖民者能透過頻寬（bandwidth）控制一群機械。本章拆解 Mechanitor, 頻寬, 機械 PawnKind、製造與召回，以及自訂機械。</p>
+  <span class="badge">Chapter 34 · Mechanitor</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══ 心智模型 ═══ -->
+  <div class="section">
+    <div class="section-title">心智模型：四個彼此正交的子系統</div>
+    <p>
+      機械師（mechanitor）玩法在反編譯後並不是單一龐然大物，而是四個幾乎正交的子系統疊起來的。
+      把它們拆開理解，後面所有 API 就有了座標：
+    </p>
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>身份層</h3>
+        <p>誰是機械師？由 <code>RimWorld.Pawn_MechanitorTracker</code>（掛在 <code>pawn.mechanitor</code>）與一個 <strong>mechlink</strong> Hediff 決定。沒有它，pawn 連控制機械的「插槽」都沒有。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>容量層</h3>
+        <p>能控制多少機械？由 <strong>bandwidth</strong>（頻寬）統計值決定：機械師本身提供基礎頻寬，<code>Building_MechBandNode</code> 與身體部件再加成。每隻機械吃掉 <code>bandwidthCost</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>實體層</h3>
+        <p>機械本身是 <code>Verse.Pawn</code>，其 <code>RaceProperties.IsMechanoid</code> 為真、<code>mechWeightClass</code> 分級。它隸屬玩家 faction，但行為由 overseer 與 work mode 驅動。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>生產層</h3>
+        <p>機械從哪來？<strong>mech gestator</strong>（孵化槽）＋ <code>RecipeDef</code> ＋ <strong>mech recharger</strong>（充電器）。製造、餵食、休眠回充都在這一層。</p>
+      </div>
+    </div>
+    <div class="callout callout-info">
+      <strong>反編譯定位</strong>
+      用 dnSpy 開 <code>Assembly-CSharp.dll</code>，主要鎖定 namespace <code>RimWorld</code> 下的
+      <code>Pawn_MechanitorTracker</code>、<code>MechanitorUtility</code>、<code>CompMechCarrier</code>、
+      <code>CompMechGestator</code>（孵化器 comp）、<code>Building_MechBandNode</code>、
+      <code>MechWorkModeDefOf</code>，以及 <code>Verse</code> 下的 <code>RaceProperties</code>、<code>Pawn</code>。
+      所有 def 型別（<code>MechWeightClassDef</code>、<code>MechWorkModeDef</code>）也在 <code>RimWorld</code>。
+    </div>
+  </div>
+
+  <!-- ═══ §1 DLC 守門與總覽 ═══ -->
+  <div class="section" id="dlc">
+    <div class="section-title">§1 · DLC 守門與總覽</div>
+
+    <p>
+      機械師的一切都依賴 <strong>Biotech DLC</strong>。沒裝 DLC 時，相關型別仍存在於 <code>Assembly-CSharp.dll</code>
+      （它們是核心組件的一部分），但對應的 Def（PawnKind、ThingDef、Recipe）不會載入。
+      因此你的 mod 必須做兩件事：<strong>XML 端用 <code>MayRequire</code> 條件載入</strong>、<strong>C# 端先檢查 <code>ModLister.BiotechInstalled</code> 再碰任何機械相關邏輯</strong>。
+    </p>
+
+    <h3>C# 守門</h3>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">MechGate</span>
+{
+    <span class="cm">// 在任何讀寫 pawn.mechanitor / 機械 Def 之前都先過這一關</span>
+    <span class="kw">public static bool</span> <span class="nm">Available</span> =&gt; <span class="ty">ModLister</span>.<span class="nm">BiotechInstalled</span>;
+
+    <span class="kw">public static void</span> <span class="nm">TryDoMechStuff</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">if</span> (!<span class="nm">Available</span>)
+        {
+            <span class="cm">// 沒裝 DLC：直接安靜返回，不要丟例外、不要碰 mechanitor</span>
+            <span class="kw">return</span>;
+        }
+        <span class="kw">var</span> tracker = pawn.<span class="nm">mechanitor</span>;   <span class="cm">// 只有確定有 DLC 才安全存取</span>
+        <span class="kw">if</span> (tracker == <span class="kw">null</span>) <span class="kw">return</span>; <span class="cm">// 此 pawn 不是機械師</span>
+        <span class="cm">// ... 真正的機械邏輯</span>
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>最常見的崩潰</strong>
+      在沒裝 Biotech 的存檔裡，若你的 Harmony patch 無條件呼叫 <code>pawn.mechanitor.ControlledPawns</code>，
+      <code>pawn.mechanitor</code> 多半是 <code>null</code> → <code>NullReferenceException</code> →
+      存檔載入崩潰且難以歸因。<strong>每一條碰機械的程式路徑都要先過 <code>BiotechInstalled</code>。</strong>
+    </div>
+
+    <h3>XML 守門：<code>MayRequire</code></h3>
+    <p>
+      在 def 的任一節點上加 <code>MayRequire="Ludeon.RimWorld.Biotech"</code>，
+      若 DLC 未啟用，該節點（連同它包住的子樹）會被靜默丟棄，不會報錯。
+      整份 def 檔若只在 DLC 下才有意義，可放在獨立資料夾，再用 <code>LoadFolders.xml</code> 條件載入：
+    </p>
+    <pre><span class="cm">&lt;!-- LoadFolders.xml --&gt;</span>
+<span class="xml-tag">&lt;loadFolders&gt;</span>
+  <span class="xml-tag">&lt;v1.5&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Common<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="cm">&lt;!-- 只有啟用 Biotech 時才載入這個資料夾 --&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">IfModActive</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>Biotech<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/v1.5&gt;</span>
+<span class="xml-tag">&lt;/loadFolders&gt;</span></pre>
+
+    <p>單一節點層級的條件載入（適合一份 def 裡只有某段需要 DLC）：</p>
+    <pre><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Workshop<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- 只有 Biotech 在時，才賦予這個建築 mech 加成的 comp --&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_MechBandNode"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">/&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <table>
+      <tr><th>守門方式</th><th>用途</th><th>失效行為</th></tr>
+      <tr><td><code>ModLister.BiotechInstalled</code></td><td>C# 執行期判斷</td><td>回傳 false，由你決定降級</td></tr>
+      <tr><td><code>MayRequire="..."</code>（節點屬性）</td><td>單一 def 節點條件載入</td><td>該節點被丟棄，其餘照載</td></tr>
+      <tr><td><code>MayRequireAnyOf="A,B"</code></td><td>多 DLC 任一即可</td><td>全缺才丟棄</td></tr>
+      <tr><td><code>LoadFolders.xml</code> + <code>IfModActive</code></td><td>整資料夾條件載入</td><td>整夾跳過</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>機械≠殖民者</strong>
+      先建立直覺：機械是 <code>Pawn</code>、屬玩家 faction，但<strong>它不是「殖民者」</strong>。
+      它沒有心情、需求（除了能量）、無法被招募成人類意義上的成員，也通常不計入「殖民者人口」這個用於事件點數的指標。
+      §8 會詳述這個判斷的精確 API。
+    </div>
+  </div>
+
+  <!-- ═══ §2 機械師身份 ═══ -->
+  <div class="section" id="identity">
+    <div class="section-title">§2 · 機械師身份：mechlink、tracker 與 overseer 綁定</div>
+
+    <p>
+      一個普通 pawn 要成為機械師，必須先擁有 <strong>mechlink</strong>——一個植入式 Hediff
+      （def 名 <code>MechlinkHediff</code>，可由手術 recipe <code>InstallMechlink</code> 安裝，串第 28 章「健康醫療」）。
+      mechlink 一旦存在，遊戲就會為該 pawn 配置一個 <code>RimWorld.Pawn_MechanitorTracker</code>，
+      之後可由 <code>pawn.mechanitor</code> 取得。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>取得身份</h3>
+        <p>手術安裝 mechlink（消耗物品 <code>Mechlink</code>），或角色生成時帶 mechanitor 特性。<code>MechanitorUtility.IsMechanitor(pawn)</code> 是最權威的判斷。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>tracker 物件</h3>
+        <p><code>Pawn_MechanitorTracker</code> 管理「這位機械師控制了哪些機械、頻寬用了多少、可控上限多少」。它隨 mechlink 出現、移除 mechlink 時清理。</p>
+      </div>
+    </div>
+
+    <h3>tracker 的關鍵成員</h3>
+    <table>
+      <tr><th>成員</th><th>型別</th><th>意義</th></tr>
+      <tr><td><code>ControlledPawns</code></td><td><code>List&lt;Pawn&gt;</code></td><td>此機械師目前控制（overseeing）的所有機械</td></tr>
+      <tr><td><code>TotalBandwidth</code></td><td><code>int</code></td><td>可用頻寬上限（基礎 + 建築 + 部件加成）</td></tr>
+      <tr><td><code>UsedBandwidth</code></td><td><code>int</code></td><td>已被 ControlledPawns 占用的頻寬（各機械 bandwidthCost 加總）</td></tr>
+      <tr><td><code>CanControlMechs</code></td><td><code>bool</code></td><td>是否處於可下令狀態（昏迷／在世界圖等會變 false）</td></tr>
+      <tr><td><code>OverseenPawns</code></td><td>同 ControlledPawns</td><td>不同版本命名略異，反編譯時兩者都查</td></tr>
+    </table>
+
+    <h3>判斷與列舉機械師控制的機械</h3>
+    <pre><span class="kw">using</span> System.Linq;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">MechanitorReads</span>
+{
+    <span class="cm">// 最可靠的「是不是機械師」判斷</span>
+    <span class="kw">public static bool</span> <span class="nm">IsMechanitor</span>(<span class="ty">Pawn</span> p)
+        =&gt; <span class="ty">MechanitorUtility</span>.<span class="nm">IsMechanitor</span>(p);
+
+    <span class="kw">public static int</span> <span class="nm">FreeBandwidth</span>(<span class="ty">Pawn</span> mechanitor)
+    {
+        <span class="kw">var</span> t = mechanitor.<span class="nm">mechanitor</span>;
+        <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">return</span> <span class="nu">0</span>;
+        <span class="kw">return</span> t.<span class="nm">TotalBandwidth</span> - t.<span class="nm">UsedBandwidth</span>;
+    }
+
+    <span class="kw">public static void</span> <span class="nm">DumpControlled</span>(<span class="ty">Pawn</span> mechanitor)
+    {
+        <span class="kw">var</span> t = mechanitor.<span class="nm">mechanitor</span>;
+        <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">return</span>;
+        <span class="kw">foreach</span> (<span class="ty">Pawn</span> mech <span class="kw">in</span> t.<span class="nm">ControlledPawns</span>)
+        {
+            <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"{mech.LabelShort}  cost={mech.def.race.bandwidthCost}  weight={mech.def.race.mechWeightClass}"</span>);
+        }
+    }
+}</pre>
+
+    <h3>overseer 綁定：機械「歸誰管」</h3>
+    <p>
+      機械與機械師之間的關係<strong>不是</strong> <code>Pawn.relations</code>（那是人際關係/家族），
+      而是一條專屬的 overseer 指派。機械側用 <code>mech.GetOverseer()</code>（擴充方法，定義於 <code>MechanitorUtility</code>）
+      取得目前主人；指派／解除則走 tracker 的方法或 <code>MechanitorUtility</code> 的工具方法。
+    </p>
+    <pre><span class="cm">// 取得某隻機械目前的 overseer（可能為 null＝無主，會 feral 化）</span>
+<span class="ty">Pawn</span> overseer = mech.<span class="nm">GetOverseer</span>();
+
+<span class="cm">// 將機械指派給某機械師（會占用對方頻寬）</span>
+<span class="cm">// 內部會檢查頻寬是否足夠；超載時遊戲會拒絕或標記失控（見 §8）</span>
+mechanitor.<span class="nm">mechanitor</span>.<span class="nm">Notify_MechAdded</span>(mech);   <span class="cm">// 版本相依，部分版本經由 OverseerSubject 設定</span>
+
+<span class="cm">// 較穩定的做法：透過機械自身的 comp 設定 overseer</span>
+<span class="kw">var</span> overseerComp = mech.<span class="ty">GetComp</span>&lt;<span class="ty">CompCanBeMechOverseer</span>&gt;(); <span class="cm">// 機械師端</span>
+<span class="cm">// 機械端則是 mech.overseerSubject（OverseerSubject）持有指派狀態</span></pre>
+
+    <div class="callout callout-warn">
+      <strong>命名因版本而異</strong>
+      指派／解除 overseer 的確切方法名在 1.4 → 1.5 之間動過數次（如
+      <code>Notify_MechAdded</code> / <code>SetOverseer</code> / <code>OverseerSubject.SetOverseer</code>）。
+      不要硬背名字，<strong>實際開 dnSpy 看你的目標版本</strong>。穩定不變的是兩個概念：
+      機械有 <code>overseerSubject</code>、機械師有 <code>mechanitor</code> tracker，兩者互指。
+    </div>
+  </div>
+
+  <!-- ═══ §3 機械 PawnKind / ThingDef ═══ -->
+  <div class="section" id="mechdef">
+    <div class="section-title">§3 · 機械 PawnKind / ThingDef：分級、頻寬成本與工種</div>
+
+    <p>
+      一隻機械需要兩個 Def：一個 race 的 <code>ThingDef</code>（定義它「是什麼」——血量、移動、外觀、
+      <code>RaceProperties</code>），以及一個 <code>PawnKindDef</code>（定義「怎麼生成這個個體」——裝備、貼圖變體）。
+      機械的特性集中在 <code>ThingDef.race</code> 這個 <code>RaceProperties</code> 上。
+    </p>
+
+    <h3>機械分級：<code>MechWeightClassDef</code></h3>
+    <p>分級影響召回、攜帶、AI 群體行為與許多上限判斷。香草四級：</p>
+    <table>
+      <tr><th>MechWeightClassDef</th><th>典型機械</th><th>特性</th></tr>
+      <tr><td><code>Light</code></td><td>Militor, Lifter, Cleansweeper</td><td>可被 <code>CompMechCarrier</code> 攜帶；低頻寬成本</td></tr>
+      <tr><td><code>Medium</code></td><td>Scyther, Lancer, Constructoid</td><td>主力，無法被攜帶</td></tr>
+      <tr><td><code>Heavy</code></td><td>Centipede 系列</td><td>高頻寬、高血量</td></tr>
+      <tr><td><code>UltraHeavy</code></td><td>War queen, Diabolus（特殊）</td><td>多半為敵對/特殊；玩家難控</td></tr>
+    </table>
+
+    <h3>RaceProperties 上的機械欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>意義</th></tr>
+      <tr><td><code>intelligence</code></td><td>機械通常為 <code>ToolUser</code>（能做部分工作）；純戰鬥機械可 <code>Animal</code> 級</td></tr>
+      <tr><td><code>mechEnabledWorkTypes</code></td><td>此機械可承擔的 <code>WorkTypeDef</code> 列表（如 Cleaning、Hauling）。空＝純戰鬥</td></tr>
+      <tr><td><code>mechWeightClass</code></td><td>指向 <code>MechWeightClassDef</code></td></tr>
+      <tr><td><code>bandwidthCost</code></td><td>占用機械師多少頻寬（核心平衡旋鈕）</td></tr>
+      <tr><td><code>mechFixedSkillLevel</code></td><td>機械做工作時固定的技能等級（無法成長）</td></tr>
+      <tr><td><code>fleshType</code></td><td>應為 <code>Mechanoid</code>（影響傷害、修復而非治療）</td></tr>
+      <tr><td><code>needsRest</code> / <code>foodType</code></td><td>機械不睡眠、不吃食物；以「能量」comp 取代（見 §4）</td></tr>
+    </table>
+
+    <h3>自訂一隻新機械：race ThingDef</h3>
+    <pre><span class="cm">&lt;!-- Biotech/Defs/ThingDefs_Races/Mech_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BaseMechanoid"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>Mech_MyHarvester<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>採收機<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>輕型農用機械，專責收割與搬運作物。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;statBases&gt;</span>
+      <span class="xml-tag">&lt;MarketValue&gt;</span><span class="xml-val">900</span><span class="xml-tag">&lt;/MarketValue&gt;</span>
+      <span class="xml-tag">&lt;MoveSpeed&gt;</span><span class="xml-val">3.6</span><span class="xml-tag">&lt;/MoveSpeed&gt;</span>
+      <span class="xml-tag">&lt;ToxicEnvironmentResistance&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/ToxicEnvironmentResistance&gt;</span>
+    <span class="xml-tag">&lt;/statBases&gt;</span>
+
+    <span class="xml-tag">&lt;race&gt;</span>
+      <span class="xml-tag">&lt;intelligence&gt;</span>ToolUser<span class="xml-tag">&lt;/intelligence&gt;</span>
+      <span class="xml-tag">&lt;fleshType&gt;</span>Mechanoid<span class="xml-tag">&lt;/fleshType&gt;</span>
+      <span class="xml-tag">&lt;needsRest&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/needsRest&gt;</span>
+      <span class="xml-tag">&lt;foodType&gt;</span>None<span class="xml-tag">&lt;/foodType&gt;</span>
+
+      <span class="cm">&lt;!-- 機械師相關 --&gt;</span>
+      <span class="xml-tag">&lt;mechWeightClass&gt;</span>Light<span class="xml-tag">&lt;/mechWeightClass&gt;</span>
+      <span class="xml-tag">&lt;bandwidthCost&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/bandwidthCost&gt;</span>
+      <span class="xml-tag">&lt;mechFixedSkillLevel&gt;</span><span class="xml-val">8</span><span class="xml-tag">&lt;/mechFixedSkillLevel&gt;</span>
+
+      <span class="cm">&lt;!-- 可承擔的工作（空則純戰鬥） --&gt;</span>
+      <span class="xml-tag">&lt;mechEnabledWorkTypes&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>PlantCutting<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Hauling<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/mechEnabledWorkTypes&gt;</span>
+
+      <span class="xml-tag">&lt;body&gt;</span>Mech_Lifter<span class="xml-tag">&lt;/body&gt;</span>     <span class="cm">&lt;!-- 沿用輕型機械的身體結構 --&gt;</span>
+      <span class="xml-tag">&lt;lifeStageAges&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span><span class="xml-tag">&lt;def&gt;</span>MechanoidFullyFormed<span class="xml-tag">&lt;/def&gt;</span><span class="xml-tag">&lt;minAge&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/minAge&gt;</span><span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/lifeStageAges&gt;</span>
+    <span class="xml-tag">&lt;/race&gt;</span>
+
+    <span class="cm">&lt;!-- 能量 comp：取代睡眠/吃飯（見 §4） --&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Rechargeable"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;maxEnergy&gt;</span><span class="xml-val">100</span><span class="xml-tag">&lt;/maxEnergy&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_OverseerSubject"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;delayUntilFeralCheck&gt;</span><span class="xml-val">60000</span><span class="xml-tag">&lt;/delayUntilFeralCheck&gt;</span> <span class="cm">&lt;!-- 失去 overseer 後多久檢查失控 --&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/ThingDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>對應的 PawnKindDef</h3>
+    <pre><span class="cm">&lt;!-- Biotech/Defs/PawnKindDefs/PawnKind_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;PawnKindDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>Mech_MyHarvester<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>採收機<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;race&gt;</span>Mech_MyHarvester<span class="xml-tag">&lt;/race&gt;</span>
+    <span class="xml-tag">&lt;combatPower&gt;</span><span class="xml-val">60</span><span class="xml-tag">&lt;/combatPower&gt;</span>
+    <span class="xml-tag">&lt;isFighter&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/isFighter&gt;</span>
+    <span class="xml-tag">&lt;lifeStages&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;bodyGraphicData&gt;</span>
+          <span class="xml-tag">&lt;texPath&gt;</span>Things/Pawn/Mechanoid/MyHarvester<span class="xml-tag">&lt;/texPath&gt;</span>
+          <span class="xml-tag">&lt;drawSize&gt;</span><span class="xml-val">1.5</span><span class="xml-tag">&lt;/drawSize&gt;</span>
+        <span class="xml-tag">&lt;/bodyGraphicData&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/lifeStages&gt;</span>
+  <span class="xml-tag">&lt;/PawnKindDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>找對 ParentName</strong>
+      香草機械的 abstract 基底通常是 <code>BaseMechanoid</code>（含血量、傷害免疫、屍體＝拆解料等共通設定）。
+      繼承它能省下大量樣板。可在香草檔
+      <code>Data/Biotech/Defs/ThingDefs_Races/Races_Mechanoids_*.xml</code> 找到範本，照抄再改。
+    </div>
+  </div>
+
+  <!-- ═══ §4 製造機械 ═══ -->
+  <div class="section" id="gestate">
+    <div class="section-title">§4 · 製造機械：孵化槽、配方與能量回充</div>
+
+    <p>
+      玩家製造機械的流程：在 <strong>mech gestator</strong>（孵化槽，含 <code>CompMechGestator</code>）下達一個
+      <strong>gestation cycle</strong>（孵化配方，<code>RecipeDef</code>），消耗材料與電力，
+      經過數個由 <code>CompMechGestator</code> 驅動的週期後，從關聯的孵化盒（gestation processor）產出一隻機械。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-orange">
+        <h3>① 孵化槽</h3>
+        <p>建築 ThingDef + <code>CompProperties_MechGestator</code>。耗電、需機械師站位輸入養分（mech 用的「nutrition」其實是工人投放的原料）。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>② 孵化配方</h3>
+        <p><code>RecipeDef</code> 的 <code>ingredients</code> 定義所需材料（鋼鐵、塑鋼、subcore）；<code>products</code> 是要生出的機械 PawnKind。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>③ 能量回充</h3>
+        <p>產出後機械以 <code>CompProperties_Rechargeable</code> 管理能量；耗盡會 self-shutdown，需到 <strong>recharger</strong> 充電。</p>
+      </div>
+    </div>
+
+    <h3>孵化配方（RecipeDef）</h3>
+    <pre><span class="cm">&lt;!-- 機械孵化配方：在孵化槽列為可下令的選項 --&gt;</span>
+<span class="xml-tag">&lt;RecipeDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>GestateMyHarvester<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>孵化採收機<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;jobString&gt;</span>正在孵化採收機。<span class="xml-tag">&lt;/jobString&gt;</span>
+
+  <span class="cm">&lt;!-- 機械配方的識別：產出一隻 mech 而非 thing --&gt;</span>
+  <span class="xml-tag">&lt;mechResurrection&gt;</span><span class="xml-val">false</span><span class="xml-tag">&lt;/mechResurrection&gt;</span>
+  <span class="xml-tag">&lt;gestationCycles&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/gestationCycles&gt;</span>   <span class="cm">&lt;!-- 需幾個孵化週期 --&gt;</span>
+
+  <span class="xml-tag">&lt;ingredients&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;filter&gt;</span><span class="xml-tag">&lt;thingDefs&gt;</span><span class="xml-tag">&lt;li&gt;</span>Steel<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/thingDefs&gt;</span><span class="xml-tag">&lt;/filter&gt;</span>
+      <span class="xml-tag">&lt;count&gt;</span><span class="xml-val">60</span><span class="xml-tag">&lt;/count&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>
+      <span class="xml-tag">&lt;filter&gt;</span><span class="xml-tag">&lt;thingDefs&gt;</span><span class="xml-tag">&lt;li&gt;</span>SignalChip<span class="xml-tag">&lt;/li&gt;</span><span class="xml-tag">&lt;/thingDefs&gt;</span><span class="xml-tag">&lt;/filter&gt;</span>
+      <span class="xml-tag">&lt;count&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/count&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/ingredients&gt;</span>
+
+  <span class="cm">&lt;!-- 要孵出的機械 --&gt;</span>
+  <span class="xml-tag">&lt;products&gt;</span>
+    <span class="xml-tag">&lt;Mech_MyHarvester&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/Mech_MyHarvester&gt;</span>
+  <span class="xml-tag">&lt;/products&gt;</span>
+
+  <span class="cm">&lt;!-- 哪些孵化槽能執行 --&gt;</span>
+  <span class="xml-tag">&lt;recipeUsers&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>MechGestator<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/recipeUsers&gt;</span>
+
+  <span class="cm">&lt;!-- 解鎖研究（串第 14 章） --&gt;</span>
+  <span class="xml-tag">&lt;researchPrerequisite&gt;</span>BasicMechtech<span class="xml-tag">&lt;/researchPrerequisite&gt;</span>
+<span class="xml-tag">&lt;/RecipeDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>香草配方的權威來源</strong>
+      不要憑空寫機械配方的欄位。打開
+      <code>Data/Biotech/Defs/RecipeDefs/Recipes_Gestation.xml</code>，
+      照香草 <code>GestateMilitor</code> / <code>GestateLifter</code> 的結構抄。欄位（如 <code>gestationCycles</code>、
+      <code>mechResurrection</code>）在版本間偶有調整，<strong>以你目標版本的香草檔為準</strong>。
+    </div>
+
+    <h3>能量回充與 self-shutdown</h3>
+    <p>
+      機械不吃食物——它有「能量」（由 <code>CompProperties_Rechargeable</code> 或機械版的能量 need 管理）。
+      能量耗盡時，機械進入 <strong>self-shutdown</strong>：它會掛上一個「電量耗盡」Hediff、停止行動，
+      直到被搬到 <strong>mech recharger</strong>（充電器，<code>Building_MechCharger</code>）回充。
+      在 <code>recharge</code> work mode（見 §5）下，機械會自動走去充電。
+    </p>
+    <pre><span class="cm">// C# 端讀取/操作機械能量（comp 名稱以反編譯為準）</span>
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">MechEnergy</span>
+{
+    <span class="kw">public static float</span> <span class="nm">EnergyPercent</span>(<span class="ty">Pawn</span> mech)
+    {
+        <span class="cm">// 機械的能量在 1.5 走 Need_MechEnergy（掛在 pawn.needs）</span>
+        <span class="kw">var</span> need = mech.<span class="nm">needs</span>?.<span class="ty">TryGetNeed</span>&lt;<span class="ty">Need_MechEnergy</span>&gt;();
+        <span class="kw">return</span> need?.<span class="nm">CurLevelPercentage</span> ?? <span class="nu">0f</span>;
+    }
+
+    <span class="kw">public static bool</span> <span class="nm">IsSelfShutdown</span>(<span class="ty">Pawn</span> mech)
+    {
+        <span class="cm">// 自我關機以 Hediff 表現；def 名見 HediffDefOf（Biotech 區）</span>
+        <span class="kw">return</span> mech.<span class="nm">health</span>?.<span class="nm">hediffSet</span>?.<span class="nm">HasHediff</span>(<span class="ty">HediffDefOf</span>.<span class="nm">MechCharged</span> == <span class="kw">null</span> ? <span class="kw">null</span> : <span class="kw">null</span>) ?? <span class="kw">false</span>;
+        <span class="cm">// 實務：用 mech.Downed 搭配能量 need == 0 判斷較穩，避免硬編 Hediff 名</span>
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>充電器電力不足</strong>
+      recharger 需要持續電力（串第 18 章）。若殖民地電網跳閘，機械無法回充 → 全體 self-shutdown →
+      工作與防禦全停。設計機械隊伍時，務必把充電負載算進電力預算，並考慮備援電池。
+    </div>
+  </div>
+
+  <!-- ═══ §5 控制群與指令 ═══ -->
+  <div class="section" id="control">
+    <div class="section-title">§5 · 控制群與指令：work mode、攜帶與頻寬節點</div>
+
+    <p>
+      玩家不會逐隻微操機械，而是給每隻機械指定一個 <strong>work mode</strong>（<code>MechWorkModeDef</code>），
+      決定它在沒有明確命令時的預設行為。香草四種模式：
+    </p>
+
+    <table>
+      <tr><th>MechWorkModeDef</th><th>行為</th><th>適用</th></tr>
+      <tr><td><code>Work</code></td><td>自動承擔 <code>mechEnabledWorkTypes</code> 內的工作</td><td>勞動機械（lifter、cleansweeper）</td></tr>
+      <tr><td><code>Recharge</code></td><td>走去充電器回充，待命</td><td>能量低、暫不需用時</td></tr>
+      <tr><td><code>Escort</code></td><td>跟隨機械師移動並戰鬥</td><td>戰鬥機械（militor、scyther）</td></tr>
+      <tr><td><code>SelfShutdown</code></td><td>就地關機，不消耗能量</td><td>長期封存、節能</td></tr>
+    </table>
+
+    <p>查 <code>RimWorld.MechWorkModeDefOf</code> 取得型別安全的引用，避免硬編字串：</p>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">MechCommands</span>
+{
+    <span class="cm">// 設定一隻機械的 work mode</span>
+    <span class="kw">public static void</span> <span class="nm">SetMode</span>(<span class="ty">Pawn</span> mech, <span class="ty">MechWorkModeDef</span> mode)
+    {
+        <span class="kw">var</span> comp = mech.<span class="ty">GetComp</span>&lt;<span class="ty">CompMechWorkModes</span>&gt;();
+        comp?.<span class="nm">SetWorkMode</span>(mode);   <span class="cm">// 方法名以反編譯為準</span>
+    }
+
+    <span class="kw">public static void</span> <span class="nm">SendToWork</span>(<span class="ty">Pawn</span> mech)
+        =&gt; <span class="nm">SetMode</span>(mech, <span class="ty">MechWorkModeDefOf</span>.<span class="nm">Work</span>);
+
+    <span class="kw">public static void</span> <span class="nm">ParkAndRecharge</span>(<span class="ty">Pawn</span> mech)
+        =&gt; <span class="nm">SetMode</span>(mech, <span class="ty">MechWorkModeDefOf</span>.<span class="nm">Recharge</span>);
+}</pre>
+
+    <h3>攜帶與召回：<code>CompMechCarrier</code></h3>
+    <p>
+      某些機械（如 <strong>war queen</strong>）能在體內「攜帶」一群小型機械（如 <strong>war urchin</strong>），
+      作戰時釋放、戰後回收，回收時消耗材料補充庫存。這由 <code>CompProperties_MechCarrier</code> /
+      <code>CompMechCarrier</code> 實作。
+    </p>
+    <pre><span class="cm">&lt;!-- 在母體機械 ThingDef 的 comps 加入攜帶器 --&gt;</span>
+<span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_MechCarrier"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;fixedIngredient&gt;</span>Steel<span class="xml-tag">&lt;/fixedIngredient&gt;</span>   <span class="cm">&lt;!-- 補充一隻所需材料 --&gt;</span>
+  <span class="xml-tag">&lt;costPerPawn&gt;</span><span class="xml-val">10</span><span class="xml-tag">&lt;/costPerPawn&gt;</span>
+  <span class="xml-tag">&lt;maxPawnsToSpawn&gt;</span><span class="xml-val">6</span><span class="xml-tag">&lt;/maxPawnsToSpawn&gt;</span>
+  <span class="xml-tag">&lt;spawnPawnKind&gt;</span>Mech_WarUrchin<span class="xml-tag">&lt;/spawnPawnKind&gt;</span>
+  <span class="xml-tag">&lt;maxToFill&gt;</span><span class="xml-val">6</span><span class="xml-tag">&lt;/maxToFill&gt;</span>
+<span class="xml-tag">&lt;/li&gt;</span></pre>
+    <pre><span class="cm">// 程式化釋放／回收（gizmo 背後就是這些）</span>
+<span class="kw">var</span> carrier = warQueen.<span class="ty">GetComp</span>&lt;<span class="ty">CompMechCarrier</span>&gt;();
+<span class="kw">if</span> (carrier != <span class="kw">null</span> &amp;&amp; carrier.<span class="nm">CanSpawn</span>)
+{
+    carrier.<span class="nm">TrySpawnPawns</span>();   <span class="cm">// 釋放小型機械（受庫存與成本限制）</span>
+}</pre>
+
+    <h3>頻寬節點：<code>Building_MechBandNode</code></h3>
+    <p>
+      機械師的基礎頻寬有限。<strong>mech band node</strong> 是耗電建築，啟用後為其範圍內（或全域，視版本）
+      的機械師增加 <code>TotalBandwidth</code>。它串第 18 章「建築電力」——斷電就失去加成，可能立刻造成頻寬超載。
+    </p>
+    <pre><span class="cm">&lt;!-- 建築：頻寬節點 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_BandNodeMk2<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thingClass&gt;</span>Building_MechBandNode<span class="xml-tag">&lt;/thingClass&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;basePowerConsumption&gt;</span><span class="xml-val">400</span><span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_MechBandNode"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;bandwidthGain&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/bandwidthGain&gt;</span>   <span class="cm">&lt;!-- 每座 +3 頻寬 --&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>頻寬 = 殖民地的 mech 上限旋鈕</strong>
+      若你的 mod 想讓玩家養更大的機械軍團，調整方向有三：降低機械的 <code>bandwidthCost</code>、
+      提高 band node 的 <code>bandwidthGain</code>、或加入提升基礎頻寬的身體部件 Hediff。
+      最後一種最「劇情友善」（升級 mechlink）。
+    </div>
+  </div>
+
+  <!-- ═══ §6 機械叢集（敵對） ═══ -->
+  <div class="section" id="cluster">
+    <div class="section-title">§6 · 機械叢集（敵對玩法）與作為 incident</div>
+
+    <p>
+      機械師讓玩家「擁有」機械；硬幣的另一面是 <strong>mech cluster</strong>（機械叢集）——
+      由 <code>RimWorld.MechClusterGenerator</code> 生成的一坨敵對機械結構，含休眠機械、防禦建築（盾發生器、迫擊砲、
+      機械繁殖器）與喚醒條件。它與機械師玩法是同一套機械 race，但 faction 為 <code>Mechanoid</code>（敵對），
+      且初始多半休眠。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>叢集組成</h3>
+        <p><code>MechClusterGenerator.GenerateClusterSketch(points, map, ...)</code> 依威脅點數產生一份藍圖（sketch），包含建築與休眠機械的擺放。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>喚醒條件</h3>
+        <p>叢集帶 <code>CompWakeUpDormant</code> / proximity / 倒數計時等觸發器；玩家靠近或攻擊即喚醒整群，轉為主動攻擊。</p>
+      </div>
+    </div>
+
+    <h3>把叢集包成自訂 incident（串第 12 章）</h3>
+    <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public class</span> <span class="ty">IncidentWorker_MyMechCluster</span> : <span class="ty">IncidentWorker</span>
+{
+    <span class="kw">protected override bool</span> <span class="nm">CanFireNowSub</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="cm">// DLC 守門：沒 Biotech 就不該觸發</span>
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.<span class="nm">BiotechInstalled</span>) <span class="kw">return false</span>;
+        <span class="kw">return base</span>.<span class="nm">CanFireNowSub</span>(parms) &amp;&amp; parms.<span class="nm">target</span> <span class="kw">is</span> <span class="ty">Map</span>;
+    }
+
+    <span class="kw">protected override bool</span> <span class="nm">TryExecuteWorker</span>(<span class="ty">IncidentParms</span> parms)
+    {
+        <span class="ty">Map</span> map = (<span class="ty">Map</span>)parms.<span class="nm">target</span>;
+        <span class="kw">float</span> points = parms.<span class="nm">points</span> &gt; <span class="nu">0</span> ? parms.<span class="nm">points</span> : <span class="nu">400f</span>;
+
+        <span class="cm">// 產生叢集藍圖</span>
+        <span class="kw">var</span> sketch = <span class="ty">MechClusterGenerator</span>.<span class="nm">GenerateClusterSketch</span>(points, map);
+
+        <span class="cm">// 找落點並實體化</span>
+        <span class="ty">IntVec3</span> center = <span class="ty">MechClusterUtility</span>.<span class="nm">FindClusterPosition</span>(map, sketch, <span class="nu">100</span>, <span class="nu">0.5f</span>);
+        <span class="ty">MechClusterUtility</span>.<span class="nm">SpawnCluster</span>(center, map, sketch, dropInPods: <span class="kw">true</span>);
+
+        <span class="nm">SendStandardLetter</span>(parms, <span class="kw">new</span> <span class="ty">TargetInfo</span>(center, map));
+        <span class="kw">return true</span>;
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>不要重造輪子</strong>
+      <code>MechClusterUtility</code> / <code>MechClusterGenerator</code> 已封裝藍圖生成、落點搜尋與實體化。
+      自訂叢集 99% 的需求是「調整組成與威脅曲線」，而非重寫生成器。
+      參考香草 <code>IncidentWorker_MechCluster</code> 的反編譯，照它的呼叫順序走最安全。
+    </div>
+  </div>
+
+  <!-- ═══ §7 C# API 全覽 ═══ -->
+  <div class="section" id="api">
+    <div class="section-title">§7 · C# API：tracker、MechanitorUtility、overseer 與狀態</div>
+
+    <p>把前面散落的 API 收攏成一張速查表，這是你寫 Harmony patch 或 GameComponent 時的工具箱。</p>
+
+    <table>
+      <tr><th>API</th><th>用途</th></tr>
+      <tr><td><code>pawn.mechanitor</code></td><td>取得 <code>Pawn_MechanitorTracker</code>（非機械師為 null）</td></tr>
+      <tr><td><code>MechanitorUtility.IsMechanitor(pawn)</code></td><td>權威判斷是否為機械師</td></tr>
+      <tr><td><code>MechanitorUtility.EverControllableMech(thingDef)</code></td><td>判斷某 race 是否能被機械師控制</td></tr>
+      <tr><td><code>mech.GetOverseer()</code></td><td>取得機械目前的 overseer（機械師），無則 null</td></tr>
+      <tr><td><code>tracker.ControlledPawns</code></td><td>該機械師控制的機械清單</td></tr>
+      <tr><td><code>tracker.TotalBandwidth / UsedBandwidth</code></td><td>頻寬上限／已用</td></tr>
+      <tr><td><code>tracker.CanControlMechs</code></td><td>是否處於可下令狀態</td></tr>
+      <tr><td><code>mech.GetComp&lt;CompMechCarrier&gt;()</code></td><td>攜帶器（釋放/回收小型機械）</td></tr>
+      <tr><td><code>MechWorkModeDefOf.Work / Recharge / Escort</code></td><td>型別安全的 work mode 引用</td></tr>
+      <tr><td><code>MechClusterUtility.SpawnCluster(...)</code></td><td>生成敵對叢集</td></tr>
+    </table>
+
+    <h3>一個務實的 GameComponent：監看頻寬超載</h3>
+    <pre><span class="kw">using</span> System.Linq;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public class</span> <span class="ty">GameComponent_BandwidthWatch</span> : <span class="ty">GameComponent</span>
+{
+    <span class="kw">private int</span> nextCheckTick;
+
+    <span class="kw">public</span> <span class="nm">GameComponent_BandwidthWatch</span>(<span class="ty">Game</span> game) { }
+
+    <span class="kw">public override void</span> <span class="nm">GameComponentTick</span>()
+    {
+        <span class="cm">// DLC 守門 + 低頻檢查（每 2500 tick ≈ 1 小時）</span>
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.<span class="nm">BiotechInstalled</span>) <span class="kw">return</span>;
+        <span class="kw">if</span> (<span class="ty">Find</span>.<span class="nm">TickManager</span>.<span class="nm">TicksGame</span> &lt; nextCheckTick) <span class="kw">return</span>;
+        nextCheckTick = <span class="ty">Find</span>.<span class="nm">TickManager</span>.<span class="nm">TicksGame</span> + <span class="nu">2500</span>;
+
+        <span class="kw">var</span> map = <span class="ty">Find</span>.<span class="nm">CurrentMap</span>;
+        <span class="kw">if</span> (map == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> map.<span class="nm">mapPawns</span>.<span class="nm">FreeColonists</span>)
+        {
+            <span class="kw">if</span> (!<span class="ty">MechanitorUtility</span>.<span class="nm">IsMechanitor</span>(p)) <span class="kw">continue</span>;
+            <span class="kw">var</span> t = p.<span class="nm">mechanitor</span>;
+            <span class="kw">if</span> (t.<span class="nm">UsedBandwidth</span> &gt; t.<span class="nm">TotalBandwidth</span>)
+            {
+                <span class="ty">Messages</span>.<span class="nm">Message</span>(
+                    <span class="st">$"{p.LabelShort} 的機械頻寬超載：{t.UsedBandwidth}/{t.TotalBandwidth}"</span>,
+                    p, <span class="ty">MessageTypeDefOf</span>.<span class="nm">NegativeEvent</span>);
+            }
+        }
+    }
+}</pre>
+    <p>記得在 <code>defs/MainButtonDefs</code> 旁不需註冊；GameComponent 只要型別存在即被自動實例化，無需 def。</p>
+  </div>
+
+  <!-- ═══ §8 陷阱 ═══ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">§8 · 陷阱與最佳實務</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>未裝 DLC 崩潰</h3>
+        <p>任何碰 <code>pawn.mechanitor</code>、機械 Def 的程式路徑，<strong>第一行就先 <code>ModLister.BiotechInstalled</code></strong>。Harmony patch 尤其危險，因為它會在所有存檔執行。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>頻寬超載 → feral</h3>
+        <p>機械失去 overseer 或頻寬超載，會在倒數（<code>delayUntilFeralCheck</code>）後 <strong>feral 化</strong>——脫離玩家控制、變敵對。指派機械前務必確認 <code>FreeBandwidth &gt; bandwidthCost</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>機械無 overseer 的行為</h3>
+        <p>剛生成、或機械師死亡後，機械可能短暫無主。不要假設 <code>GetOverseer()</code> 永遠非 null——它常為 null，需先判空再用。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>recharge 站電力不足</h3>
+        <p>充電器斷電 → 機械無法回充 → 全體 self-shutdown。把充電負載納入電力預算，必要時加電池備援（串第 18 章）。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>weight class 與成本失衡</h3>
+        <p>自訂機械若 <code>bandwidthCost</code> 太低又能力太強，會破壞玩法平衡（無限軍團）。Light 級通常 1、Medium 2~3、Heavy 4+。對齊香草曲線。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>機械算不算「殖民者」</h3>
+        <p>影響事件點數、人口統計與襲擊規模。判斷要用對的 API，下面詳述。</p>
+      </div>
+    </div>
+
+    <h3>「機械算不算殖民者人口」的精確判斷</h3>
+    <p>
+      RimWorld 區分數種 pawn 集合，機械落在哪個集合直接影響事件點數（storyteller wealth/population）與
+      襲擊規模。常見誤用是把機械混進 <code>FreeColonists</code> 做人口統計：
+    </p>
+    <table>
+      <tr><th>集合 / 判斷</th><th>機械是否計入</th><th>說明</th></tr>
+      <tr><td><code>map.mapPawns.FreeColonists</code></td><td>否</td><td>純人類殖民者；機械不在此</td></tr>
+      <tr><td><code>map.mapPawns.FreeColonistsAndPrisoners</code></td><td>否</td><td>同上不含機械</td></tr>
+      <tr><td><code>map.mapPawns.SpawnedColonyMechs</code></td><td>是</td><td>玩家機械專用集合</td></tr>
+      <tr><td><code>pawn.IsColonyMech</code></td><td>—</td><td>判斷「是不是玩家機械」的最直接屬性</td></tr>
+      <tr><td><code>StorytellerUtility</code> 人口點數</td><td>部分</td><td>機械有自己的 wealth/threat 計算，非按「殖民者數」</td></tr>
+    </table>
+    <pre><span class="cm">// 正確分流：人類殖民者 vs 玩家機械</span>
+<span class="kw">int</span> humanColonists = map.<span class="nm">mapPawns</span>.<span class="nm">FreeColonists</span>.<span class="nm">Count</span>;          <span class="cm">// 不含機械</span>
+<span class="kw">int</span> colonyMechs    = map.<span class="nm">mapPawns</span>.<span class="nm">SpawnedColonyMechs</span>.<span class="nm">Count</span>;    <span class="cm">// 只有機械</span>
+
+<span class="cm">// 對單一 pawn 的判斷</span>
+<span class="kw">bool</span> isMech = p.<span class="nm">RaceProps</span>.<span class="nm">IsMechanoid</span>;
+<span class="kw">bool</span> isPlayerMech = p.<span class="nm">IsColonyMech</span>;   <span class="cm">// 機械 + 屬玩家 faction</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>最易踩雷：把機械當殖民者計入點數</strong>
+      若你的 mod 自訂事件點數公式時用了 <code>FreeColonists.Count + allMechs</code>，
+      會在機械軍團龐大時讓襲擊強度暴衝（或反之被遊戲重複計算）。
+      機械的威脅貢獻由香草透過 wealth/combat power 另算，<strong>不要再把機械「人頭」加進殖民者數</strong>。
+    </div>
+
+    <h3>最佳實務清單</h3>
+    <ol class="steps">
+      <li>每條機械程式路徑第一行先 <code>if (!ModLister.BiotechInstalled) return;</code>。</li>
+      <li>XML 用 <code>MayRequire="Ludeon.RimWorld.Biotech"</code> 或 <code>LoadFolders.xml</code> 條件載入機械 def。</li>
+      <li>自訂機械 race 從香草 <code>BaseMechanoid</code> 繼承，配方照 <code>Recipes_Gestation.xml</code> 抄。</li>
+      <li><code>bandwidthCost</code> 對齊 weight class（Light 1 / Medium 2-3 / Heavy 4+）。</li>
+      <li>指派 overseer 前檢查 <code>FreeBandwidth &gt;= bandwidthCost</code>，避免 feral。</li>
+      <li>讀 <code>GetOverseer()</code> 一律先判 null。</li>
+      <li>把充電器電力負載納入第 18 章的電力預算。</li>
+      <li>人口統計用 <code>FreeColonists</code>（人類）與 <code>SpawnedColonyMechs</code>（機械）分流，勿混算。</li>
+      <li>所有方法/欄位名以你目標版本的 dnSpy 反編譯為準，不硬背跨版本可能改名的成員。</li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <strong>串接章節</strong>
+      mechlink 安裝＝第 28 章手術 recipe；充電器電力＝第 18 章；自訂 incident（叢集）＝第 12 章；
+      機械工作分派＝第 29 章 AI 工作；研究解鎖配方＝第 14 章。機械師玩法是這些子系統的交會點，
+      把它當「整合範例」來讀最有收穫。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 34 機械師與機械族（Biotech DLC） · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

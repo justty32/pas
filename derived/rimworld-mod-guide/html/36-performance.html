@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>性能剖析與確定性 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html" class="active">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>性能剖析與確定性</h1>
+  <p>一個 mod 能不能上線，常取決於它在 200 隻小人、巨型地圖下還順不順。本章談 tick 預算、剖析工具、常見熱點，以及多人 mod 相容所需的確定性。</p>
+  <span class="badge">Chapter 36 · Performance &amp; Determinism</span>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. tick 模型與預算 ── -->
+  <div class="section">
+    <div class="section-title">§1 tick 模型與預算</div>
+
+    <p>
+      RimWorld 的核心是一個 <strong>tick-based 模擬迴圈</strong>。<code>Verse.TickManager</code> 在每個遊戲 tick 推進一次世界狀態，
+      正常速度（speed 1）下大約是<strong>每秒 60 tick</strong>。當玩家把速度切到 2× / 3×（甚至開發模式的超速）時，
+      引擎會在同一個現實秒內跑更多次 <code>TickManager.DoSingleTick()</code>，因此每個 tick 的成本會被速度倍率「線性放大」。
+      你在 <code>Tick()</code> 裡多花 0.05 ms，在 3× 速度、200 個實例下，就是每秒額外 0.05 × 3 × 200 × 60 ≈ 1800 ms 的純額外負擔——遠超過一秒，遊戲必然掉速。
+    </p>
+
+    <p>
+      TickManager 並不會「每個 tick 都呼叫每一個 Thing」。為了攤平負載，它維護了三條 <code>Verse.TickList</code>：
+      <strong>Normal（每 tick）</strong>、<strong>Rare（每 250 tick）</strong>、<strong>Long（每 2000 tick）</strong>。
+      每個 <code>Thing</code> 在 spawn 時，依其 <code>def.tickerType</code>（<code>Verse.TickerType</code> 列舉）被登記到對應的 TickList。
+      Rare / Long 清單內部還會把成員打散到不同的「子桶」，讓不同實例在不同 tick 觸發，而不是同一個 tick 一次全算。
+    </p>
+
+    <pre><span class="cm">// Verse.TickerType（節錄概念）</span>
+<span class="kw">public</span> <span class="kw">enum</span> <span class="ty">TickerType</span>
+{
+    <span class="nm">Never</span>,   <span class="cm">// 完全不 tick（純裝飾、家具、岩石等）</span>
+    <span class="nm">Normal</span>,  <span class="cm">// 每 tick：Thing.Tick()</span>
+    <span class="nm">Rare</span>,    <span class="cm">// 每 250 tick：Thing.TickRare()</span>
+    <span class="nm">Long</span>     <span class="cm">// 每 2000 tick：Thing.TickLong()</span>
+}</pre>
+
+    <p>
+      對 <code>Verse.ThingWithComps</code> 而言，這三個進入點會分別把呼叫往下傳遞給每個 comp：
+      <code>Tick()</code> → comp 的 <code>CompTick()</code>、<code>TickRare()</code> → <code>CompTickRare()</code>、<code>TickLong()</code> → <code>CompTickLong()</code>。
+      因此你寫 <code>ThingComp</code> 時，<strong>選對覆寫哪一個方法，是性能的第一道防線</strong>。
+    </p>
+
+    <pre><span class="kw">public</span> <span class="kw">class</span> <span class="ty">CompMyHeater</span> : <span class="ty">ThingComp</span>
+{
+    <span class="cm">// 每 tick：只給真的需要逐 tick 精度的東西（投射物、移動、即時溫度交換）</span>
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTick</span>() { }
+
+    <span class="cm">// 每 250 tick（約 4.2 秒）：絕大多數「狀態檢查」應該放這裡</span>
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTickRare</span>()
+    {
+        <span class="kw">var</span> power = parent.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        <span class="kw">if</span> (power != <span class="kw">null</span> &amp;&amp; power.PowerOn)
+            <span class="ty">GenTemperature</span>.<span class="nm">PushHeat</span>(parent.Position, parent.Map, <span class="nu">21f</span>);
+    }
+
+    <span class="cm">// 每 2000 tick（約 33 秒）：低頻維護、長期衰減、統計</span>
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTickLong</span>() { }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>注意：TickRare 不等於「每 250 tick 全部一起算」</strong>
+      引擎把 Rare 清單成員分散到不同 tick 觸發，所以你<strong>無法假設</strong>所有同類實例在同一 tick 收到 <code>TickRare</code>。
+      如果你的邏輯需要「全體同步在某個整點計算」，請改用 <code>Find.TickManager.TicksGame % interval == 0</code> 自行判斷，而不是依賴 TickRare 的時序。
+    </div>
+
+    <h3>各 tick 類型該放什麼</h3>
+    <table>
+      <tr><th>類型</th><th>頻率</th><th>覆寫方法</th><th>適合放的邏輯</th><th>反例（不該放）</th></tr>
+      <tr><td><code>Never</code></td><td>—</td><td>無</td><td>純裝飾、靜態建築、礦脈</td><td>任何需要隨時間變化的狀態</td></tr>
+      <tr><td><code>Normal</code></td><td>60/秒</td><td><code>Tick / CompTick</code></td><td>投射物飛行、即時 mote、戰鬥逐 tick 判定</td><td>「電力夠不夠」「附近有沒有敵人」這類查詢</td></tr>
+      <tr><td><code>Rare</code></td><td>每 250 tick</td><td><code>TickRare / CompTickRare</code></td><td>狀態檢查、資源消耗、目標重新評估、緩慢加熱</td><td>需要逐格平滑移動的物件</td></tr>
+      <tr><td><code>Long</code></td><td>每 2000 tick</td><td><code>TickLong / CompTickLong</code></td><td>腐爛/老化推進、長期統計、低頻自我修復</td><td>玩家會盯著看的即時數值</td></tr>
+    </table>
+
+    <div class="g2">
+      <div class="card card-accent-green">
+        <h3>預設往 Rare 靠</h3>
+        <p>九成的 comp 邏輯其實只需要每幾秒檢查一次。先用 <code>CompTickRare</code>，只有確定要逐 tick 精度時才升級到 <code>CompTick</code>。這是最便宜的優化，也最不容易出錯。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>tickerType 在 XML 設定</h3>
+        <p>Thing 的 ticker 類型由 <code>ThingDef.tickerType</code> 決定，而不是你覆寫了哪個方法。XML 設了 <code>Never</code>，即使你寫了 <code>CompTickRare</code> 也不會被呼叫。兩邊要對得上。</p>
+      </div>
+    </div>
+
+    <pre><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyHeater<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="cm">&lt;!-- 沒寫的話預設 Normal，記得依需求降到 Rare --&gt;</span>
+  <span class="xml-tag">&lt;tickerType&gt;</span>Rare<span class="xml-tag">&lt;/tickerType&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span> ... <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+  </div>
+
+  <!-- ── 2. 降低 tick 成本 ── -->
+  <div class="section">
+    <div class="section-title">§2 降低每 tick 的成本</div>
+
+    <p>
+      就算你選了正確的 ticker 類型，<code>Tick()</code> 內部的程式碼仍可能太貴。降低 tick 成本有四個核心技巧：
+      <strong>用 HashOffset 攤平負載</strong>、<strong>快取昂貴查詢</strong>、<strong>避免每 tick 配置物件 / 閉包</strong>、<strong>用遊戲 tick 計數而非現實計時器</strong>。
+    </p>
+
+    <h3>① HashOffset 攤平負載</h3>
+    <p>
+      <code>Verse.Thing.HashOffset()</code> 回傳一個基於該 Thing 唯一 ID 的<strong>穩定整數</strong>。
+      把它加進「整點判斷」，能讓不同實例落在不同 tick 執行重邏輯——也就是引擎在 TickList 內部做的同一件事，
+      只是你在 <code>Tick()</code> 裡自己手動做。這能把「200 個實例在同一 tick 一起算」變成「每 tick 只算約 1 個」。
+    </p>
+
+    <pre><span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTick</span>()
+{
+    <span class="cm">// 壞：每個實例都在「tick 能被 250 整除」時一起算 → 尖峰負載</span>
+    <span class="kw">if</span> (<span class="ty">Find</span>.TickManager.TicksGame % <span class="nu">250</span> == <span class="nu">0</span>)
+        <span class="nm">DoExpensiveCheck</span>();
+
+    <span class="cm">// 好：用 HashOffset 把同類實例攤到不同 tick</span>
+    <span class="kw">if</span> ((<span class="ty">Find</span>.TickManager.TicksGame + parent.<span class="nm">HashOffset</span>()) % <span class="nu">250</span> == <span class="nu">0</span>)
+        <span class="nm">DoExpensiveCheck</span>();
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>GenTicks.TickRareInterval / TickLongInterval 是常數</strong>
+      別自己硬寫 <code>250</code> / <code>2000</code>，用 <code>Verse.GenTicks.TickRareInterval</code>、<code>GenTicks.TickLongInterval</code>，
+      語意清楚且不會因引擎調整而失準。需要「每 N 秒」時用 <code>GenTicks.TicksPerRealSecond</code>（= 60）換算。
+    </div>
+
+    <h3>② 快取昂貴查詢，別每 tick 跑 LINQ</h3>
+    <p>
+      最常見的性能殺手是「在 <code>Tick()</code> 裡每次都跑一段 LINQ 或全地圖掃描」。LINQ 每次呼叫都會配置 enumerator/閉包物件，
+      在 hot path 上累積成嚴重的 GC 壓力；全地圖掃描本身又是 O(n)。正確做法是<strong>把結果快取，只在失效時重算</strong>。
+    </p>
+
+    <pre><span class="kw">public</span> <span class="kw">class</span> <span class="ty">CompNearbyEnemySensor</span> : <span class="ty">ThingComp</span>
+{
+    <span class="kw">private</span> <span class="kw">int</span> _lastScanTick = -<span class="nu">99999</span>;
+    <span class="kw">private</span> <span class="kw">bool</span> _enemyNearbyCached;
+
+    <span class="kw">private</span> <span class="kw">const</span> <span class="kw">int</span> ScanInterval = <span class="nu">120</span>; <span class="cm">// 2 秒重算一次就夠</span>
+
+    <span class="kw">public</span> <span class="kw">bool</span> <span class="nm">EnemyNearby</span>
+    {
+        <span class="kw">get</span>
+        {
+            <span class="kw">int</span> now = <span class="ty">Find</span>.TickManager.TicksGame;
+            <span class="kw">if</span> (now - _lastScanTick &gt;= ScanInterval)
+            {
+                _lastScanTick = now;
+                <span class="cm">// 用引擎現成的空間查詢，避免自己掃全地圖的 LINQ</span>
+                _enemyNearbyCached = parent.Map
+                    .<span class="nm">GetComponent</span>&lt;<span class="ty">AttackTargetsCache</span>&gt;() != <span class="kw">null</span>
+                    &amp;&amp; <span class="ty">GenHostility</span>.<span class="nm">AnyHostileActiveThreatTo</span>(parent.Map, parent.Faction);
+            }
+            <span class="kw">return</span> _enemyNearbyCached;
+        }
+    }
+
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTickRare</span>()
+    {
+        <span class="kw">if</span> (<span class="nm">EnemyNearby</span>) { <span class="cm">/* ... */</span> }
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>絕對不要這樣寫</strong>
+      <code>Map.mapPawns.AllPawnsSpawned.Where(p =&gt; p.HostileTo(Faction)).Any()</code> 放在每 tick 的迴圈裡——
+      每個 Thing 每 tick 都重掃一次全地圖人口、配置一串 enumerator。200 個實例 × 60 tick 就是每秒上萬次全地圖 LINQ，這是教科書級的卡頓來源。
+    </div>
+
+    <h3>③ 避免每 tick new 物件與閉包</h3>
+    <p>
+      C# 的 GC 在遊戲中是「無聲的卡頓製造機」：每 tick 配置的小物件會堆積成 Gen0 垃圾，觸發 GC 時造成 spike（畫面一頓）。
+      在 hot path 上要刻意避免 <code>new List&lt;&gt;()</code>、lambda 捕捉、裝箱（boxing）、字串串接、以及隱含配置的 LINQ。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>每 tick 配置（壞）</h3>
+        <pre><span class="kw">void</span> <span class="nm">Tick</span>()
+{
+    <span class="kw">var</span> tmp = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">IntVec3</span>&gt;();
+    cells.<span class="nm">ForEach</span>(c =&gt; tmp.<span class="nm">Add</span>(c));
+    <span class="cm">// 每 tick 一個 List + 一個 lambda 閉包</span>
+}</pre>
+      </div>
+      <div class="card card-accent-green">
+        <h3>重用緩衝（好）</h3>
+        <pre><span class="kw">static</span> <span class="kw">readonly</span> <span class="ty">List</span>&lt;<span class="ty">IntVec3</span>&gt; _buf = <span class="kw">new</span>();
+<span class="kw">void</span> <span class="nm">Tick</span>()
+{
+    _buf.<span class="nm">Clear</span>();
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; cells.Count; i++)
+        _buf.<span class="nm">Add</span>(cells[i]);
+    <span class="cm">// 零配置；用 for 取代 ForEach 也省一個閉包</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>RimWorld 內建的物件池</strong>
+      引擎自己也用這招：<code>Verse.SimplePool&lt;T&gt;</code> 可借還暫存物件；許多計算用的 <code>tmpList</code> 都是 <code>static</code> 欄位重用的。
+      模仿引擎慣例即可，但記得 static 緩衝<strong>不可跨呼叫保留狀態</strong>，用前一定 <code>Clear()</code>，更要避免在多執行緒情境下共用（見 §6）。
+    </div>
+
+    <h3>④ 用 TicksGame 比較，而非現實計時器</h3>
+    <p>
+      計時邏輯一律以 <code>Find.TickManager.TicksGame</code>（遊戲 tick 計數）為基準，記錄「下次觸發的 tick」並比較大小。
+      千萬別用 <code>System.DateTime.Now</code> 或 <code>Stopwatch</code> 來驅動遊戲邏輯——那會隨速度倍率與機器效能而漂移，且在多人模式直接導致 desync（見 §6）。
+    </p>
+  </div>
+
+  <!-- ── 3. 剖析工具 ── -->
+  <div class="section">
+    <div class="section-title">§3 剖析工具：先量再改</div>
+
+    <p>
+      性能優化的鐵律是<strong>先剖析、再優化</strong>。憑直覺猜熱點十有八九會猜錯，把時間花在不痛的地方。下面是由內到外的幾種量測手段。
+    </p>
+
+    <h3>① 開發模式內建剖析</h3>
+    <p>
+      開啟 <strong>Dev mode</strong> 後，左下角工具列的 <em>View Settings</em> 面板裡有 debug profiling 相關開關（顯示 ms/tick、TPS、各系統耗時的覆蓋層）。
+      它能快速告訴你「現在的瓶頸是 tick（模擬）還是 frame（畫面）」——這是分流的第一步。
+    </p>
+
+    <table>
+      <tr><th>症狀</th><th>多半是</th><th>觀察點</th></tr>
+      <tr><td>速度切 3× 上不去、TPS 掉到 60 以下</td><td>tick（模擬）瓶頸</td><td>ms/tick 飆高，但 FPS 正常</td></tr>
+      <tr><td>畫面拖影、滑鼠卡，但時間照跑</td><td>frame（渲染 / UI）瓶頸</td><td>FPS 掉，但 TPS 維持</td></tr>
+      <tr><td>每隔幾秒固定一頓</td><td>GC spike 或定時重算</td><td>規律性 spike，配 §2 找配置點</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+      <strong>分清 tick 卡頓 vs UI 卡頓</strong>
+      若暫停遊戲（speed 0）後畫面依然卡，問題出在 <strong>OnGUI / 渲染</strong>（每 frame 跑的東西，例如 <code>Map.MapUpdate</code>、overlay、過量 mote、每 frame 的 GUI 計算）。
+      若暫停後就順了，問題出在 <strong>Tick</strong>。兩者的修法完全不同，先分清楚再動手。
+    </div>
+
+    <h3>② 社群剖析器（觀念層）</h3>
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>Dubs Performance Analyzer</h3>
+        <p>社群最常用的逐方法剖析器。它能列出每個 patch / 每個方法的 ms 佔比，直接點名「哪個 mod 的哪個方法吃掉了你的 tick」。開發期掛上它跑一輪，是定位他人 mod 衝突與自己熱點的利器。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>RocketMan</h3>
+        <p>偏「自動優化」取向，會快取與節流大量引擎呼叫。它更適合玩家端加速，但開發期可暫時開來觀察「哪些呼叫被它判定為高頻」，反推自己程式的熱點分佈。</p>
+      </div>
+    </div>
+    <p>本指南只介紹觀念，不教安裝。重點是：<strong>它們的核心都是 Harmony patch + 計時打點</strong>，理解原理後你也能在自己程式碼裡手動打點。</p>
+
+    <h3>③ 在自己程式碼打點：DeepProfiler 與 Stopwatch</h3>
+    <p>
+      <code>Verse.DeepProfiler</code> 是引擎內建的階層式計時器，用 <code>Start(label)</code> / <code>End()</code> 包夾一段程式碼，
+      結果會進到引擎的剖析輸出。它<strong>本身有開銷</strong>，只在開發期排查時使用，發布版要移除或用旗標關閉。
+    </p>
+
+    <pre><span class="cm">// 用 DeepProfiler 包夾可疑區段（成對 Start/End，建議 try/finally 保證配對）</span>
+<span class="ty">DeepProfiler</span>.<span class="nm">Start</span>(<span class="st">"MyMod.RecalculateGrid"</span>);
+<span class="kw">try</span>
+{
+    <span class="nm">RecalculateGrid</span>();
+}
+<span class="kw">finally</span>
+{
+    <span class="ty">DeepProfiler</span>.<span class="nm">End</span>();
+}</pre>
+
+    <p>
+      若只想要一個粗略的毫秒數，<code>System.Diagnostics.Stopwatch</code> 最直接。注意它只能用來<strong>量測</strong>，
+      量到的數字寫進 log，<strong>絕不可拿來驅動遊戲邏輯</strong>（不確定性，見 §6）。
+    </p>
+
+    <pre><span class="cm">// 一次性量測某個重操作的成本，輸出到 log</span>
+<span class="kw">var</span> sw = <span class="ty">Stopwatch</span>.<span class="nm">StartNew</span>();
+<span class="nm">DoExpensiveThing</span>();
+sw.<span class="nm">Stop</span>();
+<span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] DoExpensiveThing 花了 {sw.Elapsed.TotalMilliseconds:F3} ms"</span>);</pre>
+
+    <div class="callout callout-warn">
+      <strong>量測本身會干擾結果</strong>
+      在每 tick 的 hot path 上塞 <code>Stopwatch.StartNew()</code>（會配置物件）或 <code>DeepProfiler</code>，量到的數字會被工具本身的開銷污染。
+      量單一重操作用 Stopwatch；量「整個 tick 的分佈」交給 Dubs Performance Analyzer，別自己在每 tick 打一堆點。
+    </div>
+  </div>
+
+  <!-- ── 4. 常見熱點與修法 ── -->
+  <div class="section">
+    <div class="section-title">§4 常見熱點與對應修法</div>
+
+    <p>以下是 mod 性能問題的「常客」，按出現頻率排列，每一項都附上修法方向。</p>
+
+    <table>
+      <tr><th>熱點</th><th>為何貴</th><th>修法</th></tr>
+      <tr><td>每 tick LINQ / 正則</td><td>配置 enumerator/閉包、O(n) 掃描、正則編譯</td><td>快取結果（§2）、改 for 迴圈、正則用 <code>RegexOptions.Compiled</code> 且只編一次</td></tr>
+      <tr><td>頻繁 <code>PathFinder</code> 呼叫</td><td>A* 尋路是最貴的單一操作之一</td><td>快取路徑、用 <code>reachability</code> 先做廉價可達性判斷、降低重算頻率</td></tr>
+      <tr><td>每 tick 取 <code>Find.X</code></td><td>屬性鏈與空檢查累積</td><td>在 spawn / 首次使用時取一次存成欄位</td></tr>
+      <tr><td>大量 Mote / overlay</td><td>每 frame 渲染，且 mote 也要 tick</td><td>降密度、用 <code>ThrowMetaIcon</code> 節流、靜態 overlay 改用快取材質</td></tr>
+      <tr><td>Harmony Prefix 跑在 hot path</td><td>每次目標方法被呼叫都多一層</td><td>提早 return、或改 Transpiler（串第 3 章）</td></tr>
+      <tr><td>未快取的 <code>DefDatabase</code> 查詢</td><td><code>GetNamed</code> 走字典查找＋字串</td><td>用 <code>static readonly</code> 欄位快取 Def 引用</td></tr>
+      <tr><td>每次呼叫的 reflection</td><td><code>GetMethod</code>/<code>GetField</code> 每次都掃 metadata</td><td>快取 <code>MethodInfo</code>/<code>FieldInfo</code>，最好做成 delegate</td></tr>
+    </table>
+
+    <h3>Harmony Prefix 在 hot path：提早 return</h3>
+    <p>
+      第 3 章談過 Harmony。這裡的性能重點是：<strong>patch 一個高頻方法時，prefix 的第一件事應該是廉價的「要不要管」判斷，不符就立刻放行</strong>。
+      別把昂貴的判斷或 LINQ 放在每次都會跑的 prefix 開頭。
+    </p>
+
+    <pre><span class="at">[HarmonyPatch(typeof(Pawn), nameof(Pawn.Tick))]</span>
+<span class="kw">static</span> <span class="kw">class</span> <span class="ty">Pawn_Tick_Patch</span>
+{
+    <span class="kw">static</span> <span class="kw">void</span> <span class="nm">Postfix</span>(<span class="ty">Pawn</span> __instance)
+    {
+        <span class="cm">// 第一行就用最廉價的條件擋掉九成情況，避免每 tick 都跑下面的重邏輯</span>
+        <span class="kw">if</span> (!__instance.IsColonist) <span class="kw">return</span>;
+        <span class="kw">if</span> ((<span class="ty">Find</span>.TickManager.TicksGame + __instance.<span class="nm">HashOffset</span>()) % <span class="nu">250</span> != <span class="nu">0</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 真正的重邏輯：每 250 tick、僅殖民者才跑</span>
+        <span class="nm">DoExpensiveColonistLogic</span>(__instance);
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>不要 patch <code>Pawn.Tick</code> 然後在裡面跑重邏輯</strong>
+      <code>Pawn.Tick</code> 是全遊戲最熱的方法之一。如果你的 postfix 每 tick 對每隻 pawn 都做事，等同於替整個遊戲加裝拖油瓶。
+      要嘛提早 return 攤平（如上），要嘛根本不要 patch Tick——改 patch 一個只在事件發生時呼叫的方法（見 §7 事件驅動）。
+    </div>
+
+    <h3>快取 DefDatabase 與 reflection</h3>
+    <pre><span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> <span class="ty">MyDefOf</span>
+{
+    <span class="cm">// 用 [DefOf] 讓引擎在載入後自動填入，零執行期查找</span>
+    <span class="at">[DefOf]</span>
+    <span class="kw">public</span> <span class="kw">static</span> <span class="ty">ThingDef</span> MyHeater;
+
+    <span class="kw">static</span> <span class="ty">MyDefOf</span>() =&gt; <span class="ty">DefOfHelper</span>.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(<span class="ty">MyDefOf</span>));
+}
+
+<span class="cm">// reflection 一定要快取——別在 hot path 重複 GetMethod</span>
+<span class="kw">static</span> <span class="kw">readonly</span> <span class="ty">FieldInfo</span> _privateField =
+    <span class="ty">AccessTools</span>.<span class="nm">Field</span>(<span class="kw">typeof</span>(<span class="ty">Pawn_HealthTracker</span>), <span class="st">"cachedPain"</span>);
+
+<span class="cm">// 更進階：把 FieldInfo 編成 delegate，呼叫成本接近直接存取</span>
+<span class="kw">static</span> <span class="kw">readonly</span> <span class="ty">AccessTools</span>.<span class="ty">FieldRef</span>&lt;<span class="ty">Pawn_HealthTracker</span>, <span class="kw">float</span>&gt; _painRef =
+    <span class="ty">AccessTools</span>.<span class="nm">FieldRefAccess</span>&lt;<span class="ty">Pawn_HealthTracker</span>, <span class="kw">float</span>&gt;(<span class="st">"cachedPain"</span>);</pre>
+
+    <div class="callout callout-info">
+      <strong>用 <code>[DefOf]</code> 取代 <code>DefDatabase.GetNamed</code></strong>
+      <code>[DefOf]</code> 欄位在遊戲載入後由引擎一次性解析、之後直接欄位讀取，是零成本的。
+      <code>DefDatabase&lt;T&gt;.GetNamed("...")</code> 每次都走字典＋字串雜湊，放在 hot path 是浪費。只有「defName 在執行期才決定」時才用 GetNamed，且要快取。
+    </div>
+  </div>
+
+  <!-- ── 5. 記憶體與載入 ── -->
+  <div class="section">
+    <div class="section-title">§5 記憶體與載入成本</div>
+
+    <p>
+      性能不只是 tick——<strong>載入時間</strong>與<strong>記憶體佔用</strong>同樣影響體驗，而且這兩者的成本應該與遊戲執行期分離：
+      載入期可以多花時間做一次性的準備（建快取、編 delegate），換取執行期的便宜。
+    </p>
+
+    <h3>StaticConstructorOnStartup 與載入期工作</h3>
+    <pre><span class="cm">// 標了這個 attribute 的類別，其 static 建構子會在遊戲載入完成後執行一次</span>
+<span class="at">[StaticConstructorOnStartup]</span>
+<span class="kw">public</span> <span class="kw">static</span> <span class="kw">class</span> <span class="ty">MyMod</span>
+{
+    <span class="cm">// 載入期建立 Harmony patch、預載材質、建快取——一次性成本</span>
+    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">readonly</span> <span class="ty">Material</span> OverlayMat =
+        <span class="ty">MaterialPool</span>.<span class="nm">MatFrom</span>(<span class="st">"MyMod/Overlays/Glow"</span>, <span class="ty">ShaderDatabase</span>.Transparent);
+
+    <span class="kw">static</span> <span class="ty">MyMod</span>()
+    {
+        <span class="kw">var</span> h = <span class="kw">new</span> <span class="ty">Harmony</span>(<span class="st">"author.mymod"</span>);
+        h.<span class="nm">PatchAll</span>();
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>Texture / Material 只在 StaticConstructorOnStartup 載</strong>
+      <code>ContentFinder&lt;Texture2D&gt;.Get</code>、<code>MaterialPool.MatFrom</code> 等只能在主執行緒、且在內容載入完成後呼叫（串第 8 章）。
+      別在 tick 或建構子裡每次 <code>MatFrom</code>——它有快取，但查找與字串仍有成本；把 Material 存成 <code>static readonly</code> 一次取好。
+    </div>
+
+    <h3>避免靜態大集合洩漏</h3>
+    <p>
+      <code>static</code> 集合的生命週期跟整個程序一樣長。如果你往 static <code>Dictionary</code>/<code>List</code> 塞 <code>Thing</code>/<code>Pawn</code> 卻不在它們銷毀時移除，
+      這些物件永遠不會被 GC 回收——既洩漏記憶體，又可能讓已 despawn 的物件被誤用。讀檔 / 換地圖時更要清空。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>洩漏（壞）</h3>
+        <p>static <code>Dictionary&lt;Pawn, Data&gt;</code> 在 <code>SpawnSetup</code> 加入，卻沒在 <code>DeSpawn</code>/<code>Destroy</code> 移除，也沒在 <code>GameComponent</code> 換檔時清空 → 跨存檔累積、舊 Pawn 永久存活。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>正確（好）</h3>
+        <p>用 <code>ThingComp</code> / <code>HediffComp</code> 把資料「掛在物件身上」，隨物件一起被 Scribe 與 GC 管理；真要用 static 快取，務必在物件銷毀與讀檔時清。</p>
+      </div>
+    </div>
+
+    <h3>存檔膨脹：Scribe 大資料</h3>
+    <p>
+      存檔大小與讀寫時間，正比於你用 <code>Verse.Scribe</code> 序列化的資料量（串第 7 章）。常見地雷是「每 tick 累積、卻從不清理的歷史資料」被一路存進檔案。
+      把可重算的衍生資料標為「不存」，只存真正的權威狀態。
+    </p>
+
+    <pre><span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">PostExposeData</span>()
+{
+    <span class="cm">// 存：真正的權威狀態</span>
+    <span class="ty">Scribe_Values</span>.<span class="nm">Look</span>(<span class="kw">ref</span> _charge, <span class="st">"charge"</span>, <span class="nu">0f</span>);
+
+    <span class="cm">// 不存：可由 charge 算出的衍生快取（讀檔後重算即可，避免存檔膨脹）</span>
+    <span class="cm">// _displayColor、_cachedGlowRadius 這類一律不寫進 Scribe</span>
+}</pre>
+
+    <table>
+      <tr><th>階段</th><th>成本特性</th><th>策略</th></tr>
+      <tr><td>Mod 載入期</td><td>一次性，玩家願意等</td><td>建 patch、預載材質、建 delegate 快取、解析 DefOf</td></tr>
+      <tr><td>地圖生成 / 讀檔</td><td>偶發、可接受短暫卡</td><td>重建衍生快取、清空 static 集合</td></tr>
+      <tr><td>遊戲執行期（tick/frame）</td><td>高頻、必須便宜</td><td>只讀快取、零配置、攤平負載</td></tr>
+    </table>
+  </div>
+
+  <!-- ── 6. 確定性與多人相容 ── -->
+  <div class="section">
+    <div class="section-title">§6 確定性與多人相容</div>
+
+    <p>
+      RimWorld 的 <strong>Multiplayer</strong> mod 採用「鎖步同步（lockstep）」：伺服器只同步玩家指令，<strong>每個客戶端各自跑完全相同的模擬</strong>。
+      只要任一處計算在不同客戶端產生不同結果，世界狀態就會分岔（desync），導致對不上、最終斷線。
+      因此<strong>你的 mod 必須是確定性的</strong>：給定相同輸入與相同 tick，永遠算出相同結果。
+    </p>
+
+    <h3>亂數一律走 Verse.Rand</h3>
+    <p>
+      確定性最常見的破口就是亂數。<code>Verse.Rand</code> 的亂數狀態是世界狀態的一部分、會被同步與存檔。
+      所有遊戲邏輯的隨機都要用 <code>Rand.Value</code>、<code>Rand.Range</code>、<code>Rand.Chance</code>、<code>Rand.Element</code> 等，
+      <strong>絕不可</strong>用 <code>System.Random</code>（未種子）或 <code>UnityEngine.Random</code>。
+    </p>
+
+    <pre><span class="cm">// 對：走 Verse.Rand，狀態被引擎同步</span>
+<span class="kw">if</span> (<span class="ty">Rand</span>.<span class="nm">Chance</span>(<span class="nu">0.25f</span>)) <span class="nm">SpawnBonusLoot</span>();
+<span class="kw">int</span> dmg = <span class="ty">Rand</span>.<span class="nm">Range</span>(<span class="nu">8</span>, <span class="nu">14</span>);
+<span class="kw">var</span> pick = things.<span class="nm">RandomElement</span>(); <span class="cm">// 走 Rand</span>
+
+<span class="cm">// 錯：自己的 Random，各客戶端種子不同 → desync</span>
+<span class="kw">var</span> rng = <span class="kw">new</span> <span class="ty">System</span>.<span class="ty">Random</span>();
+<span class="kw">int</span> bad = rng.<span class="nm">Next</span>(<span class="nu">8</span>, <span class="nu">14</span>);</pre>
+
+    <h3>非確定性區段用 PushState / PopState 包夾</h3>
+    <p>
+      有時你需要「為了視覺或預覽」算一段隨機，但<strong>不想干擾</strong>主世界的亂數序列（推進全域 Rand 狀態本身會造成 desync——
+      因為某客戶端多抽了一次）。做法是用 <code>Rand.PushState(seed)</code> 開一個獨立的、以固定 seed 起始的亂數區段，用完 <code>Rand.PopState()</code> 還原。
+    </p>
+
+    <pre><span class="cm">// 用固定 seed 包夾：區段內的抽樣不影響外部 Rand 序列，且各客戶端結果一致</span>
+<span class="kw">int</span> seed = <span class="ty">Gen</span>.<span class="nm">HashCombineInt</span>(parent.thingIDNumber, <span class="ty">Find</span>.TickManager.TicksGame);
+<span class="ty">Rand</span>.<span class="nm">PushState</span>(seed);
+<span class="kw">try</span>
+{
+    <span class="kw">var</span> tint = <span class="kw">new</span> <span class="ty">Color</span>(<span class="ty">Rand</span>.Value, <span class="ty">Rand</span>.Value, <span class="ty">Rand</span>.Value);
+    <span class="nm">ApplyVisualTint</span>(tint);
+}
+<span class="kw">finally</span>
+{
+    <span class="ty">Rand</span>.<span class="nm">PopState</span>(); <span class="cm">// 一定要還原，否則之後的 Rand 序列被你改寫</span>
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>PushState / PopState 必須成對</strong>
+      用 try/finally 確保即使中途拋例外也會 PopState。漏掉 PopState 會讓 Rand 狀態堆疊失衡，連鎖污染後續所有亂數——
+      這種 bug 在單人下可能無感，到多人模式才爆，極難回溯。
+    </div>
+
+    <h3>確定性殺手清單</h3>
+    <table>
+      <tr><th>禁用 / 危險</th><th>原因</th><th>正確替代</th></tr>
+      <tr><td><code>DateTime.Now</code> / <code>Environment.TickCount</code></td><td>依現實時間，各客戶端不同</td><td><code>Find.TickManager.TicksGame</code></td></tr>
+      <tr><td><code>System.Guid.NewGuid()</code></td><td>本質隨機、不可重現</td><td>引擎的 <code>thingIDNumber</code> / <code>GenText</code> 種子 ID</td></tr>
+      <tr><td>未種子 <code>System.Random</code> / <code>UnityEngine.Random</code></td><td>不在同步範圍內</td><td><code>Verse.Rand</code></td></tr>
+      <tr><td>依賴 <code>Dictionary</code> / <code>HashSet</code> 迭代順序</td><td>順序未保證、跨執行可能不同</td><td>排序後迭代，或用 <code>List</code> 維持插入序</td></tr>
+      <tr><td>浮點數平台差異 / <code>float</code> 累積誤差</td><td>不同 CPU / JIT 可能有極小差</td><td>避免長串浮點累積；關鍵判定盡量用整數 / Rand</td></tr>
+      <tr><td>多執行緒寫共享狀態</td><td>競態 → 不可重現</td><td>世界邏輯留在主執行緒（串太吾筆記同類陷阱）</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>Dictionary 迭代順序是隱形地雷</strong>
+      <code>foreach (var kv in someDict)</code> 若用迭代結果去抽 <code>Rand</code> 或決定行為，等於把「不保證的順序」餵進確定性流程。
+      需要穩定順序時，先 <code>OrderBy</code> 一個確定的鍵（如 <code>thingIDNumber</code>）再迭代。
+    </div>
+
+    <p>
+      此外，Multiplayer mod 提供 <code>ITweakField</code> 與各種同步 API（<code>SyncMethod</code>、<code>SyncField</code>）來讓「玩家觸發的動作」被正確地廣播。
+      若你的 mod 有玩家可點的按鈕會改變世界狀態，必須讓那個動作走同步管道，而不是在本地直接改——否則只有按按鈕的客戶端會生效，其餘客戶端 desync。
+    </p>
+  </div>
+
+  <!-- ── 7. 設計原則 ── -->
+  <div class="section">
+    <div class="section-title">§7 設計原則：讓「快」成為預設</div>
+
+    <p>真正可規模化的性能來自架構，而非微優化。下面幾條原則應該在動筆寫 C# 之前就先想清楚。</p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>昂貴計算移出 hot path</h3>
+        <p>能在事件發生時算一次、就別在每 tick 重算。把結果快取，hot path 只讀不算。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>事件驅動取代輪詢</h3>
+        <p>別每 tick 問「狀態變了嗎」，改在狀態改變的源頭通知（串第 12 章事件敘事）。輪詢是 O(tick)，事件是 O(變化次數)。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>能用資料就別寫程式</h3>
+        <p>能用 <code>StatDef</code> / <code>StatPart</code> / XML 表達的數值修正，就別在 C# 每 tick 算（串第 14 章）。引擎會替你快取 stat 結果。</p>
+      </div>
+    </div>
+
+    <h3>用 StatPart 取代每 tick 計算</h3>
+    <p>
+      <code>RimWorld.StatPart</code> 是引擎「把某個修正套進 stat 計算」的擴充點，而 stat 結果本身是<strong>會被快取</strong>的（多數 stat 不是每 tick 重算）。
+      把你的「依條件加成」寫成 StatPart，既乾淨又便宜，遠勝於 patch 一個 hot 方法每 tick 改數值。
+    </p>
+
+    <pre><span class="kw">public</span> <span class="kw">class</span> <span class="ty">StatPart_MyAura</span> : <span class="ty">StatPart</span>
+{
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">TransformValue</span>(<span class="ty">StatRequest</span> req, <span class="kw">ref</span> <span class="kw">float</span> val)
+    {
+        <span class="kw">if</span> (req.Thing <span class="kw">is</span> <span class="ty">Pawn</span> p &amp;&amp; <span class="nm">HasAura</span>(p))
+            val *= <span class="nu">1.2f</span>;
+    }
+
+    <span class="kw">public</span> <span class="kw">override</span> <span class="kw">string</span> <span class="nm">ExplanationPart</span>(<span class="ty">StatRequest</span> req)
+    {
+        <span class="kw">if</span> (req.Thing <span class="kw">is</span> <span class="ty">Pawn</span> p &amp;&amp; <span class="nm">HasAura</span>(p))
+            <span class="kw">return</span> <span class="st">"MyMod_AuraBonus".Translate() + ": x1.2"</span>;
+        <span class="kw">return</span> <span class="kw">null</span>;
+    }
+}</pre>
+
+    <pre><span class="cm">&lt;!-- 在 StatDef 裡掛上 StatPart，引擎自動套用並快取 --&gt;</span>
+<span class="xml-tag">&lt;StatDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>WorkSpeedGlobal<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;parts&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyMod.StatPart_MyAura"</span> <span class="xml-tag">/&gt;</span>
+  <span class="xml-tag">&lt;/parts&gt;</span>
+<span class="xml-tag">&lt;/StatDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>TickRare 足夠時，永遠別用 Tick</strong>
+      問自己：「玩家真的能察覺這個狀態 4 秒的延遲嗎？」九成情況答案是否。把 <code>CompTick</code> 降級成 <code>CompTickRare</code>，
+      是投報率最高的單一改動——成本直接除以 250。能降 Long 就更好。
+    </div>
+  </div>
+
+  <!-- ── 8. 量測導向結語 ── -->
+  <div class="section">
+    <div class="section-title">§8 量測導向：一個完整的優化案例</div>
+
+    <p>
+      最後用一個貼近真實的小案例串起全章。假設你做了一個「警報塔」comp：附近有敵人時點亮 overlay 並廣播訊息。
+      玩家回報「放幾十座之後遊戲在 3× 卡爆」。我們<strong>按量測流程</strong>逐步修。
+    </p>
+
+    <ol class="steps">
+      <li><strong>剖析定位</strong>：掛 Dubs Performance Analyzer，發現 <code>CompAlarmTower.CompTick</code> 佔了 tick 時間的一大塊；ms/tick 高但 FPS 正常 → 確定是 tick 瓶頸（§3）。</li>
+      <li><strong>看初版程式碼</strong>：每 tick、每座塔都跑一段全地圖 LINQ 找敵人，還每 tick <code>new</code> 一個結果 List（§2、§4 的雙重地雷）。</li>
+      <li><strong>降頻 + 攤平</strong>：把檢查降到每 250 tick，並用 <code>HashOffset()</code> 讓幾十座塔分散到不同 tick，消掉尖峰（§2 ①）。</li>
+      <li><strong>快取查詢</strong>：把「附近有無敵人」改成走引擎 <code>GenHostility</code>，結果快取到欄位，避免每次全地圖 LINQ（§2 ②、§4）。</li>
+      <li><strong>再量測</strong>：回到 Analyzer 確認該方法已從榜首消失。沒退步才算數，不靠感覺。</li>
+    </ol>
+
+    <pre><span class="cm">// ── 初版（壞）：每 tick + 全地圖 LINQ + 每 tick new ──</span>
+<span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTick</span>()
+{
+    <span class="kw">var</span> hostiles = parent.Map.mapPawns.AllPawnsSpawned
+        .<span class="nm">Where</span>(p =&gt; p.HostileTo(parent.Faction))
+        .<span class="nm">ToList</span>();                 <span class="cm">// 每 tick 配置 + 全掃</span>
+    _lit = hostiles.<span class="nm">Any</span>(p =&gt;
+        p.Position.<span class="nm">DistanceTo</span>(parent.Position) &lt; <span class="nu">20f</span>);
+}
+
+<span class="cm">// ── 修正版（好）：降頻 + HashOffset 攤平 + 廉價可達性 + 快取 ──</span>
+<span class="kw">private</span> <span class="kw">bool</span> _lit;
+<span class="kw">private</span> <span class="kw">const</span> <span class="kw">int</span> Interval = <span class="nu">250</span>;
+<span class="kw">private</span> <span class="kw">const</span> <span class="kw">float</span> RadiusSq = <span class="nu">20f</span> * <span class="nu">20f</span>;
+
+<span class="kw">public</span> <span class="kw">override</span> <span class="kw">void</span> <span class="nm">CompTick</span>()
+{
+    <span class="kw">if</span> ((<span class="ty">Find</span>.TickManager.TicksGame + parent.<span class="nm">HashOffset</span>()) % Interval != <span class="nu">0</span>)
+        <span class="kw">return</span>;                       <span class="cm">// 攤平：每 tick 只有極少數塔真的算</span>
+
+    <span class="cm">// 先用最廉價的全圖敵意判斷擋掉「整張圖根本沒敵人」的常態</span>
+    <span class="kw">if</span> (!<span class="ty">GenHostility</span>.<span class="nm">AnyHostileActiveThreatTo</span>(parent.Map, parent.Faction))
+    {
+        _lit = <span class="kw">false</span>;
+        <span class="kw">return</span>;
+    }
+
+    <span class="cm">// 只有真有威脅時，才做局部距離檢查；用平方距離省一次開根號</span>
+    _lit = <span class="kw">false</span>;
+    <span class="kw">var</span> pawns = parent.Map.mapPawns.AllPawnsSpawned;
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; pawns.Count; i++)   <span class="cm">// for 取代 LINQ，零配置</span>
+    {
+        <span class="kw">var</span> p = pawns[i];
+        <span class="kw">if</span> (p.HostileTo(parent.Faction)
+            &amp;&amp; (p.Position - parent.Position).<span class="nm">LengthHorizontalSquared</span> &lt; RadiusSq)
+        {
+            _lit = <span class="kw">true</span>;
+            <span class="kw">break</span>;                      <span class="cm">// 找到一個就夠，提早跳出</span>
+        }
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>確定性同樣免費搭車</strong>
+      上面的修正版沒有用到任何 <code>System.Random</code>、<code>DateTime</code>、或 Dictionary 迭代順序，計時也全走 <code>TicksGame</code>。
+      它在多人模式下天然確定。提早遵守 §6 規範，比上線後才抓 desync 划算太多——確定性 bug 難重現，是最折磨人的一類。
+    </div>
+
+    <h3>本章重點回顧</h3>
+    <ul>
+      <li><strong>選對 ticker</strong>：預設往 <code>TickRare</code> / <code>TickLong</code> 靠，能不每 tick 就別每 tick（§1、§7）。</li>
+      <li><strong>攤平與快取</strong>：<code>HashOffset()</code> 消尖峰、快取查詢、hot path 零配置（§2）。</li>
+      <li><strong>先量再改</strong>：用內建剖析分清 tick / frame 瓶頸，社群 Analyzer 點名熱點，改完一定回量（§3、§8）。</li>
+      <li><strong>避開常客熱點</strong>：每 tick LINQ、頻繁尋路、未快取的 DefDatabase / reflection、hot path 上的 Prefix（§4）。</li>
+      <li><strong>分離成本</strong>：載入期一次性、執行期便宜；別讓 static 集合洩漏，別讓 Scribe 存可重算的快取（§5）。</li>
+      <li><strong>確定性是底線</strong>：亂數走 <code>Rand</code>、必要時 <code>PushState/PopState</code> 包夾，遠離 <code>DateTime</code>/<code>Guid</code>/未種子 Random/字典順序（§6）。</li>
+    </ul>
+
+    <div class="callout callout-tip">
+      <strong>一句話帶走</strong>
+      性能優化是一個量測閉環：<em>發現熱點 → HashOffset 攤平 → 快取查詢 → 再量測</em>。確定性則是一條紀律：<em>提早遵守，永不後悔</em>。
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 36 性能剖析與確定性 · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

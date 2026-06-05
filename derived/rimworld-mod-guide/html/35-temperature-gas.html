@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>溫度、氣體、屋頂與天氣 — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html" class="active">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>溫度、氣體、屋頂與天氣</h1>
+  <p>房間溫度、毒氣與煙霧、屋頂遮蔽、天氣事件——這些環境系統決定了殖民地的宜居性。本章拆解 GenTemperature、Room、Gas 與 WeatherDef。</p>
+  <span class="badge">Chapter 35 · Temperature &amp; Gas</span>
+</div>
+
+<div class="container">
+
+  <!-- ══════════ 導覽 ══════════ -->
+  <div class="section">
+    <div class="section-title">本章導覽</div>
+    <p>RimWorld 的環境系統由四個相互糾纏卻又各自獨立的子系統構成：<strong>房間 / 區域模型</strong>負責把地圖切成可交換熱量的單位、<strong>溫度系統</strong>每 tick 在這些單位之間流動熱量、<strong>氣體網格</strong>在地圖上擴散毒氣與煙霧、而<strong>屋頂與天氣</strong>則決定哪些格子算室內、降雨多寡、日照與命中懲罰。要寫出一個會暖房的柴爐、一個自訂的毒霧發生器、或一個專屬的暴風天氣事件，都得先弄懂這幾層怎麼疊在一起。</p>
+    <div class="g3">
+      <div class="card card-accent-blue"><h3>§1–2 溫度</h3><p>Region/Room 模型、GenTemperature、CompTempControl 與 CompHeatPusher，自訂控溫建築。</p></div>
+      <div class="card card-accent-green"><h3>§3 玩法影響</h3><p>舒適溫度 StatDef、凍傷中暑 Hediff、食物腐敗、種植溫度區間。</p></div>
+      <div class="card card-accent-purple"><h3>§4 氣體</h3><p>GasType、GasGrid 擴散、毒氣 Hediff、Biotech 污染軟依賴。</p></div>
+      <div class="card card-accent-orange"><h3>§5–6 屋頂天氣</h3><p>RoofDef/RoofGrid/塌陷、WeatherDef、GameConditionDef。</p></div>
+    </div>
+    <div class="callout callout-info">
+      <strong>反編譯定位</strong>本章引用的型別主要落在 <code>Verse</code>（Region、Room、GenTemperature、GasGrid、RoofGrid、WeatherDef、WeatherManager）與 <code>RimWorld</code>（CompTempControl、CompHeatPusher、Building_Vent、Building_Cooler、GameConditionManager、GameCondition_*）兩個命名空間。建議在 dnSpy 開啟 <code>Assembly-CSharp.dll</code>，照本章標註的型別名直接搜尋。版本以 1.5 為準，部分污染相關 API 屬 Biotech DLC。
+    </div>
+  </div>
+
+  <!-- ══════════ §1 房間與區域模型 ══════════ -->
+  <div class="section">
+    <div class="section-title">§1 房間與區域模型（Region → Room）</div>
+
+    <p>溫度不是逐格獨立模擬的——那樣大地圖會直接卡死。RimWorld 先把地圖切成<strong>區域 (Region)</strong>，再把相連的區域聚合成<strong>房間 (Room)</strong>，溫度系統真正操作的單位是 Room。理解這條鏈是理解整個溫度系統的前提。</p>
+
+    <h3>Region：地圖的空間索引單位</h3>
+    <p><code>Verse.Region</code> 是地圖空間分割的基本塊（最大 12×12），由 <code>Verse.RegionAndRoomUpdater</code> 維護。它原本是為了 pathfinding 與 reachability 服務的，但 Room 正是建立在 Region 之上：每個 Region 屬於一個 Room，相鄰且無「隔斷」（牆、門關閉等）的 Region 會被合併到同一個 Room。當你蓋一道牆、開一扇門、或拆掉一塊地板，<code>RegionAndRoomUpdater</code> 會把受影響的 Region 標記為 dirty，並在下個適當時機重算房間歸屬。</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue"><h3>Region</h3><p>≤12×12 的空間塊，pathfinding / reachability / room 聚合的基礎。由 <code>RegionGrid</code> 持有。</p></div>
+      <div class="card card-accent-green"><h3>Room</h3><p>由相連 Region 聚合而成的「房間」。持有溫度、Region 列表、RoomRoleDef、是否使用室外溫度等。</p></div>
+      <div class="card card-accent-purple"><h3>District</h3><p>1.x 後引入的中間層 <code>Verse.District</code>，介於 Region 與 Room 之間（門會切割 District 但仍屬同 Room）。多數 mod 不需直接碰。</p></div>
+    </div>
+
+    <h3>Room：溫度交換的單位</h3>
+    <p><code>Verse.Room</code> 的關鍵成員：</p>
+    <table>
+      <tr><th>成員</th><th>型別</th><th>說明</th></tr>
+      <tr><td><code>Temperature</code></td><td>float (get/set)</td><td>房間目前溫度（攝氏）。set 時會寫回房間群組的溫度暫存。室外房間 get 會回傳地圖室外溫度。</td></tr>
+      <tr><td><code>UsesOutdoorTemperature</code></td><td>bool</td><td>房間是否沿用室外溫度（未密閉、或屬於室外的「假房間」時為 true）。</td></tr>
+      <tr><td><code>OpenRoofCount</code></td><td>int</td><td>房間內未被屋頂覆蓋的格數。&gt;0 通常意味著漏天、會被當室外處理。</td></tr>
+      <tr><td><code>CellCount</code></td><td>int</td><td>房間格數，溫度的「熱容量」與此相關（大房間升溫慢）。</td></tr>
+      <tr><td><code>PsychologicallyOutdoors</code></td><td>bool</td><td>心理上是否算室外（影響 thought，串第20章）。</td></tr>
+      <tr><td><code>Role</code></td><td>RoomRoleDef</td><td>房間角色（臥室、餐廳、監獄…），由 <code>RoomRoleWorker</code> 推斷。</td></tr>
+    </table>
+
+    <p>取得一個格子所在房間最常用的入口是擴充方法 <code>RegionAndRoomQuery.RoomAt(cell, map)</code>，或更口語的 <code>cell.GetRoom(map)</code>（<code>Verse.GridsUtility.GetRoom</code>）。Thing 上則有 <code>thing.GetRoom()</code>。</p>
+
+    <pre><span class="cm">// 取得某格 / 某 pawn 所在房間，並讀其溫度</span>
+<span class="ty">Room</span> room = cell.<span class="nm">GetRoom</span>(map);             <span class="cm">// Verse.GridsUtility.GetRoom</span>
+<span class="kw">if</span> (room != <span class="kw">null</span> &amp;&amp; !room.<span class="nm">UsesOutdoorTemperature</span>)
+{
+    <span class="ty">float</span> t = room.<span class="nm">Temperature</span>;        <span class="cm">// 室內封閉房間的實際溫度</span>
+}
+
+<span class="ty">Room</span> pawnRoom = pawn.<span class="nm">GetRoom</span>();          <span class="cm">// Verse.RegionAndRoomQuery / Pawn 擴充</span></pre>
+
+    <h3>密閉判定：roofed + walled</h3>
+    <p>一個房間要被視為「室內、可獨立控溫」，直覺上需要同時滿足：<strong>四周封閉（沒有缺口連到室外）</strong>且<strong>完全有屋頂</strong>。在程式碼層面，RimWorld 用「房間是否與室外連通」與 <code>OpenRoofCount</code> 來判定，最終體現在 <code>UsesOutdoorTemperature</code>：</p>
+    <ul>
+      <li>房間若連到地圖邊緣或一個「fog/室外」假房間 → <code>UsesOutdoorTemperature == true</code>。</li>
+      <li>房間若有任何格子無屋頂（<code>OpenRoofCount &gt; 0</code>）→ 視為與室外熱交換、實際也跟著室外走。</li>
+      <li>真正密閉（四面牆 + 全屋頂、無缺口）才會擁有獨立的房間溫度暫存，控溫設備才有意義。</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>「房間」的最大格數上限</strong>RimWorld 對房間有大小上限（<code>Room.RegionCount</code> / 細胞數過大會被當室外處理，常見約 300+ 格的開放空間會 fallback 成室外溫度）。把暖氣放在一個沒封頂或過大的「房間」裡，溫度會死死貼著室外溫度不動——這幾乎是新手控溫 mod 第一個踩到的坑。
+    </div>
+
+    <h3>GenTemperature.GetTemperatureForCell — 逐格溫度查詢</h3>
+    <p>很多時候你手上只有一個 <code>IntVec3</code>，想知道「這格現在幾度」。<code>Verse.GenTemperature.GetTemperatureForCell(c, map)</code> 會做正確的分流：若該格屬於密閉房間，回房間溫度；否則回室外溫度。</p>
+
+    <pre><span class="cm">// GenTemperature.GetTemperatureForCell 的行為（概念重述，非逐行原始碼）</span>
+<span class="kw">public static</span> <span class="ty">float</span> <span class="nm">GetTemperatureForCell</span>(<span class="ty">IntVec3</span> c, <span class="ty">Map</span> map)
+{
+    <span class="ty">Room</span> room = c.<span class="nm">GetRoom</span>(map);
+    <span class="kw">if</span> (room != <span class="kw">null</span> &amp;&amp; !room.<span class="nm">UsesOutdoorTemperature</span>)
+        <span class="kw">return</span> room.<span class="nm">Temperature</span>;
+    <span class="kw">return</span> map.<span class="nm">mapTemperature</span>.<span class="nm">OutdoorTemp</span>;   <span class="cm">// 室外溫度（含季節 + 緯度）</span>
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>最佳實務</strong>幾乎所有「這格幾度」的查詢都該走 <code>GenTemperature.GetTemperatureForCell</code> 或 <code>GenTemperature.TryGetDirectAirTemperatureForCell</code>，而不要自己 <code>cell.GetRoom().Temperature</code>——前者已經幫你處理好室內/室外 fallback、null room 等邊界情況。
+    </div>
+  </div>
+
+  <!-- ══════════ §2 溫度 API 與調節 ══════════ -->
+  <div class="section">
+    <div class="section-title">§2 溫度 API 與調節（GenTemperature / CompTempControl / CompHeatPusher）</div>
+
+    <p>溫度的「資料層」是 Room.Temperature，「行為層」則由一群 ThingComp 每 tick 往房間注入或抽走熱量。要寫控溫 mod，你會在這兩端之間工作。</p>
+
+    <h3>GenTemperature：靜態工具集</h3>
+    <table>
+      <tr><th>方法</th><th>用途</th></tr>
+      <tr><td><code>GetTemperatureForCell(c, map)</code></td><td>逐格溫度，含室內/室外 fallback（§1）。</td></tr>
+      <tr><td><code>TryGetDirectAirTemperatureForCell(c, map, out temp)</code></td><td>取得「直接空氣溫度」，回傳是否成功。被火、設備等局部熱源呼叫。</td></tr>
+      <tr><td><code>ControlTemperatureTempChange(cell, map, energyLimit, targetTemp)</code></td><td>計算這 tick 應施加的溫度變化量，是 <code>CompTempControl</code> 的核心數學。考慮房間熱容量與能量上限。</td></tr>
+      <tr><td><code>PushHeat(cell, map, energy)</code></td><td>往該格所在房間注入 energy（&gt;0 升溫，&lt;0 降溫）。Building_Cooler、火、CompHeatPusher 都呼叫它。</td></tr>
+      <tr><td><code>OutdoorTemp / SeasonalTemp</code></td><td>由 <code>MapTemperature</code> 持有的室外溫度（緯度 + 季節 + 天氣修正）。</td></tr>
+    </table>
+
+    <pre><span class="cm">// 直接往一格所在房間推熱：正值升溫、負值降溫</span>
+<span class="ty">GenTemperature</span>.<span class="nm">PushHeat</span>(this.<span class="nm">Position</span>, this.<span class="nm">Map</span>, <span class="nu">21f</span>);
+
+<span class="cm">// 朝 targetTemperature 控溫，energyLimit 限制每 tick 能投入的能量</span>
+<span class="ty">float</span> change = <span class="ty">GenTemperature</span>.<span class="nm">ControlTemperatureTempChange</span>(
+    cell, map, energyLimit: <span class="nu">21f</span>, targetTemperature: <span class="nu">21f</span>);
+room.<span class="nm">Temperature</span> += change;</pre>
+
+    <h3>CompTempControl：暖氣 / 冷氣的核心</h3>
+    <p><code>RimWorld.CompTempControl</code> 是「有目標溫度」的設備共用 comp（暖氣、冷氣、地下溫控、自動門簾…）。它持有 <code>targetTemperature</code> 與 <code>operatingAtHighPower</code>，並在 UI 上提供「升溫/降溫到 X 度」的 gizmo。它本身<strong>不</strong>直接推熱——具體的 <code>Building_Heater</code> / <code>Building_Cooler</code> 每 tick 讀 CompTempControl 的目標值，再呼叫 GenTemperature 施加變化。</p>
+
+    <pre><span class="xml-tag">&lt;ThingDef</span> <span class="xml-attr">ParentName</span>=<span class="xml-val">"BuildingBase"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyHeater<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thingClass&gt;</span>RimWorld.Building_Heater<span class="xml-tag">&lt;/thingClass&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Power"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompPowerTrader<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;basePowerConsumption&gt;</span>175<span class="xml-tag">&lt;/basePowerConsumption&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_TempControl"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;energyPerSecond&gt;</span>21<span class="xml-tag">&lt;/energyPerSecond&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_HeatPusher"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;compClass&gt;</span>CompHeatPusherPowered<span class="xml-tag">&lt;/compClass&gt;</span>
+      <span class="xml-tag">&lt;heatPerSecond&gt;</span>21<span class="xml-tag">&lt;/heatPerSecond&gt;</span>
+      <span class="xml-tag">&lt;heatPushMaxTemperature&gt;</span>28.5<span class="xml-tag">&lt;/heatPushMaxTemperature&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>原版暖氣其實是 HeatPusher</strong>原版「暖氣 (Heater)」用的就是 <code>CompHeatPusherPowered</code> + <code>CompProperties_TempControl</code> 組合；「冷氣 (Cooler)」才是真正 <code>Building_Cooler</code>（一面進熱一面排熱、需貼牆）。要做純升溫設備，沿用 HeatPusher 路線最省事；要做雙面溫差設備，才走 Building_Cooler。
+    </div>
+
+    <h3>CompHeatPusher：無腦推熱</h3>
+    <p><code>RimWorld.CompHeatPusher</code>（與帶電版 <code>CompHeatPusherPowered</code>）每 tick 對所在房間推固定熱量，直到房間溫度達 <code>heatPushMaxTemperature</code> 為止。柴爐、營火、太陽燈的副熱、化學燃料發電機都用它。它<strong>沒有目標溫度概念</strong>，只會單向加熱（heatPerSecond 設負值即可單向降溫，但極少這樣用）。</p>
+
+    <table>
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td><code>heatPerSecond</code></td><td>每秒推入的熱量（換算成 tick）。正升溫負降溫。</td></tr>
+      <tr><td><code>heatPushMaxTemperature</code></td><td>達此溫度後停止推熱（防止無限加熱）。</td></tr>
+      <tr><td><code>heatPushMinTemperature</code></td><td>降溫用時的下限。</td></tr>
+    </table>
+
+    <h3>Building_Vent / Building_Cooler 模式</h3>
+    <div class="g2">
+      <div class="card card-accent-cyan"><h3>Building_Vent（通風口）</h3><p><code>RimWorld.Building_Vent</code> 連通兩側房間溫度，使其趨於平均。開關狀態由 <code>CompFlickable</code> 控制；關閉時 <code>FlickableComp</code> 切斷溫度傳遞。本質是「在牆上開一個讓熱量流通的洞」。</p></div>
+      <div class="card card-accent-blue"><h3>Building_Cooler（冷氣）</h3><p><code>RimWorld.Building_Cooler</code> 有方向性：背面（intake）抽熱、正面（exhaust）排熱。必須卡在牆上，兩側分別屬於不同房間。<code>CompTempControl</code> 給目標溫度，效率隨外側溫度上升而衰減（過熱會結霜停機）。</p></div>
+    </div>
+
+    <h3>實作：一個自訂的「會推熱的供暖建築」</h3>
+    <p>串第18章的 <code>CompPowerTrader</code> 與 PlaceWorker，做一個只在通電且房間封閉時才有效的暖爐。重點是覆寫 <code>TickRare</code>（每 250 tick 一次，溫度系統不需要每 tick）並自己控制推熱條件。</p>
+
+    <pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">Building_SmartHeater</span> : <span class="ty">Building</span>
+{
+    <span class="kw">private</span> <span class="ty">CompPowerTrader</span> powerComp;
+    <span class="kw">private</span> <span class="ty">CompTempControl</span> tempControl;
+
+    <span class="kw">public override void</span> <span class="nm">SpawnSetup</span>(<span class="ty">Map</span> map, <span class="ty">bool</span> respawningAfterLoad)
+    {
+        <span class="kw">base</span>.<span class="nm">SpawnSetup</span>(map, respawningAfterLoad);
+        powerComp   = <span class="nm">GetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        tempControl = <span class="nm">GetComp</span>&lt;<span class="ty">CompTempControl</span>&gt;();
+    }
+
+    <span class="kw">public override void</span> <span class="nm">TickRare</span>()
+    {
+        <span class="kw">base</span>.<span class="nm">TickRare</span>();
+        <span class="kw">if</span> (powerComp != <span class="kw">null</span> &amp;&amp; !powerComp.<span class="nm">PowerOn</span>) <span class="kw">return</span>;
+
+        <span class="ty">Room</span> room = this.<span class="nm">GetRoom</span>();
+        <span class="cm">// 開放空間 / 漏天房間：推熱無意義，省下運算</span>
+        <span class="kw">if</span> (room == <span class="kw">null</span> || room.<span class="nm">UsesOutdoorTemperature</span>) <span class="kw">return</span>;
+
+        <span class="ty">float</span> target = tempControl.<span class="nm">targetTemperature</span>;
+        <span class="kw">if</span> (room.<span class="nm">Temperature</span> &gt;= target) <span class="kw">return</span>;        <span class="cm">// 已達標就停手</span>
+
+        <span class="cm">// 用 ControlTemperatureTempChange 取得本 tick 應變化量（energyPerSecond 由 props 帶入）</span>
+        <span class="ty">float</span> energy = tempControl.<span class="nm">Props</span>.<span class="nm">energyPerSecond</span> * <span class="nu">4.16667f</span>; <span class="cm">// TickRare ≈ 4.17s</span>
+        <span class="ty">float</span> change = <span class="ty">GenTemperature</span>.<span class="nm">ControlTemperatureTempChange</span>(
+            this.<span class="nm">Position</span>, this.<span class="nm">Map</span>, energy, target);
+        room.<span class="nm">Temperature</span> += change;
+
+        <span class="cm">// 可調整耗電顯示：滿載 vs 待機</span>
+        powerComp.<span class="nm">PowerOutput</span> = -powerComp.<span class="nm">Props</span>.<span class="nm">PowerConsumption</span>;
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>用 TickRare 不用 Tick</strong>溫度變化緩慢，<code>TickRare</code>（每 250 tick）對溫控完全足夠，且省下大量逐 tick 計算。原版 CompTempControl 與 CompHeatPusher 也都在 rare/medium tick 層級工作。把溫控邏輯塞進 <code>Tick</code> 是常見的性能浪費（串第36章）。
+    </div>
+  </div>
+
+  <!-- ══════════ §3 溫度對玩法的影響 ══════════ -->
+  <div class="section">
+    <div class="section-title">§3 溫度對玩法的影響（舒適區間 / 凍傷中暑 / 腐敗 / 種植）</div>
+
+    <p>溫度本身只是一個數字，真正影響玩法的是消費這個數字的各個系統。下面四條是 mod 最常需要掛鉤的路徑。</p>
+
+    <h3>(1) 舒適溫度區間：StatDef + StatPart</h3>
+    <p>每個 pawn 有 <code>ComfyTemperatureMin</code> / <code>ComfyTemperatureMax</code> 兩個 StatDef（<code>RimWorld.StatDefOf</code>）。最終值由 race base + 衣物保暖度（Insulation_Cold / Insulation_Heat）+ hediff + 基因等 StatPart 疊加。要讓自訂裝備或基因改變耐寒耐熱，正規做法是寫 StatPart 或在 ThingDef/GeneDef 上掛 <code>statOffsets</code>（串第14、17、21章）。</p>
+
+    <pre><span class="cm">// 取得 pawn 的舒適溫度上下限與「目前是否過冷/過熱」</span>
+<span class="ty">float</span> min = pawn.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.<span class="nm">ComfyTemperatureMin</span>);
+<span class="ty">float</span> max = pawn.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.<span class="nm">ComfyTemperatureMax</span>);
+<span class="ty">float</span> ambient = pawn.<span class="nm">AmbientTemperature</span>;   <span class="cm">// Verse.Thing.AmbientTemperature</span>
+<span class="kw">bool</span> tooCold = ambient &lt; min;
+<span class="kw">bool</span> tooHot  = ambient &gt; max;</pre>
+
+    <pre><span class="cm">// 自訂耐寒披風：直接在 ThingDef 上加 statOffsets（無需 C#）</span>
+<span class="xml-tag">&lt;statOffsets&gt;</span>
+  <span class="xml-tag">&lt;Insulation_Cold&gt;</span>28<span class="xml-tag">&lt;/Insulation_Cold&gt;</span>   <span class="cm">&lt;!-- 攝氏，向下擴張舒適下限 --&gt;</span>
+  <span class="xml-tag">&lt;Insulation_Heat&gt;</span>4<span class="xml-tag">&lt;/Insulation_Heat&gt;</span>
+<span class="xml-tag">&lt;/statOffsets&gt;</span></pre>
+
+    <h3>(2) 凍傷與中暑：Hediff</h3>
+    <p>過冷產生 <code>HediffDefOf.Hypothermia</code>（失溫）、過熱產生 <code>Heatstroke</code>（中暑）。它們由 <code>Pawn_HealthTracker</code> 下的環境檢查每隔一段時間根據 <code>AmbientTemperature</code> 與舒適區間的偏差量推進嚴重度（severity）。要做「自訂材質造成特殊溫度傷害」，正規做法是定義新的 <code>HediffDef</code> + <code>HediffGiver</code>（或 <code>HediffGiver_Heat</code> / <code>HediffGiver_Hypothermia</code> 的衍生），掛在 race 的 <code>RaceProperties.hediffGiverSets</code> 上。</p>
+
+    <div class="callout callout-warn">
+      <strong>別直接每 tick 加 severity</strong>失溫/中暑的嚴重度推進是「偏離舒適區越遠、推進越快；回到舒適區會自動回復」。若你用 Harmony 硬塞 severity，要記得也處理回復段，否則 pawn 進了室內仍持續凍傷。優先複用既有 <code>HediffGiver</code> 的數學。
+    </div>
+
+    <h3>(3) 食物腐敗：CompRottable</h3>
+    <p><code>RimWorld.CompRottable</code> 是讓物品會腐爛的 comp，其腐敗進度受所在格溫度影響：低於 <code>TemperatureThreshold</code>（約 0°C）幾乎不腐、低於 <code>RotProgressFreezeThreshold</code>（約 −10°C，冷凍）完全凍結。冷凍庫 mod 的本質就是「把一個密閉房間用冷氣壓到 0°C 以下」。</p>
+
+    <table>
+      <tr><th>溫度區間</th><th>CompRottable 行為</th></tr>
+      <tr><td>&gt; 0°C</td><td>正常腐敗，越熱越快（線性加速）。</td></tr>
+      <tr><td>−10°C ~ 0°C</td><td>腐敗大幅減速。</td></tr>
+      <tr><td>&lt; −10°C</td><td>完全凍結，rotProgress 不前進（冷凍保存）。</td></tr>
+    </table>
+
+    <pre><span class="cm">// 查詢某堆食物還能放多久（受目前溫度影響）</span>
+<span class="ty">CompRottable</span> rot = thing.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompRottable</span>&gt;();
+<span class="kw">if</span> (rot != <span class="kw">null</span>)
+{
+    <span class="ty">float</span> daysLeft = rot.<span class="nm">PropsRot</span>.<span class="nm">TicksToRotStart</span> != <span class="nu">0</span>
+        ? (rot.<span class="nm">PropsRot</span>.<span class="nm">TicksToRotStart</span> - rot.<span class="nm">RotProgress</span>) / <span class="nu">60000f</span>
+        : <span class="nu">0f</span>;
+    <span class="ty">RotStage</span> stage = rot.<span class="nm">Stage</span>;   <span class="cm">// Fresh / Rotting / Dessicated</span>
+}</pre>
+
+    <h3>(4) 種植溫度區間</h3>
+    <p>植物（<code>RimWorld.Plant</code> / <code>ThingDef.plant</code>）有可生長的溫度窗。原版硬編在 <code>Plant.GrowthRateFactor_Temperature</code>：低於約 0°C 或高於約 58°C 不長，最適區間約 6°C–42°C。要自訂耐寒作物，通常透過自訂 <code>PlantProperties</code>（如 <code>growMinGlow</code>、生長季）配合並用 Harmony patch <code>GrowthRateFactor_Temperature</code>，因為溫度窗本身未完全 def 化（串第19章）。</p>
+
+    <div class="g3">
+      <div class="card card-accent-green"><h3>StatPart</h3><p>改舒適溫度、保暖度的乾淨做法（§14）。</p></div>
+      <div class="card card-accent-red"><h3>HediffGiver</h3><p>自訂溫度傷害，複用回復數學（§28）。</p></div>
+      <div class="card card-accent-cyan"><h3>CompRottable</h3><p>冷凍庫＝把房間壓到 −10°C 以下。</p></div>
+    </div>
+  </div>
+
+  <!-- ══════════ §4 氣體系統 ══════════ -->
+  <div class="section">
+    <div class="section-title">§4 氣體系統（GasType / GasGrid / 毒氣 Hediff / 污染）</div>
+
+    <p>RimWorld 1.5 的地圖氣體用一張統一網格管理。三種「環境氣體」共享同一個 <code>Verse.GasGrid</code>，逐 tick 在格子間擴散、消散。</p>
+
+    <h3>GasType：三種氣體</h3>
+    <table>
+      <tr><th>GasType</th><th>來源</th><th>效果</th></tr>
+      <tr><td><code>BlindSmoke</code></td><td>煙幕彈、機械蟲噴霧</td><td>降低視野/命中（致盲煙）。</td></tr>
+      <tr><td><code>ToxGas</code></td><td>毒氣彈、自爆機械、毒霧發生器</td><td>對 pawn 累積毒性負荷（tox buildup hediff）。</td></tr>
+      <tr><td><code>RotStink</code></td><td>腐爛物、屍體堆</td><td>產生負面 thought（惡臭），不直接傷害。</td></tr>
+    </table>
+
+    <h3>GasGrid：擴散與密度</h3>
+    <p><code>Verse.GasGrid</code>（透過 <code>map.gasGrid</code>）以一張 byte 陣列存每格各氣體的密度（0–255）。每 tick 在開放格之間平均擴散、並隨時間衰減；牆與關閉的門會阻擋擴散。常用 API：</p>
+
+    <table>
+      <tr><th>方法</th><th>說明</th></tr>
+      <tr><td><code>AnyGasAt(cell)</code></td><td>該格是否有任何氣體。</td></tr>
+      <tr><td><code>DensityAt(cell, gasType)</code></td><td>該格某種氣體密度（byte）。</td></tr>
+      <tr><td><code>AddGas(cell, gasType, amount, canOverflow)</code></td><td>在該格注入氣體（會觸發鄰格擴散）。</td></tr>
+      <tr><td><code>SetDirect(index, ...)</code></td><td>低階直接寫，少用。</td></tr>
+    </table>
+
+    <pre><span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// 在建築周圍持續釋放毒氣（毒霧發生器的核心）</span>
+<span class="kw">public class</span> <span class="ty">CompToxEmitter</span> : <span class="ty">ThingComp</span>
+{
+    <span class="kw">public override void</span> <span class="nm">CompTickRare</span>()
+    {
+        <span class="ty">Map</span> map = parent.<span class="nm">Map</span>;
+        <span class="kw">if</span> (map == <span class="kw">null</span>) <span class="kw">return</span>;
+        <span class="ty">IntVec3</span> c = parent.<span class="nm">Position</span>;
+        <span class="cm">// 注入 ToxGas，數量上限 255；canOverflow 讓鄰格分擔</span>
+        map.<span class="nm">gasGrid</span>.<span class="nm">AddGas</span>(c, <span class="ty">GasType</span>.<span class="nm">ToxGas</span>, amount: <span class="nu">100</span>, canOverflow: <span class="kw">true</span>);
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>GenGas 與便捷工具</strong>原版用 <code>Verse.GenGas</code> 處理煙霧等臨時氣體的散佈邏輯；而對毒氣與 ToxGas 的高層操作多半透過 <code>map.gasGrid</code>。要在地圖一片區域瞬間鋪滿毒氣（如毒氣彈爆炸），原版有 <code>SkyfallerMaker</code> / 爆炸 <code>DamageDef</code> 帶 <code>postExplosionGasType</code> 的路徑，比手動逐格 AddGas 更省事。</div>
+
+    <h4>爆炸後留毒氣：純 XML</h4>
+    <pre><span class="cm">&lt;!-- 一個爆炸後在落點周圍噴 ToxGas 的彈藥 ProjectileDef --&gt;</span>
+<span class="xml-tag">&lt;projectile&gt;</span>
+  <span class="xml-tag">&lt;damageDef&gt;</span>Bomb<span class="xml-tag">&lt;/damageDef&gt;</span>
+  <span class="xml-tag">&lt;explosionRadius&gt;</span>2.9<span class="xml-tag">&lt;/explosionRadius&gt;</span>
+  <span class="xml-tag">&lt;postExplosionGasType&gt;</span>ToxGas<span class="xml-tag">&lt;/postExplosionGasType&gt;</span>
+  <span class="xml-tag">&lt;postExplosionGasRadiusOverride&gt;</span>3.9<span class="xml-tag">&lt;/postExplosionGasRadiusOverride&gt;</span>
+<span class="xml-tag">&lt;/projectile&gt;</span></pre>
+
+    <h3>毒氣對 pawn：tox buildup hediff</h3>
+    <p>當 pawn 處在 ToxGas 中且未戴防毒裝備（gas mask / 全罩面具，由 <code>StatDefOf.ToxicResistance</code> 與 apparel 的 gas 防護決定），會累積 <code>HediffDefOf.ToxicBuildup</code> 的嚴重度。達一定門檻會造成器官傷害甚至死亡。pawn 的 <code>GetStatValue(StatDefOf.ToxicResistance)</code> 與所在格的 ToxGas 密度共同決定每 tick 的累積速率（由 <code>Pawn_HealthTracker</code> 環境檢查推進）。</p>
+
+    <h3>Biotech 污染（pollution，軟依賴）</h3>
+    <p>Biotech 引入的<strong>地圖污染</strong>是另一套系統（與 GasGrid 無關）：地形被污染後 <code>TerrainDef</code> 切換為 polluted 變體，污染由 <code>map.pollutionGrid</code> 管理；<code>wastepack</code>（污染包）會洩漏污染、毒性落塵 (toxic fallout) 是覆蓋全圖的 GameCondition。要在 mod 中觸碰這些，務必用<strong>軟依賴</strong>，因為玩家不一定有 Biotech。</p>
+
+    <pre><span class="cm">&lt;!-- 用 MayRequire 讓欄位只在 Biotech 啟用時載入，避免缺 DLC 報錯 --&gt;</span>
+<span class="xml-tag">&lt;ThingDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyReactor<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;comps&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"CompProperties_Pollution"</span>
+        <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Biotech"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;cellsToPollutePerDay&gt;</span>3<span class="xml-tag">&lt;/cellsToPollutePerDay&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/comps&gt;</span>
+<span class="xml-tag">&lt;/ThingDef&gt;</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>C# 端的 Biotech 軟依賴</strong>若 C# 直接引用 Biotech 專屬型別（如污染相關 class），在無 DLC 的玩家機器上 JIT 到該方法就會 <code>TypeLoadException</code>。把 Biotech 專屬程式碼隔離進獨立方法，並先用 <code>ModsConfig.BiotechActive</code> 判斷後才呼叫；必要時整個 patch class 加 <code>[StaticConstructorOnStartup]</code> 條件註冊。
+    </div>
+  </div>
+
+  <!-- ══════════ §5 屋頂與遮蔽 ══════════ -->
+  <div class="section">
+    <div class="section-title">§5 屋頂與遮蔽（RoofDef / RoofGrid / 塌陷）</div>
+
+    <p>屋頂同時影響溫度（密閉判定）、降雨遮蔽、日照（室內光）與礦山挖掘（厚岩頂）。它存在一張獨立的 <code>Verse.RoofGrid</code>，與地形、建築網格分離。</p>
+
+    <h3>RoofDef：三種屋頂</h3>
+    <table>
+      <tr><th>RoofDef</th><th>defName</th><th>特性</th></tr>
+      <tr><td>薄頂</td><td><code>RoofConstructed</code></td><td>殖民者建造的屋頂；可拆除；不擋掉落物（drop pod 可穿）。</td></tr>
+      <tr><td>厚岩頂</td><td><code>RoofRockThick</code></td><td>山體內的厚頂；無法手動拆除，需挖掉整塊岩石；擋空投與軌道砲。</td></tr>
+      <tr><td>薄岩頂</td><td><code>RoofRockThin</code></td><td>山體邊緣的薄岩頂；可被掘穿。</td></tr>
+    </table>
+    <p>RoofDef 關鍵欄位：<code>isThickRoof</code>（是否厚頂，決定能否阻擋軌道打擊與 drop pod）、<code>isNatural</code>（自然生成）、<code>collapseLeavingThingDef</code>（塌陷後留下的瓦礫/岩塊）、<code>VanishOnCollapse</code>。</p>
+
+    <h3>RoofGrid：查詢與設定</h3>
+    <pre><span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="ty">RoofGrid</span> roofs = map.<span class="nm">roofGrid</span>;
+<span class="kw">bool</span> hasRoof   = roofs.<span class="nm">Roofed</span>(cell);            <span class="cm">// 該格是否有屋頂</span>
+<span class="ty">RoofDef</span> def    = roofs.<span class="nm">RoofAt</span>(cell);            <span class="cm">// 屋頂型別（null = 露天）</span>
+
+<span class="cm">// 設定屋頂（會影響光照、降雨、之後的 region/room 重算）</span>
+roofs.<span class="nm">SetRoof</span>(cell, <span class="ty">RoofDefOf</span>.<span class="nm">RoofConstructed</span>);
+roofs.<span class="nm">SetRoof</span>(cell, <span class="kw">null</span>);                    <span class="cm">// 拆除屋頂</span></pre>
+
+    <h3>屋頂建造 / 拆除 area</h3>
+    <p>玩家不是逐格蓋屋頂，而是劃定<strong>「建造屋頂區」(BuildRoofArea)</strong>與<strong>「拆除屋頂區」(NoRoofArea)</strong>兩張 area（<code>Verse.Area_BuildRoof</code> / <code>Area_NoRoof</code>，存於 <code>map.areaManager</code>）。殖民者在有牆支撐的範圍內把標記區內的格子蓋上 <code>RoofConstructed</code>。要在 mod 中程式化指定屋頂區：</p>
+
+    <pre><span class="ty">Area_BuildRoof</span> buildRoof = map.<span class="nm">areaManager</span>.<span class="nm">BuildRoof</span>;
+buildRoof[cell] = <span class="kw">true</span>;          <span class="cm">// 標記此格「應蓋屋頂」</span>
+
+<span class="ty">Area_NoRoof</span> noRoof = map.<span class="nm">areaManager</span>.<span class="nm">NoRoof</span>;
+noRoof[cell] = <span class="kw">true</span>;             <span class="cm">// 標記此格「應拆屋頂」</span></pre>
+
+    <h3>屋頂塌陷：RoofCollapseUtility</h3>
+    <p>屋頂需要鄰近的<strong>支撐物（牆、柱、岩石）</strong>。當支撐被拆除/摧毀，無支撐的屋頂會塌陷砸傷下方一切。支撐距離由 <code>Verse.RoofCollapseUtility.RoofMaxSupportDistance</code>（原版約 6 格）決定——任何屋頂格若在該距離內找不到支撐就會被列入塌陷。判定由 <code>RoofCollapseCheckerUtility</code> / <code>RoofCollapserImmediate</code> 執行。</p>
+
+    <table>
+      <tr><th>型別 / 成員</th><th>用途</th></tr>
+      <tr><td><code>RoofCollapseUtility.RoofMaxSupportDistance</code></td><td>屋頂能離支撐最遠的距離（≈6）。</td></tr>
+      <tr><td><code>RoofCollapseUtility.WithinRangeOfRoofHolder(c, map)</code></td><td>該格是否在某支撐物範圍內。</td></tr>
+      <tr><td><code>RoofCollapseCellsFinder.RemoveBulkCollapsingRoofs(...)</code></td><td>計算並移除一批失去支撐的屋頂。</td></tr>
+      <tr><td><code>RoofCollapserImmediate.DropRoofInCells(cells, map)</code></td><td>立即令指定格屋頂塌陷（含砸傷）。</td></tr>
+    </table>
+
+    <div class="callout callout-danger">
+      <strong>塌陷會砸死人</strong>用 <code>DropRoofInCells</code> 或拆除支撐牆時，塌陷會對下方 pawn/物品造成 <code>DamageDefOf.Crush</code>（厚岩頂塌陷幾乎必殺）。製作「炸塌山頂壓敵人」之類機制時務必先確認落點，並避免砸到自己人。厚頂塌陷後留下 <code>collapseLeavingThingDef</code>（岩塊），會永久佔格。
+    </div>
+
+    <h3>屋頂對溫度/降雨/日照的影響</h3>
+    <ul>
+      <li><strong>溫度</strong>：屋頂是房間密閉的必要條件之一。漏一格頂，整個房間 <code>UsesOutdoorTemperature</code> 變 true（§1）。</li>
+      <li><strong>降雨/落塵</strong>：有頂的格子不會被雨淋濕、不沾毒性落塵的污染，pawn 在頂下也不會直接淋雨掉心情。</li>
+      <li><strong>日照</strong>：薄頂格室內光偏暗（影響太陽能板＝戶外才發電、室內植物需人工照明，串第18、19章）。厚岩頂下完全無天光。</li>
+    </ul>
+  </div>
+
+  <!-- ══════════ §6 天氣與環境事件 ══════════ -->
+  <div class="section">
+    <div class="section-title">§6 天氣與環境事件（WeatherDef / WeatherManager / GameConditionDef）</div>
+
+    <p>天氣 (Weather) 與遊戲條件 (GameCondition) 是兩個容易混淆的系統：<strong>天氣</strong>是地圖當下的「天空狀態」（晴/雨/霧/雪），由 <code>WeatherManager</code> 在 WeatherDef 間平滑過渡；<strong>GameCondition</strong>是疊加在天氣之上、有明確開始/結束的「事件狀態」（毒性落塵、火山冬天、極光、熱浪、寒流…）。一個 GameCondition 可以強制覆蓋天氣，但兩者資料結構獨立。</p>
+
+    <h3>WeatherDef：天氣定義</h3>
+    <table>
+      <tr><th>欄位</th><th>說明</th></tr>
+      <tr><td><code>rainRate</code></td><td>降雨/降雪率（&gt;0 會淋濕露天格、滅火、生長加成等）。</td></tr>
+      <tr><td><code>windSpeedFactor</code></td><td>風速倍率（影響風力發電、火勢蔓延）。</td></tr>
+      <tr><td><code>accuracyMultiplier</code></td><td>命中率倍率（霧/雨降低遠程命中，串第15章）。</td></tr>
+      <tr><td><code>moveSpeedMultiplier</code></td><td>露天移動速度倍率（暴雪減速）。</td></tr>
+      <tr><td><code>exposeWeather</code></td><td>是否讓露天 pawn「暴露在天氣中」（影響心情/體溫）。</td></tr>
+      <tr><td><code>overlayClasses</code></td><td>畫面覆蓋特效（雨幕、雪幕、霧）的 <code>SkyOverlay</code> 類別清單。</td></tr>
+      <tr><td><code>skyColorsNightMid / Day / Dusk</code></td><td>各時段天空配色（<code>SkyColorSet</code>），決定畫面氛圍與環境光。</td></tr>
+      <tr><td><code>commonalityRainfall</code> / <code>temperatureRange</code></td><td>此天氣可出現的降雨/溫度條件（生物群系/季節篩選）。</td></tr>
+    </table>
+
+    <pre><span class="xml-tag">&lt;WeatherDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>AshStorm<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>灰燼風暴<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>火山灰遮天蔽日，能見度極差。<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;rainRate&gt;</span>0<span class="xml-tag">&lt;/rainRate&gt;</span>
+  <span class="xml-tag">&lt;windSpeedFactor&gt;</span>2.2<span class="xml-tag">&lt;/windSpeedFactor&gt;</span>
+  <span class="xml-tag">&lt;accuracyMultiplier&gt;</span>0.5<span class="xml-tag">&lt;/accuracyMultiplier&gt;</span>
+  <span class="xml-tag">&lt;moveSpeedMultiplier&gt;</span>0.85<span class="xml-tag">&lt;/moveSpeedMultiplier&gt;</span>
+  <span class="xml-tag">&lt;exposeWeather&gt;</span>true<span class="xml-tag">&lt;/exposeWeather&gt;</span>
+  <span class="xml-tag">&lt;perceivePriority&gt;</span>1<span class="xml-tag">&lt;/perceivePriority&gt;</span>
+  <span class="xml-tag">&lt;windSpeedOffset&gt;</span>1.2<span class="xml-tag">&lt;/windSpeedOffset&gt;</span>
+  <span class="xml-tag">&lt;overlayClasses&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>WeatherOverlay_Fog<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/overlayClasses&gt;</span>
+  <span class="xml-tag">&lt;skyColorsNightMid&gt;</span>
+    <span class="xml-tag">&lt;sky&gt;</span>(0.30, 0.26, 0.24)<span class="xml-tag">&lt;/sky&gt;</span>
+    <span class="xml-tag">&lt;shadow&gt;</span>(0.40, 0.36, 0.34)<span class="xml-tag">&lt;/shadow&gt;</span>
+    <span class="xml-tag">&lt;overlay&gt;</span>(0.55, 0.50, 0.46)<span class="xml-tag">&lt;/overlay&gt;</span>
+    <span class="xml-tag">&lt;saturation&gt;</span>0.7<span class="xml-tag">&lt;/saturation&gt;</span>
+  <span class="xml-tag">&lt;/skyColorsNightMid&gt;</span>
+  <span class="xml-tag">&lt;weatherThought&gt;</span>null<span class="xml-tag">&lt;/weatherThought&gt;</span>
+<span class="xml-tag">&lt;/WeatherDef&gt;</span></pre>
+
+    <h3>WeatherManager：當前天氣與過渡</h3>
+    <p><code>RimWorld.WeatherManager</code>（<code>map.weatherManager</code>）持有 <code>curWeather</code> / <code>lastWeather</code> 與兩者間的混合度 <code>curWeatherAge</code>。天氣切換不是瞬間的——它在兩個 WeatherDef 間平滑插值天空配色、降雨幕等。下一個天氣由 <code>WeatherDecider</code> 根據各 WeatherDef 的 <code>TransitionCommonality</code> 與當前條件（季節、降雨量、溫度範圍）加權隨機選出。</p>
+
+    <pre><span class="cm">// 讀取與強制天氣</span>
+<span class="ty">WeatherDef</span> now = map.<span class="nm">weatherManager</span>.<span class="nm">curWeather</span>;
+<span class="ty">float</span> rain = map.<span class="nm">weatherManager</span>.<span class="nm">RainRate</span>;     <span class="cm">// 已混合的實際降雨率</span>
+
+<span class="cm">// 強制立刻切到指定天氣（debug / 事件用）</span>
+map.<span class="nm">weatherManager</span>.<span class="nm">TransitionTo</span>(<span class="ty">DefDatabase</span>&lt;<span class="ty">WeatherDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"AshStorm"</span>));</pre>
+
+    <h3>GameConditionDef：覆蓋全圖的事件狀態</h3>
+    <p><code>RimWorld.GameConditionDef</code> + 對應的 <code>GameCondition</code> 子類（<code>RimWorld.GameCondition_*</code>）構成「有時限的全圖環境效果」。它由 <code>GameConditionManager</code>（每張地圖一個 + 一個世界層級的）管理。許多事件（Incident，串第12章）的本體就是「註冊一個 GameCondition」：</p>
+
+    <table>
+      <tr><th>GameCondition 子類</th><th>效果</th></tr>
+      <tr><td><code>GameCondition_ToxicFallout</code></td><td>毒性落塵：露天累積毒性、植物死亡。</td></tr>
+      <tr><td><code>GameCondition_VolcanicWinter</code></td><td>火山冬天：日照與溫度下降。</td></tr>
+      <tr><td><code>GameCondition_Aurora</code></td><td>極光：夜晚正面 thought。</td></tr>
+      <tr><td><code>GameCondition_HeatWave / ColdSnap</code></td><td>熱浪 / 寒流：偏移室外溫度。</td></tr>
+      <tr><td><code>GameCondition_NoSunlight</code></td><td>遮蔽天光（如機械族篩網事件）。</td></tr>
+    </table>
+
+    <h4>自訂一個簡單的 GameCondition（溫度偏移）</h4>
+    <pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">GameCondition_ChillFog</span> : <span class="ty">GameCondition</span>
+{
+    <span class="kw">private const</span> <span class="ty">float</span> TempOffset = -<span class="nu">12f</span>;
+
+    <span class="cm">// 偏移室外溫度（每張受影響地圖會問所有 active condition）</span>
+    <span class="kw">public override float</span> <span class="nm">TemperatureOffset</span>()
+    {
+        <span class="kw">return</span> TempOffset;
+    }
+
+    <span class="cm">// 覆蓋天空：讓畫面變冷色調的霧</span>
+    <span class="kw">public override</span> <span class="ty">List</span>&lt;<span class="ty">SkyOverlay</span>&gt; <span class="nm">SkyOverlays</span>(<span class="ty">Map</span> map)
+    {
+        <span class="kw">return</span> overlays;
+    }
+    <span class="kw">private static readonly</span> <span class="ty">List</span>&lt;<span class="ty">SkyOverlay</span>&gt; overlays =
+        <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="ty">SkyOverlay</span>&gt; { <span class="kw">new</span> <span class="ty">WeatherOverlay_Fog</span>() };
+}</pre>
+
+    <pre><span class="cm">&lt;!-- 對應的 GameConditionDef --&gt;</span>
+<span class="xml-tag">&lt;GameConditionDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>ChillFog<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;conditionClass&gt;</span>MyMod.GameCondition_ChillFog<span class="xml-tag">&lt;/conditionClass&gt;</span>
+  <span class="xml-tag">&lt;label&gt;</span>寒霧<span class="xml-tag">&lt;/label&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>濃重的冷霧壓低了氣溫。<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;endMessage&gt;</span>寒霧散去了。<span class="xml-tag">&lt;/endMessage&gt;</span>
+  <span class="xml-tag">&lt;canBePermanent&gt;</span>false<span class="xml-tag">&lt;/canBePermanent&gt;</span>
+<span class="xml-tag">&lt;/GameConditionDef&gt;</span></pre>
+
+    <p>要由事件觸發它，寫一個 <code>IncidentWorker</code>（串第12章）在 <code>TryExecuteWorker</code> 內 <code>RegisterCondition</code>（見 §7），或在既有 <code>IncidentWorker_MakeGameCondition</code> 的 IncidentDef 上指定 <code>gameCondition</code> 欄位即可，後者完全免 C#。</p>
+
+    <div class="callout callout-info">
+      <strong>TransitionCommonality 不是出現機率本身</strong><code>WeatherDef.commonality</code> / <code>WeatherDecider</code> 的權重會被當下的季節溫度範圍、降雨量需求過濾後才生效。你的自訂天氣若 <code>temperatureRange</code> 設得很窄或與生物群系不符，可能永遠抽不到。debug 時用 <code>map.weatherManager.TransitionTo</code> 直接驗證視覺與數值，再回頭調權重。</div>
+  </div>
+
+  <!-- ══════════ §7 C# 速查 ══════════ -->
+  <div class="section">
+    <div class="section-title">§7 C# 速查（常用呼叫與溫度交換注入）</div>
+
+    <p>把本章最常用的入口集中在一處，方便複製。</p>
+
+    <table>
+      <tr><th>目標</th><th>呼叫</th></tr>
+      <tr><td>當前天氣</td><td><code>map.weatherManager.curWeather</code> / <code>.RainRate</code></td></tr>
+      <tr><td>強制切天氣</td><td><code>map.weatherManager.TransitionTo(weatherDef)</code></td></tr>
+      <tr><td>條件是否啟用</td><td><code>map.gameConditionManager.ConditionIsActive(GameConditionDefOf.ToxicFallout)</code></td></tr>
+      <tr><td>取得啟用中條件</td><td><code>map.gameConditionManager.GetActiveCondition(def)</code></td></tr>
+      <tr><td>取格子房間</td><td><code>cell.GetRoom(map)</code> / <code>pawn.GetRoom()</code></td></tr>
+      <tr><td>逐格溫度</td><td><code>GenTemperature.GetTemperatureForCell(cell, map)</code></td></tr>
+      <tr><td>室外溫度</td><td><code>map.mapTemperature.OutdoorTemp</code></td></tr>
+      <tr><td>推熱</td><td><code>GenTemperature.PushHeat(cell, map, energy)</code></td></tr>
+      <tr><td>屋頂查詢</td><td><code>map.roofGrid.Roofed(cell)</code> / <code>.RoofAt(cell)</code></td></tr>
+      <tr><td>氣體密度</td><td><code>map.gasGrid.DensityAt(cell, GasType.ToxGas)</code></td></tr>
+    </table>
+
+    <h3>註冊 / 解除一個 GameCondition</h3>
+    <pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="cm">// 建立並註冊一個持續 N 天的條件</span>
+<span class="ty">GameConditionManager</span> mgr = map.<span class="nm">gameConditionManager</span>;
+<span class="ty">GameConditionDef</span> def = <span class="ty">DefDatabase</span>&lt;<span class="ty">GameConditionDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"ChillFog"</span>);
+
+<span class="ty">GameCondition</span> cond = <span class="ty">GameConditionMaker</span>.<span class="nm">MakeCondition</span>(def, durationTicks: <span class="nu">60000</span> * <span class="nu">2</span>);
+mgr.<span class="nm">RegisterCondition</span>(cond);
+
+<span class="cm">// 查詢與提前結束</span>
+<span class="kw">if</span> (mgr.<span class="nm">ConditionIsActive</span>(def))
+{
+    <span class="ty">GameCondition</span> active = mgr.<span class="nm">GetActiveCondition</span>(def);
+    active.<span class="nm">End</span>();   <span class="cm">// 觸發 endMessage 並移除</span>
+}</pre>
+
+    <h3>讓自訂建築參與溫度交換：per-tick 注入 tempChange</h3>
+    <p>核心模式：每（rare）tick 判斷房間是否封閉，再用 <code>ControlTemperatureTempChange</code> 取得本 tick 變化量寫回 <code>room.Temperature</code>，或直接 <code>PushHeat</code>。下面是一個「太陽燈式」恆溫推熱 comp，可掛在任何 ThingDef 上。</p>
+
+    <pre><span class="kw">using</span> <span class="ty">RimWorld</span>;
+<span class="kw">using</span> <span class="ty">Verse</span>;
+
+<span class="kw">public class</span> <span class="ty">CompProperties_RoomHeater</span> : <span class="ty">CompProperties</span>
+{
+    <span class="kw">public</span> <span class="ty">float</span> heatPerSecond = <span class="nu">10f</span>;
+    <span class="kw">public</span> <span class="ty">float</span> maxTemperature = <span class="nu">25f</span>;
+    <span class="kw">public</span> <span class="ty">CompProperties_RoomHeater</span>() { compClass = <span class="kw">typeof</span>(<span class="ty">CompRoomHeater</span>); }
+}
+
+<span class="kw">public class</span> <span class="ty">CompRoomHeater</span> : <span class="ty">ThingComp</span>
+{
+    <span class="ty">CompProperties_RoomHeater</span> Props =&gt; (<span class="ty">CompProperties_RoomHeater</span>)props;
+
+    <span class="kw">public override void</span> <span class="nm">CompTickRare</span>()
+    {
+        <span class="ty">Map</span> map = parent.<span class="nm">Map</span>;
+        <span class="kw">if</span> (map == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 需通電才生效（若有 CompPowerTrader）</span>
+        <span class="ty">CompPowerTrader</span> power = parent.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompPowerTrader</span>&gt;();
+        <span class="kw">if</span> (power != <span class="kw">null</span> &amp;&amp; !power.<span class="nm">PowerOn</span>) <span class="kw">return</span>;
+
+        <span class="ty">Room</span> room = parent.<span class="nm">GetRoom</span>();
+        <span class="cm">// 開放空間：CompHeatPusher 在這裡也會直接無效（熱量被當室外吸收）</span>
+        <span class="kw">if</span> (room == <span class="kw">null</span> || room.<span class="nm">UsesOutdoorTemperature</span>) <span class="kw">return</span>;
+        <span class="kw">if</span> (room.<span class="nm">Temperature</span> &gt;= Props.maxTemperature) <span class="kw">return</span>;
+
+        <span class="cm">// TickRare ≈ 4.1667 秒；換算成本 tick 的熱量再推</span>
+        <span class="ty">float</span> energy = Props.heatPerSecond * <span class="nu">4.1667f</span>;
+        <span class="ty">GenTemperature</span>.<span class="nm">PushHeat</span>(parent.<span class="nm">Position</span>, map, energy);
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>PushHeat vs 直接寫 room.Temperature</strong><code>PushHeat</code> 會把能量正確分攤到房間熱容量（大房間升溫慢、小房間快），是物理上正確的做法；直接 <code>room.Temperature += x</code> 則忽略熱容量、所有房間升幅一樣。除非你刻意要「瞬間設定房間溫度」（如事件），否則一律用 PushHeat / ControlTemperatureTempChange。
+    </div>
+  </div>
+
+  <!-- ══════════ §8 陷阱 ══════════ -->
+  <div class="section">
+    <div class="section-title">§8 陷阱與最佳實務</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>房間未密閉 → UsesOutdoorTemperature</h3>
+        <p>缺一塊屋頂、漏一格牆、或房間過大都會讓 <code>UsesOutdoorTemperature</code> 變 true，溫度死貼室外。控溫前永遠先 <code>if (room == null || room.UsesOutdoorTemperature) return;</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>CompHeatPusher 在開放空間無效</h3>
+        <p>HeatPusher 推的熱在室外/漏天房間會被即時吸收，看起來「沒作用」。柴爐放戶外不會暖——這是設計而非 bug。提示玩家需封閉空間。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>毒氣網格效能</h3>
+        <p><code>GasGrid</code> 每 tick 對全圖開放格做擴散；大地圖（如 400×400）上瘋狂 AddGas 會拖垮 tick。用 <code>CompTickRare</code> 釋放、限制範圍、達上限後停止注入（串第36章）。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>屋頂塌陷誤傷</h3>
+        <p>拆掉承重牆或厚岩頂塌陷會 <code>Crush</code> 下方一切。程式化塌陷前先掃落點 pawn，避免砸到友軍；厚頂塌陷還會留岩塊永久佔格。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>GameCondition 與 WeatherDef 重疊</h3>
+        <p>GameCondition 可覆蓋天氣與天空（<code>SkyOverlays</code>/<code>TemperatureOffset</code>），多個條件的溫度偏移會疊加。自訂時注意別跟毒性落塵/火山冬天衝突造成溫度疊到離譜。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>跨 DLC 的 pollution 軟依賴</h3>
+        <p>污染、wastepack、polluted terrain 屬 Biotech。XML 用 <code>MayRequire="Ludeon.RimWorld.Biotech"</code>；C# 先判 <code>ModsConfig.BiotechActive</code> 再進隔離方法，避免無 DLC 玩家 TypeLoadException。</p>
+      </div>
+    </div>
+
+    <h3>其他易錯點</h3>
+    <ul>
+      <li><strong>溫度單位</strong>：API 一律攝氏。玩家設定可能顯示華氏，但程式內部與 def 一律 °C，別在 def 寫成華氏數值。</li>
+      <li><strong>Region/Room 重算時機</strong>：改屋頂或牆後，房間不一定立刻更新；別在同一 tick 內既 <code>SetRoof</code> 又依賴新的 <code>GetRoom</code> 結果，必要時等 <code>RegionAndRoomUpdater</code> 處理完。</li>
+      <li><strong>map 可能為 null</strong>：物品在背包、運輸中、未 spawn 時 <code>parent.Map == null</code>。所有溫度/氣體/屋頂查詢前先判 map。</li>
+      <li><strong>太陽能/室內光</strong>：屋頂遮天會讓太陽能板不發電、戶外作物不長——這是溫度章節之外但常一起踩的環境耦合（串第18、19章）。</li>
+      <li><strong>DefOf 快取</strong>：頻繁用到的 RoofDef/GasType/GameConditionDef 用 <code>[DefOf]</code> 靜態快取，別每 tick <code>GetNamed</code>（字串查表慢，串第36章）。</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <strong>除錯小抄</strong>開發者模式下：God mode + 溫度工具可直接畫溫度；<code>map.weatherManager.TransitionTo</code> 強切天氣；debug action「Do incident → 各 GameCondition」可立即觸發毒性落塵/火山冬天驗證 <code>TemperatureOffset</code> 疊加；查房間用 debug 的 Room 高亮工具確認 <code>UsesOutdoorTemperature</code>。
+    </div>
+
+    <div class="g3">
+      <div class="card card-accent-blue"><h3>串接 §14</h3><p>舒適溫度 / 保暖度走 StatDef + StatPart。</p></div>
+      <div class="card card-accent-orange"><h3>串接 §18</h3><p>控溫建築 = CompPower + TempControl + PlaceWorker。</p></div>
+      <div class="card card-accent-red"><h3>串接 §28</h3><p>凍傷/中暑/毒性負荷皆為 Hediff。</p></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 35 溫度、氣體、屋頂與天氣 · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

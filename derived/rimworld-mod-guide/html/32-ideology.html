@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>思想體系（Ideology DLC） — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html" class="active">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>思想體系（Ideology DLC）</h1>
+  <p>Ideology 把「殖民地信什麼」變成可編程的系統：Meme 組出 Ideo，Precept 規定善惡與心情，Ritual 把信仰變成可執行的典禮。</p>
+  <span class="badge">Chapter 32 · Ideology</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §1 系統總覽與 DLC 守門
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="overview">
+    <div class="section-title">§1 系統總覽與 DLC 守門</div>
+
+    <p>
+      Ideology 在資料層的核心問題只有一句：<strong>「這個殖民地相信什麼，以及相信得有多堅定？」</strong>
+      把它拆成 C# 工程師熟悉的語彙，整個 DLC 是一條
+      <em>「模板 → 組裝 → 執行期 instance」</em> 的管線。和 Biotech（第 21 章）的
+      GeneDef→XenotypeDef→Gene 三層結構幾乎是同構的，理解一個就能類比另一個。
+    </p>
+
+    <div class="g4">
+      <div class="card card-accent-blue">
+        <h3>MemeDef</h3>
+        <p>信念基石（XML Def）。對應 <code>RimWorld.MemeDef : Def</code>。像 trait 集合：規定一個 Ideo 能/必須帶哪些 precept、用哪套敘事文法。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>PreceptDef</h3>
+        <p>具體戒律的「模板」（<code>RimWorld.PreceptDef : Def</code>）。掛在某個 <code>IssueDef</code> 下，與同 issue 的其它 precept 互斥。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Ideo</h3>
+        <p>執行期物件（<code>RimWorld.Ideo</code>），由玩家/生成器把多個 meme + 一串 <code>Precept</code> instance 組裝而成。存活在 <code>Find.IdeoManager</code>。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>pawn.Ideo</h3>
+        <p>每個 pawn 透過 <code>Pawn_IdeoTracker</code>（<code>pawn.ideo</code>）持有一個 Ideo 與一個 <code>certainty</code>（0–1 的信仰堅定度）。</p>
+      </div>
+    </div>
+
+    <p>
+      注意 <strong>Def 是模板、Ideo/Precept 是 instance</strong> 的分野：你在 XML 寫的是
+      <code>MemeDef</code> / <code>PreceptDef</code>，但玩家存檔裡裝的是動態生成的
+      <code>Ideo</code> 物件、其中每個戒律是一個 <code>RimWorld.Precept</code>（或子類，如
+      <code>Precept_Role</code> / <code>Precept_Ritual</code>）。同一個 PreceptDef 可被多個 Ideo
+      實體化，數值與綁定的角色都記在 instance 上。
+    </p>
+
+    <h3>DLC 守門：絕對不能省的兩件事</h3>
+    <p>
+      Ideology 是付費 DLC。玩家若沒裝，你引用的 <code>MemeDef</code> / <code>IssueDef</code> 等型別根本不會被載入，
+      硬引用會在 def 載入階段直接拋例外、整包 mod 掛掉。守門分兩個層級：
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-cyan">
+        <h3>① XML 層：MayRequire</h3>
+        <p>對任何「只在裝了 Ideology 時才有意義」的節點掛
+          <code>MayRequire="Ludeon.RimWorld.Ideology"</code>。沒裝 DLC 時該節點被靜默略過，整個 def 仍能載入。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>② C# 層：ModLister 檢查</h3>
+        <p>所有觸碰 <code>Find.IdeoManager</code> / <code>pawn.Ideo</code> 的程式碼路徑，先過
+          <code>ModLister.IdeologyInstalled</code> 短路返回，否則 NRE。</p>
+      </div>
+    </div>
+
+    <pre><span class="cm">// 任何 Harmony patch / GameComponent 進入 Ideology 邏輯前的標準守門</span>
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> RimWorld;
+
+<span class="kw">public static class</span> <span class="ty">IdeoGate</span>
+{
+    <span class="kw">public static bool</span> <span class="nm">TryGetIdeo</span>(<span class="ty">Pawn</span> pawn, <span class="kw">out</span> <span class="ty">Ideo</span> ideo)
+    {
+        ideo = <span class="kw">null</span>;
+        <span class="cm">// 1) 沒裝 DLC → 直接退出，連 pawn.Ideo 都別碰</span>
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.IdeologyInstalled) <span class="kw">return false</span>;
+        <span class="cm">// 2) 動物 / 機械 等沒有信仰追蹤器的 pawn，ideo 會是 null</span>
+        ideo = pawn?.Ideo;
+        <span class="kw">return</span> ideo != <span class="kw">null</span>;
+    }
+}</pre>
+
+    <div class="callout callout-danger">
+      <strong>最常見的崩潰來源</strong>
+      不要用 <code>ModsConfig.IdeologyActive</code> 以外的方式硬判斷，也不要假設
+      <code>pawn.Ideo</code> 必不為 null。即使裝了 DLC，動物、機械人、以及
+      <code>IdeoManager</code> 尚未生成 Ideo 的早期載入階段，<code>pawn.Ideo</code> 都可能是 null。
+    </div>
+
+    <table>
+      <tr><th>反編譯定位（dnSpy / Assembly-CSharp.dll）</th><th>角色</th></tr>
+      <tr><td><code>RimWorld.MemeDef</code></td><td>信念基石模板</td></tr>
+      <tr><td><code>RimWorld.PreceptDef</code> / <code>RimWorld.IssueDef</code></td><td>戒律模板與其分類軸</td></tr>
+      <tr><td><code>RimWorld.Ideo</code> / <code>RimWorld.IdeoManager</code></td><td>執行期信仰物件與其管理器</td></tr>
+      <tr><td><code>RimWorld.Precept</code> / <code>Precept_Role</code> / <code>Precept_Ritual</code></td><td>執行期戒律 instance</td></tr>
+      <tr><td><code>RimWorld.Pawn_IdeoTracker</code></td><td>掛在 pawn 上的 <code>pawn.ideo</code></td></tr>
+      <tr><td><code>RimWorld.IdeoUtility</code></td><td>常用靜態輔助方法</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §2 MemeDef
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="memedef">
+    <div class="section-title">§2 MemeDef：信念基石</div>
+
+    <p>
+      <code>MemeDef</code> 決定一個 Ideo 的「人格骨架」。組裝 Ideo 時規則是：
+      <strong>必選恰好一個 Structure meme（結構基石），再加數個 Normal meme</strong>。
+      Structure 例如 <code>Supremacist</code>（至上主義）、<code>Collectivist</code>（集體主義），
+      它們界定整個信仰的世界觀；Normal meme 例如 <code>Cannibal</code>（食人）、<code>Nudism</code>（裸體主義）
+      則是疊加的傾向。
+    </p>
+
+    <table>
+      <tr><th>欄位</th><th>型別</th><th>用途</th></tr>
+      <tr><td><code>category</code></td><td><code>MemeCategory</code></td><td><code>Structure</code> 或 <code>Normal</code>；Structure 每個 Ideo 只能有一個</td></tr>
+      <tr><td><code>impact</code></td><td>int</td><td>對 Ideo 多樣性的「重量」，影響隨機生成器的選用機率</td></tr>
+      <tr><td><code>requireOne</code></td><td>List&lt;List&lt;PreceptDef&gt;&gt;</td><td>選了此 meme，每個內層清單至少要採用一個 precept</td></tr>
+      <tr><td><code>preceptsToAdd</code></td><td>List&lt;PreceptDef&gt;</td><td>採用此 meme 時自動加入的 precept</td></tr>
+      <tr><td><code>exclusionTags</code></td><td>List&lt;string&gt;</td><td>同 tag 的 meme 互斥（避免「食人」與「動物連結·素食」共存）</td></tr>
+      <tr><td><code>generalRules</code></td><td><code>RulePackDef</code></td><td>敘事文法：產生信仰名稱、教義段落的詞彙規則</td></tr>
+      <tr><td><code>renderOrderPriority</code></td><td>int</td><td>UI 排序權重</td></tr>
+    </table>
+
+    <h3>範例：自訂一個「工匠崇拜」Structure meme</h3>
+    <p>
+      我們做一個強調「親手鍛造才神聖」的結構基石：它強制信仰必須在「製造」這個 issue 上採用某些 precept，
+      並自動加入一個崇拜工作台的 precept。
+    </p>
+
+    <pre><span class="cm">&lt;!-- Defs/MemeDefs/Memes_Artisan.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="xml-tag">&lt;MemeDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Artisanal<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>工匠主義<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>真正的價值出自雙手。機器量產是對技藝之神的褻瀆。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;iconPath&gt;</span>UI/Memes/MyMod_Artisanal<span class="xml-tag">&lt;/iconPath&gt;</span>
+
+    <span class="cm">&lt;!-- Structure = 世界觀骨架，一個 Ideo 只能挑一個 --&gt;</span>
+    <span class="xml-tag">&lt;category&gt;</span>Structure<span class="xml-tag">&lt;/category&gt;</span>
+    <span class="xml-tag">&lt;impact&gt;</span><span class="xml-val">3</span><span class="xml-tag">&lt;/impact&gt;</span>
+
+    <span class="cm">&lt;!-- 採用此 meme 時自動帶上的 precept --&gt;</span>
+    <span class="xml-tag">&lt;preceptsToAdd&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_Smithy_Veneration<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/preceptsToAdd&gt;</span>
+
+    <span class="cm">&lt;!-- 在「成衣 / 製造」issue 上，至少要從這組挑一個 precept --&gt;</span>
+    <span class="xml-tag">&lt;requireOne&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>MyMod_Production_Handmade_Required<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>MyMod_Production_Handmade_Preferred<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/requireOne&gt;</span>
+
+    <span class="cm">&lt;!-- 與「工業化崇拜」這類 meme 互斥 --&gt;</span>
+    <span class="xml-tag">&lt;exclusionTags&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>ProductionPhilosophy<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/exclusionTags&gt;</span>
+
+    <span class="cm">&lt;!-- 敘事文法：信仰自動命名與教義文案會用到 --&gt;</span>
+    <span class="xml-tag">&lt;generalRules&gt;</span>
+      <span class="xml-tag">&lt;rulesStrings&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>memeConcept-&gt;技藝<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>memeConcept-&gt;鍛造<span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>ideoName-&gt;[memeConcept]之道<span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;/rulesStrings&gt;</span>
+    <span class="xml-tag">&lt;/generalRules&gt;</span>
+  <span class="xml-tag">&lt;/MemeDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>requireOne 是「約束求解」，不是「自動加入」</strong>
+      <code>preceptsToAdd</code> 會無條件塞進去；<code>requireOne</code> 只是告訴生成器「這幾組各挑一個」。
+      若玩家在自訂 Ideo 介面手動移除了 requireOne 涵蓋的 precept，遊戲會跳警告但仍允許——
+      所以別把 requireOne 當成硬性保證，真正要「一定存在」的請用 <code>preceptsToAdd</code>。
+    </div>
+
+    <div class="callout callout-warn">
+      <strong>impact 不是強度</strong>
+      <code>impact</code> 只影響隨機 Ideo 生成器挑到此 meme 的傾向與「衝擊預算」消耗，不影響任何遊戲內數值。
+      想做平衡請改 precept 的心情值，而非調 impact。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §3 PreceptDef 與 Precept
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="preceptdef">
+    <div class="section-title">§3 PreceptDef 與 Precept：戒律</div>
+
+    <p>
+      Precept 是 Ideology 的真正肉身——它把抽象信念換算成具體的善惡判定與心情。
+      每個 <code>PreceptDef</code> 都掛在一個 <code>IssueDef</code>（議題軸）下，
+      <strong>同一個 issue 下的 precept 互斥</strong>，一個 Ideo 在每個 issue 上最多採用一個立場。
+    </p>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>IssueDef</h3>
+        <p>議題軸（<code>RimWorld.IssueDef</code>）。例如 <code>Drugs</code>、<code>Cannibalism</code>、<code>Apparel_Mood</code>、<code>WeaponPreference</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>PreceptDef</h3>
+        <p>該軸上的一個立場。<code>Cannibalism</code> 軸上有 <code>Cannibalism_Acceptable</code>、<code>Cannibalism_Horrible</code> 等互斥選項。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>ThoughtDef 銜接</h3>
+        <p>信徒做了符合/違反戒律的事 → 觸發 <code>comps</code> 內定義的心情（接第 20 章 needs/mood/thoughts）。</p>
+      </div>
+    </div>
+
+    <h3>PreceptDef 重要欄位速查</h3>
+    <table>
+      <tr><th>欄位</th><th>用途</th></tr>
+      <tr><td><code>issue</code></td><td>所屬議題軸（IssueDef）；同 issue 互斥</td></tr>
+      <tr><td><code>impact</code></td><td>戒律「分量」（None/Low/Medium/High），影響生成偏好與 UI</td></tr>
+      <tr><td><code>associatedMemes</code></td><td>傾向哪些 meme 採用此 precept（生成器加權）</td></tr>
+      <tr><td><code>requiredMemes</code></td><td>硬性：沒這些 meme 不能採用此 precept</td></tr>
+      <tr><td><code>conflictingMemes</code></td><td>有這些 meme 時不可採用</td></tr>
+      <tr><td><code>comps</code></td><td>戒律行為的核心：<code>PreceptComp_*</code> 清單，掛心情/自我表達等效果</td></tr>
+      <tr><td><code>preceptInstanceDef</code></td><td>把抽象 precept 綁到某個具體目標（如「崇拜某 ThingDef」）</td></tr>
+      <tr><td><code>ritualPatternBase</code></td><td>若此 precept 是 ritual，指向 RitualPatternDef（見 §5）</td></tr>
+      <tr><td><code>preceptClass</code></td><td>執行期 instance 類別，預設 <code>RimWorld.Precept</code>，role/ritual 用子類</td></tr>
+    </table>
+
+    <h3>PreceptComp：把戒律接到心情系統</h3>
+    <p>
+      戒律的效果幾乎都靠 <code>comps</code> 表達，最常見的是
+      <code>PreceptComp_SituationalThought</code>（情境心情，例如「身處有某設施的房間」）與
+      <code>PreceptComp_UnaccompaniedThought</code> / 事件驅動的 thought。
+      這些 comp 內引用的 <code>ThoughtDef</code> 必須是
+      <strong>Ideology 專屬的 <code>Thought_Situational</code> / <code>Thought_Memory</code> 子型別並設定
+      <code>requiredTraits</code> / <code>nullifyingTraits</code> 或 <code>requiredMemes</code></strong>，
+      以確保只對信徒生效（見 §8 陷阱）。
+    </p>
+
+    <h3>範例 A：崇拜某個 ThingDef（preceptInstanceDef）</h3>
+    <p>
+      我們要做「崇拜深度鑽井」——信徒在能看見深度鑽井的房間裡會獲得正面心情。
+      這牽涉一個 <code>IssueDef</code>（崇拜對象軸）+ 一個 <code>PreceptDef</code>，以及一個情境 <code>ThoughtDef</code>。
+    </p>
+
+    <pre><span class="cm">&lt;!-- Defs/PreceptDefs/Precepts_Smithy.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+
+  <span class="cm">&lt;!-- 議題軸：對「神聖工作台」的態度 --&gt;</span>
+  <span class="xml-tag">&lt;IssueDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_SacredWorkbench<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>神聖工作台<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;iconPath&gt;</span>UI/Issues/MyMod_SacredWorkbench<span class="xml-tag">&lt;/iconPath&gt;</span>
+  <span class="xml-tag">&lt;/IssueDef&gt;</span>
+
+  <span class="cm">&lt;!-- 立場：崇拜鐵砧 --&gt;</span>
+  <span class="xml-tag">&lt;PreceptDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Smithy_Veneration<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;issue&gt;</span>MyMod_SacredWorkbench<span class="xml-tag">&lt;/issue&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>崇拜鍛造台<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>鍛造台是技藝之神顯化之處，信徒見之心安。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;impact&gt;</span>High<span class="xml-tag">&lt;/impact&gt;</span>
+    <span class="xml-tag">&lt;associatedMemes&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_Artisanal<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/associatedMemes&gt;</span>
+
+    <span class="cm">&lt;!-- 情境心情：身處有鍛造台的房間 → +心情 --&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PreceptComp_SituationalThought"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;thought&gt;</span>MyMod_NearSacredSmithy<span class="xml-tag">&lt;/thought&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/PreceptDef&gt;</span>
+
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <pre><span class="cm">&lt;!-- Defs/ThoughtDefs/Thoughts_Smithy.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;ThoughtDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_NearSacredSmithy<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="cm">&lt;!-- 情境思想，需在房間內偵測到指定建築 --&gt;</span>
+    <span class="xml-tag">&lt;thoughtClass&gt;</span>Thought_Situational<span class="xml-tag">&lt;/thoughtClass&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>ThoughtWorker_PreceptNearBuilding<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;buildingDef&gt;</span>FueledSmithy<span class="xml-tag">&lt;/buildingDef&gt;</span>
+    <span class="xml-tag">&lt;stages&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>身處神聖之鍛造<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;baseMoodEffect&gt;</span><span class="xml-val">4</span><span class="xml-tag">&lt;/baseMoodEffect&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/stages&gt;</span>
+  <span class="xml-tag">&lt;/ThoughtDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>ThoughtWorker 是真實 API</strong>
+      <code>ThoughtWorker_PreceptNearBuilding</code>（namespace <code>RimWorld</code>）就是原版「崇拜建築」戒律的 worker，
+      它讀 <code>thought.buildingDef</code> 並掃描房間。若你的「崇拜對象」不是建築（例如崇拜某動物或地形），
+      就需要自己寫 <code>ThoughtWorker_Precept</code> 子類；別硬塞不相容的 worker。
+    </div>
+
+    <h3>範例 B：禁用某類武器（WeaponPreference 風格）</h3>
+    <p>
+      原版有「武器偏好」這條軸，常見作法是覆寫/新增 precept，搭配
+      <code>PreceptComp_Apparel</code> 之外的「裝備不悅」心情。下面示範一個「禁用遠程武器」的立場，
+      讓信徒攜帶遠程武器時掉心情：
+    </p>
+
+    <pre><span class="cm">&lt;!-- Defs/PreceptDefs/Precepts_WeaponPurity.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;PreceptDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Weapons_MeleeOnly<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;issue&gt;</span>WeaponPreference<span class="xml-tag">&lt;/issue&gt;</span>  <span class="cm">&lt;!-- 原版 IssueDef --&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>遠程武器：可憎<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;description&gt;</span>懦夫才從遠處殺人。真正的信徒近身搏鬥。<span class="xml-tag">&lt;/description&gt;</span>
+    <span class="xml-tag">&lt;impact&gt;</span>Medium<span class="xml-tag">&lt;/impact&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="cm">&lt;!-- 攜帶遠程武器 → 心情懲罰；此 worker 由 thought 內判斷武器類別 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PreceptComp_SituationalThought"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;thought&gt;</span>MyMod_CarryingRangedWeapon<span class="xml-tag">&lt;/thought&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+  <span class="xml-tag">&lt;/PreceptDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <pre><span class="cm">// 自訂 ThoughtWorker：偵測信徒手持遠程武器</span>
+<span class="cm">// 放在 namespace MyMod，繼承 RimWorld.ThoughtWorker_Precept</span>
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">ThoughtWorker_PreceptCarryingRanged</span> : <span class="ty">ThoughtWorker_Precept</span>
+{
+    <span class="kw">protected override</span> <span class="ty">ThoughtState</span> <span class="nm">ShouldHaveThought</span>(<span class="ty">Pawn</span> p)
+    {
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.IdeologyInstalled) <span class="kw">return false</span>;
+        <span class="ty">ThingWithComps</span> weapon = p.equipment?.Primary;
+        <span class="kw">if</span> (weapon == <span class="kw">null</span>) <span class="kw">return false</span>;
+        <span class="cm">// def.IsRangedWeapon 是 Verse.ThingDef 上的便利屬性</span>
+        <span class="kw">return</span> weapon.def.IsRangedWeapon
+            ? <span class="ty">ThoughtState</span>.ActiveAtStage(<span class="nu">0</span>)
+            : <span class="ty">ThoughtState</span>.Inactive;
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>ThoughtWorker_Precept 自帶信徒過濾</strong>
+      繼承 <code>RimWorld.ThoughtWorker_Precept</code> 的好處是：基底已會檢查「該 pawn 的 Ideo 是否真的採用了此 precept」，
+      你只要管「行為條件」。若你直接繼承 <code>Verse.ThoughtWorker</code>，就必須自己加
+      <code>p.Ideo.HasPrecept(...)</code> 判斷，否則會對所有 pawn 生效（典型 §8 陷阱）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §4 Role
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="role">
+    <div class="section-title">§4 Role：信仰角色</div>
+
+    <p>
+      角色是一種特殊的 PreceptDef——<code>preceptClass</code> 設為
+      <code>RimWorld.Precept_Role</code>（其下又分 <code>Precept_RoleSingle</code> 領袖型、
+      <code>Precept_RoleMulti</code> 多人型）。一個 Ideo 可以有領袖（Leader）、道德導師（Moral Guide）
+      等指派給特定 pawn 的職位，被指派者會獲得
+      <strong>服裝要求、能力、以及一組 role-only 的心情/權能</strong>。
+    </p>
+
+    <h3>Role 的關鍵欄位</h3>
+    <table>
+      <tr><th>欄位</th><th>用途</th></tr>
+      <tr><td><code>preceptClass</code></td><td><code>Precept_RoleSingle</code>（唯一，如領袖）或 <code>Precept_RoleMulti</code>（可多人，如專家）</td></tr>
+      <tr><td><code>roleEffects</code></td><td>List&lt;RoleEffect&gt;：賦予能力、stat 加成、特殊權能（見下）</td></tr>
+      <tr><td><code>roleApparelRequirements</code></td><td>擔任此角色時的服裝硬性需求（接第 17 章服裝層）</td></tr>
+      <tr><td><code>roleRequiredWorkTags</code> / <code>roleDisabledWorkTags</code></td><td>指派資格 / 上任後的工作限制</td></tr>
+      <tr><td><code>leaderRole</code></td><td>布林，標記此角色為「信仰領袖」（影響某些典禮資格）</td></tr>
+      <tr><td><code>grantedAbilities</code> (via roleEffect)</td><td>透過 <code>RoleEffect_AbilityAvailable</code> 賦予 AbilityDef（接第 24 章）</td></tr>
+    </table>
+
+    <h3>範例：定義「大鐵匠」領袖角色並賦予能力</h3>
+    <pre><span class="cm">&lt;!-- Defs/PreceptDefs/Precepts_RoleSmith.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;PreceptDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Role_HighSmith<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;issue&gt;</span>Role_Leader<span class="xml-tag">&lt;/issue&gt;</span>          <span class="cm">&lt;!-- 領袖議題軸 --&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>大鐵匠<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;preceptClass&gt;</span>RimWorld.Precept_RoleSingle<span class="xml-tag">&lt;/preceptClass&gt;</span>
+    <span class="xml-tag">&lt;leaderRole&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/leaderRole&gt;</span>
+    <span class="xml-tag">&lt;impact&gt;</span>High<span class="xml-tag">&lt;/impact&gt;</span>
+    <span class="xml-tag">&lt;associatedMemes&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_Artisanal<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/associatedMemes&gt;</span>
+
+    <span class="cm">&lt;!-- 服裝硬性需求：必須戴特定頭飾才能維持角色 --&gt;</span>
+    <span class="xml-tag">&lt;roleApparelRequirements&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;requirement</span> <span class="xml-attr">Class</span>=<span class="xml-val">"ApparelRequirement"</span><span class="xml-tag">&gt;</span>
+          <span class="xml-tag">&lt;requiredDefs&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>Apparel_SmithCrown<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;/requiredDefs&gt;</span>
+        <span class="xml-tag">&lt;/requirement&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/roleApparelRequirements&gt;</span>
+
+    <span class="cm">&lt;!-- 角色效果：賦予一個 AbilityDef + 提供 stat 加成 --&gt;</span>
+    <span class="xml-tag">&lt;roleEffects&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoleEffect_AbilityAvailable"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;abilityDef&gt;</span>MyMod_BlessTheForge<span class="xml-tag">&lt;/abilityDef&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RoleEffect_PawnStatFactor"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;statDef&gt;</span>GeneralLaborSpeed<span class="xml-tag">&lt;/statDef&gt;</span>
+        <span class="xml-tag">&lt;modifier&gt;</span><span class="xml-val">1.15</span><span class="xml-tag">&lt;/modifier&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/roleEffects&gt;</span>
+  <span class="xml-tag">&lt;/PreceptDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <h3>C# 端：指派與查詢角色</h3>
+    <pre><span class="cm">// 取得某 Ideo 的領袖角色，並把 pawn 指派上去</span>
+<span class="kw">using</span> System.Linq;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static void</span> <span class="nm">AssignAsLeader</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="kw">if</span> (!<span class="ty">ModLister</span>.IdeologyInstalled || pawn?.Ideo == <span class="kw">null</span>) <span class="kw">return</span>;
+    <span class="ty">Ideo</span> ideo = pawn.Ideo;
+
+    <span class="cm">// RolesListForReading 列出此 Ideo 全部角色 precept</span>
+    <span class="ty">Precept_Role</span> leaderRole = ideo.RolesListForReading
+        .FirstOrDefault(r =&gt; r.def.leaderRole);
+    <span class="kw">if</span> (leaderRole == <span class="kw">null</span>) <span class="kw">return</span>;
+
+    <span class="cm">// Assign 會自動把原任者卸任（單人角色）</span>
+    leaderRole.Assign(pawn, addThoughts: <span class="kw">true</span>);
+    <span class="ty">Messages</span>.Message(<span class="st">$"{pawn.LabelShort} 成為 {leaderRole.LabelCap}"</span>,
+        <span class="ty">MessageTypeDefOf</span>.PositiveEvent);
+}
+
+<span class="cm">// 查詢某 pawn 目前擔任的角色（沒擔任回 null）</span>
+<span class="kw">public static</span> <span class="ty">Precept_Role</span> <span class="nm">CurrentRoleOf</span>(<span class="ty">Pawn</span> pawn)
+{
+    <span class="kw">if</span> (!<span class="ty">ModLister</span>.IdeologyInstalled || pawn?.Ideo == <span class="kw">null</span>) <span class="kw">return null</span>;
+    <span class="cm">// IdeoUtility / Ideo.GetRole 都能用，後者最直接</span>
+    <span class="kw">return</span> pawn.Ideo.GetRole(pawn);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>失格（disqualification）會自動發生</strong>
+      若 pawn 死亡、改信、或脫掉 <code>roleApparelRequirements</code> 要求的服裝超過容忍時間，遊戲會自動把角色卸任，
+      你不必手動監控。但若你要在「卸任瞬間」做事（例如收回自製道具），可 Harmony patch
+      <code>Precept_Role.Unassign</code> 或監聽 pawn 的相關狀態。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §5 Ritual
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="ritual">
+    <div class="section-title">§5 Ritual：典禮</div>
+
+    <p>
+      典禮是 Ideology 最複雜也最有展示性的系統。它把「信仰」變成一場由多個 pawn 參與、
+      有階段、有成果品質的<strong>群體活動</strong>，執行期由
+      <code>RimWorld.LordJob_Ritual</code> 驅動——這正是第 30 章 Lord/GroupAI 的延伸應用。
+    </p>
+
+    <h3>典禮的五個 Def 拼圖</h3>
+    <table>
+      <tr><th>Def 型別</th><th>角色</th></tr>
+      <tr><td><code>PreceptDef</code>（preceptClass=<code>Precept_Ritual</code>）</td><td>典禮在信仰中的「存在」，玩家在 UI 看到的條目</td></tr>
+      <tr><td><code>RitualPatternDef</code></td><td>把 precept、behavior、outcome 綁在一起的「藍圖」</td></tr>
+      <tr><td><code>RitualBehaviorDef</code></td><td>典禮怎麼進行：階段（RitualStage）、角色（RitualRole）、worker</td></tr>
+      <tr><td><code>RitualOutcomeEffectDef</code></td><td>典禮結束時的成果：品質（quality）→ 結果（outcome）對應表</td></tr>
+      <tr><td><code>DutyDef</code> / 既有</td><td>RitualStage 內各 RitualRole 的 duty（站位、跳舞、講道…）</td></tr>
+    </table>
+
+    <h3>資料流：從點擊到落幕</h3>
+    <ol class="steps">
+      <li>玩家在 Ideo 面板或祭壇 gizmo 觸發典禮 → 建立一個 <code>LordJob_Ritual</code>（Lord = 群體 AI 大腦）。</li>
+      <li>Lord 依 <code>RitualBehaviorDef</code> 的 <code>stages</code> 推進；每個 <code>RitualStage</code> 給各 <code>RitualRole</code> 指派 duty。</li>
+      <li>參與者按 duty 行動（移動到 cell、跳舞、觀禮），由 <code>RitualBehaviorWorker</code>（C#）監控進度。</li>
+      <li>結束時 <code>RitualOutcomeEffectDef</code> 依累積的 <code>quality</code> 抽出一個 outcome（成功/普通/失敗），套用心情/獎勵。</li>
+    </ol>
+
+    <h3>範例：一個簡單的「鍛造慶典」聚會典禮</h3>
+    <p>下面是把骨架拼齊的最小可行範例。先是 behavior（怎麼進行）：</p>
+
+    <pre><span class="cm">&lt;!-- Defs/RitualBehaviorDefs/Behavior_ForgeFeast.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RitualBehaviorDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastBehavior<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="cm">&lt;!-- worker 可用原版聚會型 worker，或自寫子類 --&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>RitualBehaviorWorker_Default<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;durationTicks&gt;</span><span class="xml-val">5000</span><span class="xml-tag">&lt;/durationTicks&gt;</span>
+
+    <span class="cm">&lt;!-- 典禮角色：召集人（領袖）+ 一般參與者 --&gt;</span>
+    <span class="xml-tag">&lt;roles&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RitualRoleTag"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>主祭<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;id&gt;</span>leader<span class="xml-tag">&lt;/id&gt;</span>
+        <span class="xml-tag">&lt;tag&gt;</span>Moralist<span class="xml-tag">&lt;/tag&gt;</span>
+        <span class="xml-tag">&lt;required&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/required&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RitualRoleColonist"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>觀禮者<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;id&gt;</span>participant<span class="xml-tag">&lt;/id&gt;</span>
+        <span class="xml-tag">&lt;maxCount&gt;</span><span class="xml-val">10</span><span class="xml-tag">&lt;/maxCount&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/roles&gt;</span>
+
+    <span class="cm">&lt;!-- 階段：主祭講道 → 眾人慶祝 --&gt;</span>
+    <span class="xml-tag">&lt;stages&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;defaultDuty&gt;</span>Spectate<span class="xml-tag">&lt;/defaultDuty&gt;</span>
+        <span class="xml-tag">&lt;roleBehaviors&gt;</span>
+          <span class="xml-tag">&lt;li&gt;</span>
+            <span class="xml-tag">&lt;roleId&gt;</span>leader<span class="xml-tag">&lt;/roleId&gt;</span>
+            <span class="xml-tag">&lt;dutyDef&gt;</span>DeliverSermon<span class="xml-tag">&lt;/dutyDef&gt;</span>
+          <span class="xml-tag">&lt;/li&gt;</span>
+        <span class="xml-tag">&lt;/roleBehaviors&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/stages&gt;</span>
+  <span class="xml-tag">&lt;/RitualBehaviorDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>再是 outcome（品質如何換算結果）：</p>
+    <pre><span class="cm">&lt;!-- Defs/RitualOutcomeEffectDefs/Outcome_ForgeFeast.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RitualOutcomeEffectDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastOutcome<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;workerClass&gt;</span>RitualOutcomeEffectWorker_FromQuality<span class="xml-tag">&lt;/workerClass&gt;</span>
+    <span class="xml-tag">&lt;comps&gt;</span>
+      <span class="cm">&lt;!-- quality 來源：參與人數、主祭社交、是否在祭壇旁 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RitualOutcomeComp_ParticipantCount"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>參與人數<span class="xml-tag">&lt;/label&gt;</span>
+        <span class="xml-tag">&lt;curve&gt;</span>
+          <span class="xml-tag">&lt;points&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>(1, 0.1)<span class="xml-tag">&lt;/li&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>(5, 0.3)<span class="xml-tag">&lt;/li&gt;</span>
+            <span class="xml-tag">&lt;li&gt;</span>(10, 0.5)<span class="xml-tag">&lt;/li&gt;</span>
+          <span class="xml-tag">&lt;/points&gt;</span>
+        <span class="xml-tag">&lt;/curve&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/comps&gt;</span>
+    <span class="cm">&lt;!-- quality → outcome 區間：0~0.4 失望，0.4~0.8 普通，0.8+ 鼓舞 --&gt;</span>
+    <span class="xml-tag">&lt;outcomeChances&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;chance&gt;</span><span class="xml-val">0.5</span><span class="xml-tag">&lt;/chance&gt;</span>
+        <span class="xml-tag">&lt;positivityIndex&gt;</span><span class="xml-val">2</span><span class="xml-tag">&lt;/positivityIndex&gt;</span>
+        <span class="xml-tag">&lt;memory&gt;</span>MyMod_ForgeFeast_Inspired<span class="xml-tag">&lt;/memory&gt;</span>
+        <span class="xml-tag">&lt;label&gt;</span>鼓舞人心<span class="xml-tag">&lt;/label&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/outcomeChances&gt;</span>
+  <span class="xml-tag">&lt;/RitualOutcomeEffectDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>最後用 RitualPatternDef + PreceptDef 把三者綁起來：</p>
+    <pre><span class="cm">&lt;!-- Defs/RitualPatternDefs/Pattern_ForgeFeast.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;RitualPatternDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeFeastPattern<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;ritualBehavior&gt;</span>MyMod_ForgeFeastBehavior<span class="xml-tag">&lt;/ritualBehavior&gt;</span>
+    <span class="xml-tag">&lt;ritualObligationTargetFilter</span> <span class="xml-attr">Class</span>=<span class="xml-val">"RitualObligationTargetFilter_ThingDef"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;thingDefs&gt;</span>
+        <span class="xml-tag">&lt;li&gt;</span>Ideo_Altar<span class="xml-tag">&lt;/li&gt;</span>  <span class="cm">&lt;!-- 在祭壇旁舉行 --&gt;</span>
+      <span class="xml-tag">&lt;/thingDefs&gt;</span>
+    <span class="xml-tag">&lt;/ritualObligationTargetFilter&gt;</span>
+    <span class="xml-tag">&lt;ritualOutcomeEffect&gt;</span>MyMod_ForgeFeastOutcome<span class="xml-tag">&lt;/ritualOutcomeEffect&gt;</span>
+  <span class="xml-tag">&lt;/RitualPatternDef&gt;</span>
+
+  <span class="xml-tag">&lt;PreceptDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Ritual_ForgeFeast<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;issue&gt;</span>Ritual<span class="xml-tag">&lt;/issue&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>鍛造慶典<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;preceptClass&gt;</span>RimWorld.Precept_Ritual<span class="xml-tag">&lt;/preceptClass&gt;</span>
+    <span class="xml-tag">&lt;ritualPatternBase&gt;</span>MyMod_ForgeFeastPattern<span class="xml-tag">&lt;/ritualPatternBase&gt;</span>
+    <span class="xml-tag">&lt;associatedMemes&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>MyMod_Artisanal<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/associatedMemes&gt;</span>
+  <span class="xml-tag">&lt;/PreceptDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>能用原版 worker 就別自寫</strong>
+      <code>RitualBehaviorWorker_Default</code> 與 <code>RitualOutcomeEffectWorker_FromQuality</code>
+      已能滿足絕大多數「聚會 + 講道 + 品質換心情」的需求。只有要插入自訂階段邏輯
+      （例如典禮中段必須擊殺某目標）時才繼承
+      <code>RimWorld.RitualBehaviorWorker</code> 覆寫 <code>Tick</code> / <code>ExpectedDuration</code>。
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>典禮就是 Lord，除錯方法相通</strong>
+      典禮卡住、pawn 不就位，通常是 duty 指派或 LordToil 的問題。打開
+      Dev mode 的 <em>Draw Duties</em> 與 <em>View settings → Lord</em>，能直接看到每個 pawn 當前 duty。
+      這與第 30 章除錯 Lord 的手法完全一致。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §6 Style 與表現
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="style">
+    <div class="section-title">§6 Style 與表現</div>
+
+    <p>
+      Ideology 引入了「同一個物件、不同文化外觀」的概念。一張椅子，崇尚石化文明的信仰看到的是
+      雕花石椅，工業信仰看到的是金屬折疊椅——靠的是 <code>StyleCategoryDef</code> 與
+      <code>ThingStyleDef</code>（接第 8 章 graphics）。
+    </p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>StyleCategoryDef</h3>
+        <p>一個「風格家族」（如 <code>Spikecore</code> 尖刺風、<code>Animalist</code> 動物風）。
+          內含 <code>thingDefStyles</code> 把 ThingDef 對映到 ThingStyleDef，並可帶
+          <code>fixedIdeoColor</code> / <code>iconsForRandomization</code>。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>ThingStyleDef</h3>
+        <p>單一物件的替代圖形（<code>graphicData</code>）。同物不同外觀，本質是換貼圖路徑與
+          drawSize/color，渲染管線仍走 <code>Verse.Graphic</code>。</p>
+      </div>
+    </div>
+
+    <pre><span class="cm">&lt;!-- Defs/StyleCategoryDefs/Style_ForgeCult.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="cm">&lt;!-- 單物件風格：把鋼椅換成「鐵砧風格」貼圖 --&gt;</span>
+  <span class="xml-tag">&lt;ThingStyleDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_Chair_Forge<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;graphicData&gt;</span>
+      <span class="xml-tag">&lt;texPath&gt;</span>Things/Building/Furniture/MyMod_ForgeChair<span class="xml-tag">&lt;/texPath&gt;</span>
+      <span class="xml-tag">&lt;graphicClass&gt;</span>Graphic_Single<span class="xml-tag">&lt;/graphicClass&gt;</span>
+    <span class="xml-tag">&lt;/graphicData&gt;</span>
+  <span class="xml-tag">&lt;/ThingStyleDef&gt;</span>
+
+  <span class="cm">&lt;!-- 風格家族：把多個 ThingDef 綁進此 style --&gt;</span>
+  <span class="xml-tag">&lt;StyleCategoryDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_ForgeStyle<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>鍛造風<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;fixedIdeoColor&gt;</span>(0.55, 0.30, 0.10)<span class="xml-tag">&lt;/fixedIdeoColor&gt;</span>
+    <span class="xml-tag">&lt;thingDefStyles&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>
+        <span class="xml-tag">&lt;thingDef&gt;</span>DiningChair<span class="xml-tag">&lt;/thingDef&gt;</span>
+        <span class="xml-tag">&lt;styleDef&gt;</span>MyMod_Chair_Forge<span class="xml-tag">&lt;/styleDef&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/thingDefStyles&gt;</span>
+  <span class="xml-tag">&lt;/StyleCategoryDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>
+      生成 Ideo 時，meme 可透過 <code>styleItemTags</code> / 關聯把這些 StyleCategoryDef 拉進來。
+      執行期，<code>styleDominance</code>（風格支配度）決定殖民地建築被自動套用此風格的傾向；
+      C# 中可由 <code>ideo.style</code>（<code>RimWorld.IdeoStyle...</code> 相關）查詢，
+      但多數情況下你不需要手動操作——擺好風格家具讓信徒自己提升 dominance 即可。
+    </p>
+
+    <div class="callout callout-warn">
+      <strong>ideoColor 與貼圖染色</strong>
+      <code>fixedIdeoColor</code> 會被套到信仰旗幟、某些 UI 與可染色物件上。若你的 ThingStyleDef
+      貼圖本身已上好色，請確認對應 ThingDef 的 <code>colorGenerator</code> / mask 設定不會把它再染一次，
+      否則會出現顏色疊加錯亂（詳見第 8 章貼圖 mask 章節）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §7 C# 互動 API
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="csharp-api">
+    <div class="section-title">§7 C# 互動 API</div>
+
+    <p>
+      實務上你 80% 的程式碼只會用到下面這幾個入口。重點是<strong>「先判斷 Ideo，再做事」</strong>：
+      心情、能力、互動，都要先確認對象的信仰確實採用了對應 precept。
+    </p>
+
+    <table>
+      <tr><th>API</th><th>用途</th></tr>
+      <tr><td><code>pawn.Ideo</code></td><td>取得 pawn 信仰（可能 null）；底層是 <code>Pawn_IdeoTracker</code></td></tr>
+      <tr><td><code>ideo.HasPrecept(PreceptDef)</code></td><td>此 Ideo 是否採用某戒律</td></tr>
+      <tr><td><code>ideo.GetPrecept(PreceptDef)</code></td><td>取得對應的 <code>Precept</code> instance</td></tr>
+      <tr><td><code>ideo.GetRole(Pawn)</code></td><td>該 pawn 在此 Ideo 中擔任的角色（無則 null）</td></tr>
+      <tr><td><code>ideo.RolesListForReading</code></td><td>此 Ideo 全部角色 precept（唯讀）</td></tr>
+      <tr><td><code>ideo.memes</code></td><td>此 Ideo 的 meme 清單（<code>List&lt;MemeDef&gt;</code>）</td></tr>
+      <tr><td><code>ideo.PreceptsListForReading</code></td><td>全部 precept instance（唯讀）</td></tr>
+      <tr><td><code>ideo.certaintyForReading</code> / <code>tracker.Certainty</code></td><td>pawn 的信仰堅定度（0–1）</td></tr>
+      <tr><td><code>Find.IdeoManager.IdeosListForReading</code></td><td>遊戲中所有 Ideo</td></tr>
+      <tr><td><code>IdeoUtility.*</code></td><td>常用靜態輔助（如 <code>IdeoUtility.IdeoChangeToWeights</code> 等）</td></tr>
+    </table>
+
+    <h3>範例：只對「採用了某 precept 的信徒」加心情</h3>
+    <pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+
+<span class="kw">public static class</span> <span class="ty">ForgeRites</span>
+{
+    <span class="cm">// 在 def 內以靜態欄位快取，避免每次 DefDatabase 查找</span>
+    <span class="kw">private static</span> <span class="ty">PreceptDef</span> SmithyVeneration =&gt;
+        <span class="ty">DefDatabase</span>&lt;<span class="ty">PreceptDef</span>&gt;.GetNamedSilentFail(<span class="st">"MyMod_Smithy_Veneration"</span>);
+
+    <span class="cm">// 某事件後，給「真正崇拜鍛造台」的信徒一段記憶心情</span>
+    <span class="kw">public static void</span> <span class="nm">GrantForgeBlessing</span>(<span class="ty">Pawn</span> pawn)
+    {
+        <span class="kw">if</span> (!<span class="ty">ModLister</span>.IdeologyInstalled) <span class="kw">return</span>;
+        <span class="ty">Ideo</span> ideo = pawn?.Ideo;
+        <span class="kw">if</span> (ideo == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 關鍵：先確認此信仰採用了該 precept，否則跨信仰套用會出錯</span>
+        <span class="kw">if</span> (!ideo.HasPrecept(SmithyVeneration)) <span class="kw">return</span>;
+
+        <span class="ty">Thought_Memory</span> mem = (<span class="ty">Thought_Memory</span>)<span class="ty">ThoughtMaker</span>.MakeThought(
+            <span class="ty">DefDatabase</span>&lt;<span class="ty">ThoughtDef</span>&gt;.GetNamed(<span class="st">"MyMod_ForgeBlessed"</span>));
+        pawn.needs?.mood?.thoughts?.memories?.TryGainMemory(mem);
+    }
+}</pre>
+
+    <h3>用 DefModExtension 掛額外資料</h3>
+    <p>
+      如果你想在 <code>MemeDef</code> / <code>PreceptDef</code> 上掛自己的設定（原版欄位沒有），
+      標準作法是寫一個 <code>DefModExtension</code> 子類，避免去 patch 原版 Def 類別。
+    </p>
+
+    <pre><span class="cm">// C# 端：定義擴充資料</span>
+<span class="kw">using</span> Verse;
+
+<span class="kw">public class</span> <span class="ty">ForgeMemeExtension</span> : <span class="ty">DefModExtension</span>
+{
+    <span class="kw">public</span> <span class="ty">float</span> forgeSpeedBonus = <span class="nu">0.1f</span>;
+    <span class="kw">public</span> <span class="ty">bool</span> banAutomation = <span class="kw">false</span>;
+}
+
+<span class="cm">// 讀取：</span>
+<span class="kw">var</span> ext = memeDef.GetModExtension&lt;<span class="ty">ForgeMemeExtension</span>&gt;();
+<span class="kw">if</span> (ext != <span class="kw">null</span> &amp;&amp; ext.banAutomation) { <span class="cm">/* … */</span> }</pre>
+
+    <pre><span class="cm">&lt;!-- XML 端：掛到 MemeDef 上 --&gt;</span>
+<span class="xml-tag">&lt;MemeDef</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_Artisanal<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;modExtensions&gt;</span>
+    <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"MyMod.ForgeMemeExtension"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;forgeSpeedBonus&gt;</span><span class="xml-val">0.2</span><span class="xml-tag">&lt;/forgeSpeedBonus&gt;</span>
+      <span class="xml-tag">&lt;banAutomation&gt;</span><span class="xml-val">true</span><span class="xml-tag">&lt;/banAutomation&gt;</span>
+    <span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/modExtensions&gt;</span>
+<span class="xml-tag">&lt;/MemeDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>查找 precept 的兩種風格</strong>
+      事件回呼裡用 <code>DefDatabase&lt;PreceptDef&gt;.GetNamedSilentFail</code>（找不到回 null，不崩）；
+      Ideo 上的查詢一律走 <code>ideo.HasPrecept</code> / <code>ideo.GetPrecept</code>。
+      不要把 PreceptDef 和執行期 Precept instance 搞混——前者是模板，後者才帶綁定資料。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       §8 陷阱
+  ════════════════════════════════════════════════════════════ -->
+  <div class="section" id="pitfalls">
+    <div class="section-title">§8 常見陷阱與最佳實務</div>
+
+    <div class="g2">
+      <div class="card card-accent-red">
+        <h3>① 未裝 DLC 直接崩潰</h3>
+        <p>忘了 <code>MayRequire="Ludeon.RimWorld.Ideology"</code>，或 C# 沒過
+          <code>ModLister.IdeologyInstalled</code> → def 載入或執行期 NRE。這是頭號殺手。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>② precept issue 互斥載不進</h3>
+        <p>同一個 <code>IssueDef</code> 下若你忘了它本就互斥，或把該 precept 設成多個 issue，
+          生成器會拒絕或玩家無法同時選用，呈現「戒律憑空消失」。</p>
+      </div>
+      <div class="card card-accent-purple">
+        <h3>③ ritual outcome 曲線設錯</h3>
+        <p>quality curve 的端點沒覆蓋 0~1 全域，或 <code>outcomeChances</code> 機率沒對齊，
+          導致典禮永遠抽到失敗、或品質爆表卻無正回饋。</p>
+      </div>
+      <div class="card card-accent-blue">
+        <h3>④ role 服裝與第 17 章衝突</h3>
+        <p><code>roleApparelRequirements</code> 與其他服裝層（apparel layer）或別的角色需求重疊，
+          pawn 無法同時滿足 → 反覆穿脫、卸任、心情崩。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>⑤ 跨 ideo 心情套錯對象</h3>
+        <p>給心情前沒判斷對象是否真採用該 precept，結果對「不信此教」的 pawn 也加減心情，
+          甚至對動物加心情（動物 <code>Ideo</code> 為 null）。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>⑥ Def 名稱衝突 / 載入順序</h3>
+        <p>覆寫原版 IssueDef / PreceptDef 時 defName 撞名，或 PatchOperation 在 Ideology 未啟用時報錯
+          （PatchOperation 也要包 MayRequire 條件）。</p>
+      </div>
+    </div>
+
+    <h3>逐項拆解</h3>
+
+    <h4>① MayRequire 的散布要徹底</h4>
+    <p>
+      不只是頂層 <code>&lt;MemeDef&gt;</code> 要掛——若你在原版 Def 的清單裡<strong>插入</strong>一個指向
+      Ideology 型別的 <code>&lt;li&gt;</code>（例如往某 FactionDef 加一個只有 Ideology 才存在的內容），
+      該 <code>&lt;li&gt;</code> 本身也要 <code>MayRequire</code>，否則沒裝 DLC 時整個父 def 連帶報錯。
+    </p>
+    <pre><span class="cm">&lt;!-- 正確：list 內個別 li 也掛 MayRequire --&gt;</span>
+<span class="xml-tag">&lt;someList&gt;</span>
+  <span class="xml-tag">&lt;li&gt;</span>VanillaThing<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;li</span> <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Ideology"</span><span class="xml-tag">&gt;</span>MyMod_Ideology_Only<span class="xml-tag">&lt;/li&gt;</span>
+<span class="xml-tag">&lt;/someList&gt;</span></pre>
+
+    <div class="callout callout-danger">
+      <strong>PatchOperation 也會在沒裝 DLC 時報錯</strong>
+      若你用 PatchOperation 去改 Ideology 的 Def，沒裝 DLC 時那個 XPath 找不到目標節點，
+      <code>PatchOperationReplace</code> 等會在紅字 log 報「found 0 nodes」。把 patch 包進
+      <code>&lt;Operation Class="PatchOperationFindMod"&gt;</code>（mods 設 <code>Ludeon.RimWorld.Ideology</code>）
+      的 <code>match</code> 內，僅在 DLC 啟用時套用。
+    </div>
+
+    <h4>⑤ 跨信仰心情：永遠先 HasPrecept</h4>
+    <p>這是最隱蔽的邏輯錯誤，因為它不會崩潰、只會「行為錯」。標準防呆樣板：</p>
+    <pre><span class="cm">// 反例（錯）：對所有 pawn 都加心情</span>
+pawn.needs.mood.thoughts.memories.TryGainMemory(myThought);
+
+<span class="cm">// 正例（對）：三道門 — DLC、有 Ideo、且真採用該 precept</span>
+<span class="kw">if</span> (<span class="ty">ModLister</span>.IdeologyInstalled
+    &amp;&amp; pawn.Ideo != <span class="kw">null</span>
+    &amp;&amp; pawn.Ideo.HasPrecept(myPreceptDef))
+{
+    pawn.needs?.mood?.thoughts?.memories?.TryGainMemory(myThought);
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>最佳實務總結</strong>
+      <ul>
+        <li>能用 <code>ThoughtWorker_Precept</code> / 原版 ritual worker 就別自寫，它們自帶信徒過濾。</li>
+        <li>所有 Ideology 相關 XML（含 list 內 li 與 PatchOperation）一律考慮 <code>MayRequire</code>。</li>
+        <li>C# 進 Ideology 路徑的第一行永遠是 <code>ModLister.IdeologyInstalled</code>。</li>
+        <li>分清 Def（模板）與 instance（Ideo/Precept/Precept_Role）——查詢用 <code>HasPrecept</code>，別拿 Def 當 instance。</li>
+        <li>自訂額外欄位用 <code>DefModExtension</code>，不要 Harmony patch 原版 Def 類別結構。</li>
+        <li>典禮就是 Lord（第 30 章），卡關用 Dev mode 的 Draw Duties 除錯。</li>
+      </ul>
+    </div>
+
+    <h3>跨章節銜接速查</h3>
+    <table>
+      <tr><th>Ideology 元素</th><th>相關章節</th></tr>
+      <tr><td>戒律心情 ThoughtDef</td><td>第 20 章 需求心情</td></tr>
+      <tr><td>角色服裝需求</td><td>第 17 章 服裝裝備</td></tr>
+      <tr><td>角色賦予能力 RoleEffect_AbilityAvailable</td><td>第 24 章 能力超能</td></tr>
+      <tr><td>典禮執行期 LordJob_Ritual</td><td>第 30 章 群體 AI</td></tr>
+      <tr><td>ThingStyleDef 圖形</td><td>第 8 章 貼圖圖形</td></tr>
+      <tr><td>信仰隨派系生成</td><td>第 31 章 派系外交</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 32 思想體系（Ideology DLC） · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>

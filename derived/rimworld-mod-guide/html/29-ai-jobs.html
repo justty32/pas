@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 工作系統：Job、Toil、WorkGiver、ThinkTree — RimWorld Modding 指南</title>
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚙ RimWorld Mod</span>
+  <a href="index.html">總覽</a>
+  <a href="01-environment.html">環境設定</a>
+  <a href="02-xml-defs.html">XML Defs</a>
+  <a href="03-harmony.html">Harmony</a>
+  <a href="04-patterns.html">常見模式</a>
+  <a href="05-debug.html">除錯發布</a>
+  <a href="06-ui-widgets.html">UI Widgets</a>
+  <a href="07-advanced.html">進階技巧</a>
+  <a href="08-graphics-textures.html">貼圖圖形</a>
+  <a href="09-sound-audio.html">音效</a>
+  <a href="10-localization.html">在地化</a>
+  <a href="11-pawn-generation.html">Pawn生成</a>
+  <a href="12-incidents-storyteller.html">事件敘事</a>
+  <a href="13-world-map.html">世界地圖</a>
+  <a href="14-research-production.html">研究生產</a>
+  <a href="15-combat-damage.html">戰鬥傷害</a>
+  <a href="16-testing.html">測試</a>
+  <a href="17-apparel-equipment.html">服裝裝備</a>
+  <a href="18-buildings-power.html">建築電力</a>
+  <a href="19-plants-animals.html">植物動物</a>
+  <a href="20-needs-mood-thoughts.html">需求心情</a>
+  <a href="21-genes-xenotypes.html">基因異種</a>
+  <a href="22-quests.html">任務系統</a>
+  <a href="23-stuff-materials.html">材質系統</a>
+  <a href="24-abilities-psycasts.html">能力超能</a>
+  <a href="25-map-generation.html">地圖生成</a>
+  <a href="26-storage-filters.html">儲存分類</a>
+  <a href="27-cookbook.html">速查食譜</a>
+  <a href="28-health-medical.html">健康醫療</a>
+  <a href="29-ai-jobs.html" class="active">AI工作</a>
+  <a href="30-lord-groupai.html">群體AI</a>
+  <a href="31-factions.html">派系外交</a>
+  <a href="32-ideology.html">思想體系</a>
+  <a href="33-royalty.html">皇室榮譽</a>
+  <a href="34-mechanitor.html">機械族</a>
+  <a href="35-temperature-gas.html">溫度氣體</a>
+  <a href="36-performance.html">性能確定</a>
+</nav>
+
+<div class="hero">
+  <h1>AI 工作系統：Job、Toil、WorkGiver、ThinkTree</h1>
+  <p>RimWorld 的小人不是被「指揮」，而是被一棵思維樹「拉取」工作。理解 ThinkTree → JobGiver → Job → JobDriver → Toil 這條鏈，是寫任何自訂行為的根。</p>
+  <span class="badge">Chapter 29 · AI Jobs</span>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       §1 整條鏈總覽
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§1 整條鏈總覽：從 tick 到 Toil</div>
+
+    <p>RimWorld 沒有「指揮系統」這種東西。每個 Pawn 身上掛著一個 <code>Verse.AI.Pawn_JobTracker</code>（即 <code>pawn.jobs</code>），它在每個 tick 檢查「我現在有沒有事做」。當前一個 Job 結束、被打斷、或根本沒有 Job 時，它會去拉一棵 <code>Verse.AI.ThinkTreeDef</code> 編譯成的思維樹，由樹從上往下「拉取」(pull) 出下一個該做的 <code>Verse.AI.Job</code>。換句話說：<strong>工作不是推給小人的，是小人主動從思維樹裡撈出來的。</strong></p>
+
+    <p>這條鏈分成五個層次，職責切得很乾淨。先看資料如何流動：</p>
+
+    <pre><span class="cm">Pawn_JobTracker.JobTrackerTick()  ── 每 tick 檢查是否需要新 Job</span>
+   ↓ <span class="nm">ThinkResult thinkResult = thinker.MainThinkNodeRoot.TryIssueJobPackage(...)</span>
+<span class="cm">ThinkTree（思維樹：一堆 ThinkNode 組成的決策樹）</span>
+   ↓ 樹由上往下走，遇到能產出 Job 的節點就回傳
+<span class="cm">JobGiver_Work（思維樹節點，掃描所有啟用的 WorkGiver）</span>
+   ↓ WorkGiver_Scanner.JobOnThing(pawn, thing)
+<span class="cm">Job（資料封裝：def + targetA/B/C + count + ...）</span>
+   ↓ Pawn_JobTracker.StartJob(job)
+<span class="cm">JobDriver（行為：JobDef.driverClass 指定，產生 Toil 序列）</span>
+   ↓ JobDriver.MakeNewToils() yield return ...
+<span class="cm">Toil（最小行為單元：走過去 / 等待 / 拿起 / 套用效果）</span>
+   ↓ 一個接一個執行，全部跑完 Job 才結束</pre>
+
+    <div class="g3">
+      <div class="card card-accent-blue">
+        <h3>決策層</h3>
+        <p><code>ThinkTreeDef</code> / <code>ThinkNode</code> / <code>JobGiver</code> 決定「現在該做什麼」。它只負責挑工作，不負責怎麼做。</p>
+      </div>
+      <div class="card card-accent-orange">
+        <h3>資料層</h3>
+        <p><code>Job</code> 是一張「工作單」：哪個 <code>JobDef</code>、目標是誰（<code>targetA/B/C</code>）、數量多少。純資料，無行為。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>行為層</h3>
+        <p><code>JobDriver</code> 把工作單翻譯成一連串 <code>Toil</code>。Toil 才是真正會走路、會敲打、會改變世界狀態的東西。</p>
+      </div>
+    </div>
+
+    <h3>兩條工作來源：WorkGiver vs JobGiver</h3>
+
+    <p>初學者最容易搞混 <code>WorkGiver</code> 和 <code>JobGiver</code>。它們都是「產生 Job 的東西」，但定位完全不同：</p>
+
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>WorkGiver（玩家工作標籤）</h3>
+        <p>對應到右下角「工作」面板那一欄欄可勾選、可排優先序的工作（種田、烹飪、建造……）。玩家能<strong>開關與排序</strong>。多個 WorkGiver 被 <code>JobGiver_Work</code> 這個單一思維樹節點統一掃描。寫「殖民者平時自動會做的勞動」就用這條。</p>
+      </div>
+      <div class="card card-accent-cyan">
+        <h3>JobGiver（思維樹節點）</h3>
+        <p>是 <code>ThinkNode_JobGiver</code> 的子類，直接掛在思維樹的某個位置。玩家<strong>看不到、不能關</strong>。用於非勞動行為：逃跑、進食、社交、發呆、精神崩潰行為、動物覓食。它的優先序由它在樹裡的位置決定。</p>
+      </div>
+    </div>
+
+    <h3>名詞職責速查表</h3>
+
+    <table>
+      <thead>
+        <tr><th>名詞</th><th>類型</th><th>職責</th><th>典型基類</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ThinkTreeDef</code></td>
+          <td>Def (XML)</td>
+          <td>整棵決策樹的根；<code>Humanlike</code>、<code>Animal</code>、<code>Mechanoid</code> 各一棵</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><code>ThinkNode</code></td>
+          <td>C# class</td>
+          <td>樹上的一個節點；可以是優先選擇器、子樹、或產生 Job 的葉節點</td>
+          <td><code>Verse.AI.ThinkNode</code></td>
+        </tr>
+        <tr>
+          <td><code>JobGiver</code></td>
+          <td>C# class</td>
+          <td>會直接吐 Job 的思維樹葉節點（非玩家可見工作）</td>
+          <td><code>Verse.AI.ThinkNode_JobGiver</code></td>
+        </tr>
+        <tr>
+          <td><code>WorkGiver</code></td>
+          <td>C# + Def</td>
+          <td>玩家可見的一格工作；由 <code>JobGiver_Work</code> 統一掃描排序</td>
+          <td><code>RimWorld.WorkGiver_Scanner</code></td>
+        </tr>
+        <tr>
+          <td><code>Job</code></td>
+          <td>C# 資料物件</td>
+          <td>一張工作單：def + targetA/B/C + count + 其他參數</td>
+          <td><code>Verse.AI.Job</code></td>
+        </tr>
+        <tr>
+          <td><code>JobDef</code></td>
+          <td>Def (XML)</td>
+          <td>工作的靜態描述：用哪個 driver、報告字串、可否被打斷</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><code>JobDriver</code></td>
+          <td>C# class</td>
+          <td>執行 Job 的狀態機，產出 Toil 序列、做預約</td>
+          <td><code>Verse.AI.JobDriver</code></td>
+        </tr>
+        <tr>
+          <td><code>Toil</code></td>
+          <td>C# 物件</td>
+          <td>最小行為單元；有 initAction / tickAction / 完成條件</td>
+          <td><code>Verse.AI.Toil</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>心智模型</strong>把整條鏈想成：<em>ThinkTree 是「大腦的決策迴路」，WorkGiver/JobGiver 是「念頭」，Job 是「待辦清單上的一條」，JobDriver 是「執行這條時的肌肉記憶腳本」，Toil 是「一個動作」。</em> 你要改什麼行為，先問自己：是要新增一種念頭（JobGiver/WorkGiver）、還是新增一套動作流程（JobDriver/Toil）、還是改決策優先序（ThinkTree）。
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §2 JobDef
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§2 JobDef：工作的靜態身分證</div>
+
+    <p><code>Verse.AI.JobDef</code> 是純資料 Def，描述一種工作「是什麼」，但不描述「怎麼做」。怎麼做交給 <code>driverClass</code> 指向的 <code>JobDriver</code>。一個 JobDef 通常對應一個 JobDriver。香草遊戲的 JobDef 都集中在 <code>Defs/JobDefs/</code>。</p>
+
+    <h3>核心欄位一覽</h3>
+
+    <table>
+      <thead>
+        <tr><th>欄位</th><th>型別</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>driverClass</code></td>
+          <td><code>Type</code> (JobDriver)</td>
+          <td><strong>必填</strong>。執行此工作的 JobDriver 子類，例如 <code>JobDriver_FoodFeedPatient</code></td>
+        </tr>
+        <tr>
+          <td><code>reportString</code></td>
+          <td><code>string</code></td>
+          <td>選取小人時右下角顯示的字串模板，可用 <code>TargetA</code> 等佔位符（如 <code>Mining at {0}.</code>）</td>
+        </tr>
+        <tr>
+          <td><code>playerInterruptible</code></td>
+          <td><code>bool</code></td>
+          <td>玩家下達新命令時能否打斷此工作（預設 true；手術、分娩等設 false）</td>
+        </tr>
+        <tr>
+          <td><code>casualInterruptible</code></td>
+          <td><code>bool</code></td>
+          <td>能否被「隨意」事件打斷（看到敵人、需求警報等）。手術設 false 避免醫生中途跑掉</td>
+        </tr>
+        <tr>
+          <td><code>joyKind</code></td>
+          <td><code>JoyKindDef</code></td>
+          <td>若此工作屬於娛樂，提供哪種娛樂類型（社交、感官、奢侈……）</td>
+        </tr>
+        <tr>
+          <td><code>joyMaxParticipants</code></td>
+          <td><code>int</code></td>
+          <td>娛樂工作最多幾人同時參與（撞球桌 2、聚會更多）</td>
+        </tr>
+        <tr>
+          <td><code>joySkill</code> / <code>joyGainRate</code></td>
+          <td>各種</td>
+          <td>娛樂相關：練哪個技能、娛樂回填速度</td>
+        </tr>
+        <tr>
+          <td><code>allowOpportunisticPrefix</code></td>
+          <td><code>bool</code></td>
+          <td>true 時走去做這工作的路上可順手搬運（順路搬運最佳化）</td>
+        </tr>
+        <tr>
+          <td><code>collideWithPawns</code></td>
+          <td><code>bool</code></td>
+          <td>執行此工作時是否與其他 Pawn 碰撞（戰鬥相關工作常為 true）</td>
+        </tr>
+        <tr>
+          <td><code>suspendable</code></td>
+          <td><code>bool</code></td>
+          <td>true（預設）時遇到緊急狀況可暫停；長手術鏈通常維持可暫停</td>
+        </tr>
+        <tr>
+          <td><code>alwaysShowWeapon</code></td>
+          <td><code>bool</code></td>
+          <td>執行時是否一直把武器畫出來</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>最小 JobDef XML 範例</h3>
+
+<pre><span class="cm">&lt;!-- Defs/JobDefs/Jobs_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;JobDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_RefuelCustomMachine<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="cm">&lt;!-- driverClass 是整個 Def 的核心，沒它 Job 無法執行 --&gt;</span>
+    <span class="xml-tag">&lt;driverClass&gt;</span>MyMod.JobDriver_RefuelCustomMachine<span class="xml-tag">&lt;/driverClass&gt;</span>
+    <span class="cm">&lt;!-- {0} 會被 TargetA 取代（reportString 解析時） --&gt;</span>
+    <span class="xml-tag">&lt;reportString&gt;</span>Refueling {0}.<span class="xml-tag">&lt;/reportString&gt;</span>
+    <span class="cm">&lt;!-- 玩家點別處可打斷，是日常勞動 --&gt;</span>
+    <span class="xml-tag">&lt;playerInterruptible&gt;</span>true<span class="xml-tag">&lt;/playerInterruptible&gt;</span>
+    <span class="xml-tag">&lt;casualInterruptible&gt;</span>true<span class="xml-tag">&lt;/casualInterruptible&gt;</span>
+    <span class="cm">&lt;!-- 走過去的路上可順手搬東西 --&gt;</span>
+    <span class="xml-tag">&lt;allowOpportunisticPrefix&gt;</span>true<span class="xml-tag">&lt;/allowOpportunisticPrefix&gt;</span>
+  <span class="xml-tag">&lt;/JobDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>reportString 的佔位符</strong><code>{0}</code> = TargetA、<code>{1}</code> = TargetB、<code>{2}</code> = TargetC。若需要更動態的描述，可在 JobDriver 覆寫 <code>GetReport()</code> 自行組字串，這比 reportString 模板靈活得多（很多香草工作都這樣做）。
+    </div>
+
+    <h3>建立 Job 物件（C# 端）</h3>
+
+    <p>有了 JobDef，在 C# 用 <code>Verse.AI.JobMaker.MakeJob</code> 建立實際的 Job 實例。不要直接 <code>new Job(...)</code>——RimWorld 1.x 起一律走 <code>JobMaker</code> 物件池：</p>
+
+<pre><span class="kw">using</span> Verse.AI;
+
+<span class="cm">// 三種常見建法</span>
+Job job1 = JobMaker.<span class="nm">MakeJob</span>(MyMod_JobDefOf.MyMod_RefuelCustomMachine, targetThing);
+Job job2 = JobMaker.<span class="nm">MakeJob</span>(JobDefOf.HaulToCell, haulThing, destCell);
+Job job3 = JobMaker.<span class="nm">MakeJob</span>(JobDefOf.Ingest, foodThing);
+job3.count = <span class="nu">3</span>;  <span class="cm">// 吃 3 份</span>
+
+<span class="cm">// 把 Job 塞給小人去做（強制指定，跳過思維樹）</span>
+pawn.jobs.<span class="nm">TryTakeOrderedJob</span>(job1, JobTag.Misc);</pre>
+
+    <p>替自己的 JobDef 寫一個 <code>DefOf</code> 類別，避免到處用字串查找：</p>
+
+<pre><span class="at">[DefOf]</span>
+<span class="kw">public static class</span> <span class="ty">MyMod_JobDefOf</span>
+{
+    <span class="kw">public static</span> <span class="ty">JobDef</span> MyMod_RefuelCustomMachine;
+
+    <span class="kw">static</span> <span class="ty">MyMod_JobDefOf</span>() =&gt; DefOfHelper.<span class="nm">EnsureInitializedInCtor</span>(<span class="kw">typeof</span>(MyMod_JobDefOf));
+}</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §3 自訂 JobDriver
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§3 寫一個自訂 JobDriver</div>
+
+    <p><code>Verse.AI.JobDriver</code> 是整個系統的心臟。它是一個由 <code>Toil</code> 序列驅動的協程狀態機。你主要覆寫兩個方法：</p>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>TryMakePreToilReservations</h3>
+        <p>在 Job 開始前做<strong>預約</strong>。回傳 <code>bool</code>：能成功預約目標就 true，否則 false（Job 取消）。典型呼叫 <code>pawn.Reserve(target, job, ...)</code>。沒預約好就動工會被別的小人搶，或產生 "could not reserve" 紅字。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>MakeNewToils</h3>
+        <p>回傳 <code>IEnumerable&lt;Toil&gt;</code>，用 <code>yield return</code> 一個個吐出 Toil。這是個迭代器：Toil 會依序執行，全部完成 Job 才結束。可在中間插入失敗條件、進度條、自訂 action。</p>
+      </div>
+    </div>
+
+    <h3>常用 Toil 工廠</h3>
+
+    <p>不要每個 Toil 都手刻。RimWorld 提供一票工廠類別產生常見動作：</p>
+
+    <table>
+      <thead>
+        <tr><th>工廠方法</th><th>產出的 Toil</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Toils_Goto.GotoThing(ind, peMode)</code></td>
+          <td>走到某個 target（以 TargetIndex 指定）；peMode 決定停在哪（Touch / ClosestTouch / InteractionCell）</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Goto.GotoCell(ind, peMode)</code></td>
+          <td>走到某個格子</td>
+        </tr>
+        <tr>
+          <td><code>Toils_General.Wait(ticks)</code></td>
+          <td>原地等待 N tick（60 tick = 1 秒），常配 <code>WithProgressBar</code></td>
+        </tr>
+        <tr>
+          <td><code>Toils_Reserve.Reserve(ind)</code></td>
+          <td>在 Toil 鏈中途預約目標（除了 PreToil 預約外的補強）</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Haul.StartCarryThing(ind)</code></td>
+          <td>把 target 拿到手上（變成攜帶物）</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Haul.CarryHauledThingToCell(ind)</code></td>
+          <td>把手上的東西搬到指定格</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Haul.PlaceHauledThingInCell(ind, ...)</code></td>
+          <td>把手上的東西放到地上 / 容器</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Ingest.*</code></td>
+          <td>進食相關（吃下、扣食物量、回填飢餓需求）</td>
+        </tr>
+        <tr>
+          <td><code>Toils_Combat.*</code></td>
+          <td>戰鬥相關（瞄準、開火）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Toil 的擴充方法：失敗條件、進度條、action</h3>
+
+    <p>Toil 本身是純資料，靠一票 fluent 擴充方法（多在 <code>Verse.AI.ToilFailConditions</code>、<code>Verse.AI.ToilEffects</code>）串接行為與守衛：</p>
+
+    <table>
+      <thead>
+        <tr><th>擴充方法</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>.FailOnDespawnedOrNull(ind)</code></td>
+          <td>若 target 消失/銷毀/為 null，Job 立即失敗（最常用的守衛）</td>
+        </tr>
+        <tr>
+          <td><code>.FailOnDestroyedOrNull(ind)</code></td>
+          <td>target 被摧毀或 null 則失敗（不管是否 despawn）</td>
+        </tr>
+        <tr>
+          <td><code>.FailOnForbidden(ind)</code></td>
+          <td>target 被玩家標記禁止則失敗</td>
+        </tr>
+        <tr>
+          <td><code>.FailOn(() =&gt; bool)</code></td>
+          <td>自訂 lambda，每 tick 檢查，回 true 則失敗</td>
+        </tr>
+        <tr>
+          <td><code>.FailOnBurningImmobile(ind)</code></td>
+          <td>target 著火且不可移動則失敗</td>
+        </tr>
+        <tr>
+          <td><code>.WithProgressBarToilDelay(ind)</code></td>
+          <td>依 Toil 的 <code>defaultDuration</code> 在 target 上顯示進度條</td>
+        </tr>
+        <tr>
+          <td><code>.PlaySustainerOrSound(...)</code></td>
+          <td>執行期間播放持續音效</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>FailOn 是註冊不是當下判斷</strong><code>FailOnXXX</code> 把條件登記到 Toil 的 <code>endConditions</code> 清單，<strong>每 tick</strong> 都會檢查，並非只在 Toil 開始時判一次。所以要把守衛掛在「實際工作的那個 Toil」上，而不是只掛在 GotoThing 上——否則走到一半目標消失才會被抓到，工作 Toil 期間目標被搶走則無人理會。慣用做法是把 FailOn 串在工廠回傳值上，整條鏈共享。</div>
+
+    <h3>defaultCompleteMode：Toil 何時算完成</h3>
+
+    <p>每個自製 Toil 一定要指定 <code>defaultCompleteMode</code>，否則永遠不會結束、Pawn 卡死：</p>
+
+    <table>
+      <thead>
+        <tr><th>ToilCompleteMode</th><th>何時完成</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Instant</code></td><td>當 tick 執行完 initAction 立即完成（瞬間動作）</td></tr>
+        <tr><td><code>Delay</code></td><td>等待 <code>defaultDuration</code> 個 tick 後完成（配進度條）</td></tr>
+        <tr><td><code>Never</code></td><td>永不自動完成，必須靠 FailOn / 程式碼 / EndJobWith 結束（如戰鬥瞄準）</td></tr>
+        <tr><td><code>PatherArrival</code></td><td>抵達路徑終點時完成（GotoThing 內部用）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>完整範例：走到某物 → 工作 N tick → 產生效果</h3>
+
+    <p>下面這個 JobDriver 模擬「走到自訂機器 → 工作 120 tick（顯示進度條）→ 補充燃料」。注意 TargetIndex 的用法（<code>TargetA</code> = 機器）：</p>
+
+<pre><span class="kw">using</span> System.Collections.Generic;
+<span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">JobDriver_RefuelCustomMachine</span> : <span class="ty">JobDriver</span>
+    {
+        <span class="cm">// 方便讀取的快捷屬性</span>
+        <span class="kw">private</span> <span class="ty">Thing</span> Machine =&gt; job.<span class="nm">GetTarget</span>(TargetIndex.A).Thing;
+
+        <span class="cm">// 工作所需 tick；60 tick = 1 秒</span>
+        <span class="kw">private const int</span> RefuelDuration = <span class="nu">120</span>;
+
+        <span class="kw">public override</span> <span class="ty">bool</span> <span class="nm">TryMakePreToilReservations</span>(<span class="ty">bool</span> errorOnFailed)
+        {
+            <span class="cm">// 預約機器；失敗（已被別人預約）就放棄此 Job</span>
+            <span class="kw">return</span> pawn.<span class="nm">Reserve</span>(Machine, job, <span class="nu">1</span>, -<span class="nu">1</span>, <span class="kw">null</span>, errorOnFailed);
+        }
+
+        <span class="kw">protected override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Toil</span>&gt; <span class="nm">MakeNewToils</span>()
+        {
+            <span class="cm">// 整條鏈共用的守衛：機器消失就整個 Job 失敗</span>
+            <span class="kw">this</span>.<span class="nm">FailOnDespawnedOrNull</span>(TargetIndex.A);
+            <span class="kw">this</span>.<span class="nm">FailOnBurningImmobile</span>(TargetIndex.A);
+
+            <span class="cm">// 1) 走到機器的互動格</span>
+            <span class="kw">yield return</span> Toils_Goto.<span class="nm">GotoThing</span>(TargetIndex.A, PathEndMode.InteractionCell)
+                .<span class="nm">FailOnDespawnedNullOrForbidden</span>(TargetIndex.A);
+
+            <span class="cm">// 2) 工作 Toil：等待 N tick，顯示進度條，期間播音效</span>
+            <span class="ty">Toil</span> work = Toils_General.<span class="nm">Wait</span>(RefuelDuration, TargetIndex.A);
+            work.<span class="nm">WithProgressBarToilDelay</span>(TargetIndex.A);
+            work.<span class="nm">FailOnCannotTouch</span>(TargetIndex.A, PathEndMode.InteractionCell);
+            work.<span class="nm">PlaySustainerOrSound</span>(SoundDefOf.Interact_Tend);
+            work.activeSkill = () =&gt; SkillDefOf.Crafting;  <span class="cm">// 練手藝技能</span>
+            <span class="kw">yield return</span> work;
+
+            <span class="cm">// 3) 工作完成的瞬間動作：產生實際效果</span>
+            <span class="kw">yield return</span> <span class="kw">new</span> <span class="ty">Toil</span>
+            {
+                initAction = () =&gt;
+                {
+                    <span class="cm">// 這裡才真正改變世界狀態</span>
+                    <span class="ty">CompRefuelable</span> comp = Machine.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompRefuelable</span>&gt;();
+                    comp?.<span class="nm">Refuel</span>(<span class="nu">25f</span>);
+                    Machine.Map.designationManager
+                        .<span class="nm">DesignationOn</span>(Machine, MyMod_DesignationDefOf.RefuelDesignation)
+                        ?.<span class="nm">Delete</span>();
+                },
+                defaultCompleteMode = ToilCompleteMode.Instant
+            };
+        }
+    }
+}</pre>
+
+    <div class="callout callout-tip">
+      <strong>initAction vs tickAction</strong><code>initAction</code> 在 Toil 開始的那一個 tick 跑一次（適合「結算瞬間效果」）；<code>tickAction</code> 每 tick 跑一次（適合「持續累積」，如逐漸補燃料、逐漸建造）。若需要漸進效果，用 <code>tickAction</code> 配 <code>defaultCompleteMode = Delay</code>，並在 tickAction 內呼叫 <code>readyForNextToil = true</code> 提前結束，或用 <code>EndOnDespawnedOrNull</code> 收尾。</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §4 WorkGiver
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§4 WorkGiver：把工作插進玩家的工作面板</div>
+
+    <p>當你要的是「殖民者平常自動會做、且玩家可以在工作面板開關與排優先序」的勞動，就要寫 <code>WorkGiver</code>。它由兩部分組成：<code>WorkGiverDef</code>（XML 資料）+ <code>WorkGiver_Scanner</code> 的 C# 子類（掃描邏輯）。</p>
+
+    <h3>WorkGiver_Scanner 的三個關鍵方法</h3>
+
+    <table>
+      <thead>
+        <tr><th>方法</th><th>職責</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>PotentialWorkThingsGlobal(pawn)</code></td>
+          <td>回傳「可能需要這份工作」的候選 Thing 集合。回傳越精準（用 designation / ListerThings 過濾）效能越好。回 null 則退回掃全地圖（慢）</td>
+        </tr>
+        <tr>
+          <td><code>HasJobOnThing(pawn, thing, forced)</code></td>
+          <td>快速布林檢查：這個 pawn 對這個 thing 現在有沒有事可做。便宜的篩選，先擋掉不合格者</td>
+        </tr>
+        <tr>
+          <td><code>JobOnThing(pawn, thing, forced)</code></td>
+          <td>真正產生 Job。通常先做完整可達/可預約檢查，再 <code>JobMaker.MakeJob</code> 回傳</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>WorkGiver 範例：為帶有指定標記的機器加燃料</h3>
+
+<pre><span class="kw">using</span> RimWorld;
+<span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+<span class="kw">using</span> System.Collections.Generic;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">WorkGiver_RefuelCustomMachine</span> : <span class="ty">WorkGiver_Scanner</span>
+    {
+        <span class="cm">// 用 designation 縮小候選範圍，避免掃全地圖</span>
+        <span class="kw">public override</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">Thing</span>&gt; <span class="nm">PotentialWorkThingsGlobal</span>(<span class="ty">Pawn</span> pawn)
+        {
+            <span class="kw">foreach</span> (<span class="ty">Designation</span> d <span class="kw">in</span> pawn.Map.designationManager
+                .<span class="nm">SpawnedDesignationsOfDef</span>(MyMod_DesignationDefOf.RefuelDesignation))
+            {
+                <span class="kw">yield return</span> d.target.Thing;
+            }
+        }
+
+        <span class="cm">// 走 designation 路徑時告訴引擎用哪種 designation</span>
+        <span class="kw">public override</span> <span class="ty">PathEndMode</span> PathEndMode =&gt; PathEndMode.InteractionCell;
+
+        <span class="kw">public override</span> <span class="ty">bool</span> <span class="nm">HasJobOnThing</span>(<span class="ty">Pawn</span> pawn, <span class="ty">Thing</span> t, <span class="ty">bool</span> forced = <span class="kw">false</span>)
+        {
+            <span class="cm">// 便宜檢查：有沒有 comp、需不需要燃料</span>
+            <span class="ty">CompRefuelable</span> comp = t.<span class="nm">TryGetComp</span>&lt;<span class="ty">CompRefuelable</span>&gt;();
+            <span class="kw">if</span> (comp == <span class="kw">null</span> || comp.IsFull) <span class="kw">return</span> <span class="kw">false</span>;
+
+            <span class="cm">// 是否被禁止 / 能否預約且抵達</span>
+            <span class="kw">if</span> (t.<span class="nm">IsForbidden</span>(pawn)) <span class="kw">return</span> <span class="kw">false</span>;
+            <span class="kw">if</span> (!pawn.<span class="nm">CanReserveAndReach</span>(t, PathEndMode.InteractionCell,
+                    pawn.NormalMaxDanger(), <span class="nu">1</span>, -<span class="nu">1</span>, <span class="kw">null</span>, forced))
+                <span class="kw">return</span> <span class="kw">false</span>;
+
+            <span class="kw">return</span> <span class="kw">true</span>;
+        }
+
+        <span class="kw">public override</span> <span class="ty">Job</span> <span class="nm">JobOnThing</span>(<span class="ty">Pawn</span> pawn, <span class="ty">Thing</span> t, <span class="ty">bool</span> forced = <span class="kw">false</span>)
+        {
+            <span class="cm">// HasJobOnThing 已通過，這裡直接組 Job</span>
+            <span class="kw">return</span> JobMaker.<span class="nm">MakeJob</span>(MyMod_JobDefOf.MyMod_RefuelCustomMachine, t);
+        }
+    }
+}</pre>
+
+    <div class="callout callout-warn">
+      <strong>HasJobOnThing 與 JobOnThing 必須一致</strong>引擎先用 <code>HasJobOnThing</code> 篩、再用 <code>JobOnThing</code> 取。如果 HasJobOnThing 回 true 但 JobOnThing 回 null，小人會「想做卻拿不到工作」，導致每 tick 反覆嘗試、出現遲滯或 spam log。兩者的判定條件要嚴格對齊。</div>
+
+    <h3>WorkGiverDef + WorkTypeDef（XML）</h3>
+
+    <p><code>WorkGiverDef</code> 把你的 C# scanner 接到一個 <code>WorkTypeDef</code>（工作大類，如 <code>Hauling</code>、<code>Crafting</code>）。把自訂工作掛到既有 WorkType 最省事：</p>
+
+<pre><span class="cm">&lt;!-- Defs/WorkGivers/WorkGivers_MyMod.xml --&gt;</span>
+<span class="xml-tag">&lt;Defs&gt;</span>
+  <span class="xml-tag">&lt;WorkGiverDef&gt;</span>
+    <span class="xml-tag">&lt;defName&gt;</span>MyMod_RefuelCustomMachine<span class="xml-tag">&lt;/defName&gt;</span>
+    <span class="xml-tag">&lt;label&gt;</span>refuel custom machine<span class="xml-tag">&lt;/label&gt;</span>
+    <span class="xml-tag">&lt;giverClass&gt;</span>MyMod.WorkGiver_RefuelCustomMachine<span class="xml-tag">&lt;/giverClass&gt;</span>
+    <span class="cm">&lt;!-- 掛到香草「基礎勞動」工作類別 --&gt;</span>
+    <span class="xml-tag">&lt;workType&gt;</span>BasicWorker<span class="xml-tag">&lt;/workType&gt;</span>
+    <span class="cm">&lt;!-- 在同一 workType 內的相對優先序，數字大者先 --&gt;</span>
+    <span class="xml-tag">&lt;priorityInType&gt;</span>50<span class="xml-tag">&lt;/priorityInType&gt;</span>
+    <span class="xml-tag">&lt;verb&gt;</span>refuel<span class="xml-tag">&lt;/verb&gt;</span>
+    <span class="xml-tag">&lt;gerund&gt;</span>refueling<span class="xml-tag">&lt;/gerund&gt;</span>
+    <span class="cm">&lt;!-- 命令小人去做時，若不可達顯示的提示 --&gt;</span>
+    <span class="xml-tag">&lt;requiredCapacities&gt;</span>
+      <span class="xml-tag">&lt;li&gt;</span>Manipulation<span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/requiredCapacities&gt;</span>
+  <span class="xml-tag">&lt;/WorkGiverDef&gt;</span>
+<span class="xml-tag">&lt;/Defs&gt;</span></pre>
+
+    <p>如果要做<strong>全新的工作大類</strong>（在工作面板多一欄），則需新增 <code>WorkTypeDef</code>，並指定 <code>workGiversByPriority</code> 把 WorkGiverDef 串進去。但 <code>workGiversByPriority</code> 多由引擎依各 WorkGiverDef 的 <code>workType</code> + <code>priorityInType</code> 自動組裝，一般不必手填：</p>
+
+<pre><span class="cm">&lt;!-- 只有需要全新欄位時才寫 WorkTypeDef --&gt;</span>
+<span class="xml-tag">&lt;WorkTypeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_MachineTending<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;labelShort&gt;</span>tend<span class="xml-tag">&lt;/labelShort&gt;</span>
+  <span class="xml-tag">&lt;pawnLabel&gt;</span>technician<span class="xml-tag">&lt;/pawnLabel&gt;</span>
+  <span class="xml-tag">&lt;gerundLabel&gt;</span>tending<span class="xml-tag">&lt;/gerundLabel&gt;</span>
+  <span class="xml-tag">&lt;description&gt;</span>Maintain custom machines.<span class="xml-tag">&lt;/description&gt;</span>
+  <span class="xml-tag">&lt;verb&gt;</span>tend<span class="xml-tag">&lt;/verb&gt;</span>
+  <span class="cm">&lt;!-- 工作面板由左到右的排序權重 --&gt;</span>
+  <span class="xml-tag">&lt;naturalPriority&gt;</span>410<span class="xml-tag">&lt;/naturalPriority&gt;</span>
+  <span class="xml-tag">&lt;workTags&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>ManualSkilled<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/workTags&gt;</span>
+  <span class="xml-tag">&lt;relevantSkills&gt;</span>
+    <span class="xml-tag">&lt;li&gt;</span>Crafting<span class="xml-tag">&lt;/li&gt;</span>
+  <span class="xml-tag">&lt;/relevantSkills&gt;</span>
+<span class="xml-tag">&lt;/WorkTypeDef&gt;</span></pre>
+
+    <div class="callout callout-info">
+      <strong>CanReserveAndReach 的意義</strong><code>pawn.CanReserveAndReach(target, peMode, danger, ...)</code> 一次檢查三件事：(1) 路徑可達、(2) 預約沒被別人佔、(3) 沿途危險度可接受。它是 WorkGiver 的標準守門員，幾乎所有香草 WorkGiver 都在 JobOnThing 或 HasJobOnThing 呼叫它。</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §5 ThinkTree 與 ThinkNode
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§5 ThinkTree 與 ThinkNode：決策樹本身</div>
+
+    <p>前面說的 WorkGiver / JobGiver 都掛在 <code>Verse.AI.ThinkTreeDef</code> 編成的決策樹上。香草最重要的兩棵是 <code>Humanlike</code>（人類主樹）與 <code>Humanlike_PostMentalState</code>。樹由一層層 <code>ThinkNode</code> 組成，從根往下走，第一個能吐出 Job 的節點獲勝。</p>
+
+    <h3>常見 ThinkNode 類型</h3>
+
+    <table>
+      <thead>
+        <tr><th>ThinkNode 子類</th><th>行為</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ThinkNode_Priority</code></td>
+          <td>依序嘗試每個子節點，第一個成功者勝出（最常見的選擇器）</td>
+        </tr>
+        <tr>
+          <td><code>ThinkNode_PrioritySorter</code></td>
+          <td>動態依優先值排序子節點再嘗試（如各種逃跑/治療的緊急度）</td>
+        </tr>
+        <tr>
+          <td><code>ThinkNode_Subtree</code></td>
+          <td>引用另一棵 <code>ThinkTreeDef</code>（模組化複用，如 <code>subtreesToInsert</code> 的目標）</td>
+        </tr>
+        <tr>
+          <td><code>ThinkNode_ConditionalXXX</code></td>
+          <td>守衛節點：只有條件成立才往下走（如 <code>ThinkNode_ConditionalColonist</code>）</td>
+        </tr>
+        <tr>
+          <td><code>JobGiver_Work</code></td>
+          <td>掃描所有啟用 WorkGiver、依優先序產生勞動 Job 的葉節點</td>
+        </tr>
+        <tr>
+          <td><code>JobGiver_GetRest</code> / <code>JobGiver_GetFood</code></td>
+          <td>需求驅動的葉節點（睡覺、吃飯）</td>
+        </tr>
+        <tr>
+          <td><code>JobGiver_Wander*</code></td>
+          <td>沒事做時到處晃的葉節點（樹的最底層 fallback）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>ThinkTreeDef 結構（節錄香草 Humanlike）</h3>
+
+<pre><span class="cm">&lt;!-- 香草樹的概念結構（簡化） --&gt;</span>
+<span class="xml-tag">&lt;ThinkTreeDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>Humanlike<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;thinkRoot</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_Priority"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;subNodes&gt;</span>
+      <span class="cm">&lt;!-- 1) 最高優先：被俘/受控/精神狀態 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalCanDoConstantThinkTreeJobNow"</span><span class="xml-tag">&gt;</span> ... <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 2) Duty（被 Lord 控制時，見 §6） --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalHasLord"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;subNodes&gt;</span>
+          <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_DutyConstant"</span> <span class="xml-tag">/&gt;</span>
+        <span class="xml-tag">&lt;/subNodes&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 3) 緊急需求：逃離火、找掩護 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"JobGiver_ExitMapBest"</span> <span class="xml-tag">/&gt;</span>
+      <span class="cm">&lt;!-- 4) 玩家勞動工作（這裡掃 WorkGiver） --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalColonist"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;subNodes&gt;</span>
+          <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"JobGiver_Work"</span> <span class="xml-tag">/&gt;</span>
+        <span class="xml-tag">&lt;/subNodes&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+      <span class="cm">&lt;!-- 5) 滿足需求：吃、睡、娛樂 --&gt;</span>
+      <span class="cm">&lt;!-- 6) 最底層 fallback：到處晃 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"JobGiver_WanderColony"</span> <span class="xml-tag">/&gt;</span>
+    <span class="xml-tag">&lt;/subNodes&gt;</span>
+  <span class="xml-tag">&lt;/thinkRoot&gt;</span>
+<span class="xml-tag">&lt;/ThinkTreeDef&gt;</span></pre>
+
+    <h3>用 PatchOperation 插入自訂 ThinkNode</h3>
+
+    <p>絕對<strong>不要</strong>整棵複製 vanilla 樹再改——相容性會死。用 <code>PatchOperationAdd</code> 或專用的 <code>PatchOperationInsertThinkNode</code>（RimWorld 自帶）把節點插到指定位置。最穩的做法是替香草樹的子節點加上 <code>insertTag</code>，再用 insert patch 對準該 tag 插入：</p>
+
+<pre><span class="cm">&lt;!-- Patches/InsertMyJobGiver.xml --&gt;</span>
+<span class="xml-tag">&lt;Patch&gt;</span>
+  <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class=</span><span class="xml-val">"PatchOperationInsertThinkNode"</span><span class="xml-tag">&gt;</span>
+    <span class="cm">&lt;!-- 對哪棵樹的哪個父節點動手 --&gt;</span>
+    <span class="xml-tag">&lt;parentNode&gt;</span>/ThinkTreeDef[defName="Humanlike"]/thinkRoot<span class="xml-tag">&lt;/parentNode&gt;</span>
+    <span class="cm">&lt;!-- 數字越小越早被嘗試（越高優先） --&gt;</span>
+    <span class="xml-tag">&lt;insertPriority&gt;</span>50<span class="xml-tag">&lt;/insertPriority&gt;</span>
+    <span class="xml-tag">&lt;subnodes&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_ConditionalColonist"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;subNodes&gt;</span>
+          <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"MyMod.JobGiver_DoSpecialChore"</span> <span class="xml-tag">/&gt;</span>
+        <span class="xml-tag">&lt;/subNodes&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/subnodes&gt;</span>
+  <span class="xml-tag">&lt;/Operation&gt;</span>
+<span class="xml-tag">&lt;/Patch&gt;</span></pre>
+
+    <h3>自訂 JobGiver（非玩家可見的念頭）</h3>
+
+    <p><code>ThinkNode_JobGiver</code> 只要覆寫一個 <code>TryGiveJob</code>。回傳 null 代表「我沒事可給」，樹就往下個節點走：</p>
+
+<pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> Verse.AI;
+
+<span class="kw">namespace</span> MyMod
+{
+    <span class="kw">public class</span> <span class="ty">JobGiver_DoSpecialChore</span> : <span class="ty">ThinkNode_JobGiver</span>
+    {
+        <span class="kw">protected override</span> <span class="ty">Job</span> <span class="nm">TryGiveJob</span>(<span class="ty">Pawn</span> pawn)
+        {
+            <span class="cm">// 只有殖民者、心情夠好、地圖上有目標才給</span>
+            <span class="kw">if</span> (!pawn.<span class="nm">IsColonist</span>) <span class="kw">return</span> <span class="kw">null</span>;
+
+            <span class="ty">Thing</span> target = GenClosest.<span class="nm">ClosestThingReachable</span>(
+                pawn.Position, pawn.Map,
+                ThingRequest.<span class="nm">ForDef</span>(MyMod_ThingDefOf.SpecialChoreTarget),
+                PathEndMode.Touch,
+                TraverseParms.<span class="nm">For</span>(pawn),
+                <span class="nu">30f</span>,
+                t =&gt; !t.<span class="nm">IsForbidden</span>(pawn) &amp;&amp; pawn.<span class="nm">CanReserve</span>(t));
+
+            <span class="kw">if</span> (target == <span class="kw">null</span>) <span class="kw">return</span> <span class="kw">null</span>;
+
+            <span class="kw">return</span> JobMaker.<span class="nm">MakeJob</span>(MyMod_JobDefOf.DoSpecialChore, target);
+        }
+
+        <span class="cm">// 可覆寫 GetPriority 讓父節點是 PrioritySorter 時動態排序</span>
+        <span class="kw">public override</span> <span class="ty">float</span> <span class="nm">GetPriority</span>(<span class="ty">Pawn</span> pawn) =&gt; <span class="nu">5f</span>;
+    }
+}</pre>
+
+    <div class="callout callout-info">
+      <strong>ThinkResult</strong>樹節點實際回傳的是 <code>Verse.AI.ThinkResult</code>，封裝了 Job + 來源 ThinkNode + JobTag + 是否 fromQueue。多數時候你不會直接碰它（JobGiver 幫你包好），但除錯思維樹時知道它的存在很有用——它正是 "View thinkTree" 顯示鏈條的依據。</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §6 Duty 與 mental state
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§6 Duty 與 Mental State：另兩個 Job 來源</div>
+
+    <p>除了「自主思維樹」這條主線，還有兩個重要的 Job 來源覆蓋在它之上：被 <code>Lord</code> 控制時的 <strong>Duty</strong>，以及精神崩潰時的 <strong>MentalState</strong>。</p>
+
+    <div class="g2">
+      <div class="card card-accent-purple">
+        <h3>Duty（群體 AI 的命令）</h3>
+        <p>當 Pawn 隸屬某個 <code>Verse.AI.Group.Lord</code>（襲擊隊、商隊、典禮參與者），Lord 會給它一個 <code>PawnDuty</code>。思維樹頂部的 <code>ThinkNode_ConditionalHasLord</code> 會優先走 Duty 對應的子樹，覆蓋日常勞動。這是第 30 章群體 AI 的核心，這裡先建立銜接。</p>
+      </div>
+      <div class="card card-accent-red">
+        <h3>MentalState（精神狀態）</h3>
+        <p>當 Pawn 進入 <code>Verse.AI.MentalState</code>（暴走、放火、麻木閒晃），<code>pawn.mindState.mentalStateHandler</code> 會切換到專屬的思維樹 <code>Humanlike_MentalState</code>，覆蓋一切正常行為。與第 20 章「需求心情」互補：心情崩到閾值以下才觸發。</p>
+      </div>
+    </div>
+
+    <h3>DutyDef 與 Duty 思維樹</h3>
+
+    <p><code>Verse.AI.DutyDef</code> 把一個職責名稱接到一棵 <strong>duty 思維樹</strong>（<code>thinkNode</code>）。Lord 的 <code>LordToil</code> 在每個 Pawn 身上設 <code>pawn.mindState.duty = new PawnDuty(dutyDef, focusTarget)</code>，思維樹便依此產生對應 Job：</p>
+
+<pre><span class="cm">&lt;!-- 一個簡化的 DutyDef --&gt;</span>
+<span class="xml-tag">&lt;DutyDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_GuardSpot<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;hook&gt;</span>HighPriority<span class="xml-tag">&lt;/hook&gt;</span>
+  <span class="xml-tag">&lt;thinkNode</span> <span class="xml-attr">Class=</span><span class="xml-val">"ThinkNode_Priority"</span><span class="xml-tag">&gt;</span>
+    <span class="xml-tag">&lt;subNodes&gt;</span>
+      <span class="cm">&lt;!-- 受攻擊時還擊 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"JobGiver_AISapper"</span> <span class="xml-tag">/&gt;</span>
+      <span class="cm">&lt;!-- 否則站在 duty.focus 指定的點上 --&gt;</span>
+      <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class=</span><span class="xml-val">"JobGiver_Standby"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;radius&gt;</span>4<span class="xml-tag">&lt;/radius&gt;</span>
+      <span class="xml-tag">&lt;/li&gt;</span>
+    <span class="xml-tag">&lt;/subNodes&gt;</span>
+  <span class="xml-tag">&lt;/thinkNode&gt;</span>
+<span class="xml-tag">&lt;/DutyDef&gt;</span></pre>
+
+    <p>在 C# 端的 LordToil 設定 duty（細節留待第 30 章）：</p>
+
+<pre><span class="kw">public override void</span> <span class="nm">UpdateAllDuties</span>()
+{
+    <span class="kw">foreach</span> (<span class="ty">Pawn</span> p <span class="kw">in</span> lord.ownedPawns)
+    {
+        <span class="ty">PawnDuty</span> duty = <span class="kw">new</span> <span class="ty">PawnDuty</span>(MyMod_DutyDefOf.MyMod_GuardSpot);
+        duty.focus = <span class="kw">new</span> <span class="ty">LocalTargetInfo</span>(guardCell);
+        p.mindState.duty = duty;
+    }
+}</pre>
+
+    <h3>MentalStateDef 簡述</h3>
+
+    <p><code>RimWorld.MentalStateDef</code> 定義一種精神狀態：用哪個 <code>stateClass</code>（<code>MentalState</code> 子類）、持續時間、是否攻擊、結束條件等。觸發通常由 <code>MentalBreakDef</code>（心情崩潰類型，見第 20 章）呼叫 <code>pawn.mindState.mentalStateHandler.TryStartMentalState(def)</code>：</p>
+
+<pre><span class="cm">&lt;!-- 自訂精神狀態：到處砸東西 --&gt;</span>
+<span class="xml-tag">&lt;MentalStateDef&gt;</span>
+  <span class="xml-tag">&lt;defName&gt;</span>MyMod_SmashThings<span class="xml-tag">&lt;/defName&gt;</span>
+  <span class="xml-tag">&lt;stateClass&gt;</span>MentalState_Tantrum<span class="xml-tag">&lt;/stateClass&gt;</span>
+  <span class="xml-tag">&lt;category&gt;</span>Misc<span class="xml-tag">&lt;/category&gt;</span>
+  <span class="xml-tag">&lt;recoveryMtbDays&gt;</span>0.5<span class="xml-tag">&lt;/recoveryMtbDays&gt;</span>
+  <span class="xml-tag">&lt;minTicksBeforeRecovery&gt;</span>1250<span class="xml-tag">&lt;/minTicksBeforeRecovery&gt;</span>
+  <span class="xml-tag">&lt;baseInspectLine&gt;</span>Mental state: smashing things<span class="xml-tag">&lt;/baseInspectLine&gt;</span>
+<span class="xml-tag">&lt;/MentalStateDef&gt;</span></pre>
+
+    <div class="callout callout-tip">
+      <strong>三條來源的優先級</strong>從思維樹頂往下看：<code>Constant tree（被俘/出口）</code> &gt; <code>MentalState</code> &gt; <code>Duty（有 Lord 時）</code> &gt; <code>日常勞動 JobGiver_Work</code> &gt; <code>需求</code> &gt; <code>閒晃 fallback</code>。你要插入的自訂行為該放在哪一層，取決於它的「不可抗拒程度」。</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §7 預約與路徑
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§7 預約與路徑：Reservation 與 Reach</div>
+
+    <p>RimWorld 用<strong>預約系統</strong>避免多個小人搶同一個目標或同一格。<code>Verse.AI.ReservationManager</code>（<code>map.reservationManager</code>）管理所有 target 預約。每個 Job 在開始前要「預約」它的目標，否則別人會插隊，或同一個目標被兩人同時施工。</p>
+
+    <h3>預約相關 API</h3>
+
+    <table>
+      <thead>
+        <tr><th>API</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>pawn.Reserve(target, job, maxPawns, stackCount, layer, errorOnFailed)</code></td>
+          <td>在 JobDriver.TryMakePreToilReservations 內預約。成功回 true</td>
+        </tr>
+        <tr>
+          <td><code>map.reservationManager.CanReserve(pawn, target, ...)</code></td>
+          <td>檢查能否預約（不真的佔用），WorkGiver 篩選用</td>
+        </tr>
+        <tr>
+          <td><code>pawn.CanReserve(target, maxPawns, stackCount, layer, ignoreOtherReservations)</code></td>
+          <td>Pawn 層的便捷封裝</td>
+        </tr>
+        <tr>
+          <td><code>pawn.CanReserveAndReach(target, peMode, danger, ...)</code></td>
+          <td>同時檢查預約 + 路徑可達 + 危險度（WorkGiver 標準守門）</td>
+        </tr>
+        <tr>
+          <td><code>map.reservationManager.ReleaseAllForTarget(thing)</code></td>
+          <td>手動釋放某 target 的所有預約（特殊情境）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>路徑可達：CanReach 與 PathEndMode</h3>
+
+    <p>「能不能走到」由 <code>pawn.CanReach(target, peMode, danger, ...)</code> 判定。<code>PathEndMode</code> 決定「走到哪裡才算到」，這個選錯會讓小人站錯位置或永遠到不了：</p>
+
+    <table>
+      <thead>
+        <tr><th>PathEndMode</th><th>抵達定義</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>OnCell</code></td><td>必須踩到 target 那一格本身</td></tr>
+        <tr><td><code>Touch</code></td><td>站在 target 相鄰（含斜角）任一格即可</td></tr>
+        <tr><td><code>ClosestTouch</code></td><td>走到最近的可觸碰格（Touch 的最佳化版）</td></tr>
+        <tr><td><code>InteractionCell</code></td><td>站在建築物指定的互動格（工作台、床等有固定操作位）</td></tr>
+        <tr><td><code>ClosestTouchUseShootingCheck</code></td><td>近身或可射擊位置（戰鬥用）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-danger">
+      <strong>"could not reserve" 紅字成因</strong>這是 modding 最常見的崩錯之一，通常是：(1) <strong>WorkGiver 沒檢查 CanReserve 就回 Job</strong>，導致兩個小人同時被指派；(2) <strong>JobDriver.TryMakePreToilReservations 回 true 但實際沒呼叫 pawn.Reserve</strong>，Toil 中途又去 Reserve 撞車；(3) <strong>maxPawns / stackCount 與工作實際需求不符</strong>（如要搬 30 個但只預約了 1）。對策：WorkGiver 端用 <code>CanReserveAndReach(forced)</code> 守門，JobDriver 端在 PreToil 確實預約同一批 target。</div>
+
+    <div class="callout callout-info">
+      <strong>forced 參數很重要</strong>當玩家右鍵「強制執行」時，引擎傳 <code>forced = true</code>。許多檢查（如工作優先序為 0、距離過遠）在 forced 時要放寬。把 forced 一路傳進 <code>CanReserveAndReach(..., forced)</code>，否則玩家強制命令會莫名失效。</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       §8 除錯
+  ═══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">§8 除錯：看穿小人的腦袋</div>
+
+    <p>AI 行為最難除錯，因為「小人不做我要的事」可能出在鏈條任何一環。RimWorld 的 Dev mode 提供了直接的思維樹檢視工具。先在設定開啟 Development mode。</p>
+
+    <h3>Dev mode 工具</h3>
+
+    <div class="g2">
+      <div class="card card-accent-blue">
+        <h3>View thinkTree</h3>
+        <p>Dev 工具列 → 選中一個 Pawn → 開啟 thinkTree 檢視。它會即時印出當前思維樹被遍歷的路徑，告訴你<strong>是哪個 ThinkNode 產出了當前 Job</strong>，以及為什麼其他節點被跳過。這是定位「我的 JobGiver 為何沒被選中」的首要工具。</p>
+      </div>
+      <div class="card card-accent-green">
+        <h3>Pawn debug / reportString</h3>
+        <p>選中 Pawn 後右下角會顯示 <code>JobDef.reportString</code> 解析後的當前工作描述。配合 Dev 的 "Pawn debug info" 可看 curJob、curDriver、目前在第幾個 Toil。</p>
+      </div>
+    </div>
+
+    <h3>用 Log 印出當前 Job 狀態</h3>
+
+<pre><span class="cm">// 臨時除錯：印出小人現在在做什麼、哪個 driver、第幾個 Toil</span>
+<span class="ty">Job</span> cur = pawn.CurJob;
+Log.<span class="nm">Message</span>($<span class="st">"[MyMod] {pawn.LabelShort} curJob="</span> +
+    $<span class="st">"{cur?.def.defName ?? \"(none)\"} "</span> +
+    $<span class="st">"targetA={cur?.targetA.ToStringSafe()} "</span> +
+    $<span class="st">"driver={pawn.jobs.curDriver?.GetType().Name}"</span>);
+
+<span class="cm">// 想知道為何 WorkGiver 沒給工作？手動跑一次它的判定</span>
+<span class="kw">var</span> wg = <span class="kw">new</span> <span class="ty">WorkGiver_RefuelCustomMachine</span>();
+Log.<span class="nm">Message</span>($<span class="st">"HasJobOnThing = {wg.HasJobOnThing(pawn, target, forced: false)}"</span>);
+Log.<span class="nm">Message</span>($<span class="st">"JobOnThing = {wg.JobOnThing(pawn, target)?.def.defName ?? \"null\"}"</span>);</pre>
+
+    <h3>最常見的 AI 卡死陷阱</h3>
+
+    <table>
+      <thead>
+        <tr><th>症狀</th><th>根因</th><th>修法</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>小人站著不動、Toil 永遠不結束</td>
+          <td>自製 Toil 忘了設 <code>defaultCompleteMode</code></td>
+          <td>明確設 <code>Instant</code> / <code>Delay</code>（配 defaultDuration）/ 用 FailOn 收尾</td>
+        </tr>
+        <tr>
+          <td>每 tick 反覆嘗試同工作、log spam</td>
+          <td>HasJobOnThing 回 true 但 JobOnThing 回 null（判定不一致）</td>
+          <td>對齊兩者的條件，尤其 CanReserveAndReach</td>
+        </tr>
+        <tr>
+          <td>"could not reserve X"</td>
+          <td>WorkGiver 沒守門 / PreToil 未真正 Reserve</td>
+          <td>WorkGiver 用 <code>CanReserveAndReach</code>，PreToil 確實 <code>pawn.Reserve</code></td>
+        </tr>
+        <tr>
+          <td>JobGiver 從不被選中</td>
+          <td>插入點優先序太低、或被上層 Conditional 擋掉</td>
+          <td>用 View thinkTree 看遍歷路徑；調整 insertPriority / 移除過嚴守衛</td>
+        </tr>
+        <tr>
+          <td>走到目標旁卻不工作</td>
+          <td>PathEndMode 選錯（如該用 InteractionCell 卻用 Touch）</td>
+          <td>GotoThing 與 CanReach 都改成正確的 PathEndMode</td>
+        </tr>
+        <tr>
+          <td>工作做到一半莫名中斷</td>
+          <td>FailOn 條件過嚴 / target 被其他 designation 改動</td>
+          <td>檢查 FailOnForbidden、FailOnDespawnedOrNull 是否誤觸發</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>EndJobWith 與 ReadyForNextToil</strong>若要在 tickAction 內手動結束 Toil，設 <code>readyForNextToil = true</code>（進下一個 Toil）；若要結束整個 Job，呼叫 <code>EndJobWith(JobCondition.Succeeded)</code> 或 <code>JobCondition.Incompletable</code>。混淆兩者會導致「跳過剩餘 Toil」或「Job 不結束」。</div>
+
+    <h3>除錯流程速查</h3>
+
+    <ol class="steps">
+      <li>小人不做工作？先開 <strong>View thinkTree</strong>，確認你的節點有沒有被遍歷到。</li>
+      <li>節點被遍歷但回 null？在 <code>TryGiveJob</code> / <code>JobOnThing</code> 加 Log，逐條印出篩選條件結果。</li>
+      <li>給了 Job 卻立刻中止？檢查 JobDriver 的 <code>TryMakePreToilReservations</code> 是否回 false，以及 FailOn 守衛。</li>
+      <li>開始做卻卡死？檢查每個自製 Toil 的 <code>defaultCompleteMode</code>。</li>
+      <li>"could not reserve"？對齊 WorkGiver 守門與 PreToil 預約的 target / count。</li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <strong>反編譯定位建議</strong>用 dnSpy 開 <code>Assembly-CSharp.dll</code>，這章涉及的型別集中在 <code>Verse.AI</code> 命名空間（<code>Pawn_JobTracker</code>、<code>JobDriver</code>、<code>Toil</code>、<code>ThinkNode_*</code>、<code>JobGiver_*</code>）與 <code>RimWorld</code>（<code>WorkGiver_*</code>、<code>WorkGiverDef</code>）。想學某個香草工作怎麼寫，直接找對應的 <code>JobDriver_XXX</code> 看它的 MakeNewToils——這是最好的範本來源。</div>
+  </div>
+
+</div>
+
+<footer>
+  RimWorld Modding 指南 · Chapter 29 AI 工作系統：Job、Toil、WorkGiver、ThinkTree · 內容以 .md 為真實來源，本頁為導覽呈現層
+</footer>
+
+</body>
+</html>
