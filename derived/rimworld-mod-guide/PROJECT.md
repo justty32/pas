@@ -37,7 +37,7 @@
 - [x] index.html「共 37 章」+「深入系統與 DLC」卡片區（28–36）
 - [x] 25–36 章程式碼範例對反編譯原始碼逐符號校對（12 章並行；修正大量虛構類別／錯誤欄位名／錯誤 namespace，詳見 session_log）
 - [x] 版本標示統一為 1.6（badge／footer／supportedVersions 範例；保留兩處「1.5 引入」歷史事實敘述）
-- [ ]（待定）logo 文字統一（02 頁為「RimWorld Modding」，其餘為「⚙ RimWorld Mod」）
+- [x] 品牌名稱統一：全站 logo＝「⚙ RimWorld Mod」；36 章 title／全站 footer 統一為「RimWorld Modding 指南」（修正 02/17/19/23 的「RimWorld Mod 指南」單數誤植，及 指南／入門指南 混用）；index 首頁 h1 保留全名「RimWorld Modding 入門指南」
 
 ## 對應 RimWorld 版本
 1.6（磁碟上的反編譯原始碼 `projects/rimworld/` 即 1.6，含 Gravship/Odyssey；校對一律以此為權威。部分章節含 1.4/1.5/1.6 多版本相容說明）
