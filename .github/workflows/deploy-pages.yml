@@ -28,6 +28,12 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Generate Markdown index
+        run: |
+          find . -type d \( -name .git -o -name .github \) -prune -o -type f -name '*.md' -print \
+            | sed 's|^\./||' | sort | jq -R . | jq -s -c . > md-index.json
+          echo "indexed $(jq length md-index.json) markdown files"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
