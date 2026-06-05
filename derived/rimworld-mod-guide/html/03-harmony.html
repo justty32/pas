@@ -189,10 +189,10 @@
     <span class="kw">static bool</span> <span class="nm">Prefix</span>(
         <span class="ty">Pawn_HealthTracker</span> __instance,   <span class="cm">// this</span>
         <span class="ty">DamageInfo</span>?        dinfo,          <span class="cm">// 原方法第一個參數（按名稱對應）</span>
-        <span class="ty">HediffDef</span>          hediffDef)      <span class="cm">// 原方法第二個參數</span>
+        <span class="ty">Hediff</span>             hediff)         <span class="cm">// 原方法第二個參數（型別/名稱須與原方法一致）</span>
     {
         <span class="cm">// Pawn_HealthTracker.pawn 是 internal，用 Traverse 或 ___pawn（三底線）存取</span>
-        <span class="ty">Pawn</span> pawn = __instance.<span class="nm">GetField</span><<span class="ty">Pawn</span>>(<span class="st">"pawn"</span>); <span class="cm">// 說明用；見 AccessTools 節</span>
+        <span class="ty">Pawn</span> pawn = <span class="ty">Traverse</span>.<span class="nm">Create</span>(__instance).<span class="nm">Field</span><<span class="ty">Pawn</span>>(<span class="st">"pawn"</span>).Value; <span class="cm">// 或在簽章加 Pawn ___pawn 參數，見 AccessTools 節</span>
 
         <span class="cm">// 若 pawn 具有「免疫倒地」的自訂 Hediff，阻止原方法</span>
         <span class="kw">if</span> (pawn.<span class="nm">health</span>.<span class="nm">hediffSet</span>.<span class="nm">HasHediff</span>(<span class="ty">MyHediffDefOf</span>.ImmuneToDown))
@@ -618,7 +618,7 @@
       <tr><td><code>Priority.Normal</code></td><td>400</td><td>預設值，一般情況</td></tr>
       <tr><td><code>Priority.Low</code></td><td>200</td><td>需要在其他 mod 修改後再調整</td></tr>
       <tr><td><code>Priority.VeryLow</code></td><td>100</td><td>最後執行的兜底邏輯</td></tr>
-      <tr><td><code>Priority.Last</code></td><td>0</td><td>絕對最後（比 VeryLow 更低）</td></tr>
+      <tr><td><code>Priority.Last</code></td><td>int.MinValue</td><td>絕對最後（比 VeryLow 更低；對稱的 <code>Priority.First</code> = int.MaxValue）</td></tr>
     </table>
 
     <div class="callout callout-info">

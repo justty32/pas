@@ -464,8 +464,7 @@ pawn.story.Childhood = <span class="ty">DefDatabase</span>&lt;<span class="ty">B
 pawn.story.Adulthood = <span class="ty">DefDatabase</span>&lt;<span class="ty">BackstoryDef</span>&gt;.<span class="nm">GetNamed</span>(<span class="st">"MyMod_AdultMercenary"</span>);
 
 <span class="cm">// 變更 backstory 後，技能與工作限制不會自動重算——需手動刷新</span>
-pawn.Notify_DisabledWorkTypesChanged();
-pawn.skills.<span class="nm">Notify_SkillDisablesChanged</span>();</pre>
+pawn.Notify_DisabledWorkTypesChanged();</pre>
 
     <div class="callout callout-warn">
       <strong>改 Backstory 後務必刷新衍生狀態</strong>
@@ -568,12 +567,12 @@ pawn.health.<span class="nm">AddHediff</span>(plague);
 
 <pre><span class="cm">// 成癮通常 = 化學依賴 Hediff + 耐受度 Hediff</span>
 <span class="kw">var</span> addiction = <span class="ty">HediffMaker</span>.<span class="nm">MakeHediff</span>(
-    <span class="ty">HediffDefOf</span>.AlcoholAddiction ?? <span class="ty">HediffDef</span>.<span class="nm">Named</span>(<span class="st">"AlcoholAddiction"</span>),
+    <span class="ty">HediffDef</span>.<span class="nm">Named</span>(<span class="st">"AlcoholAddiction"</span>),  <span class="cm">// 此 def 未被 HediffDefOf 快取，用 Named 取得</span>
     pawn);
 pawn.health.<span class="nm">AddHediff</span>(addiction);
 
-<span class="cm">// 也可用官方工具一步到位（會處理相關 Hediff 與耐受）</span>
-<span class="ty">AddictionUtility</span>.<span class="nm">CheckDrugAddictionTeachOpportunity</span>(pawn); <span class="cm">// 教學提示用</span></pre>
+<span class="cm">// 完整成癮還需配對「耐受度」Hediff（如 AlcoholTolerance），並設定 severity</span>
+<span class="ty">AddictionUtility</span>.<span class="nm">CheckDrugAddictionTeachOpportunity</span>(pawn); <span class="cm">// 此方法僅觸發教學提示，不建立 Hediff</span></pre>
 
     <h3>用 HediffGiver / 生成階段注入</h3>
 
@@ -623,8 +622,8 @@ pawn.health.<span class="nm">AddHediff</span>(addiction);
     qualityGenerator      = <span class="ty">QualityGenerator</span>.BaseGen
 };
 
-<span class="cm">// 用內建的「隨機武器組」ThingSetMaker 生成</span>
-<span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; loot = <span class="ty">ThingSetMakerDefOf</span>.MapGen_DefaultStockpile
+<span class="cm">// 用內建的「標準獎勵物品」ThingSetMaker 生成一組戰利品（吃上面設定的 parms）</span>
+<span class="ty">List</span>&lt;<span class="ty">Thing</span>&gt; loot = <span class="ty">ThingSetMakerDefOf</span>.Reward_ItemsStandard
     .root.<span class="nm">Generate</span>(parms);
 
 <span class="cm">// 把生成的物品放到地圖某格（near + 散落）</span>
@@ -715,9 +714,7 @@ pawn.health.<span class="nm">AddHediff</span>(addiction);
     <span class="kw">if</span> (!pawn.Spawned)
     {
         pawn.relations?.<span class="nm">ClearAllRelations</span>();      <span class="cm">// 斷開關係避免懸空</span>
-        <span class="ty">Find</span>.WorldPawns.<span class="nm">RemovePawn</span>(pawn);        <span class="cm">// 若已在世界池</span>
-        pawn.<span class="nm">Destroy</span>(<span class="ty">DestroyMode</span>.Vanish);
-        <span class="ty">Find</span>.WorldPawns.<span class="nm">PassToWorld</span>(pawn, <span class="ty">PawnDiscardDecideMode</span>.Discard);
+        <span class="ty">Find</span>.WorldPawns.<span class="nm">PassToWorld</span>(pawn, <span class="ty">PawnDiscardDecideMode</span>.Discard); <span class="cm">// 交世界池丟棄（未 spawn 勿用 Destroy）</span>
     }
 }</pre>
 
