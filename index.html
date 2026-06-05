@@ -198,10 +198,19 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);
   </div>
 </div>
 
+<!-- 全部 Markdown 文件瀏覽器（點資料夾展開，不需打字） -->
+<div class="section">
+  <div class="section-title">瀏覽全部 Markdown 文件</div>
+  <p style="color:var(--muted);font-size:.82rem;margin-bottom:12px;">
+    點資料夾展開、點檔案即用 md 檢視器開啟。清單於每次部署自動更新。</p>
+  <md-file-browser manifest="md-index.json" viewer="md.html"></md-file-browser>
+</div>
+
 <footer>
   PAS · Project Analysis System &nbsp;|&nbsp; 內容真相層為各目錄下的 <code>.md</code> 文件，HTML 為導覽呈現層
 </footer>
 
 </div><!-- /max-width -->
+<script src="md-browser.js" defer></script>
 </body>
 </html>
