@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PAS — Markdown 檢視器</title>
+<link rel="stylesheet" href="_shared.css">
+<!-- GitHub 風格 Markdown 排版（暗色） -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown-dark.min.css">
+<!-- highlight.js 程式碼高亮（暗色） -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/styles/github-dark.min.css">
+<style>
+  .wrap{max-width:1000px;margin:0 auto;padding:0 4px;}
+  .doc-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:18px 0 14px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;}
+  .doc-bar .path{font-family:monospace;font-size:.8rem;color:var(--muted);}
+  .doc-bar .path b{color:var(--blue);}
+  .doc-bar .actions a{font-size:.78rem;margin-left:14px;}
+  .markdown-body{background:transparent;}
+  /* 讓 markdown-body 融入站台暗底 */
+  body{background:var(--bg);}
+  .markdown-body pre{background:#161b22;}
+  .mermaid{background:#0d1117;text-align:center;border:1px solid var(--border);
+    border-radius:8px;padding:14px;margin:14px 0;}
+  #status{padding:40px 0;color:var(--muted);font-size:.9rem;}
+  #status.err{color:var(--red);}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">PAS</span>
+  <a href="index.html">導覽首頁</a>
+  <a href="md.html?doc=readme.md" data-doc="readme.md">工作區說明</a>
+  <a href="md.html?doc=index.md" data-doc="index.md">分析索引</a>
+  <a href="md.html?doc=CLAUDE.md" data-doc="CLAUDE.md">CLAUDE.md</a>
+</nav>
+
+<div class="wrap">
+  <div class="doc-bar">
+    <span class="path">📄 <b id="docpath"></b></span>
+    <span class="actions">
+      <a href="index.html">← 回導覽首頁</a>
+      <a id="rawlink" href="#" target="_blank" rel="noopener">原始檔 ↗</a>
+    </span>
+  </div>
+  <div id="status">載入中…</div>
+  <article id="content" class="markdown-body"></article>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad:false, theme:'dark', securityLevel:'loose' });
+
+  // ── 取得並淨化 doc 參數 ──
+  const params = new URLSearchParams(location.search);
+  let doc = params.get('doc') || 'readme.md';
+  doc = doc.replace(/^\/+/, '');                 // 去開頭斜線
+  if (/:\/\//.test(doc) || doc.split('/').includes('..')) doc = 'readme.md'; // 擋協定與上跳
+
+  const baseDir = doc.includes('/') ? doc.slice(0, doc.lastIndexOf('/')) : '';
+  document.getElementById('docpath').textContent = doc;
+  document.title = 'PAS — ' + doc;
+  const raw = document.getElementById('rawlink'); raw.href = doc;
+
+  // 導覽列 active 狀態
+  document.querySelectorAll('nav a[data-doc]').forEach(a => {
+    if (a.dataset.doc === doc) a.classList.add('active');
+  });
+
+  // 相對路徑正規化（相對於 baseDir）
+  function resolvePath(base, rel) {
+    if (/^([a-z]+:)?\/\//i.test(rel) || rel.startsWith('#') || rel.startsWith('/')) return rel;
+    const stack = base ? base.split('/') : [];
+    for (const part of rel.split('/')) {
+      if (part === '' || part === '.') continue;
+      if (part === '..') stack.pop(); else stack.push(part);
+    }
+    return stack.join('/');
+  }
+
+  const statusEl = document.getElementById('status');
+  const contentEl = document.getElementById('content');
+
+  fetch(doc, { cache: 'no-cache' })
+    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.text(); })
+    .then(md => {
+      marked.setOptions({ gfm: true, breaks: false });
+      contentEl.innerHTML = marked.parse(md);
+      statusEl.style.display = 'none';
+
+      // mermaid：把 language-mermaid 的程式碼塊轉成 <pre class="mermaid">
+      contentEl.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const pre = document.createElement('pre');
+        pre.className = 'mermaid';
+        pre.textContent = code.textContent;
+        code.parentElement.replaceWith(pre);
+      });
+
+      // 其餘程式碼塊高亮
+      contentEl.querySelectorAll('pre code:not(.language-mermaid)').forEach(b => hljs.highlightElement(b));
+
+      // 改寫相對連結：.md → 用本檢視器開；其餘相對連結/圖片 → 修正成相對 repo 根
+      contentEl.querySelectorAll('a[href]').forEach(a => {
+        const href = a.getAttribute('href');
+        if (!href || /^([a-z]+:)?\/\//i.test(href) || href.startsWith('#')) return;
+        const [path, hash] = href.split('#');
+        const resolved = resolvePath(baseDir, path);
+        if (/\.md$/i.test(path)) {
+          a.setAttribute('href', 'md.html?doc=' + encodeURIComponent(resolved) + (hash ? '#' + hash : ''));
+        } else {
+          a.setAttribute('href', resolved + (hash ? '#' + hash : ''));
+        }
+      });
+      contentEl.querySelectorAll('img[src]').forEach(img => {
+        const src = img.getAttribute('src');
+        if (src && !/^([a-z]+:)?\/\//i.test(src) && !src.startsWith('/')) {
+          img.setAttribute('src', resolvePath(baseDir, src));
+        }
+      });
+
+      // 渲染 mermaid 圖
+      const nodes = contentEl.querySelectorAll('.mermaid');
+      if (nodes.length) mermaid.run({ nodes });
+
+      // 若帶 #anchor，捲動到對應標題
+      if (location.hash) {
+        const t = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+        if (t) t.scrollIntoView();
+      }
+    })
+    .catch(err => {
+      statusEl.className = 'err';
+      statusEl.innerHTML = '無法載入 <code>' + doc + '</code>：' + err.message +
+        '<br><a href="index.html">← 回導覽首頁</a>';
+    });
+</script>
+</body>
+</html>
