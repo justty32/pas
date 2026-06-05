@@ -15,8 +15,9 @@
 - 2026-06-05 新增 14-research-production.html（研究與生產鏈，§1~§10：ResearchProjectDef、ResearchTabDef佈局、C#查詢解鎖(FinishProject/IsFinished)、RecipeDef、IngredientCount+ThingFilter、工作台ThingDef(WorkGiver_DoBill/billGiver)、Bill系統(BillStack/RecipeWorkerCounter)、自訂RecipeWorker(Notify_IterationCompleted)、StatDef+StatPart效率、常見坑），17 連結 nav，active=14。
 
 ## 進度快照（接上用）
-- 當前理解：8 頁 HTML 指南已全部完成且 nav 一致，內容齊全。
-- 剩餘待辦：(選用) 統一 02 頁 logo 文字；(選用) 校對各頁程式碼範例正確性；(選用) 加 Preview/截圖。
+- 當前理解：27 頁 HTML 指南全部完成，nav／active／logo 已全站統一（驗證通過）。
+- 2026-06-05 nav 統一驗證：28 頁 nav 連結全一致（總覽+01~27）、每頁 active 標記正確、logo 文字 28 頁皆「⚙ RimWorld Mod」→ 結論：nav 統一已完成，無需修改（舊待辦過時）。
+- 剩餘待辦：(選用) 校對各頁程式碼範例正確性；(選用) 加 Preview/截圖。
 - 2026-06-05 新增 12-incidents-storyteller.html（事件與敘事者，§0~§10：資料流/IncidentDef/IncidentWorker(CanFireNowSub+TryExecuteWorker)/IncidentParms/三型別完整範例(襲擊+訪客+天氣)/Storyteller架構/三大Comp(OnOffCycle+RandomMain+FactionInteraction)/威脅點數/LetterDef/GameCondition/除錯坑），17 連結 nav，active=12。
 - 2026-06-05 新增 20-needs-mood-thoughts.html（需求心情想法，總覽資料流+10 大節：NeedDef/自訂Need(NeedInterval+CurLevel)、啟用need(ShouldHaveNeed)、ThoughtDef(stages/durationDays/stackLimit)、Memory vs Situational、TryGainMemory、MoodOffset+崩潰閾值、MentalStateDef/MentalBreakDef、ThoughtWorker、trait的nullify/thoughtOffset、常見坑），暫用簡易 2 連結 nav（待全站統一覆蓋）。
 - 2026-06-05 新增 15-combat-damage.html（戰鬥與傷害系統，§1~§10：DamageDef(workerClass/armorCategory/harmAllLayersUntilOutside/deathMessage)、DamageWorker階層+DamageInfo struct、C#主動造傷(TakeDamage/DamageResult)、Verb系統(VerbProperties/Verb_Shoot/MeleeAttack/LaunchProjectile)、自訂Verb覆寫TryCastShot、ProjectileDef+Projectile.Impact、護甲三檔機率模型+ArmorUtility.GetPostArmorDamage(穿透=扣評分,Sharp降級Blunt)、BodyPartDef/BodyDef coverage命中部位、Tool+ToolCapacityDef近戰、常見坑)，17 連結 nav，active=15。
