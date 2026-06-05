@@ -404,9 +404,9 @@ pawn.pather.StopDead();  <span class="cm">// 取消正在走的路徑</span></pr
 
       <div class="recipe">
         <div class="recipe-desc"><b>地圖特效 Mote</b>（煙霧 / 火花圖示）</div>
-<pre><span class="ty">MoteMaker</span>.MakeStaticMote(
-    cell.ToVector3Shifted(), map,
-    <span class="ty">ThingDefOf</span>.Mote_Stun, scale: <span class="nu">1.5f</span>);</pre>
+<pre><span class="cm">// 1.5 輕量特效多用 Fleck（不需查 Mote ThingDef）</span>
+<span class="ty">FleckMaker</span>.ThrowSmoke(cell.ToVector3Shifted(), map, <span class="nu">1.5f</span>);
+<span class="cm">// 火花：FleckMaker.ThrowMicroSparks(loc, map);</span></pre>
       </div>
     </div>
 
@@ -443,9 +443,12 @@ pawn.pather.StopDead();  <span class="cm">// 取消正在走的路徑</span></pr
 
       <div class="recipe">
         <div class="recipe-desc"><b>延遲執行</b>（N tick 後跑一段程式）</div>
-<pre><span class="kw">long</span> fireAt = <span class="ty">Find</span>.TickManager.TicksGame + <span class="nu">300</span>;
-<span class="ty">Find</span>.TickManager.later.ScheduleCallback(
-    () =&gt; <span class="ty">Log</span>.Message(<span class="st">"5 秒後執行"</span>), <span class="nu">300</span>);</pre>
+<pre><span class="cm">// RimWorld 無通用排程器；存下目標 tick，在 GameComponent/Comp 的 Tick() 內比對</span>
+<span class="kw">long</span> fireAt = <span class="ty">Find</span>.TickManager.TicksGame + <span class="nu">300</span>;
+<span class="cm">// ── 於 Tick() 內 ──</span>
+<span class="kw">if</span> (<span class="ty">Find</span>.TickManager.TicksGame &gt;= fireAt) {
+    <span class="ty">Log</span>.Message(<span class="st">"5 秒後執行"</span>);  fireAt = <span class="kw">long</span>.MaxValue; <span class="cm">// 重設/停用</span>
+}</pre>
       </div>
 
       <div class="recipe">

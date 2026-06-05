@@ -494,8 +494,8 @@ MyMod/
 <span class="ty">Pawn</span> pawn = ...;
 pawn.<span class="nm">Drawer</span>.<span class="nm">renderer</span>.<span class="nm">SetAllGraphicsDirty</span>();   <span class="cm">// 1.5：重建 render tree</span>
 
-<span class="cm">// 取頭髮 / 身體的著色 Graphic（1.4 風格）</span>
-<span class="ty">Graphic</span> bodyGraphic = pawn.<span class="nm">Drawer</span>.<span class="nm">renderer</span>.<span class="nm">BodyGraphic</span>;
+<span class="cm">// 取身體著色 Graphic：1.4 經 PawnGraphicSet；1.5 改 render tree，無單一等價屬性</span>
+<span class="ty">Graphic</span> bodyGraphic = pawn.<span class="nm">Drawer</span>.<span class="nm">renderer</span>.graphics.nakedGraphic;  <span class="cm">// 僅 1.4（無 BodyGraphic 屬性）</span>
 
 <span class="cm">// 自訂裝備穿戴貼圖（需 Harmony patch ApparelGraphicRecordGetter</span>
 <span class="cm">// 或實作 PawnRenderNodeWorker，視版本而定）</span></pre>
