@@ -7,6 +7,7 @@
 | 專案名稱 | 類型 | 分析深度 | 狀態 | 核心內容摘要 |
 | :--- | :--- | :--- | :--- | :--- |
 | **RimWorld** | 遊戲模組/引擎 | 高 (Architecture+Tutorial) | 已遷移 | 包含 AI、派系、地圖系統與豐富的 C# 開發教學。 |
+| **RimWorld Mods（群組）** | RimWorld 1.6 Workshop mod 分析群組 | 中 (Architecture+Tutorial, create 導向) | 分析中 (2026-06-06) | `analysis/rimworld_mods/`，反編譯/源碼在 `projects/rimworld_mods/`。三 mod：**Vanilla Outposts Expanded**（自治營地，引擎在 VEF 的 Outposts.dll；產資源型 outpost＝純 XML，互動服務型需 C#；現行 outpost 不會被襲擊、raidPoints 為死欄位，唯一襲擊設計是反向的 Outpost_Defensive 削減主基地 raid）／**Custom Quest Framework**（遊戲內任務編輯器＋CQFAction 腳本，純 XML 覆蓋 90%+，自帶 `.QuestEditor_Library/` 原始碼＋SKILL.md）／**SpeakUp 畅所欲言**（純本地 GrammarResolver 規則對話、不接 LLM，依賴 Interaction Bubbles，擴充走 Patches 注入或 ExtraGrammarUtility 改碼）。詳見 `analysis/rimworld_mods/README.md`。 |
 | **Airships: CtS** | 飛行戰艦策略遊戲 (Java) | 高 (Level 1-3, C++重寫導向) | 分析中 | CFR 反編譯 game.jar→`projects/airships-cts/src/`（691 .java）；6 份子系統分析＋C++ 重寫路線圖。核心：確定性鎖步多人、Loadable 資料系統(71 型別)、雙層戰術 Combat/戰略 Campaign、評分式 AI、2D 法線光照渲染。 |
 | **Skyrim Mod** | 遊戲模組 | 極高 (Classified) | 已遷移 | 深度分類分析 (NPC, Magic, 3D)，含 CommonLibSSE-NG。 |
 | **Luanti (Minetest)**| 遊戲引擎 | 極高 (Level 1-12) | 已遷移 | 完整的引擎剖析、Lua API 綁定、渲染管線與 13 篇開發教學。 |

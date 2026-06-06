@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    建置：在有 RimWorld 參考組件的機器上執行
+        dotnet build Source/SpeakUpContextExpansion.csproj -c Release
+    或（mono）
+        msbuild Source/SpeakUpContextExpansion.csproj /p:Configuration=Release
+
+    各參考組件路徑可由下列屬性覆寫（預設為本機 Linux Steam 安裝路徑，已驗證存在）：
+      RimWorldManaged   RimWorld 的 Managed 目錄（含 Assembly-CSharp.dll、UnityEngine*.dll）
+      HarmonyDll        0Harmony.dll
+      SpeakUpDll        SpeakUp.dll
+      BubblesDll        Bubbles.dll（編譯期不直接用，列出以便日後擴充顯示端）
+    例：dotnet build ... /p:RimWorldManaged=/path/to/Managed
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>SpeakUpContextExpansion</AssemblyName>
+    <RootNamespace>SpeakUpContextExpansion</RootNamespace>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <!-- 編好的 DLL 直接落到 mod 的 1.6/Assemblies/ -->
+    <OutputPath>..\1.6\Assemblies\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!-- 參考組件位置（可由命令列 /p: 覆寫）。預設＝本機已驗證路徑。 -->
+  <PropertyGroup>
+    <RimWorldManaged Condition=" '$(RimWorldManaged)' == '' ">$(HOME)/.local/share/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed</RimWorldManaged>
+    <HarmonyDll Condition=" '$(HarmonyDll)' == '' ">$(HOME)/.local/share/Steam/steamapps/workshop/content/294100/2009463077/Current/Assemblies/0Harmony.dll</HarmonyDll>
+    <SpeakUpDll Condition=" '$(SpeakUpDll)' == '' ">$(HOME)/.local/share/Steam/steamapps/workshop/content/294100/3445623063/1.6/Assemblies/SpeakUp.dll</SpeakUpDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="SpeakUpContextExpansionMod.cs" />
+    <Compile Include="ExtraRulesInjector.cs" />
+    <Compile Include="ColonyDeathTracker.cs" />
+    <Compile Include="Pawn_Kill_Patch.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(RimWorldManaged)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(RimWorldManaged)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(RimWorldManaged)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(HarmonyDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SpeakUp">
+      <HintPath>$(SpeakUpDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

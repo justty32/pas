@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  把三個新情境變數對應的台詞，注入原版 Chitchat 的 logRulesInitiator/rulesStrings。
+  寫法與順序慣例參照 SpeakUp 既有 1.6/Patches/z_add_chitchat_nearest.xml:3。
+  檔名 zzz_ 前綴：確保在 SpeakUp 的 z_* 之後套用，避免被其 PatchOperationReplace 整段覆蓋。
+
+  可用的新關鍵字（由本 mod C# 端 ExtraRulesInjector 注入）：
+    COLONY_DANGER            none / low / high
+    INITIATOR_drafted        是 / 否
+    COLONY_FOOD_DAYS         數值（天），用 &lt; 比較
+    COLONY_DAYS_SINCE_DEATH  數值（天）；無死亡時此關鍵字不存在
+  數值比較依賴 SpeakUp 的 RuleEntry_ValidateConstantConstraints 擴充（已支援 &lt; &gt; &lt;= &gt;= == !=）。
+-->
+<Patch>
+  <Operation Class="PatchOperationAdd">
+    <xpath>/Defs/InteractionDef[defName = "Chitchat"]/logRulesInitiator/rulesStrings</xpath>
+    <value>
+
+      <!-- =================================================================== -->
+      <!-- 情境 1：戰鬥 / 受威脅                                                 -->
+      <!-- =================================================================== -->
+
+      <!-- 高威脅 + 自己被徵召：臨戰對話 -->
+      <li>r_logentry(COLONY_DANGER==high,INITIATOR_drafted==是,priority=6)->[ce_combat_drafted]</li>
+        <li>ce_combat_drafted->进入战斗位置！别愣着，准备战斗！</li>
+        <li>ce_combat_drafted->敌人就在外面，握紧你的武器！</li>
+        <li>ce_combat_drafted(INITIATOR_trait==格斗者)->终于有架打了，我等这一刻很久了！</li>
+        <li>ce_combat_drafted(INITIATOR_trait==胆小如鼠)->我…我真的必须上场吗？我好害怕。</li>
+        <li>ce_combat_drafted->听我口令，保持队形，别落单！</li>
+
+      <!-- 高威胁但自己未被徵召：後方緊張 -->
+      <li>r_logentry(COLONY_DANGER==high,INITIATOR_drafted==否,priority=5)->[ce_threat_high]</li>
+        <li>ce_threat_high->外面在打仗，我们躲好别添乱。</li>
+        <li>ce_threat_high->天哪，希望守在外面的人能挡住他们。</li>
+        <li>ce_threat_high->这么大的动静…我们真的守得住吗？</li>
+        <li>ce_threat_high(INITIATOR_mood&lt;0.4)->我快撑不住了，外面还在打…</li>
+
+      <!-- 低度威脅：警戒但未到危急 -->
+      <li>r_logentry(COLONY_DANGER==low,priority=4)->[ce_threat_low]</li>
+        <li>ce_threat_low->我总觉得外面不太对劲，提高警惕吧。</li>
+        <li>ce_threat_low->最近不太平，随身带好东西比较好。</li>
+
+      <!-- =================================================================== -->
+      <!-- 情境 2：糧食危機（可吃天數 COLONY_FOOD_DAYS）                          -->
+      <!-- 注意：在威脅期間優先說戰鬥相關，故糧食 rule 的 priority 設較低。           -->
+      <!-- =================================================================== -->
+
+      <!-- 不到 1 天的存糧：危急 -->
+      <li>r_logentry(COLONY_FOOD_DAYS&lt;1,COLONY_DANGER==none,priority=5)->[ce_food_critical]</li>
+        <li>ce_food_critical->我们的存粮快见底了，再不想办法就要饿肚子了。</li>
+        <li>ce_food_critical->仓库几乎空了…接下来吃什么？</li>
+        <li>ce_food_critical(INITIATOR_trait==贪食者)->没有吃的对我来说简直是酷刑！</li>
+
+      <!-- 1~3 天存糧：吃緊 -->
+      <li>r_logentry(COLONY_FOOD_DAYS&lt;3,COLONY_FOOD_DAYS&gt;=1,COLONY_DANGER==none,priority=3)->[ce_food_low]</li>
+        <li>ce_food_low->存粮不太够了，我们得抓紧多种点、多打点猎物。</li>
+        <li>ce_food_low->口粮要省着点吃了，最近收成不好。</li>
+
+      <!-- =================================================================== -->
+      <!-- 情境 3：近期殖民者死亡（COLONY_DAYS_SINCE_DEATH，無死亡時關鍵字不存在）    -->
+      <!-- =================================================================== -->
+
+      <!-- 死亡發生在 1 天內：剛失去同伴 -->
+      <li>r_logentry(COLONY_DAYS_SINCE_DEATH&lt;1,priority=6)->[ce_death_fresh]</li>
+        <li>ce_death_fresh->我还没法接受…我们刚刚失去了一个人。</li>
+        <li>ce_death_fresh->今天大家都别说太多了，心里堵得慌。</li>
+        <li>ce_death_fresh(INITIATOR_trait==冷酷无情)->死了就是死了，日子还得过。</li>
+        <li>ce_death_fresh(INITIATOR_mood&lt;0.4)->我满脑子都是刚才的事…太难受了。</li>
+
+      <!-- 死亡發生在近 3 天：仍在哀悼 -->
+      <li>r_logentry(COLONY_DAYS_SINCE_DEATH&lt;3,COLONY_DAYS_SINCE_DEATH&gt;=1,priority=4)->[ce_death_recent]</li>
+        <li>ce_death_recent->这几天我一直想着走的那个人。</li>
+        <li>ce_death_recent->基地里好像还少了点什么…我们都还没缓过来。</li>
+        <li>ce_death_recent->愿他安息。我们会撑下去的。</li>
+
+    </value>
+  </Operation>
+</Patch>

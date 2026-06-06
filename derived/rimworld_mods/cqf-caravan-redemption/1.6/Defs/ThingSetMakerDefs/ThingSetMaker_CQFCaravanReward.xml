@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!--
+    固定白銀獎勵的 ThingSetMaker。
+    沿用原版 ThingSetMaker_StackCount + fixedParams 寫法
+    （參照 Core/Defs/ThingSetMakerDefs/ThingSetMakers_Misc.xml::DebugCaravanInventory）。
+    由 QuestNode_GenerateThingSet 生成 -> QuestNode_DropPods 投放。
+  -->
+  <ThingSetMakerDef>
+    <defName>CQFCaravanRedemption_RewardSilver</defName>
+    <root Class="ThingSetMaker_StackCount">
+      <fixedParams>
+        <filter>
+          <thingDefs>
+            <li>Silver</li>
+          </thingDefs>
+        </filter>
+        <countRange>200~400</countRange>
+      </fixedParams>
+    </root>
+  </ThingSetMakerDef>
+
+</Defs>

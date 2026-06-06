@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!--
+    流民商隊的償還 — CQF 純 XML 可行性驗證任務
+    ============================================
+    證明點：QuestNode_DoCQFActions + CQFAction_Message 能被原版任務系統執行。
+    欄位名全部對照反編譯 SaveToXElement()/ExposeData() 與作者 SKILL.md：
+      - QuestNode_DoCQFActions : inSignal(SlateRef<string>), actions(List<CQFAction>)  (decompiled.cs:32791)
+      - CQFAction_Message      : message(翻譯key), type(MessageTypeDef)                (decompiled.cs:618)
+      - CQFAction_SentSignal   : signal, addQuestPrefix, signalIsOnlyValidInPart        (decompiled.cs:447)
+    獎勵走原版節點（CQFAction_Spawn 在空 targets 下找不到地圖目標，故不用於發獎）：
+      - QuestNode_GenerateThingSet -> QuestNode_DropPods
+        （參照 Core/Defs/QuestScriptDefs/Scripts_Utility_RewardsCore.xml）
+  -->
+  <QuestScriptDef>
+    <defName>CQFCaravanRedemption</defName>
+
+    <!-- 讓說書人有機會隨機選到；rootMinPoints=0 代表早期即可出 -->
+    <rootSelectionWeight>1</rootSelectionWeight>
+    <rootMinPoints>0</rootMinPoints>
+    <expireDaysRange>5~10</expireDaysRange>
+
+    <questNameRules>
+      <rulesStrings>
+        <li>questName->流民商隊的償還</li>
+      </rulesStrings>
+    </questNameRules>
+    <questDescriptionRules>
+      <rulesStrings>
+        <li>questDescription->一支流民商隊曾在風雪中受過你殖民地的接濟。如今他們循著舊路返回，捎來一筆白銀作為償還，以及一句遲到的謝意。</li>
+      </rulesStrings>
+    </questDescriptionRules>
+
+    <root Class="QuestNode_Sequence">
+      <nodes>
+
+        <!-- (1) CQF 證明點：任務生成時（inSignal 留空＝吃任務 initiate 信號）跳一則開場白 + 發一個信號 -->
+        <li Class="QuestEditor_Library.QuestNode_DoCQFActions">
+          <actions>
+            <li Class="QuestEditor_Library.CQFAction_Message">
+              <message>CQF_CaravanRedemption_OpeningMessage</message>
+              <type>PositiveEvent</type>
+            </li>
+            <li Class="QuestEditor_Library.CQFAction_SentSignal">
+              <signal>CaravanArrived</signal>
+              <addQuestPrefix>true</addQuestPrefix>
+            </li>
+          </actions>
+        </li>
+
+        <!-- (2) 生成固定白銀獎勵物到 slate 變數 -->
+        <li Class="QuestNode_GenerateThingSet">
+          <thingSetMaker>CQFCaravanRedemption_RewardSilver</thingSetMaker>
+          <storeAs>cqfCaravanRewardThings</storeAs>
+        </li>
+
+        <!-- (3) 用原版投放艙把獎勵送到殖民地，附帶標準信件。
+             注意：customLetterLabel/customLetterText 走 QuestGen 規則文字（非 Translate key），
+             因此這裡直接給可讀文字，不寫翻譯 key。 -->
+        <li Class="QuestNode_DropPods">
+          <contents>$cqfCaravanRewardThings</contents>
+          <sendStandardLetter>true</sendStandardLetter>
+          <useTradeDropSpot>true</useTradeDropSpot>
+          <customLetterLabel>流民商隊的償還</customLetterLabel>
+          <customLetterText>那支曾受你接濟的流民商隊送來了一筆白銀，作為當年的償還。</customLetterText>
+        </li>
+
+      </nodes>
+    </root>
+  </QuestScriptDef>
+
+</Defs>

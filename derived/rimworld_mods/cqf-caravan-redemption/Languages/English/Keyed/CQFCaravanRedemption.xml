@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+  <!-- CQFAction_Message.message is passed through Translator.Translate (decompiled.cs:680), so it is a translation key -->
+  <CQF_CaravanRedemption_OpeningMessage>The Caravan's Redemption: a band of refugee traders you once sheltered has returned along the old snowbound road, bringing a long-overdue word of thanks.</CQF_CaravanRedemption_OpeningMessage>
+</LanguageData>
