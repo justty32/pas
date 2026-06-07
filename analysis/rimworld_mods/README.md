@@ -11,6 +11,7 @@
 | **Vanilla Outposts Expanded** | `vanillaexpanded.outposts` / 2688941031 | 世界地圖自治營地：定時產資源/提供服務。引擎在 VEF 的 `Outposts.dll` | **產資源型＝純 XML**（繼承 `OutpostBase`＋`OutpostExtension.ResultOptions`）；互動服務型才需 C# | `vanilla-outposts-expanded/tutorial/01_add_outpost_xml.md` |
 | **Custom Quest Framework** | `HaiLuan.CustomQuestFramework` / 2978572782 | 遊戲內視覺化任務/地圖/物件編輯器＋領域腳本（`QuestScriptDef`＋`CQFAction`） | **純 XML 覆蓋 90%+**：`QuestNode_DoCQFActions` 裝既有 100+ 個 `CQFAction`；新副作用才繼承 `CQFAction_Target` 寫 C# | `custom-quest-framework/tutorial/01_add_custom_quest.md` |
 | **SpeakUp 畅所欲言** | `cn.speakup.ttyet` / 3445623063（依賴 Interaction Bubbles `Jaxe.Bubbles` / 1516158345） | 純本地 `GrammarResolver` 語法規則驅動的動態對話，**不接 LLM/網路**；與 Bubbles 經原版 `PlayLog` 解耦 | **A 純資料**（`1.6/Patches/` 加 `PatchOperation` 注入對話）／**B 改碼**（`ExtraGrammarUtility.cs::ExtraRules` 加情境變數） | `speakup/details/extension_points.md` |
+| **Interaction Bubbles** | `Jaxe.Bubbles` / 1516158345（作者 © Jaxe；SpeakUp 的顯示層依賴） | 把社交互動畫成小人頭上漫畫對話泡泡的**純 UI mod**：零 Def/零 XML 資料層，全機制＝C#＋反射＋4 patch（1116 行單檔）。唯一捕獲點＝`PlayLog.Add` Postfix；文字直接用原版 `Entry.ToGameStringFromPOV` | **沒有資料層可擴充**：純 XML 只能換 9-slice 貼圖＋翻譯；行為全須 fork C#。真正價值＝三可複用範式（`PlayLog.Add` 通用互動捕獲點／小人頭上跟隨浮動 UI／反射零樣板 ModSettings） | `interaction-bubbles/details/extension_points.md` |
 
 ### 第二批：載具/傳送門三件套（依賴鏈 Vehicle Framework ← SimplePortal ← RV with PD，皆作者 Furia 除框架本體）
 
@@ -95,6 +96,7 @@
 ## 重要備註
 - **CQF 自帶權威 schema**：mod 目錄內 `<MOD>/.QuestEditor_Library/` 有作者原始碼樹＋4 份 `Skill/*/SKILL.md`（`cqf-overview`/`cqf-def-catalog`/`cqf-action-condition-dev`/`cqf-map-dev`），做 create 時優先參考。
 - **SpeakUp 不是 AI 對話**：目前完全是模板規則；若想「接 LLM 讓對話更聰明」是全新對話來源接點（B 類改碼），非改 XML 模板。
+- **Interaction Bubbles 是顯示層、`PlayLog.Add` 是通用互動捕獲點**：Bubbles 零 Def/零 XML，無資料層可擴充（純 XML 只能換貼圖+翻譯）。但它示範的 `PlayLog.Add` Postfix 是「小人社交互動發生」最全面的鉤子——自動吃到 SpeakUp 等他 mod 寫進 PlayLog 的文字，配 `Entry.ToGameStringFromPOV(pawn)` 取在地化字串。想做「浮動文字/LLM 對話泡泡/互動觸發事件」的衍生都應接這裡＋自訂文字來源，**不要改 Bubbles 本身**。SpeakUp↔Bubbles 經原版 PlayLog/LogEntry 解耦＝「內容生成」與「顯示」分離的範本。
 - **VOE outpost 現行不會被襲擊**：`raidPoints`/`raidFaction` 是死欄位，About 描述過時；唯一的「襲擊設計」是反向（`Outpost_Defensive` 削減打主基地的 raid）。詳見 `vanilla-outposts-expanded/details/raid_and_attack_design.md`。
 - **Vehicle Framework 不附具體載具**：框架只給 `Base*` 抽象 Def，卡車/船/直升機由內容 mod（如 Vanilla Vehicles Expanded）提供；那些抽象 Def 即「如何定義載具」的權威範本。
 - **RV 的 SimplePortal comp 是被注入的**：`CompSimplePortal` 由 SimplePortal 自己 patch 進 `BaseVehiclePawn`（`Patch_Vehicles.xml`），不是 RV 加的——做衍生載具不必手動加。RV 的 `VehicleFrameworkFix.dll` 修的是 `Map.Index` 複用導致 `VehiclePathingSystem` 快取錯亂。
