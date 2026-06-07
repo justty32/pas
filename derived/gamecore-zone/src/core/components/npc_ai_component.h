@@ -8,9 +8,10 @@ namespace zone {
 struct NpcAiComponent {
     bool alerted{ false };
     int  alert_turns{ 0 };
+    bool is_caster{ false };   // true：相鄰英雄時施放 nova 技能（資料驅動）
 
     template<class Archive>
-    void serialize(Archive& ar) { ar(alerted, alert_turns); }
+    void serialize(Archive& ar) { ar(alerted, alert_turns, is_caster); }
 };
 
 } // namespace zone

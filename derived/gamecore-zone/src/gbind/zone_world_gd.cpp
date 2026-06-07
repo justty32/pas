@@ -8,6 +8,14 @@
 #include "core/components/combat_stats_component.h"
 #include "core/components/hero_component.h"
 #include "core/components/world_state_component.h"
+#include "core/components/energy_component.h"
+#include "core/components/player_controlled_component.h"
+#include "core/turn/action.h"
+#include "core/turn/move_dir.h"
+#include "core/turn/npc_brain.h"
+#include "core/turn/timed_effect.h"
+#include "core/components/ongoing_action_component.h"
+#include "core/components/energy_component.h"
 #include "core/maps/map_data.h"
 #include "core/maps/map_gen.h"
 #include "core/systems/npc_ai_system.h"
@@ -19,6 +27,7 @@
 #include <filesystem>
 #include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/color.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
 
@@ -44,6 +53,22 @@ void zone_gd::ZoneWorld::_bind_methods() {
     ClassDB::bind_method(D_METHOD("generate_map_image", "cell_px"), &ZoneWorld::generate_map_image);
     ClassDB::bind_method(D_METHOD("move", "dx", "dy"), &ZoneWorld::move);
     ClassDB::bind_method(D_METHOD("wait_turn"), &ZoneWorld::wait_turn);
+    ClassDB::bind_method(D_METHOD("set_scheduler_mode", "mode"), &ZoneWorld::set_scheduler_mode);
+    ClassDB::bind_method(D_METHOD("get_scheduler_mode"), &ZoneWorld::get_scheduler_mode);
+    ClassDB::bind_method(D_METHOD("submit_hero_move", "dx", "dy"), &ZoneWorld::submit_hero_move);
+    ClassDB::bind_method(D_METHOD("submit_hero_wait"), &ZoneWorld::submit_hero_wait);
+    ClassDB::bind_method(D_METHOD("submit_hero_cast", "turns"), &ZoneWorld::submit_hero_cast);
+    ClassDB::bind_method(D_METHOD("submit_hero_skill", "name"), &ZoneWorld::submit_hero_skill);
+    ClassDB::bind_method(D_METHOD("step_scheduler"), &ZoneWorld::step_scheduler);
+    ClassDB::bind_method(D_METHOD("hero_is_waiting"), &ZoneWorld::hero_is_waiting);
+    ClassDB::bind_method(D_METHOD("get_hero_status"),  &ZoneWorld::get_hero_status);
+    ClassDB::bind_method(D_METHOD("get_hero_effects"), &ZoneWorld::get_hero_effects);
+    ClassDB::bind_method(D_METHOD("get_debug_text"),   &ZoneWorld::get_debug_text);
+    ClassDB::bind_method(D_METHOD("get_world_clock"),  &ZoneWorld::get_world_clock);
+    ClassDB::bind_method(D_METHOD("set_trace_enabled", "on"), &ZoneWorld::set_trace_enabled);
+    ClassDB::bind_method(D_METHOD("get_trace_enabled"), &ZoneWorld::get_trace_enabled);
+    ClassDB::bind_method(D_METHOD("get_debug_log"),    &ZoneWorld::get_debug_log);
+    ClassDB::bind_method(D_METHOD("clear_debug_log"),  &ZoneWorld::clear_debug_log);
     ClassDB::bind_method(D_METHOD("get_hero_x"),      &ZoneWorld::get_hero_x);
     ClassDB::bind_method(D_METHOD("get_hero_y"),      &ZoneWorld::get_hero_y);
     ClassDB::bind_method(D_METHOD("get_turn_count"),  &ZoneWorld::get_turn_count);
@@ -87,6 +112,7 @@ void zone_gd::ZoneWorld::setup_world() {
         em_.add_system(zone::npc_ai_system);
         systems_ready_ = true;
     }
+    setup_scheduler();
 }
 
 void zone_gd::ZoneWorld::setup_map() {
@@ -128,6 +154,9 @@ void zone_gd::ZoneWorld::setup_map() {
         reg.emplace<zone::ActorComponent>(hero_entity_);
         reg.emplace<zone::SpatialComponent>(hero_entity_, hx, hy);
         reg.emplace<zone::HealthComponent>(hero_entity_, HERO_HP, HERO_HP);
+        reg.emplace<zone::CombatStatsComponent>(hero_entity_);   // 排程器路徑：英雄攻擊力
+        reg.emplace<zone::PlayerControlledComponent>(hero_entity_);
+        reg.emplace<zone::EnergyComponent>(hero_entity_);        // 行動值（排程器路徑用）
     } else {
         if (auto* sp = reg.try_get<zone::SpatialComponent>(hero_entity_))
             { sp->x = hx; sp->y = hy; }
@@ -145,13 +174,16 @@ void zone_gd::ZoneWorld::setup_map() {
     for (int r = 1; r < (int)rooms.size() && npc_count < npc_cap; ++r, ++npc_count) {
         int hp  = NPC_BASE_HP + (current_floor_ - 1) * NPC_HP_SCALE;
         int atk = NPC_ATK_BASE + (current_floor_ - 1) * NPC_ATK_SCALE;
+        const bool caster = (npc_count % 2 == 0);
         auto e = em_.create();
-        reg.emplace<zone::NpcAiComponent>(e);
+        reg.emplace<zone::NpcAiComponent>(e).is_caster = caster;  // 半數為施法者
         reg.emplace<zone::ActorComponent>(e);
         reg.emplace<zone::SpatialComponent>(e, rooms[r].cx(), rooms[r].cy());
         reg.emplace<zone::HealthComponent>(e, hp, hp);
         reg.emplace<zone::CombatStatsComponent>(e,
             zone::CombatStatsComponent{ atk, 50 });
+        // 速度差：施法者慢(80)、近戰快(130)，方便在能量排程器面板觀察行動值差異
+        reg.emplace<zone::EnergyComponent>(e).speed_mod = caster ? 80 : 130;
     }
 
     // 物品
@@ -179,13 +211,16 @@ void zone_gd::ZoneWorld::next_floor() {
 }
 
 void zone_gd::ZoneWorld::restart() {
-    if (hero_entity_ != entt::null) {
+    if (hero_entity_ != entt::null && em_.registry().valid(hero_entity_)) {
         em_.registry().destroy(hero_entity_);
-        hero_entity_ = entt::null;
     }
+    hero_entity_ = entt::null;
     game_over_     = false;
     turn_count_    = 0;
     current_floor_ = 1;
+    world_clock_   = 0;
+    scheduler_ = zone::make_scheduler(static_cast<zone::SchedulerMode>(scheduler_mode_));  // 清舊 pending/waiting
+    trace_log_.clear();
     setup_map();
     recompute_fov();
     emit_signal("world_changed");
@@ -441,4 +476,288 @@ bool zone_gd::ZoneWorld::load_game(const godot::String& path) {
 
 bool zone_gd::ZoneWorld::has_save_game(const godot::String& path) const {
     return std::filesystem::exists(std::string(path.utf8().get_data()));
+}
+
+// ---- 排程器路徑（可切換 A/B/C）---------------------------------------------
+
+void zone_gd::ZoneWorld::setup_scheduler() {
+    effects_.register_kind(zone::ActionKind::Move,   &move_fx_);
+    effects_.register_kind(zone::ActionKind::Attack, &move_fx_);  // 撞擊攻擊也走 Move 效果
+    effects_.register_kind(zone::ActionKind::Wait,   &wait_fx_);
+    effects_.register_kind(zone::ActionKind::Cast,   &cast_fx_);
+
+    // 資料驅動技能庫：先試讀 JSON，失敗用硬編後備
+    bool loaded = false;
+#ifdef ZONE_DATA_DIR
+    loaded = action_lib_.load_json(std::string(ZONE_DATA_DIR) + "/actions.json");
+#endif
+    if (!loaded) action_lib_.load_defaults();
+    lib_fx_.lib = &action_lib_;
+    effects_.register_kind(zone::ActionKind::Skill, &lib_fx_);
+    if (!scheduler_)
+        scheduler_ = zone::make_scheduler(static_cast<zone::SchedulerMode>(scheduler_mode_));
+}
+
+zone::TurnWorld zone_gd::ZoneWorld::make_turn_world() {
+    zone::TurnWorld w{
+        em_.registry(),
+        effects_,
+        [this](entt::registry& r, entt::entity e) { return npc_decide(r, e); }
+    };
+    if (map_entity_ != entt::null)
+        w.map = &em_.get<zone::MapData>(map_entity_);
+    w.events = &events_;
+    w.on_actor_turn = [](zone::TurnWorld& tw, entt::entity e) {
+        zone::tick_timed_effects(tw, e);   // 每個 actor 回合開始 tick DoT
+    };
+    if (trace_enabled_)
+        w.trace = [this](const std::string& s) { on_trace(s); };
+    return w;
+}
+
+zone::Action zone_gd::ZoneWorld::npc_decide(entt::registry& reg, entt::entity e) {
+    return zone::decide_chase(reg, e, hero_entity_, action_lib_);
+}
+
+void zone_gd::ZoneWorld::set_scheduler_mode(int mode) {
+    scheduler_mode_ = mode;
+    scheduler_ = zone::make_scheduler(static_cast<zone::SchedulerMode>(mode));
+}
+
+int zone_gd::ZoneWorld::get_scheduler_mode() const { return scheduler_mode_; }
+
+void zone_gd::ZoneWorld::submit_hero_move(int dx, int dy) {
+    if (!scheduler_) setup_scheduler();
+    scheduler_->submit(hero_entity_,
+        zone::Action{ zone::ActionKind::Move, zone::encode_dir(dx, dy), 1 });
+    bump_turn_count();
+}
+
+void zone_gd::ZoneWorld::submit_hero_wait() {
+    if (!scheduler_) setup_scheduler();
+    scheduler_->submit(hero_entity_, zone::Action{ zone::ActionKind::Wait, 0, 1 });
+    bump_turn_count();
+}
+
+void zone_gd::ZoneWorld::submit_hero_cast(int turns) {
+    if (!scheduler_) setup_scheduler();
+    if (turns < 1) turns = 1;
+    scheduler_->submit(hero_entity_, zone::Action{ zone::ActionKind::Cast, 0, turns });
+    bump_turn_count();
+}
+
+void zone_gd::ZoneWorld::submit_hero_skill(const godot::String& name) {
+    if (!scheduler_) setup_scheduler();
+    int idx = action_lib_.find(std::string(name.utf8().get_data()));
+    if (idx < 0) return;
+    const int weight = action_lib_.at(idx).weight;
+    scheduler_->submit(hero_entity_,
+        zone::Action{ zone::ActionKind::Skill, 0, weight, idx });
+    bump_turn_count();
+}
+
+void zone_gd::ZoneWorld::bump_turn_count() {
+    ++turn_count_;
+    if (map_entity_ != entt::null)
+        em_.registry().get<zone::WorldStateComponent>(map_entity_).turn_count = turn_count_;
+}
+
+bool zone_gd::ZoneWorld::step_scheduler() {
+    if (game_over_) return true;
+    if (!scheduler_) setup_scheduler();
+    events_.clear();
+    auto w = make_turn_world();
+    if (trace_enabled_)
+        on_trace("── step (clock=" + std::to_string(world_clock_)
+            + ", turn=" + std::to_string(turn_count_) + ") ──");
+    scheduler_->advance(w);
+    world_clock_ += w.clock;   // 累計世界時鐘（make_turn_world 每次從 0 起算）
+    drain_events();
+    return hero_is_waiting();
+}
+
+bool zone_gd::ZoneWorld::hero_is_waiting() const {
+    return scheduler_ && scheduler_->waiting_actor() == hero_entity_;
+}
+
+godot::String zone_gd::ZoneWorld::get_hero_status() const {
+    using godot::String;
+    if (hero_entity_ == entt::null) return String::utf8("—");
+    const auto& reg = em_.registry();
+    if (const auto* og = reg.try_get<zone::OngoingActionComponent>(hero_entity_)) {
+        const zone::Action& a = og->action;
+        String name;
+        if (a.kind == zone::ActionKind::Skill && a.def >= 0 && a.def < action_lib_.size())
+            name = String::utf8(action_lib_.at(a.def).name.c_str());
+        else if (a.kind == zone::ActionKind::Cast) name = String::utf8("詠唱");
+        else name = String::utf8("動作");
+        return String::utf8("詠唱 ") + name + " "
+             + String::num_int64(og->progress) + "/" + String::num_int64(a.weight);
+    }
+    if (scheduler_ && scheduler_->waiting_actor() == hero_entity_) return String::utf8("待命");
+    return String::utf8("行動中");
+}
+
+int zone_gd::ZoneWorld::get_world_clock() const { return static_cast<int>(world_clock_); }
+
+void zone_gd::ZoneWorld::set_trace_enabled(bool on) { trace_enabled_ = on; }
+bool zone_gd::ZoneWorld::get_trace_enabled() const { return trace_enabled_; }
+void zone_gd::ZoneWorld::clear_debug_log() { trace_log_.clear(); }
+
+void zone_gd::ZoneWorld::on_trace(const std::string& line) {
+    trace_log_.push_back(line);
+    if (trace_log_.size() > 300)
+        trace_log_.erase(trace_log_.begin(),
+                         trace_log_.begin() + (trace_log_.size() - 300));
+    godot::UtilityFunctions::print(godot::String::utf8(line.c_str()));  // 即時主控台 print
+}
+
+godot::String zone_gd::ZoneWorld::get_debug_log() const {
+    using godot::String;
+    String s;
+    const std::size_t n = trace_log_.size();
+    const std::size_t start = n > 24 ? n - 24 : 0;  // 最近 24 行
+    for (std::size_t i = start; i < n; ++i)
+        s += String::utf8(trace_log_[i].c_str()) + "\n";
+    return s;
+}
+
+namespace {
+// 動作標籤（含 Skill 名稱查庫）
+godot::String fmt_action(const zone::Action& a, const zone::ActionLibrary& lib) {
+    using godot::String;
+    String name;
+    if (a.kind == zone::ActionKind::Skill && a.def >= 0 && a.def < lib.size())
+        name = String::utf8(lib.at(a.def).name.c_str());
+    else if (a.kind == zone::ActionKind::Cast) name = String::utf8("詠唱");
+    else if (a.kind == zone::ActionKind::Move) name = String::utf8("移動");
+    else if (a.kind == zone::ActionKind::Wait) name = String::utf8("等待");
+    else if (a.kind == zone::ActionKind::Idle) name = String::utf8("待命");
+    else name = String::utf8("動作");
+    return name;
+}
+godot::String fmt_effects_of(const entt::registry& reg, entt::entity e) {
+    using godot::String;
+    const auto* te = reg.try_get<zone::TimedEffectsComponent>(e);
+    if (!te || te->effects.empty()) return String("-");
+    String s;
+    for (const auto& ef : te->effects) {
+        String n = ef.kind == zone::TimedEffectKind::Burning ? String::utf8("燃燒")
+                 : ef.kind == zone::TimedEffectKind::Poison  ? String::utf8("中毒")
+                 :                                             String::utf8("回復");
+        s += n + String::num_int64(ef.power) + String::utf8("(剩")
+           + String::num_int64(ef.turns_left) + String::utf8(") ");
+    }
+    return s;
+}
+const char* mode_label(int m) {
+    switch (m) {
+        case 0: return "A:能量瞬發";
+        case 1: return "B:能量+channel";
+        case 2: return "C:純tick";
+        default: return "?";
+    }
+}
+} // namespace
+
+godot::String zone_gd::ZoneWorld::get_debug_text() const {
+    using godot::String;
+    const auto& reg = em_.registry();
+
+    // 標頭：排程器 / 時鐘 / 回合 / 樓層 / waiting
+    String waiting = String::utf8("無");
+    if (scheduler_) {
+        entt::entity wa = scheduler_->waiting_actor();
+        if (wa != entt::null)
+            waiting = String("#") + String::num_int64(static_cast<int>(entt::to_integral(wa) & 0xFFFFFu))
+                    + (wa == hero_entity_ ? String::utf8("(英雄)") : String());
+    }
+    String out = String::utf8("排程器 ") + String::utf8(mode_label(scheduler_mode_))
+        + String::utf8("  時鐘 ") + String::num_int64(world_clock_) + String::utf8(" ticks")
+        + String::utf8("  回合 ") + String::num_int64(turn_count_)
+        + String::utf8("  樓層 ") + String::num_int64(current_floor_)
+        + String::utf8("  等待 ") + waiting
+        + (game_over_ ? String::utf8("  [GAME OVER]") : String()) + "\n";
+
+    // 逐 actor（英雄優先列出）
+    auto dump_actor = [&](entt::entity e) {
+        const bool is_hero = (e == hero_entity_);
+        const auto* sp = reg.try_get<zone::SpatialComponent>(e);
+        String line = (is_hero ? String::utf8("◆英雄 #") : String::utf8("·NPC  #"))
+            + String::num_int64(static_cast<int>(entt::to_integral(e) & 0xFFFFFu));
+        if (sp) line += String::utf8(" (") + String::num_int64(sp->x) + ","
+                      + String::num_int64(sp->y) + ")";
+        if (const auto* hp = reg.try_get<zone::HealthComponent>(e))
+            line += String::utf8("  HP ") + String::num_int64(hp->hp) + "/" + String::num_int64(hp->max_hp);
+        if (const auto* en = reg.try_get<zone::EnergyComponent>(e))
+            line += String::utf8("  能量 ") + String::num_int64(en->value) + "/1000 spd"
+                  + String::num_int64(en->speed_mod);
+        if (const auto* og = reg.try_get<zone::OngoingActionComponent>(e))
+            line += String::utf8("  進行: ") + fmt_action(og->action, action_lib_)
+                  + " " + String::num_int64(og->progress) + "/" + String::num_int64(og->action.weight)
+                  + String::utf8(" (rem ") + String::num_int64(og->remaining_ticks) + ")";
+        line += String::utf8("  效果: ") + fmt_effects_of(reg, e);
+        return line;
+    };
+
+    if (hero_entity_ != entt::null && reg.valid(hero_entity_))
+        out += dump_actor(hero_entity_) + "\n";
+    for (auto e : reg.view<zone::ActorComponent>()) {
+        if (e == hero_entity_) continue;
+        out += dump_actor(e) + "\n";
+    }
+    return out;
+}
+
+godot::String zone_gd::ZoneWorld::get_hero_effects() const {
+    using godot::String;
+    if (hero_entity_ == entt::null) return String("");
+    const auto& reg = em_.registry();
+    const auto* te = reg.try_get<zone::TimedEffectsComponent>(hero_entity_);
+    if (!te || te->effects.empty()) return String("");
+    String s;
+    for (const auto& ef : te->effects) {
+        String n = ef.kind == zone::TimedEffectKind::Burning ? String::utf8("燃燒")
+                 : ef.kind == zone::TimedEffectKind::Poison  ? String::utf8("中毒")
+                 :                                             String::utf8("回復");
+        s += n + String::num_int64(ef.power) + String::utf8("(剩")
+           + String::num_int64(ef.turns_left) + String::utf8(") ");
+    }
+    return s;
+}
+
+void zone_gd::ZoneWorld::drain_events() {
+    using EK = zone::EventKind;
+    bool reached_stair = false;
+    for (auto& ev : events_) {
+        switch (ev.kind) {
+            case EK::BumpedWall:
+                if (ev.a == hero_entity_) emit_signal("hero_bumped_wall");
+                break;
+            case EK::BumpedActor:
+                if (ev.a == hero_entity_) emit_signal("hero_bumped_npc", String("npc"));
+                break;
+            case EK::ActorDied:
+                emit_signal("npc_died", String("npc"));
+                break;
+            case EK::ItemPickedUp:
+                if (ev.a == hero_entity_)
+                    emit_signal("item_picked_up", String("health_potion"), ev.amount);
+                break;
+            case EK::ReachedStairDown:
+                if (ev.a == hero_entity_) reached_stair = true;
+                break;
+        }
+    }
+    events_.clear();
+    recompute_fov();
+
+    if (hero_entity_ != entt::null) {
+        if (const auto* hp = em_.registry().try_get<zone::HealthComponent>(hero_entity_))
+            if (hp->hp <= 0 && !game_over_) { game_over_ = true; emit_signal("game_over"); }
+    }
+
+    if (reached_stair) { next_floor(); return; }
+
+    emit_signal("world_changed");  // turn_count 由 submit_* 計（每個玩家指令一回合）
 }

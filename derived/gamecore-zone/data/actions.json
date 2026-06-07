@@ -1,0 +1,34 @@
+{
+    "actions": [
+        {
+            "name": "fireball", "weight": 3, "do_move": 0,
+            "nova_damage": 4, "radius": 1, "dot_turns": 3, "dot_power": 2, "dot_kind": 0,
+            "self_heal": 0, "self_regen_turns": 0, "self_regen_power": 0
+        },
+        {
+            "name": "heal", "weight": 2, "do_move": 0,
+            "nova_damage": 0, "radius": 1, "dot_turns": 0, "dot_power": 0, "dot_kind": 0,
+            "self_heal": 8, "self_regen_turns": 3, "self_regen_power": 2
+        },
+        {
+            "name": "smite", "weight": 1, "do_move": 0,
+            "nova_damage": 6, "radius": 1, "dot_turns": 0, "dot_power": 0, "dot_kind": 0,
+            "self_heal": 0, "self_regen_turns": 0, "self_regen_power": 0
+        },
+        {
+            "name": "meteor", "weight": 4, "do_move": 0,
+            "nova_damage": 5, "radius": 2, "dot_turns": 2, "dot_power": 3, "dot_kind": 0,
+            "self_heal": 0, "self_regen_turns": 0, "self_regen_power": 0
+        },
+        {
+            "name": "venom", "weight": 2, "do_move": 0,
+            "nova_damage": 1, "radius": 1, "dot_turns": 5, "dot_power": 2, "dot_kind": 1,
+            "self_heal": 0, "self_regen_turns": 0, "self_regen_power": 0
+        },
+        {
+            "name": "npc_flame", "weight": 1, "do_move": 0,
+            "nova_damage": 3, "radius": 1, "dot_turns": 2, "dot_power": 2, "dot_kind": 0,
+            "self_heal": 0, "self_regen_turns": 0, "self_regen_power": 0
+        }
+    ]
+}
