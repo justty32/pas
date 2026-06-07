@@ -28,6 +28,8 @@ namespace SpeakUpContextExpansion
     ///   RECIPIENT_drafted      : 是 / 否                （該 pawn 是否被徵召＝臨戰）
     ///   COLONY_FOOD_DAYS       : 數值（天）             （可吃天數，供 &lt; 比較判斷糧食危機）
     ///   COLONY_DAYS_SINCE_DEATH: 數值（天）；無死亡時不發此 rule（以利用「不存在」判斷）
+    ///   INITIATOR_pain /
+    ///   RECIPIENT_pain         : 數值（0~1）           （該 pawn 總疼痛；數值門檻 &gt; 比較的最小驗證點）
     /// </summary>
     [HarmonyPatch(typeof(ExtraGrammarUtility), nameof(ExtraGrammarUtility.ExtraRules))]
     public static class ExtraRulesInjector
@@ -57,6 +59,9 @@ namespace SpeakUpContextExpansion
 
                 // --- 情境 3：近期殖民者死亡 ---
                 AddRecentDeathRules(rules);
+
+                // --- 情境 4：個別 pawn 受傷 ---
+                AddInjuryRules(rules, initiator, DialogManager.Recipient);
 
                 __result = rules;
             }
@@ -110,6 +115,25 @@ namespace SpeakUpContextExpansion
             if (days < 0f) return;
 
             MakeRule(rules, "COLONY_DAYS_SINCE_DEATH", days.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        private static void AddInjuryRules(List<Rule> rules, Pawn initiator, Pawn recipient)
+        {
+            // 個別 pawn 的總疼痛（Pawn.health.hediffSet.PainTotal，0~1，已正規化）。
+            // 為數值關鍵字，供 XML 以 INITIATOR_pain&gt;0.1 之類門檻引用；
+            // 受傷在 dev mode 最易製造（不毀糧、不殺人），故選為 < / > 數值約束的最小驗證點。
+            MakeRule(rules, InitPrefix + "pain", PainOf(initiator));
+            if (recipient != null && recipient.Spawned)
+            {
+                MakeRule(rules, ReciPrefix + "pain", PainOf(recipient));
+            }
+        }
+
+        private static string PainOf(Pawn p)
+        {
+            var hs = p.health?.hediffSet;
+            if (hs == null) return null;
+            return hs.PainTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         /// <summary>

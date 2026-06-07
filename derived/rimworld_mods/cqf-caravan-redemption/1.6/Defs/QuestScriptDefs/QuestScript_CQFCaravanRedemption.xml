@@ -35,6 +35,15 @@
     <root Class="QuestNode_Sequence">
       <nodes>
 
+        <!-- (0) 取得投放目標地圖，寫入 slate 的 map 變數。
+             這是 DropPods 的前置必要步驟：所有原版投放艙任務（Script_TradeRequest /
+             Script_BanditCamp / Script_PrisonerWillingToJoin）都先跑 QuestNode_GetMap。
+             少了它，生成時 slate 無 map → DropPods TestRun 失敗 → 整個 quest 被靜默丟棄
+             （清單選得到但生不出來、無紅字）。 -->
+        <li Class="QuestNode_GetMap">
+          <canBeSpace>true</canBeSpace>
+        </li>
+
         <!-- (1) CQF 證明點：任務生成時（inSignal 留空＝吃任務 initiate 信號）跳一則開場白 + 發一個信號 -->
         <li Class="QuestEditor_Library.QuestNode_DoCQFActions">
           <actions>

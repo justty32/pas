@@ -16,7 +16,7 @@ namespace SpeakUpContextExpansion
         {
             var harmony = new Harmony("pas.speakup.contextexpansion");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
-            Log.Message("[SpeakUpContextExpansion] Harmony patches applied (COLONY_DANGER / drafted / COLONY_FOOD_DAYS / COLONY_DAYS_SINCE_DEATH).");
+            Log.Message("[SpeakUpContextExpansion] Harmony patches applied (COLONY_DANGER / drafted / COLONY_FOOD_DAYS / COLONY_DAYS_SINCE_DEATH / pain).");
         }
     }
 }

@@ -44,6 +44,12 @@ VOE 的 override：
 
 > 旁證（既有分析）：`analysis/.../vanilla-outposts-expanded/details/raid_and_attack_design.md` — outpost 平時 `Map==null`、`raidPoints`/`raidFaction` 是死欄位、框架不會主動襲擊 outpost。
 
+### 2.5 VOE outpost **永不生成地圖**（2026-06-07 源碼查證）
+- `Outpost : MapParent`（`Outposts.decompiled.cs:731`），但全檔**無** `GetOrGenerateMap`/`MapGenerator`/`SettlementUtility`/`CaravanArrivalAction_Visit`/`Site` 任何呼叫。`Tick` 兩處都 `if (((MapParent)this).Map == null)` 後跑 `SatisfyNeeds()`（`:919/:977`），**沒有任何生成地圖的分支——`Map` 設計上恆為 null**。
+- 裡面的人＝抽象 `List<Pawn> occupants`（`:743`，加入時 `Find.WorldPawns.RemovePawn` 轉 world pawn），純 `SatisfyNeeds` 數值養著。
+- 唯一「離開抽象」的路是**打包**：`CaravanMaker.MakeCaravan(occupants…)`（`:1126`）變回商隊；進別的地圖走一般 caravan 流程。
+- **意義：VOE outpost 天生不能被「訪問/襲擊成地圖」**。要可造訪/可攻打的據點，必須走 §5/§6 的 `Settlement`/`GetOrGenerateMap` 線，**不能用 VOE 模型**。
+
 ---
 
 ## 3. 自寫輕量 WorldObject vs 照搬 VOE
@@ -92,6 +98,10 @@ XML def 取最省設定（`WorldObjectDef.cs`）：
 | 犧牲 | — | 放棄 VOE 的產出/部署 UI；要攻打得自己接 `GetOrGenerateMap` |
 
 **建議：自寫 `: WorldObject`（純展示型）或 `: MapParent`（要可進地圖攻打/拜訪）。** 不要繼承或實例化 VOE 的 `Outpost`。VOE 的價值在「玩家自營產出據點」這個玩法，不在當廉價地圖圖釘。
+
+> **使用者前瞻需求（2026-06-07）：以後可能想讓 outpost 可被訪問/襲擊。** 這推翻「抽象資源點與可造訪據點是兩種互斥物件」的簡單切法——建議**產出型 outpost 也建在可生地圖的基類上**（首選繼承 `Settlement` 白嫖 visit/trade/attack 全套，見 §6；或 `: MapParent` 自接 `GetOrGenerateMap`，見 §5），**把「抽象產出」做成掛在上面的 `WorldObjectComp`**（產出率可由 [[06_colony_archival_to_outpost]] 的採樣推導）。如此平時零 pawn、零地圖、近零成本（效能等同純抽象，§2.5/§5.1），但**保留隨時可 lazy 生成地圖被訪問/襲擊的後路**，不必日後重構。
+>
+> 一句話：**「抽象 vs 可造訪」是同一物件的兩個狀態（有無 map），不是兩種型別。** 用 `Settlement`/`MapParent` 基類 + 產出 comp 同時滿足；唯一例外是「永遠純圖標、確定不會被進入」的裝飾物才用裸 `: WorldObject`。
 
 ---
 

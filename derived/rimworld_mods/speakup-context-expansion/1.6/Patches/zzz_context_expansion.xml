@@ -9,6 +9,7 @@
     INITIATOR_drafted        是 / 否
     COLONY_FOOD_DAYS         數值（天），用 &lt; 比較
     COLONY_DAYS_SINCE_DEATH  數值（天）；無死亡時此關鍵字不存在
+    INITIATOR_pain           數值（0~1），用 &gt; 比較（個別 pawn 總疼痛）
   數值比較依賴 SpeakUp 的 RuleEntry_ValidateConstantConstraints 擴充（已支援 &lt; &gt; &lt;= &gt;= == !=）。
 -->
 <Patch>
@@ -72,6 +73,15 @@
         <li>ce_death_recent->这几天我一直想着走的那个人。</li>
         <li>ce_death_recent->基地里好像还少了点什么…我们都还没缓过来。</li>
         <li>ce_death_recent->愿他安息。我们会撑下去的。</li>
+
+      <!-- =================================================================== -->
+      <!-- 情境 4：個別 pawn 受傷（INITIATOR_pain 數值門檻 > 比較的驗證點）           -->
+      <!-- 限 COLONY_DANGER==none，與戰鬥/糧食隔離，便於單獨驗證 > 約束是否生效。       -->
+      <!-- =================================================================== -->
+      <li>r_logentry(INITIATOR_pain&gt;0.1,COLONY_DANGER==none,priority=4)->[ce_injured]</li>
+        <li>ce_injured->嘶…我这伤口还在疼，得找时间处理一下。</li>
+        <li>ce_injured->别担心我，就是有点疼，还撑得住。</li>
+        <li>ce_injured(INITIATOR_trait==坚强)->这点伤算什么，我扛得住。</li>
 
     </value>
   </Operation>

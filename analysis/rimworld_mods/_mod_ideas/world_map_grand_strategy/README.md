@@ -21,6 +21,7 @@
 | `03_rimwar_warband_territories_integration.md` | 5、6(整合) | Rim War 擋襲擊與戰力公式 + 改綁 outpost + Warband 兵種 roster 接 Rim War 部隊 + Faction Territories 領土門檻/擴張橋接 |
 | `04_settlement_map_generation.md` | 9 | NPC 據點/outpost 訪問/襲擊時的完整聚居點地圖生成（議事廳/家族房舍/工坊）；VBGE(KCSG) + RimCities + 原版 SymbolResolver 對比 |
 | `05_settlement_npc_life_and_interaction.md` | 10 | NPC 活的聚居點行為（議事廳討論/工坊工作/農務，Lord/Duty 系統）+ 玩家側互動（酒館對話租房、本地工作板接任務） |
+| `06_colony_archival_to_outpost.md` | （舊構想重啟） | 玩家「採樣殖民地產出→封存→當 outpost 持續抽象產出」；採樣借 RecordsTracker、抽象產出借 VOE、**同圖還原借 Faction Manager（自帶源碼）**；兩半各借一現成 mod |
 
 ## 權威源（工作目錄 /home/lorkhan/repo/pas）
 - 本體：`projects/rimworld/`（`RimWorld/Faction.cs`/`FactionManager.cs`/`FactionGenerator.cs`、`RimWorld.Planet/WorldObject.cs`/`Settlement.cs`/`WorldPawns.cs` 等）
@@ -42,7 +43,7 @@
 | `life_politics/rpg_quest_system.md` | idea 3（傭兵告示牌，見 `../03_mercenary_missions.md`）+ `05` B-2(本地工作板) |
 
 **可直接複用的舊覆核硬傷警告**（`mod_feasibility_review.md`）：
-- 哨站封存**無官方快照 API**，只能「抽象化（銷毀地圖留數值，如 Oskar Outposts）」或自序列化（極重）→ 印證本叢集 `02` 的 lazy 生成、不持久化地圖。
+- 哨站封存**無官方快照 API**，只能「抽象化（銷毀地圖留數值，如 Oskar Outposts）」或自序列化（極重，但 **Faction Manager mod 已做到同圖還原**，自帶源碼——見 `06` §4.5）→ 印證本叢集 `02` 的 lazy 生成、不持久化地圖。
 - 事件重定向：`IncidentWorker.TryExecute` 別用 `ref`；普通 `WorldObject` 未實作 `IIncidentTarget`（要自己補 8 成員）；很多 worker 內部 `parms.target as Map` 會崩 → 只能對「能脫離地圖結算」的事件白名單重定向。
 - `WorldRoutePlanner.GetRoute` **杜撰**（它是互動式 UI）；世界尋路走 `WorldPath`/`WorldPathing`（或 `Layer.Pather.FindPath`）。
 - `map.resourceCounter.AllCountedAmounts` 只統計**儲存格**內物品（漏地上物/背包/作物/動物）→ 算產能別當「全圖快照」。
@@ -50,4 +51,4 @@
 **框架轉變**：舊稿要在原版上**從零**打造帝國/世界層；本叢集改為**疊在 Rim War（世界模擬）+ VOE（哨站）+ Faction Territories（領土）+ Warband（部隊）上整合**——把舊藍圖最重的地基外包給既有 mod，工程量可能更小，代價是相依與相容。
 
 ## 狀態
-- 2026-06-07：建立五份整合可行性報告（R1–R5，idea 4–10，並行 subagent 深挖源碼）＋與 `analysis/rimworld/others/` 舊願景稿 cross-reference。此叢集規模遠大於 idea 1/2/3，預期需再拆成數個子 mod / 分階段 spec。**中樞＝idea 8 具名 NPC/家族資料層**（據點易主、家族屋綁定、visit 找 NPC 全依賴它）。待使用者讀後界定優先序。
+- 2026-06-07：建立六份整合可行性報告（R1–R5 idea 4–10 + `06` 殖民地封存→outpost）＋與 `analysis/rimworld/others/` 舊願景稿 cross-reference。`02` §2.5/§3.3、`06` §4.5 補入本日源碼查證：VOE outpost 永不生成地圖（Map 恆 null）、Faction Manager（2878135150，自帶源碼）做到同圖序列化還原但卸載期不產出。此叢集規模遠大於 idea 1/2/3，預期需再拆成數個子 mod / 分階段 spec。**中樞＝idea 8 具名 NPC/家族資料層**。待使用者讀後界定優先序。
