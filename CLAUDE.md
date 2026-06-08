@@ -14,6 +14,18 @@
 | **Create** | 基於分析產物建立獨立衍生小專案 | `create_workflow.md` |
 | **Patch** | 製作可被 agent 套用至原專案的獨立 Patch 小專案 | `patch_workflow.md` |
 
+## 工作流 Slash Command（`.claude/commands/`）
+
+本檔放**共同核心準則**；每個工作流的進入點用 slash command，打一句就「變身」成該模式。指令只是模式切換與 SOP 摘要，**完整 SOP 仍以對應 `*_workflow.md` 為權威來源**。
+
+| 指令 | 模式／用途 | 權威 SOP |
+|------|-----------|---------|
+| `/analysis` | Analysis：初次分析陌生專案（Level 1-6） | `analysis_workflow.md` |
+| `/create` | Create：基於分析建立衍生小專案 | `create_workflow.md` |
+| `/patch` | Patch：製作可套用的獨立 Patch | `patch_workflow.md` |
+| `/html` | 生成／更新 HTML 導覽層（準則 6） | 本檔準則 6、7 |
+| `/save` | 會話保存：追加進度快照到 `session_log.md`（準則 5） | 本檔準則 5 |
+
 ## 目錄結構 (Directory Structure)
 
 ```
@@ -22,6 +34,7 @@ pas/
 ├── analysis/       # 各專案的分析產物
 ├── derived/        # 衍生小專案（Create 模式產出）
 ├── patches/        # Patch 小專案（Patch 模式產出）
+├── .claude/commands/  # 各工作流的專屬 slash command（模式切換入口）
 └── *.md            # SOP 文件與工作區索引
 ```
 
