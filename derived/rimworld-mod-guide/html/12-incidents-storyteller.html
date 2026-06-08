@@ -915,7 +915,7 @@ points = <span class="ty">Mathf</span>.<span class="nm">Clamp</span>(basePoints,
       <tbody>
         <tr>
           <td><strong>targetTags 與目標不相交</strong><br>最常見。def 寫 <code>Map_PlayerHome</code> 但你以為作用於商隊。</td>
-          <td>檢查目標的 <code>IIncidentTarget.AcceptedTypes()</code> 是否包含 def.targetTags 之一。</td>
+          <td>檢查目標的 <code>IIncidentTarget.IncidentTargetTags()</code> 是否包含 def.targetTags 之一。</td>
           <td>確認 targetTags 與目標型別匹配。地圖事件用 <code>Map_PlayerHome</code>，世界事件用 <code>World</code>。</td>
         </tr>
         <tr>

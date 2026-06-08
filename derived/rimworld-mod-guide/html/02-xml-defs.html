@@ -284,7 +284,7 @@
       </div>
       <div class="card card-accent-orange">
         <h3>equipmentType</h3>
-        <p><code>Primary</code> / <code>Secondary</code>（盾牌）。決定殖民者裝備欄位。</p>
+        <p>實務上只用 <code>Primary</code>（主武器槽）。<code>EquipmentType</code> enum 僅有 <code>None</code> 與 <code>Primary</code>，並無 <code>Secondary</code>；盾帶（shield belt）屬於 Apparel 而非 equipment。</p>
       </div>
       <div class="card card-accent-green">
         <h3>weaponTags</h3>
@@ -369,7 +369,7 @@
 
     <p>
       PatchOperation 讓你<strong>不修改原始 Def 檔案</strong>就能變更任何 Def 的內容，是 mod 相容性的關鍵機制。
-      Patch 檔案放在 mod 的 <code>Patches/</code> 資料夾，在所有 Def 載入後、<code>XmlInheritance.Resolve()</code> 前套用。
+      Patch 檔案放在 mod 的 <code>Patches/</code> 資料夾，在所有 mod 的 XML 載入合併後、<code>XmlInheritance.Resolve()</code>（繼承展開）前套用。
     </p>
 
     <h3>常用操作類型</h3>
@@ -423,7 +423,7 @@
 
     <h3>完整範例：在鋼鐵劍 statBases 加入自訂屬性</h3>
     <pre><code><span class="cm">&lt;!-- Patches/MyMod_SteelSword_Patch.xml --&gt;</span>
-<span class="xml-tag">&lt;Patch&gt;</span>
+<span class="xml-tag">&lt;Patches&gt;</span>
 
   <span class="cm">&lt;!-- 單一操作 --&gt;</span>
   <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationAdd"</span><span class="xml-tag">&gt;</span>
@@ -434,10 +434,10 @@
     <span class="xml-tag">&lt;/value&gt;</span>
   <span class="xml-tag">&lt;/Operation&gt;</span>
 
-<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+<span class="xml-tag">&lt;/Patches&gt;</span></code></pre>
 
     <h3>PatchOperationSequence 批次操作</h3>
-    <pre><code><span class="xml-tag">&lt;Patch&gt;</span>
+    <pre><code><span class="xml-tag">&lt;Patches&gt;</span>
   <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationSequence"</span><span class="xml-tag">&gt;</span>
     <span class="xml-tag">&lt;success&gt;</span>Always<span class="xml-tag">&lt;/success&gt;</span>   <span class="cm">&lt;!-- Always / Normal / Never --&gt;</span>
     <span class="xml-tag">&lt;operations&gt;</span>
@@ -465,11 +465,11 @@
 
     <span class="xml-tag">&lt;/operations&gt;</span>
   <span class="xml-tag">&lt;/Operation&gt;</span>
-<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+<span class="xml-tag">&lt;/Patches&gt;</span></code></pre>
 
     <h3>MayRequire 條件修補</h3>
     <p>當 Patch 依賴其他 mod（或 DLC）時，用 <code>MayRequire</code>/<code>MayRequireAnyOf</code> 包裝，缺少依賴時整個 Operation 會靜默跳過。</p>
-    <pre><code><span class="xml-tag">&lt;Patch&gt;</span>
+    <pre><code><span class="xml-tag">&lt;Patches&gt;</span>
   <span class="cm">&lt;!-- 僅在 Royalty DLC 存在時套用 --&gt;</span>
   <span class="xml-tag">&lt;Operation</span> <span class="xml-attr">Class</span>=<span class="xml-val">"PatchOperationSequence"</span>
               <span class="xml-attr">MayRequire</span>=<span class="xml-val">"Ludeon.RimWorld.Royalty"</span><span class="xml-tag">&gt;</span>
@@ -492,7 +492,7 @@
       <span class="xml-tag">&lt;li</span> <span class="xml-attr">Class</span>=<span class="xml-val">"OtherMod.CompProperties_CustomEffect"</span><span class="xml-tag">/&gt;</span>
     <span class="xml-tag">&lt;/value&gt;</span>
   <span class="xml-tag">&lt;/Operation&gt;</span>
-<span class="xml-tag">&lt;/Patch&gt;</span></code></pre>
+<span class="xml-tag">&lt;/Patches&gt;</span></code></pre>
 
     <div class="callout callout-danger">
       <strong>PatchOperationFindMod 已棄用</strong>

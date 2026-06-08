@@ -283,10 +283,9 @@
     </table>
 
     <div class="callout callout-warn">
-      <strong>Tick 要明確開啟</strong>
-      <code>Pawn_GeneTracker</code> 只會 tick 那些 GeneDef 標記 <code>&lt;tickInterval&gt;</code> 或 <code>&lt;canGenerateInGeneSet&gt;</code> 等條件的基因。
-      實務上原版透過 <code>GeneDef.tickInterval</code>（值為 tick 數）控制呼叫頻率——把節流交給引擎，而不是自己在 Tick 裡數 tick。
-      若版本欄位有差異，用 dnSpy 確認 <code>Pawn_GeneTracker.GeneTrackerTick()</code> 如何篩選。
+      <strong>Tick 由引擎每 tick 呼叫，自行節流</strong>
+      <code>Pawn_GeneTracker</code> 每 tick 都會對 active 的基因呼叫 <code>Gene.Tick()</code>；<strong>GeneDef 沒有 <code>tickInterval</code> 欄位</strong>。
+      要降低頻率，請在 <code>Tick()</code> 內用 <code>pawn.IsHashIntervalTick(250)</code> 判斷，而非依賴 XML 設定。
     </div>
 
     <h3>範例：夜行基因（白天減益，夜晚增益）</h3>
@@ -315,14 +314,16 @@
             <span class="ty">Log</span>.<span class="nm">Message</span>(<span class="st">$"[MyMod] {pawn.LabelShort} 獲得夜行基因"</span>);
         }
 
-        <span class="cm">// 由 GeneDef.tickInterval 控制呼叫頻率（不要自己數 tick）</span>
+        <span class="cm">// 引擎每 tick 都會呼叫，自己用 IsHashIntervalTick 節流</span>
         <span class="kw">public override void</span> <span class="nm">Tick</span>()
         {
             <span class="kw">base</span>.<span class="nm">Tick</span>();
             <span class="kw">if</span> (!<span class="nm">Active</span>) <span class="kw">return</span>;
+            <span class="kw">if</span> (!pawn.<span class="nm">IsHashIntervalTick</span>(<span class="nu">250</span>)) <span class="kw">return</span>;  <span class="cm">// 每 250 tick 才執行</span>
 
-            <span class="cm">// 夜晚時緩慢回復一點休息值</span>
-            pawn.<span class="nm">needs</span>?.<span class="nm">rest</span>?.<span class="nm">CurLevel</span> += <span class="nu">0.0005f</span>;
+            <span class="cm">// 夜晚時緩慢回復一點休息值（?. 不能當複合賦值左值，先取變數判空）</span>
+            <span class="ty">Need_Rest</span> rest = pawn.<span class="nm">needs</span>?.<span class="nm">rest</span>;
+            <span class="kw">if</span> (rest != <span class="kw">null</span>) rest.<span class="nm">CurLevel</span> += <span class="nu">0.01f</span>;
         }
     }
 }</pre>
@@ -331,8 +332,7 @@
     <pre><span class="xml-tag">&lt;GeneDef&gt;</span>
   <span class="xml-tag">&lt;defName&gt;</span>MyMod_Nocturnal<span class="xml-tag">&lt;/defName&gt;</span>
   <span class="xml-tag">&lt;label&gt;</span>夜行<span class="xml-tag">&lt;/label&gt;</span>
-  <span class="xml-tag">&lt;geneClass&gt;</span>MyMod.Gene_Nocturnal<span class="xml-tag">&lt;/geneClass&gt;</span>  <span class="cm">&lt;!-- 命名空間.類別名 --&gt;</span>
-  <span class="xml-tag">&lt;tickInterval&gt;</span><span class="xml-val">250</span><span class="xml-tag">&lt;/tickInterval&gt;</span>          <span class="cm">&lt;!-- 每 250 tick 才呼叫 Tick() --&gt;</span>
+  <span class="xml-tag">&lt;geneClass&gt;</span>MyMod.Gene_Nocturnal<span class="xml-tag">&lt;/geneClass&gt;</span>  <span class="cm">&lt;!-- 命名空間.類別名（節流寫在 Tick 內，無 tickInterval 欄位）--&gt;</span>
   <span class="xml-tag">&lt;biostatCpx&gt;</span><span class="xml-val">1</span><span class="xml-tag">&lt;/biostatCpx&gt;</span>
   <span class="xml-tag">&lt;biostatMet&gt;</span><span class="xml-val">0</span><span class="xml-tag">&lt;/biostatMet&gt;</span>
 <span class="xml-tag">&lt;/GeneDef&gt;</span></pre>
@@ -727,7 +727,7 @@ set.<span class="nm">AddGene</span>(<span class="ty">MyModGeneDefOf</span>.MyMod
     <div class="subsection">
       <h3><span class="tag tag-orange">坑 4</span> 在 <code>Tick()</code> 裡做重活</h3>
       <p>
-        <code>Tick()</code> 每秒最多 60 次 × 每個帶此基因的 pawn。用 <code>GeneDef.tickInterval</code> 讓引擎節流，
+        <code>Tick()</code> 每秒最多 60 次 × 每個帶此基因的 pawn。用 <code>pawn.IsHashIntervalTick(N)</code> 自行節流，
         不要自己在 Tick 裡跑昂貴查找（路徑、全地圖掃描）。每 tick 反射存取尤其致命。
       </p>
     </div>

@@ -245,11 +245,10 @@
     <h3>增加部分進度（不直接完成）</h3>
 
 <pre><span class="cm">// 給研究專案加點（例如「研究情報」事件給予一次性進度）</span>
-<span class="cm">// 1.5：AddProgress(project, amount, source)；舊版可能為 amount 直接累加。</span>
-<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">AddProgress</span>(proj, <span class="nu">300f</span>);
-
-<span class="cm">// 設定當前正在研究的專案（相當於玩家點選）</span>
-<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">SetCurrentProject</span>(proj);</pre>
+<span class="cm">// ResearchManager 無 AddProgress；進度透過 ResearchPerformed 累加到「當前研究」</span>
+<span class="cm">// currentProj 是 public 欄位，直接賦值即相當於玩家點選該專案</span>
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.currentProj = proj;
+<span class="ty">Find</span>.<span class="nm">ResearchManager</span>.<span class="nm">ResearchPerformed</span>(<span class="nu">300f</span>, <span class="kw">null</span>);  <span class="cm">// 對當前研究加 300 點進度</span></pre>
 
     <h3>遍歷所有研究 / 反查解鎖內容</h3>
 
@@ -606,7 +605,7 @@ bench.<span class="nm">billStack</span>.<span class="nm">AddBill</span>(bill);</
     <span class="cm">// 計算地圖上「已存在」多少個目標物（決定是否還要繼續做）</span>
     <span class="kw">public override int</span> <span class="nm">CountProducts</span>(<span class="ty">Bill_Production</span> bill)
     {
-        <span class="ty">Map</span> map = bill.<span class="nm">billStack</span>.<span class="nm">billGiver</span>.<span class="nm">Map</span> ?? <span class="ty">Find</span>.CurrentMap;
+        <span class="ty">Map</span> map = (bill.<span class="nm">billStack</span>.<span class="nm">billGiver</span> <span class="kw">as</span> <span class="ty">Thing</span>)?.<span class="nm">Map</span> ?? <span class="ty">Find</span>.CurrentMap; <span class="cm">// IBillGiver 無 Map，轉 Thing</span>
         <span class="kw">int</span> total = <span class="nu">0</span>;
         total += map.<span class="nm">resourceCounter</span>.<span class="nm">GetCount</span>(MyModDefOf.MyMod_EnergyCell);
         <span class="cm">// 把「高階電池」也計入，2 顆抵 1 顆高階</span>
@@ -802,7 +801,7 @@ bench.<span class="nm">billStack</span>.<span class="nm">AddBill</span>(bill);</
 <span class="kw">float</span> speed = pawn.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.GeneralLaborSpeed);
 
 <span class="cm">// 取建築的工作台速度倍率</span>
-<span class="kw">float</span> tableFactor = bench.<span class="nm">GetStatValue</span>(<span class="ty">StatDefOf</span>.WorkTableWorkSpeedFactor);
+<span class="kw">float</span> tableFactor = bench.<span class="nm">GetStatValue</span>(<span class="ty">StatDef</span>.<span class="nm">Named</span>(<span class="st">"WorkTableWorkSpeedFactor"</span>)); <span class="cm">// 未被 StatDefOf 快取，用 Named</span>
 
 <span class="cm">// 估算一筆工單的實際耗時（ticks）</span>
 <span class="kw">float</span> ticks = recipe.<span class="nm">WorkAmountTotal</span>(stuffDef: <span class="kw">null</span>)

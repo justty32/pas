@@ -313,8 +313,9 @@ Scribe.<span class="nm">saver</span>.InitSaving(<span class="ty">ScribeMetaHeade
 Log.<span class="nm">Message</span>(sb.<span class="nm">ToString</span>());</pre>
 
     <h3>自訂 Dev Action 選單項目（DebugActionsModMenu）</h3>
-    <p>RimWorld 1.5 引入了 <code>[DebugAction]</code> Attribute，讓 mod 可以在 Dev Actions 選單中加入自訂按鈕，無需繼承任何基底類別：</p>
+    <p>RimWorld 1.5 將 <code>[DebugAction]</code> 等 Dev 工具搬到 <code>LudeonTK</code> 命名空間，讓 mod 可以在 Dev Actions 選單中加入自訂按鈕，無需繼承任何基底類別：</p>
     <pre><span class="kw">using</span> Verse;
+<span class="kw">using</span> LudeonTK;   <span class="cm">// 1.5：DebugAction/DebugActionType 已搬到此命名空間</span>
 
 <span class="at">[DebugAction(</span>
     <span class="st">"YourMod"</span>,            <span class="cm">// 分類名稱（會在選單中作為子選單標題）</span>
