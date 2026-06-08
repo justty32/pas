@@ -25,6 +25,11 @@
 | `/patch` | Patch：製作可套用的獨立 Patch | `patch_workflow.md` |
 | `/html` | 生成／更新 HTML 導覽層（準則 6） | 本檔準則 6、7 |
 | `/save` | 會話保存：追加進度快照到 `session_log.md`（準則 5） | 本檔準則 5 |
+| `/intake` | 口述線一條龍：原文逐字→初步整理→匯總筆記（落 `ideas/`） | 指令內含鐵則 |
+| `/critique` | 頭腦風暴・找漏洞 → `ideas/brainstorm/` | 指令自含 |
+| `/expand` | 頭腦風暴・擴展靈感 → `ideas/brainstorm/` | 指令自含 |
+
+`/intake`、`/critique`、`/expand` 是從 TTemp 借來的**點子捕捉／頭腦風暴軌**，產物統一落在 `ideas/`（`raw/cleaned/notes/brainstorm`），與 Analysis/Create/Patch 三模式並行、互不干擾。其中只有 `/intake`（語音輸入）採「**主 agent 即時回應、動作丟背景 subagent**」模式；其餘指令不套用此模式。
 
 ## 目錄結構 (Directory Structure)
 
@@ -34,6 +39,7 @@ pas/
 ├── analysis/       # 各專案的分析產物
 ├── derived/        # 衍生小專案（Create 模式產出）
 ├── patches/        # Patch 小專案（Patch 模式產出）
+├── ideas/          # 點子捕捉／頭腦風暴軌（intake/critique/expand 產物：raw/cleaned/notes/brainstorm）
 ├── .claude/commands/  # 各工作流的專屬 slash command（模式切換入口）
 └── *.md            # SOP 文件與工作區索引
 ```
