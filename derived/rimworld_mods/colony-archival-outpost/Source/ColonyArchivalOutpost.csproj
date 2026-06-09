@@ -38,8 +38,8 @@
     <Compile Include="ProductivitySnapshot.cs" />
     <Compile Include="Outpost_Sampled.cs" />
     <Compile Include="ColonyArchivalTracker.cs" />
-    <!-- 後續任務逐一加入：
     <Compile Include="ArchivalService.cs" />
+    <!-- 後續任務逐一加入：
     <Compile Include="Settlement_GetGizmos_Patch.cs" />
     -->
   </ItemGroup>
