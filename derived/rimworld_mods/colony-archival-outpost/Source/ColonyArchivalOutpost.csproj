@@ -35,8 +35,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CAOMod.cs" />
-    <!-- 後續任務逐一加入：
     <Compile Include="ProductivitySnapshot.cs" />
+    <!-- 後續任務逐一加入：
     <Compile Include="Outpost_Sampled.cs" />
     <Compile Include="ColonyArchivalTracker.cs" />
     <Compile Include="ArchivalService.cs" />
