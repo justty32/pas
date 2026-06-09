@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <loadFolders>
+  <!--
+    根目錄放共用內容(About/Defs/Languages)；1.6/ 放該版本的 Assemblies(csproj 輸出於此)。
+    兩者都列出，1.6 載入時 Defs/Languages 與 DLL 才都被載到。
+  -->
   <v1.6>
     <li>/</li>
+    <li>/1.6</li>
   </v1.6>
 </loadFolders>
