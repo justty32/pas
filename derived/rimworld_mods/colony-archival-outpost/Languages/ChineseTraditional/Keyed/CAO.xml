@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <CAO.BeginSampling>開始產能採樣</CAO.BeginSampling>
+  <CAO.BeginSampling.Desc>快照目前儲存資源。從現在到封存的儲存區淨變化，將決定哨站每種資源的速率（結餘送回主基地、赤字從帶走的庫存扣）。</CAO.BeginSampling.Desc>
+  <CAO.Archive>封存成哨站</CAO.Archive>
+  <CAO.Archive.Desc>銷毀這座殖民地的地圖。所有殖民地 pawn（殖民者、動物、囚犯）與儲存物資轉入抽象哨站，持續產出採樣到的結餘並送回主基地。</CAO.Archive.Desc>
+  <CAO.Archived>殖民地已封存成哨站。</CAO.Archived>
+  <CAO.NotPlayerHome>非玩家家園地圖。</CAO.NotPlayerHome>
+  <CAO.LastBase>不能封存最後一座家園——資源將無處投遞。</CAO.LastBase>
+</LanguageData>

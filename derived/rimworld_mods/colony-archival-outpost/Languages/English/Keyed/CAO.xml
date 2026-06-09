@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <CAO.BeginSampling>Begin productivity sampling</CAO.BeginSampling>
+  <CAO.BeginSampling.Desc>Snapshot current stored resources. Net stockpile change from now until archival sets the outpost's per-resource rate (surplus shipped home, deficit drawn from carried reserves).</CAO.BeginSampling.Desc>
+  <CAO.Archive>Archive into outpost</CAO.Archive>
+  <CAO.Archive.Desc>Destroy this colony's map. All colony pawns (colonists, animals, prisoners) and stored goods move into an abstract outpost that keeps producing the sampled surplus and ships it home.</CAO.Archive.Desc>
+  <CAO.Archived>Colony archived into an outpost.</CAO.Archived>
+  <CAO.NotPlayerHome>Not a player home map.</CAO.NotPlayerHome>
+  <CAO.LastBase>Cannot archive your last home base — there would be nowhere to deliver resources.</CAO.LastBase>
+</LanguageData>
