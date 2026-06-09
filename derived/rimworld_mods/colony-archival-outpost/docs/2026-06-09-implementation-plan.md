@@ -732,12 +732,13 @@ git commit -m "test(cao): static healthcheck"
 
 **Files:** 無（部署步驟）
 
-- [ ] **Step 1：建 symlink 或複製到遊戲 Mods 目錄**
+- [ ] **Step 1：symlink 到 `~/rimworld_mods`（使用者指定的 mod 來源目錄）**
 
 ```bash
 ln -s "$PWD/derived/rimworld_mods/colony-archival-outpost" \
-  "$HOME/.local/share/Steam/steamapps/common/RimWorld/Mods/colony-archival-outpost"
+  "$HOME/rimworld_mods/colony-archival-outpost"
 ```
+> 註：`~/rimworld_mods` 需是 RimWorld 實際掃描的 mod 來源（如 RimSort/RimPy 自訂來源，或再 symlink 進 `<install>/Mods`）。已驗 symlink 內容可見。
 
 - [ ] **Step 2：在遊戲 Mod 列表啟用順序**：Harmony → VEF → VOE → Colony Archival Outpost。確認載入無紅字（Player.log 找 `[ColonyArchivalOutpost] Harmony patches applied`）。
 
