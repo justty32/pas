@@ -10,4 +10,4 @@
 - 2026-06-09 實作期源碼坐實(全 build 通過)：containedItems 是 private List<Thing>→用公開 AddItem/TakeItems；DeliveryMethod 是全域設定(預設 Teleport=送主基地)→base.Produce 自動投遞；CanAddPawn 只擋 ideology Event(我們無 Event→恆過)→免反射, DeSpawn 後直接 AddPawn；SatisfyNeeds 用 ThingMaker 免費生食物不碰 containedItems→**食物雙重消耗風險解除**；def ParentName=OutpostBase(VEF抽象基底)。修 LoadFolders 同列根+1.6。
 - 2026-06-09 實機踩坑①部署：遊戲只掃 install/Mods+Workshop，不掃 ~/rimworld_mods→在 install/Mods 建 symlink 指向 ~/rimworld_mods/<mod> 才載得到(本機 Proton 跑 Win 版，真 log/Config 在 compatdata prefix)。坑②RimSort ignore 功能曾整個擋掉 mod。
 - 2026-06-09 實機踩坑③載入：自寫 LoadFolders.xml(`/`+`/1.6`)害 1.6/Assemblies 的 DLL 沒被掃→class 找不到、Harmony 沒跑、無 gizmo。**刪掉 LoadFolders.xml**回到自動版本疊加(對照能載的 speakup＝無 LoadFolders)即修正，DLL 未動免 rebuild。
-- 2026-06-09 待辦：刪 LoadFolders 後重啟遊戲驗 `[ColonyArchivalOutpost] Harmony patches applied` 出現→世界地圖選殖民地看 gizmo→Task9 端到端(採樣→囤貨→封存→看投遞/扣緩衝→存讀檔→唯一基地擋)。
+- 2026-06-09 ✅Task9 實機端到端全綠：載入(Harmony 字串出現/無 type 找不到)、世界地圖殖民地 gizmo、採樣→封存、正成長投遞回家/負成長扣緩衝、存讀檔、唯一基地擋全部通過。v1 完成。
