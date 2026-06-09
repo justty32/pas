@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <!--
+    ParentName="OutpostBase" 來自 VEF(Outposts 框架)的抽象 def，提供 texture / expandingIcon /
+    inspectorTabs / 預設 worldObjectClass=Outposts.Outpost。此處覆寫 worldObjectClass 成本 mod 子類。
+    expandingIconTexture 暫借 VOE 既有貼圖(WorldObjects/OutpostFarming)避免缺圖，未來可換自製。
+  -->
+  <WorldObjectDef ParentName="OutpostBase">
+    <defName>pas_archival_Outpost</defName>
+    <label>archived colony outpost</label>
+    <description>An abstract outpost converted from a fully-archived colony. It keeps producing the colony's sampled surplus and ships it home, while drawing down its carried reserves for whatever the colony ran at a deficit.</description>
+    <worldObjectClass>ColonyArchivalOutpost.Outpost_Sampled</worldObjectClass>
+    <expandingIconTexture>WorldObjects/OutpostFarming</expandingIconTexture>
+    <modExtensions>
+      <li Class="Outposts.OutpostExtension">
+        <TicksPerProduction>900000</TicksPerProduction>
+        <MinPawns>0</MinPawns>
+        <ResultOptions />
+      </li>
+    </modExtensions>
+  </WorldObjectDef>
+
+</Defs>
