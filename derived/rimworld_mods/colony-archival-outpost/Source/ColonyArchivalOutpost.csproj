@@ -37,8 +37,8 @@
     <Compile Include="CAOMod.cs" />
     <Compile Include="ProductivitySnapshot.cs" />
     <Compile Include="Outpost_Sampled.cs" />
-    <!-- 後續任務逐一加入：
     <Compile Include="ColonyArchivalTracker.cs" />
+    <!-- 後續任務逐一加入：
     <Compile Include="ArchivalService.cs" />
     <Compile Include="Settlement_GetGizmos_Patch.cs" />
     -->
