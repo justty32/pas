@@ -17,23 +17,34 @@ namespace ColonyArchivalOutpost
         private ProductivitySnapshot snapshot = new ProductivitySnapshot();
         public string chosenIconPath; // N3：玩家選定的世界地圖圖標路徑（如 "WorldObjects/OutpostMining"）
 
-        // 渲染用的是 ExpandingMaterial（非 ExpandingIcon），須 override 此處才能換圖。
-        // ExpandingMaterial 以 def.ExpandingIconTexture 建 material 並 cache，不呼叫 ExpandingIcon。
+        // Bug N1 fix：MaterialPool.MatFrom 以 MaterialRequest struct 為 key，但 Mono 的 struct
+        // GetHashCode 對含 reference 欄位的 struct 不穩定，可能每幀 cache miss 並洩漏 GPU material。
+        // 以本地欄位 cache，只在 chosenIconPath 改變時重建。
+        private Material _cachedExpandingMat;
+        private string _cachedIconPathForMat;
+
         public override Material ExpandingMaterial
         {
             get
             {
                 if (!chosenIconPath.NullOrEmpty() && def.expandingShader != null)
                 {
-                    Texture2D tex = ContentFinder<Texture2D>.Get(chosenIconPath, false);
-                    if (tex != null)
-                        return MaterialPool.MatFrom(new MaterialRequest
+                    if (_cachedExpandingMat == null || _cachedIconPathForMat != chosenIconPath)
+                    {
+                        Texture2D tex = ContentFinder<Texture2D>.Get(chosenIconPath, false);
+                        if (tex != null)
                         {
-                            mainTex = tex,
-                            shader = def.expandingShader.Shader,
-                            color = Color.white,
-                            maskTex = def.ExpandingIconTextureMask
-                        });
+                            _cachedExpandingMat = MaterialPool.MatFrom(new MaterialRequest
+                            {
+                                mainTex = tex,
+                                shader = def.expandingShader.Shader,
+                                color = Color.white,
+                                maskTex = def.ExpandingIconTextureMask
+                            });
+                            _cachedIconPathForMat = chosenIconPath;
+                        }
+                    }
+                    if (_cachedExpandingMat != null) return _cachedExpandingMat;
                 }
                 return base.ExpandingMaterial;
             }

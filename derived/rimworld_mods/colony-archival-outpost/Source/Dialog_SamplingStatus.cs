@@ -18,6 +18,7 @@ namespace ColonyArchivalOutpost
         public Dialog_SamplingStatus(Map map)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
+            if (tracker == null) { closeOnClickedOutside = true; return; } // Bug N2 fix
             elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
             snapshot = ArchivalService.ComputeSnapshot(map, tracker);
             daysPerCycle = 900000f / 60000f;
@@ -31,6 +32,7 @@ namespace ColonyArchivalOutpost
 
         public override void DoWindowContents(Rect inRect)
         {
+            if (snapshot == null) { Close(); return; } // Bug N2 guard
             float x = inRect.x;
             float w = inRect.width;
             float y = inRect.y;
