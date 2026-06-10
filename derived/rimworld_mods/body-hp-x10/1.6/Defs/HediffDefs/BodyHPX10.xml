@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <HediffDef>
+    <defName>BodyHPX10</defName>
+    <label>body HP ×10</label>
+    <description>All body parts have 10× their normal maximum hit points.</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <maxSeverity>1.0</maxSeverity>
+    <initialSeverity>1.0</initialSeverity>
+    <!-- vanilla 內建不死機制：ShouldBeDead() 開頭檢查 HasPreventsDeath 直接放行，
+         擋下失血/疾病/致死傷害閾值/核心部位全毀等所有「應死」判定 -->
+    <preventsDeath>true</preventsDeath>
+  </HediffDef>
+</Defs>
