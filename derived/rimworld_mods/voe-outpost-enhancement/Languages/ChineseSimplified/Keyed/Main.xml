@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 产量升级 -->
+  <VOEE.Gizmo.Prod.Label>产量提升 ({0}/{1})</VOEE.Gizmo.Prod.Label>
+  <VOEE.Gizmo.Prod.Desc>产量 {0} → {1}\n费用：{2} {3}</VOEE.Gizmo.Prod.Desc>
+  <VOEE.Gizmo.Prod.DescMax>产量已提升至 {0}（最高等级）</VOEE.Gizmo.Prod.DescMax>
+  <VOEE.Gizmo.Prod.Name>产量提升</VOEE.Gizmo.Prod.Name>
+
+  <!-- 弹药容量升级 -->
+  <VOEE.Gizmo.AmmoC.Label>弹药容量 ({0}/{1})</VOEE.Gizmo.AmmoC.Label>
+  <VOEE.Gizmo.AmmoC.Desc>最大弹药量 {0} → {1} 发\n费用：{2} {3}</VOEE.Gizmo.AmmoC.Desc>
+  <VOEE.Gizmo.AmmoC.DescMax>最大弹药量 {0} 发（最高等级）</VOEE.Gizmo.AmmoC.DescMax>
+  <VOEE.Gizmo.AmmoC.Name>弹药容量</VOEE.Gizmo.AmmoC.Name>
+
+  <!-- 蓄积速度升级 -->
+  <VOEE.Gizmo.AmmoR.Label>蓄积速度 ({0}/{1})</VOEE.Gizmo.AmmoR.Label>
+  <VOEE.Gizmo.AmmoR.Desc>蓄积速度 {0} → {1} 发/人/天\n费用：{2} {3}</VOEE.Gizmo.AmmoR.Desc>
+  <VOEE.Gizmo.AmmoR.DescMax>蓄积速度 {0} 发/人/天（最高等级）</VOEE.Gizmo.AmmoR.DescMax>
+  <VOEE.Gizmo.AmmoR.Name>蓄积速度</VOEE.Gizmo.AmmoR.Name>
+
+  <!-- 射程升级 -->
+  <VOEE.Gizmo.Range.Label>射程 ({0}/{1})</VOEE.Gizmo.Range.Label>
+  <VOEE.Gizmo.Range.Desc>射程 +{0} → +{1} 格\n费用：{2}</VOEE.Gizmo.Range.Desc>
+  <VOEE.Gizmo.Range.DescMax>射程 +{0} 格（最高等级）</VOEE.Gizmo.Range.DescMax>
+  <VOEE.Gizmo.Range.Name>射程</VOEE.Gizmo.Range.Name>
+
+  <!-- 即时补给 -->
+  <VOEE.Gizmo.Restock.Label>补充弹药（{0} 发，{1} 钢铁）</VOEE.Gizmo.Restock.Label>
+  <VOEE.Gizmo.Restock.Desc>购买 {0} 发。当前：{1}/{2}</VOEE.Gizmo.Restock.Desc>
+
+  <!-- 通用 -->
+  <VOEE.MaxLevel>已达最高等级</VOEE.MaxLevel>
+  <VOEE.CantAfford>需要 {0} {1}</VOEE.CantAfford>
+  <VOEE.CantAfford2>需要 {0}</VOEE.CantAfford2>
+  <VOEE.Upgraded>{0} 升至等级 {1}：{2}</VOEE.Upgraded>
+
+  <!-- 火炮 -->
+  <VOEE.Artillery.AmmoFull>弹药库已满</VOEE.Artillery.AmmoFull>
+  <VOEE.Artillery.NoAmmo>弹药不足（{0}/{1} 发）</VOEE.Artillery.NoAmmo>
+  <VOEE.Artillery.InspectAmmo>弹药：{0}/{1}（{2}）</VOEE.Artillery.InspectAmmo>
+  <VOEE.Artillery.Restocked>已补充 {0} 发弹药</VOEE.Artillery.Restocked>
+
+  <!-- 发射对话框 -->
+  <VOEE.Artillery.Fire.Title>炮击</VOEE.Artillery.Fire.Title>
+  <VOEE.Artillery.Fire.SelectShell>选择炮弹种类：</VOEE.Artillery.Fire.SelectShell>
+  <VOEE.Artillery.Fire.SelectCount>发射数量：{0} 发</VOEE.Artillery.Fire.SelectCount>
+  <VOEE.Artillery.Fire.Confirm>发射！</VOEE.Artillery.Fire.Confirm>
+  <VOEE.Artillery.Fire.Desc>存量：{0}/{1} 发</VOEE.Artillery.Fire.Desc>
+
+  <!-- 炮弹种类 -->
+  <VOEE.Shell.HE>高爆弹</VOEE.Shell.HE>
+  <VOEE.Shell.Incendiary>燃烧弹</VOEE.Shell.Incendiary>
+  <VOEE.Shell.EMP>电磁脉冲弹</VOEE.Shell.EMP>
+  <VOEE.Shell.Firefoam>灭火泡沫弹</VOEE.Shell.Firefoam>
+</LanguageData>
