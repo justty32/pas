@@ -29,3 +29,4 @@
 - 2026-06-10 N6細化:採樣粒度玩家可選(開始採樣視窗勾)——血量HP(先做)/肢體缺損狀態(部位重生毀損=斷肢重生)/特定狀態(添加加重減少失去,跳另一list選具體hediff,清單待參考mod)。套用方式定案:直接按速率調severity,不模擬地圖治療/環境邏輯(使用者明示那些不會正常作用也不在考慮範圍),抽象pawn直接套數值。
 - 2026-06-10 拆檔:TODO.md只留🔴Fix(F1/F2)+🟡完善(P1/P2);前瞻項🟢N1-N7+🔵E1-E4搬到新docs/IDEAS.md(含待參考暫存區)。增N7(採樣技能訓練程度:同N6第三模式作用occupants,記SkillRecord XP速率每週期Learn套用,併N6狀態變化區段與UI;是N6教師/學生分組的數值基礎;待釐清rust/passion)。
 - 2026-06-10 N7兩項定案:rust技能衰退由玩家勾選是否記錄(開始採樣視窗粒度清單再加一項);passion倍率採樣時不重現(採基礎速率),套用時依各佔位符pawn自身熱情程度即時加成(每週期Learn依該occupant自己passion算倍率)。
+- 2026-06-10 IDEAS.md過大再拆:IDEAS.md改為精簡索引(分檔表+速覽+待參考暫存);🟢N1-N7移ideas-features.md、🔵E1-E4移ideas-expansions.md。N7定rust玩家勾選/passion採樣不重現改套用時依各佔位符自身熱情加成。
