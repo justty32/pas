@@ -25,7 +25,7 @@
   <CAO.StopSampling>Stop sampling</CAO.StopSampling>
   <CAO.StopSampling.Desc>End the sampling period without archiving. All sampled data will be discarded.</CAO.StopSampling.Desc>
   <CAO.StopSampling.Confirm>Stop sampling and discard all sampled data?</CAO.StopSampling.Confirm>
-  <CAO.ArchivalConfirm.ScalePawn>Scale rates by colonist count (sampling time: {0})</CAO.ArchivalConfirm.ScalePawn>
+  <CAO.ArchivalConfirm.ScalePawn>Scale rates by colonist count (at sampling start: {0})</CAO.ArchivalConfirm.ScalePawn>
   <CAO.Preview.SkillTraining>Skill Training (per {0}-day cycle, *base XP × each pawn's passion)</CAO.Preview.SkillTraining>
   <CAO.Preview.HealthChange>Injury Changes (per {0}-day cycle)</CAO.Preview.HealthChange>
   <CAO.Preview.HealthHealing>Natural recovery</CAO.Preview.HealthHealing>

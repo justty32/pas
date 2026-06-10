@@ -141,6 +141,24 @@ namespace ColonyArchivalOutpost
                         ApplyDeteriorationToPawn(pawn, deterioratePerCycle);
                 }
 
+                // N6 tend pass（參考 VOE Additional Outposts Mercenary Camp）：
+                // deterioration / hediff delta 加重/新增傷口後，傷口為 untended 狀態會累積感染。
+                // 找 Medicine 最高的 pawn 把所有需包紮的傷都 tend 掉（null medicine = 不消耗物品）。
+                if (snapshot.applyHealthDeterioration || (snapshot.applyHediffDeltas && snapshot.dailyHediffDeltas?.Count > 0))
+                {
+                    Pawn medic = AllPawns
+                        .Where(p => !p.Dead && !p.Downed && p.RaceProps.Humanlike
+                               && !p.skills.GetSkill(SkillDefOf.Medicine).TotallyDisabled)
+                        .OrderByDescending(p => p.skills.GetSkill(SkillDefOf.Medicine).Level)
+                        .FirstOrDefault();
+                    if (medic != null)
+                    {
+                        foreach (var tendPawn in AllPawns.ToList())
+                            while (tendPawn.health.HasHediffsNeedingTend(false))
+                                TendUtility.DoTend(medic, tendPawn, null);
+                    }
+                }
+
                 // N7：技能採樣——每週期對 occupants 施加技能 XP（direct=true：只乘 occupant 自身 passion，不計 GlobalLearningFactor/飽和）
                 if (snapshot.applySkillXP && snapshot.dailySkillXP?.Count > 0)
                 {

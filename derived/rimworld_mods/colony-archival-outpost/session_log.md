@@ -37,3 +37,4 @@
 - 2026-06-10 P1/P2源碼查證完畢：P1(Deliver失敗)→VOE自帶fallback存回containedItems+Log.Warning，完全安全；P2(AddPawn內部)→只做occupants.Add+RecachePawnTraits，完全不觸碰pawn hediff/traits/comps，疑慮消除。🟡區全清。
 - 2026-06-10 實作N1+N2+N3：新增Dialog_ArchivalConfirm(確認視窗+圖標gallery)/Dialog_SamplingStatus(採樣狀況)/SnapshotPreviewDrawer(共用預覽helper)；Archive()加name/iconPath參數；Outpost_Sampled加chosenIconPath+ExpandingIcon override；csproj補3個新檔+2個Unity module ref；build 0/0。
 - 2026-06-10 修N3圖標不更新：ExpandingIcon override無效(渲染走ExpandingMaterial直接讀def硬編材質)，改override ExpandingMaterial用chosenIconPath建MaterialRequest餵MaterialPool；實機驗證成功。
+- 2026-06-10 N6補tend pass(參考VOE Additional Outposts傭兵營)：deterioration/hediff delta後找Medicine最高pawn把需包紮傷全tend(null medicine不耗物品)；自查修2 bug：IsEmpty漏avgHealthDeltaPerDay==0f(純傷勢採樣被跳過)+tend pass加medic!=null守衛。ConvertToCaravan掉Silver確認為VOE base層bug非本mod。

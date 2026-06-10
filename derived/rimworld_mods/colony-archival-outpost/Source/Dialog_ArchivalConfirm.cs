@@ -56,7 +56,7 @@ namespace ColonyArchivalOutpost
             elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
             snapshot = ArchivalService.ComputeSnapshot(map, tracker);
             daysPerCycle = 900000f / 60000f; // 15 遊戲天，對應 def TicksPerProduction=900000
-            currentPawnCount = map.mapPawns.FreeColonistsCount;
+            currentPawnCount = tracker.startColonistCount;
             outpostName = map.Parent?.Label ?? "CAO.DefaultOutpostName".Translate();
             chosenIconPath = IconPaths[0];
 

@@ -35,7 +35,8 @@ namespace ColonyArchivalOutpost
 
         public bool IsEmpty => (dailyRates == null || dailyRates.Count == 0)
                             && (dailySkillXP == null || dailySkillXP.Count == 0)
-                            && (dailyHediffDeltas == null || dailyHediffDeltas.Count == 0);
+                            && (dailyHediffDeltas == null || dailyHediffDeltas.Count == 0)
+                            && avgHealthDeltaPerDay == 0f;
 
         public void ExposeData()
         {

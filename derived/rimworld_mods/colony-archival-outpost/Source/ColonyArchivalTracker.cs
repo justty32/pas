@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
@@ -9,6 +10,7 @@ namespace ColonyArchivalOutpost
     {
         public bool isSampling;
         public int startTick = -1;
+        public int startColonistCount = 1; // N4：採樣開始時的殖民者數，作為 per-pawn 基準
         public Dictionary<ThingDef, int> startCounts = new Dictionary<ThingDef, int>();
 
         // N7：技能採樣——期初各殖民者累積 XP 與熱情等級
@@ -26,6 +28,7 @@ namespace ColonyArchivalOutpost
         {
             isSampling = true;
             startTick = Find.TickManager.TicksGame;
+            startColonistCount = Math.Max(1, map.mapPawns.FreeColonistsCount);
             startCounts = new Dictionary<ThingDef, int>(map.resourceCounter.AllCountedAmounts);
 
             // N6：snapshot 每個自由殖民者的可癒傷勢 severity 總和
@@ -69,6 +72,7 @@ namespace ColonyArchivalOutpost
         {
             isSampling = false;
             startTick = -1;
+            startColonistCount = 1;
             startCounts = new Dictionary<ThingDef, int>();
             startSkillSnapshots = new List<PawnSkillSnapshot>();
             startInjurySeverity = new Dictionary<string, float>();
@@ -89,6 +93,7 @@ namespace ColonyArchivalOutpost
             base.ExposeData();
             Scribe_Values.Look(ref isSampling, "caoIsSampling", false);
             Scribe_Values.Look(ref startTick, "caoStartTick", -1);
+            Scribe_Values.Look(ref startColonistCount, "caoStartColonistCount", 1);
             Scribe_Collections.Look(ref startCounts, "caoStartCounts", LookMode.Def, LookMode.Value);
             Scribe_Collections.Look(ref startSkillSnapshots, "caoStartSkillSnapshots", LookMode.Deep);
             Scribe_Collections.Look(ref startInjurySeverity, "caoStartInjurySeverity", LookMode.Value, LookMode.Value);

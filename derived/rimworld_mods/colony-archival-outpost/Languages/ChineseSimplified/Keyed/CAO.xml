@@ -25,7 +25,7 @@
   <CAO.StopSampling>结束但不封存</CAO.StopSampling>
   <CAO.StopSampling.Desc>结束采样期，但不封存殖民地。所有采样数据将被丢弃。</CAO.StopSampling.Desc>
   <CAO.StopSampling.Confirm>确定结束采样并丢弃所有采样数据？</CAO.StopSampling.Confirm>
-  <CAO.ArchivalConfirm.ScalePawn>速率随殖民者人数缩放（采样当下：{0} 人）</CAO.ArchivalConfirm.ScalePawn>
+  <CAO.ArchivalConfirm.ScalePawn>速率随殖民者人数缩放（采样开始时：{0} 人）</CAO.ArchivalConfirm.ScalePawn>
   <CAO.Preview.SkillTraining>技能训练（每 {0} 天周期，*基础 XP，实际乘以各 pawn 热情倍率）</CAO.Preview.SkillTraining>
   <CAO.Preview.HealthChange>伤势变化（每 {0} 天周期）</CAO.Preview.HealthChange>
   <CAO.Preview.HealthHealing>自然恢复</CAO.Preview.HealthHealing>

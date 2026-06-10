@@ -178,7 +178,7 @@ namespace ColonyArchivalOutpost
             if (perPawn)
             {
                 snapshot.perPawnScaling = true;
-                snapshot.basePawnCount = Math.Max(1, map.mapPawns.FreeColonistsCount);
+                snapshot.basePawnCount = Math.Max(1, tracker.startColonistCount);
             }
             // N7：技能採樣開關
             if (applySkillXP && snapshot.dailySkillXP?.Count > 0)
