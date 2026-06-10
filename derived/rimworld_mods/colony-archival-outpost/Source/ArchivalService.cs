@@ -34,7 +34,7 @@ namespace ColonyArchivalOutpost
         {
             var end = map.resourceCounter.AllCountedAmounts;
             int elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
-            float elapsedDays = Mathf.Max(elapsedTicks, 60000) / 60000f;
+            float elapsedDays = Math.Max(elapsedTicks, 60000) / 60000f;
             var allDefs = new HashSet<ThingDef>(end.Keys);
             allDefs.UnionWith(tracker.startCounts.Keys);
             var rates = new Dictionary<ThingDef, float>();

@@ -52,6 +52,7 @@ namespace ColonyArchivalOutpost
         {
             this.map = map;
             var tracker = map.GetComponent<ColonyArchivalTracker>();
+            if (tracker == null) { closeOnClickedOutside = true; return; } // Bug 3 fix
             elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
             snapshot = ArchivalService.ComputeSnapshot(map, tracker);
             daysPerCycle = 900000f / 60000f; // 15 遊戲天，對應 def TicksPerProduction=900000
@@ -68,6 +69,7 @@ namespace ColonyArchivalOutpost
 
         public override void DoWindowContents(Rect inRect)
         {
+            if (snapshot == null) { Close(); return; } // Bug 3 guard：tracker 為 null 時 snapshot 未設定
             float x = inRect.x;
             float w = inRect.width;
             float y = inRect.y;

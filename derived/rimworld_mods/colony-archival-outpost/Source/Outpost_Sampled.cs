@@ -96,8 +96,9 @@ namespace ColonyArchivalOutpost
                 {
                     if (kv.Value >= 0f) continue; // 只處理負成長
                     // N4：per-pawn 模式——消耗量依當前 pawn 數縮放（與 ResultOptions 正成長對稱）。
+                    // Bug 2 fix：與 ResultOptions 正成長對稱，消耗也以 CapablePawns 為基準
                     int want = snapshot.perPawnScaling
-                        ? RateToInt(-kv.Value / snapshot.basePawnCount, daysPerCycle) * PawnCount
+                        ? RateToInt(-kv.Value / snapshot.basePawnCount, daysPerCycle) * CapablePawns.Count()
                         : RateToInt(-kv.Value, daysPerCycle);
                     if (want <= 0) continue;
                     List<Thing> removed = TakeItems(kv.Key, want);

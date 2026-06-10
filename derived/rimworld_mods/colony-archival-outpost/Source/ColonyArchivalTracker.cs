@@ -41,7 +41,9 @@ namespace ColonyArchivalOutpost
                 foreach (var h in pawn.health.hediffSet.hediffs)
                 {
                     if (h is Hediff_Injury || h.def == null) continue; // 保留 MissingPart（缺損）
-                    snap.hediffSeverities[h.def] = h.Severity;
+                    // Bug 1 fix：與 ComputeSnapshot 的 endSeverities 累加方式一致
+                    snap.hediffSeverities.TryGetValue(h.def, out float cur);
+                    snap.hediffSeverities[h.def] = cur + h.Severity;
                 }
                 if (snap.hediffSeverities.Count > 0)
                     startHediffSnapshots.Add(snap);
