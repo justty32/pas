@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Outposts;
@@ -48,7 +49,7 @@ namespace ColonyArchivalOutpost
             return new ProductivitySnapshot(rates);
         }
 
-        public static void Archive(Map map, string name = null, string iconPath = null)
+        public static void Archive(Map map, string name = null, string iconPath = null, bool perPawn = false)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -61,6 +62,13 @@ namespace ColonyArchivalOutpost
             MapParent parent = map.Parent;
             var tile = map.Tile;
             var snapshot = ComputeSnapshot(map, tracker);
+
+            // N4：per-pawn 縮放——封存前記錄當下殖民者數，後續 Outpost_Sampled 用此基準縮放速率。
+            if (perPawn)
+            {
+                snapshot.perPawnScaling = true;
+                snapshot.basePawnCount = Math.Max(1, map.mapPawns.FreeColonistsCount);
+            }
 
             // 1) 建 outpost(掛玩家陣營, 餵 snapshot)
             var outpost = (Outpost_Sampled)WorldObjectMaker.MakeWorldObject(

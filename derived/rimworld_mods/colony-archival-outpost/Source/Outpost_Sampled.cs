@@ -49,9 +49,19 @@ namespace ColonyArchivalOutpost
                 foreach (var kv in snapshot.dailyRates)
                 {
                     if (kv.Value <= 0f) continue; // 只有正成長走產出投遞
-                    int amount = RateToInt(kv.Value, daysPerCycle);
-                    if (amount <= 0) continue;
-                    list.Add(new ResultOption { Thing = kv.Key, BaseAmount = amount, AmountPerPawn = 0, AmountsPerSkills = null });
+                    if (snapshot.perPawnScaling)
+                    {
+                        // N4：per-pawn 模式——AmountPerPawn 由 VOE Amount(CapablePawns) 自動乘以當前 pawn 數縮放。
+                        int perPawnAmt = RateToInt(kv.Value / snapshot.basePawnCount, daysPerCycle);
+                        if (perPawnAmt <= 0) continue;
+                        list.Add(new ResultOption { Thing = kv.Key, BaseAmount = 0, AmountPerPawn = perPawnAmt, AmountsPerSkills = null });
+                    }
+                    else
+                    {
+                        int amount = RateToInt(kv.Value, daysPerCycle);
+                        if (amount <= 0) continue;
+                        list.Add(new ResultOption { Thing = kv.Key, BaseAmount = amount, AmountPerPawn = 0, AmountsPerSkills = null });
+                    }
                 }
                 return list;
             }
@@ -83,7 +93,10 @@ namespace ColonyArchivalOutpost
                 foreach (var kv in snapshot.dailyRates)
                 {
                     if (kv.Value >= 0f) continue; // 只處理負成長
-                    int want = RateToInt(-kv.Value, daysPerCycle);
+                    // N4：per-pawn 模式——消耗量依當前 pawn 數縮放（與 ResultOptions 正成長對稱）。
+                    int want = snapshot.perPawnScaling
+                        ? RateToInt(-kv.Value / snapshot.basePawnCount, daysPerCycle) * PawnCount
+                        : RateToInt(-kv.Value, daysPerCycle);
                     if (want <= 0) continue;
                     // VOE 公開 API：從 containedItems 取出最多 want 個；不足則取到 0。取出即消耗，Destroy 之。
                     List<Thing> removed = TakeItems(kv.Key, want);

@@ -14,6 +14,8 @@ namespace ColonyArchivalOutpost
 
         private string outpostName;
         private string chosenIconPath;
+        private bool scalePawnCount;
+        private readonly int currentPawnCount;
 
         private Vector2 previewScroll;
         private float previewContentH;
@@ -49,6 +51,7 @@ namespace ColonyArchivalOutpost
             elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
             snapshot = ArchivalService.ComputeSnapshot(map, tracker);
             daysPerCycle = 900000f / 60000f; // 15 遊戲天，對應 def TicksPerProduction=900000
+            currentPawnCount = map.mapPawns.FreeColonistsCount;
             outpostName = map.Parent?.Label ?? "CAO.DefaultOutpostName".Translate();
             chosenIconPath = IconPaths[0];
 
@@ -85,6 +88,11 @@ namespace ColonyArchivalOutpost
             Widgets.Label(new Rect(x, y, 110f, 26f), "CAO.ArchivalConfirm.OutpostName".Translate() + ":");
             outpostName = Widgets.TextField(new Rect(x + 114f, y, w - 114f, 26f), outpostName);
             y += 34f;
+
+            // N4：per-pawn 開關
+            Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
+                "CAO.ArchivalConfirm.ScalePawn".Translate(currentPawnCount), ref scalePawnCount);
+            y += 32f;
 
             // N3：圖標 gallery
             Widgets.Label(new Rect(x, y, w, 22f), "CAO.ArchivalConfirm.ChooseIcon".Translate() + ":");
@@ -131,7 +139,7 @@ namespace ColonyArchivalOutpost
             {
                 Close();
                 string name = outpostName.NullOrEmpty() ? null : outpostName.Trim();
-                ArchivalService.Archive(map, name, chosenIconPath);
+                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount);
             }
         }
     }
