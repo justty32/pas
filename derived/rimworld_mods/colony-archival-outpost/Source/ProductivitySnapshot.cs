@@ -13,9 +13,13 @@ namespace ColonyArchivalOutpost
         public bool perPawnScaling;
         public int basePawnCount = 1;
 
-        // N7：技能採樣——每日平均基礎 XP 速率（已除以採樣 pawn 的 passion 倍率；套用時用 direct=true 讓 occupant passion 作用）
+        // N7：技能採樣
         public Dictionary<SkillDef, float> dailySkillXP = new Dictionary<SkillDef, float>();
-        public bool applySkillXP; // 封存視窗開關
+        public bool applySkillXP;
+
+        // N6：傷勢採樣——每日平均可癒傷勢 severity 變化量（負=淨治癒，正=淨惡化）
+        public float avgHealthDeltaPerDay; // 負值=有益（每天平均治癒 X severity/pawn）
+        public bool applyHealthDelta;
 
         public ProductivitySnapshot() { }
 
@@ -34,6 +38,8 @@ namespace ColonyArchivalOutpost
             Scribe_Values.Look(ref basePawnCount, "basePawnCount", 1);
             Scribe_Collections.Look(ref dailySkillXP, "dailySkillXP", LookMode.Def, LookMode.Value);
             Scribe_Values.Look(ref applySkillXP, "applySkillXP", false);
+            Scribe_Values.Look(ref avgHealthDeltaPerDay, "avgHealthDeltaPerDay", 0f);
+            Scribe_Values.Look(ref applyHealthDelta, "applyHealthDelta", false);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 if (dailyRates == null) dailyRates = new Dictionary<ThingDef, float>();

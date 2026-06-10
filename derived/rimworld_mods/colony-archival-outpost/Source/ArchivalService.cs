@@ -80,7 +80,32 @@ namespace ColonyArchivalOutpost
                 snapshot.dailySkillXP = skillRates;
             }
 
+            // N6：傷勢速率——統計採樣期始末都在場的 pawn 的平均可癒傷勢變化量/天
+            if (tracker.startInjurySeverity.Count > 0)
+            {
+                float totalDelta = 0f;
+                int count = 0;
+                foreach (var pair in tracker.startInjurySeverity)
+                {
+                    var pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => p.ThingID == pair.Key);
+                    if (pawn == null) continue;
+                    float endSev = TotalHealableSeverity(pawn);
+                    totalDelta += endSev - pair.Value; // 負=淨治癒
+                    count++;
+                }
+                if (count > 0) snapshot.avgHealthDeltaPerDay = totalDelta / count / elapsedDays;
+            }
+
             return snapshot;
+        }
+
+        private static float TotalHealableSeverity(Pawn pawn)
+        {
+            float total = 0f;
+            foreach (var h in pawn.health.hediffSet.hediffs)
+                if (h is Hediff_Injury hd && hd.CanHealNaturally())
+                    total += h.Severity;
+            return total;
         }
 
         // passion 倍率：與 SkillRecord.LearnRateFactor(direct=true) 一致
@@ -93,7 +118,7 @@ namespace ColonyArchivalOutpost
         };
 
         public static void Archive(Map map, string name = null, string iconPath = null,
-            bool perPawn = false, bool applySkillXP = false)
+            bool perPawn = false, bool applySkillXP = false, bool applyHealthDelta = false)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -116,6 +141,9 @@ namespace ColonyArchivalOutpost
             // N7：技能採樣開關
             if (applySkillXP && snapshot.dailySkillXP?.Count > 0)
                 snapshot.applySkillXP = true;
+            // N6：傷勢採樣開關（只有淨治癒才套用）
+            if (applyHealthDelta && snapshot.avgHealthDeltaPerDay < 0f)
+                snapshot.applyHealthDelta = true;
 
             // 1) 建 outpost(掛玩家陣營, 餵 snapshot)
             var outpost = (Outpost_Sampled)WorldObjectMaker.MakeWorldObject(

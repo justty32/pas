@@ -27,5 +27,9 @@
   <CAO.StopSampling.Confirm>Stop sampling and discard all sampled data?</CAO.StopSampling.Confirm>
   <CAO.ArchivalConfirm.ScalePawn>Scale rates by colonist count (sampling time: {0})</CAO.ArchivalConfirm.ScalePawn>
   <CAO.Preview.SkillTraining>Skill Training (per {0}-day cycle, *base XP × each pawn's passion)</CAO.Preview.SkillTraining>
+  <CAO.Preview.HealthChange>Injury Changes (per {0}-day cycle)</CAO.Preview.HealthChange>
+  <CAO.Preview.HealthHealing>Natural recovery</CAO.Preview.HealthHealing>
+  <CAO.Preview.HealthDamage>Injury deterioration</CAO.Preview.HealthDamage>
+  <CAO.ArchivalConfirm.ApplyHealthDelta>Apply injury recovery (+{0} severity/pawn per cycle)</CAO.ArchivalConfirm.ApplyHealthDelta>
   <CAO.ArchivalConfirm.ApplySkillXP>Apply skill training rates to occupant colonists ({0} skills)</CAO.ArchivalConfirm.ApplySkillXP>
 </LanguageData>

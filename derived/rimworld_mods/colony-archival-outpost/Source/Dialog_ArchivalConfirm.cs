@@ -17,6 +17,7 @@ namespace ColonyArchivalOutpost
         private bool scalePawnCount;
         private readonly int currentPawnCount;
         private bool applySkillXP;
+        private bool applyHealthDelta;
 
         private Vector2 previewScroll;
         private float previewContentH;
@@ -43,7 +44,7 @@ namespace ColonyArchivalOutpost
         private const float IconSlot = 40f; // 36px icon + 4px gap
         private const float IconSize = 36f;
 
-        public override Vector2 InitialSize => new Vector2(500f, 580f);
+        public override Vector2 InitialSize => new Vector2(500f, 620f);
 
         public Dialog_ArchivalConfirm(Map map)
         {
@@ -103,6 +104,15 @@ namespace ColonyArchivalOutpost
                 y += 32f;
             }
 
+            // N6：傷勢恢復開關（只在有淨治癒資料時顯示）
+            if (snapshot.avgHealthDeltaPerDay < 0f)
+            {
+                float healPerCycle = -snapshot.avgHealthDeltaPerDay * (900000f / 60000f);
+                Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
+                    "CAO.ArchivalConfirm.ApplyHealthDelta".Translate(healPerCycle.ToString("F2")), ref applyHealthDelta);
+                y += 32f;
+            }
+
             // N3：圖標 gallery
             Widgets.Label(new Rect(x, y, w, 22f), "CAO.ArchivalConfirm.ChooseIcon".Translate() + ":");
             y += 24f;
@@ -148,7 +158,7 @@ namespace ColonyArchivalOutpost
             {
                 Close();
                 string name = outpostName.NullOrEmpty() ? null : outpostName.Trim();
-                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP);
+                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP, applyHealthDelta);
             }
         }
     }

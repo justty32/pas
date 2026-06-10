@@ -106,6 +106,14 @@ namespace ColonyArchivalOutpost
                         if (t != null && !t.Destroyed) t.Destroy();
                 }
 
+                // N6：傷勢採樣——每週期治癒 occupants 的可癒傷傷勢（按比例分配到各傷口）
+                if (snapshot.applyHealthDelta && snapshot.avgHealthDeltaPerDay < 0f)
+                {
+                    float healPerCycle = -snapshot.avgHealthDeltaPerDay * daysPerCycle;
+                    foreach (var pawn in AllPawns.ToList())
+                        ApplyHealingToPawn(pawn, healPerCycle);
+                }
+
                 // N7：技能採樣——每週期對 occupants 施加技能 XP（direct=true：只乘 occupant 自身 passion，不計 GlobalLearningFactor/飽和）
                 if (snapshot.applySkillXP && snapshot.dailySkillXP?.Count > 0)
                 {
@@ -126,6 +134,26 @@ namespace ColonyArchivalOutpost
             }
 
             base.Produce(); // 產出正成長並依玩家全域 DeliveryMethod 投遞
+        }
+
+        // N6：按比例分配 totalHealAmount 到各可癒傷口，使用官方 Heal() 路徑
+        private static void ApplyHealingToPawn(Pawn pawn, float totalHealAmount)
+        {
+            var injuries = new List<Hediff_Injury>();
+            foreach (var h in pawn.health.hediffSet.hediffs)
+                if (h is Hediff_Injury hd && hd.CanHealNaturally() && hd.Severity > 0f)
+                    injuries.Add(hd);
+            if (injuries.Count == 0) return;
+            float totalSev = 0f;
+            foreach (var h in injuries) totalSev += h.Severity;
+            if (totalSev <= 0f) return;
+            var toRemove = new List<Hediff>();
+            foreach (var h in injuries)
+            {
+                h.Heal(totalHealAmount * (h.Severity / totalSev));
+                if (h.ShouldRemove) toRemove.Add(h);
+            }
+            foreach (var h in toRemove) pawn.health.RemoveHediff(h);
         }
 
         // double 計算再 clamp，防止極端速率 × 週期倍數超出 int32 範圍

@@ -27,5 +27,9 @@
   <CAO.StopSampling.Confirm>確定結束採樣並捨棄所有採樣資料？</CAO.StopSampling.Confirm>
   <CAO.ArchivalConfirm.ScalePawn>速率隨殖民者人數縮放（採樣當下：{0} 人）</CAO.ArchivalConfirm.ScalePawn>
   <CAO.Preview.SkillTraining>技能訓練（每 {0} 天週期，*基礎 XP，實際乘以各 pawn 熱情倍率）</CAO.Preview.SkillTraining>
+  <CAO.Preview.HealthChange>傷勢變化（每 {0} 天週期）</CAO.Preview.HealthChange>
+  <CAO.Preview.HealthHealing>自然恢復</CAO.Preview.HealthHealing>
+  <CAO.Preview.HealthDamage>傷勢惡化</CAO.Preview.HealthDamage>
+  <CAO.ArchivalConfirm.ApplyHealthDelta>套用傷勢恢復（每週期約 +{0} severity/pawn）</CAO.ArchivalConfirm.ApplyHealthDelta>
   <CAO.ArchivalConfirm.ApplySkillXP>套用技能訓練速率至佔位符殖民者（共 {0} 個技能）</CAO.ArchivalConfirm.ApplySkillXP>
 </LanguageData>

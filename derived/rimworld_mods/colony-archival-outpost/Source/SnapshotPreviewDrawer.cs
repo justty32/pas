@@ -31,6 +31,11 @@ namespace ColonyArchivalOutpost
                 h += SectionGap;
                 h += HeaderH + snapshot.dailySkillXP.Count * RowH;
             }
+            if (snapshot.avgHealthDeltaPerDay != 0f)
+            {
+                h += SectionGap;
+                h += HeaderH + RowH;
+            }
             return h;
         }
 
@@ -76,6 +81,34 @@ namespace ColonyArchivalOutpost
                     "CAO.Preview.SkillTraining".Translate(Mathf.RoundToInt(daysPerCycle)),
                     snapshot.dailySkillXP.OrderByDescending(kv => kv.Value),
                     rect.y, scrollPos.y, outerHeight);
+            }
+
+            // N6：傷勢變化段落
+            if (snapshot.avgHealthDeltaPerDay != 0f)
+            {
+                y += SectionGap;
+                bool healing = snapshot.avgHealthDeltaPerDay < 0f;
+                float perCycle = Math.Abs(snapshot.avgHealthDeltaPerDay) * daysPerCycle;
+
+                if (IsVisible(y, HeaderH, rect.y, scrollPos.y, outerHeight))
+                {
+                    Text.Font = GameFont.Tiny;
+                    Widgets.Label(new Rect(x, y, w, HeaderH), "CAO.Preview.HealthChange".Translate(Mathf.RoundToInt(daysPerCycle)));
+                    Text.Font = GameFont.Small;
+                }
+                y += HeaderH;
+
+                if (IsVisible(y, RowH, rect.y, scrollPos.y, outerHeight))
+                {
+                    Widgets.Label(new Rect(x + 4f, y, w * 0.55f, RowH),
+                        healing ? "CAO.Preview.HealthHealing".Translate() : "CAO.Preview.HealthDamage".Translate());
+                    GUI.color = healing ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f);
+                    string sign = healing ? "+" : "-";
+                    Widgets.Label(new Rect(x + w * 0.56f, y, w * 0.44f, RowH),
+                        $"{sign}{perCycle:F2} sev / {"CAO.Preview.Cycle".Translate()} / pawn");
+                    GUI.color = Color.white;
+                }
+                y += RowH;
             }
 
             Text.Font = prevFont;
