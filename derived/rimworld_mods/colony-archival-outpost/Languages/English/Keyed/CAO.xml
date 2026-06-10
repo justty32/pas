@@ -33,5 +33,7 @@
   <CAO.ArchivalConfirm.ApplyHealthDelta>Apply injury recovery (+{0} severity/pawn per cycle)</CAO.ArchivalConfirm.ApplyHealthDelta>
   <CAO.ArchivalConfirm.ApplySkillXP>Apply skill training rates to occupant colonists ({0} skills)</CAO.ArchivalConfirm.ApplySkillXP>
   <CAO.Preview.HediffDeltas>Condition Changes (per {0}-day cycle)</CAO.Preview.HediffDeltas>
+  <CAO.Preview.InfoOnly>(info only)</CAO.Preview.InfoOnly>
   <CAO.ArchivalConfirm.ApplyHediffDeltas>Apply condition changes to occupant colonists ({0} conditions)</CAO.ArchivalConfirm.ApplyHediffDeltas>
+  <CAO.ArchivalConfirm.ApplyHealthDeterioration>Apply injury deterioration (-{0} severity/pawn per cycle)</CAO.ArchivalConfirm.ApplyHealthDeterioration>
 </LanguageData>

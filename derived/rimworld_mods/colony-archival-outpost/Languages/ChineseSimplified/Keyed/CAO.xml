@@ -33,5 +33,7 @@
   <CAO.ArchivalConfirm.ApplyHealthDelta>套用伤势恢复（每周期约 +{0} severity/pawn）</CAO.ArchivalConfirm.ApplyHealthDelta>
   <CAO.ArchivalConfirm.ApplySkillXP>套用技能训练速率至占位符殖民者（共 {0} 个技能）</CAO.ArchivalConfirm.ApplySkillXP>
   <CAO.Preview.HediffDeltas>其他状态变化（每 {0} 天周期）</CAO.Preview.HediffDeltas>
+  <CAO.Preview.InfoOnly>（仅显示）</CAO.Preview.InfoOnly>
   <CAO.ArchivalConfirm.ApplyHediffDeltas>套用其他状态变化至占位符殖民者（共 {0} 种状态）</CAO.ArchivalConfirm.ApplyHediffDeltas>
+  <CAO.ArchivalConfirm.ApplyHealthDeterioration>套用伤势恶化（每周期约 -{0} severity/pawn）</CAO.ArchivalConfirm.ApplyHealthDeterioration>
 </LanguageData>

@@ -203,10 +203,16 @@ namespace ColonyArchivalOutpost
                 if (IsVisible(y, RowH, contentOrigin, scrollY, outerH))
                 {
                     bool improving = kv.Value < 0f; // 負=消退=好
+                    bool isMissingPart = kv.Key?.hediffClass != null &&
+                        typeof(Hediff_MissingPart).IsAssignableFrom(kv.Key.hediffClass);
                     float absPerCycle = Math.Abs(kv.Value) * daysPerCycle;
                     string sign = improving ? "-" : "+";
-                    Widgets.Label(new Rect(x + 4f, y, w * 0.55f, RowH), kv.Key.LabelCap);
-                    GUI.color = improving ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f);
+                    string label = isMissingPart
+                        ? kv.Key.LabelCap + " " + "CAO.Preview.InfoOnly".Translate()
+                        : kv.Key.LabelCap;
+                    Widgets.Label(new Rect(x + 4f, y, w * 0.55f, RowH), label);
+                    GUI.color = isMissingPart ? Color.gray
+                        : (improving ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f));
                     Widgets.Label(new Rect(x + w * 0.56f, y, w * 0.44f, RowH),
                         $"{sign}{absPerCycle:F3} sev / {"CAO.Preview.Cycle".Translate()}");
                     GUI.color = Color.white;

@@ -92,7 +92,7 @@ namespace ColonyArchivalOutpost
                     var endSeverities = new Dictionary<HediffDef, float>();
                     foreach (var h in pawn.health.hediffSet.hediffs)
                     {
-                        if (h is Hediff_Injury || h is Hediff_MissingPart || h.def == null) continue;
+                        if (h is Hediff_Injury || h.def == null) continue; // 保留 MissingPart（缺損）
                         endSeverities.TryGetValue(h.def, out float cur);
                         endSeverities[h.def] = cur + h.Severity;
                     }
@@ -160,7 +160,7 @@ namespace ColonyArchivalOutpost
 
         public static void Archive(Map map, string name = null, string iconPath = null,
             bool perPawn = false, bool applySkillXP = false, bool applyHealthDelta = false,
-            bool applyHediffDeltas = false)
+            bool applyHediffDeltas = false, bool applyHealthDeterioration = false)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -189,6 +189,9 @@ namespace ColonyArchivalOutpost
             // N6b：非傷勢 hediff 採樣開關
             if (applyHediffDeltas && snapshot.dailyHediffDeltas?.Count > 0)
                 snapshot.applyHediffDeltas = true;
+            // N6 傷勢惡化開關
+            if (applyHealthDeterioration && snapshot.avgHealthDeltaPerDay > 0f)
+                snapshot.applyHealthDeterioration = true;
 
             // 1) 建 outpost(掛玩家陣營, 餵 snapshot)
             var outpost = (Outpost_Sampled)WorldObjectMaker.MakeWorldObject(

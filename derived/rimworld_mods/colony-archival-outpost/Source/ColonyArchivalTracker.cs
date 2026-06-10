@@ -40,7 +40,7 @@ namespace ColonyArchivalOutpost
                 var snap = new PawnHediffSnapshot { pawnId = pawn.ThingID };
                 foreach (var h in pawn.health.hediffSet.hediffs)
                 {
-                    if (h is Hediff_Injury || h is Hediff_MissingPart || h.def == null) continue;
+                    if (h is Hediff_Injury || h.def == null) continue; // 保留 MissingPart（缺損）
                     snap.hediffSeverities[h.def] = h.Severity;
                 }
                 if (snap.hediffSeverities.Count > 0)

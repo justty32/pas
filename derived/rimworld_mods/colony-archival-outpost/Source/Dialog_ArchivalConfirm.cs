@@ -18,6 +18,7 @@ namespace ColonyArchivalOutpost
         private readonly int currentPawnCount;
         private bool applySkillXP;
         private bool applyHealthDelta;
+        private bool applyHealthDeterioration;
         private bool applyHediffDeltas;
 
         private Vector2 previewScroll;
@@ -105,12 +106,21 @@ namespace ColonyArchivalOutpost
                 y += 32f;
             }
 
-            // N6：傷勢恢復開關（只在有淨治癒資料時顯示）
+            // N6：傷勢治癒開關
             if (snapshot.avgHealthDeltaPerDay < 0f)
             {
                 float healPerCycle = -snapshot.avgHealthDeltaPerDay * (900000f / 60000f);
                 Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
                     "CAO.ArchivalConfirm.ApplyHealthDelta".Translate(healPerCycle.ToString("F2")), ref applyHealthDelta);
+                y += 32f;
+            }
+
+            // N6 壞傷勢：傷勢惡化開關
+            if (snapshot.avgHealthDeltaPerDay > 0f)
+            {
+                float deterioratePerCycle = snapshot.avgHealthDeltaPerDay * (900000f / 60000f);
+                Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
+                    "CAO.ArchivalConfirm.ApplyHealthDeterioration".Translate(deterioratePerCycle.ToString("F2")), ref applyHealthDeterioration);
                 y += 32f;
             }
 
@@ -167,7 +177,7 @@ namespace ColonyArchivalOutpost
             {
                 Close();
                 string name = outpostName.NullOrEmpty() ? null : outpostName.Trim();
-                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP, applyHealthDelta, applyHediffDeltas);
+                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP, applyHealthDelta, applyHediffDeltas, applyHealthDeterioration);
             }
         }
     }

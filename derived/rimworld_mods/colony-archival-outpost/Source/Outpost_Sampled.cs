@@ -113,12 +113,20 @@ namespace ColonyArchivalOutpost
                         ApplyHediffDeltasToPawn(pawn, snapshot.dailyHediffDeltas, daysPerCycle);
                 }
 
-                // N6：傷勢採樣——每週期治癒 occupants 的可癒傷傷勢（按比例分配到各傷口）
+                // N6：傷勢治癒——每週期治癒 occupants 的可癒傷傷勢
                 if (snapshot.applyHealthDelta && snapshot.avgHealthDeltaPerDay < 0f)
                 {
                     float healPerCycle = -snapshot.avgHealthDeltaPerDay * daysPerCycle;
                     foreach (var pawn in AllPawns.ToList())
                         ApplyHealingToPawn(pawn, healPerCycle);
+                }
+
+                // N6 壞傷勢——每週期惡化 occupants 的可癒傷傷勢
+                if (snapshot.applyHealthDeterioration && snapshot.avgHealthDeltaPerDay > 0f)
+                {
+                    float deterioratePerCycle = snapshot.avgHealthDeltaPerDay * daysPerCycle;
+                    foreach (var pawn in AllPawns.ToList())
+                        ApplyDeteriorationToPawn(pawn, deterioratePerCycle);
                 }
 
                 // N7：技能採樣——每週期對 occupants 施加技能 XP（direct=true：只乘 occupant 自身 passion，不計 GlobalLearningFactor/飽和）
@@ -163,11 +171,29 @@ namespace ColonyArchivalOutpost
             foreach (var h in toRemove) pawn.health.RemoveHediff(h);
         }
 
+        // N6 壞傷勢：按比例分配 totalDeteriorate 到各可癒傷口，加重 severity
+        private static void ApplyDeteriorationToPawn(Pawn pawn, float totalDeteriorate)
+        {
+            var injuries = new List<Hediff_Injury>();
+            foreach (var h in pawn.health.hediffSet.hediffs)
+                if (h is Hediff_Injury hd && hd.CanHealNaturally() && hd.Severity > 0f)
+                    injuries.Add(hd);
+            if (injuries.Count == 0) return;
+            float totalSev = 0f;
+            foreach (var h in injuries) totalSev += h.Severity;
+            if (totalSev <= 0f) return;
+            foreach (var h in injuries)
+                h.Severity += totalDeteriorate * (h.Severity / totalSev);
+        }
+
         // N6b：按速率對每個 pawn 的非傷勢 hediff 施加 severity 變化（正=加重/新增，負=消退）
         private static void ApplyHediffDeltasToPawn(Pawn pawn, Dictionary<HediffDef, float> dailyDeltas, float days)
         {
             foreach (var kv in dailyDeltas)
             {
+                // 缺損（MissingPart）需要 BodyPartRecord 才能正確建立，無法安全套用，略過
+                if (kv.Key?.hediffClass != null && typeof(Hediff_MissingPart).IsAssignableFrom(kv.Key.hediffClass))
+                    continue;
                 float delta = kv.Value * days;
                 if (delta == 0f) continue;
                 var existing = pawn.health.hediffSet.GetFirstHediffOfDef(kv.Key);

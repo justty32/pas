@@ -20,6 +20,7 @@ namespace ColonyArchivalOutpost
         // N6：傷勢採樣——每日平均可癒傷勢 severity 變化量（負=淨治癒，正=淨惡化）
         public float avgHealthDeltaPerDay; // 負值=有益（每天平均治癒 X severity/pawn）
         public bool applyHealthDelta;
+        public bool applyHealthDeterioration; // 正值惡化套用開關
 
         // N6b：非傷勢 hediff severity 每日變化率（正=加重/新增，負=消退）
         public Dictionary<HediffDef, float> dailyHediffDeltas = new Dictionary<HediffDef, float>();
@@ -45,6 +46,7 @@ namespace ColonyArchivalOutpost
             Scribe_Values.Look(ref applySkillXP, "applySkillXP", false);
             Scribe_Values.Look(ref avgHealthDeltaPerDay, "avgHealthDeltaPerDay", 0f);
             Scribe_Values.Look(ref applyHealthDelta, "applyHealthDelta", false);
+            Scribe_Values.Look(ref applyHealthDeterioration, "applyHealthDeterioration", false);
             Scribe_Collections.Look(ref dailyHediffDeltas, "dailyHediffDeltas", LookMode.Def, LookMode.Value);
             Scribe_Values.Look(ref applyHediffDeltas, "applyHediffDeltas", false);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
