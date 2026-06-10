@@ -11,3 +11,21 @@
 - 2026-06-09 實機踩坑①部署：遊戲只掃 install/Mods+Workshop，不掃 ~/rimworld_mods→在 install/Mods 建 symlink 指向 ~/rimworld_mods/<mod> 才載得到(本機 Proton 跑 Win 版，真 log/Config 在 compatdata prefix)。坑②RimSort ignore 功能曾整個擋掉 mod。
 - 2026-06-09 實機踩坑③載入：自寫 LoadFolders.xml(`/`+`/1.6`)害 1.6/Assemblies 的 DLL 沒被掃→class 找不到、Harmony 沒跑、無 gizmo。**刪掉 LoadFolders.xml**回到自動版本疊加(對照能載的 speakup＝無 LoadFolders)即修正，DLL 未動免 rebuild。
 - 2026-06-09 ✅Task9 實機端到端全綠：載入(Harmony 字串出現/無 type 找不到)、世界地圖殖民地 gizmo、採樣→封存、正成長投遞回家/負成長扣緩衝、存讀檔、唯一基地擋全部通過。v1 完成。
+- 2026-06-10 ⚠待辦：消耗/產出脫鉤——負成長料盡(黃金歸零)仍無條件 base.Produce()產正成長(食物變免費)。Produce()先扣料(TakeItems取到0)再無條件產出, 兩者無耦合判斷。修法選項見 docs/2026-06-10-todo-consume-produce-decoupling.md。待回家確認設計意圖後動工。
+- 2026-06-10 建立 docs/TODO.md（三類匯整：🔴Fix/🟡完善/🟢新想法）。已入：F1消耗產出脫鉤(=前述待辦)、P1投遞失敗無保險且VOE Deliver行為未查證(源碼未clone)。後續問題往 TODO.md 累積。
+- 2026-06-10 TODO.md 增 F2(採樣短/溢位:核對後溢位已被1天下限部分擋住,型別int32非int64;拆F2a殘留RoundToInt溢位+F2b最短採樣門檻建議≥1天)、N1(封存前確認視窗:產出消耗預覽+命名欄+確定/先等等)。
+- 2026-06-10 使用者定案:採樣不足1天改「軟提醒」非硬擋——N1確認視窗加黃字「不到一天,速率強制以一天計」(對應ArchivalService.cs:36下限);F2b硬擋構想改註為已被軟提醒取代(保留備查)。
+- 2026-06-10 TODO.md 增 N2(採樣中查看狀況gizmo:即時有號淨流+乘15換算每週期具體產量+已歷時;僅isSampling顯示)。與N1/F1共用「算snapshot」「snapshot→具體產量」兩段helper,避免三套算式不一致。
+- 2026-06-10 答pawn相容性疑慮:不走原版商隊(無Caravan),是DeSpawn+outpost.AddPawn搬「原Pawn物件本身」非佔位符→mod掛pawn資料隨物件保全,疑慮前提多不成立。記P2:待VOE源碼坐實AddPawn內部+列殘留風險(DeSpawn副作用/地圖銷毀帶走MapComponent資料/VOE自管occupants)。
+- 2026-06-10 TODO.md 增 N3(封存視窗可選大地圖圖標):現圖標寫死於Outpost_Sampled.xml expandingIconTexture=OutpostFarming;改法=Outpost_Sampled加chosenIconPath欄位(Scribe存)+override世界物件ExpandingIcon getter回傳選定貼圖+N1視窗放縮圖gallery。與N1命名欄並列。
+- 2026-06-10 TODO.md 新增🔵未來擴展區塊+E1(自訂哨站類型:把封存出的outpost升格為玩家定義可重用類型;構想階段)。列4個待釐清問題(類型存什麼/怎麼用/存哪/是否繞過採樣),建在N1命名+N3圖標之上,需再brainstorm。
+- 2026-06-10 E1定案(命名+圖標+配方;不花資源走簡化VOE建站略過成本/地形/技能;單存檔GameComponent;不繞採樣用模板速率復刻)。增N4(速率per-pawn縮放:VOE ResultOption.AmountPerPawn原生支援,現Outpost_Sampled.cs:30寫死0;tracker需記採樣期平均殖民者數;N1加開關)。增E2(分攤襲擊哨站,構想階段,5問待釐清,可能獨立mod)。第4點夾雜誤貼cmake-tools lua行已忽略。
+- 2026-06-10 🔵重構:E2(舊分攤襲擊)展開為三件互依——E2哨站臨時地圖生成機制(基礎,類型化佈局如牧場=房+柵欄+動物,與E1連動)、E3阻擋襲擊(臨時地圖戰鬥遭遇:3天預警窗/阻擋程度騷擾一般死守/敵價值換襲擊點數減免/撤離留occupants屍體留containedItems/無冷卻/多襲取最近;待使用者貼參考VOE擴展mod)、E4重新採樣(gizmo重採→臨時地圖→結束採樣走封存路線重設snapshot,期間不停產)。檔末暫存:待貼參考mod+待clone VOE源碼。
+- 2026-06-10 E3細化:攔截改「襲擊事發當下即時patch incident跳選項(是否攔截/用哪哨站/是否實際生成地圖戰鬥=抽象結算vs手動開地圖)」,化解原3天預警可行性風險;但與先前「3天窗提前選哨站」有出入,待拍板二選一或併存。E2地圖生成參考mod=empire refactor(待使用者回家給看),已入暫存區。
+- 2026-06-10 E2細化(範圍收斂:先只做本mod自家封存哨站的臨時地圖生成,VOE原有哨站之後再說)。設計:封存時(地圖銷毀DeinitAndRemoveMap:95前)用藍圖序列化能力擷取——①建築活動區序列化建築②額外物品活動區(可多)序列化物品③殖民者/動物/囚犯各設定位活動區;掛Outpost_Sampled隨存檔,臨時地圖生成時重建+pawn落定位。依賴決策待定(硬依賴藍圖mod vs借鑒/內嵌)。風險:序列化保真度/擷取時機/活動區選定UI/座標映射。
+- 2026-06-10 E2兩決策:藍圖序列化傾向「內嵌」(借鑒程式碼不硬依賴,回家再最終定);序列化保真度定案「外觀重現即可」(存def+位置+朝向+品質,不需HP/內容物/完整狀態)。
+- 2026-06-10 增N5(電量納入採樣):技術現實=電量是瓦特流非庫存物品,不在resourceCounter,dailyRates key是ThingDef而電量無ThingDef→須另取樣PowerNet淨功率取平均+ProductivitySnapshot加非ThingDef電量欄位。正電量送回家需跨地圖電力傳輸(整合難點)。待兩參考mod:VOE電力輸送哨站擴展+分層mod(A接電跨地圖輸B發電站),已入暫存區。
+- 2026-06-10 增N6(採樣殖民者hediff/狀態變化):概念釐清=第三種模式(非投遞/非扣物品,而是每週期對occupants施加hediff變化)→snapshot加獨立狀態區段+Produce()改occupants hediff。分階段A傷勢(恢復=產出/添加=消耗)B其他hediff(嘔吐/靈能)C他mod component(另patch或軟支援偵測載入才作用)。UI:開始sampling跳窗勾記錄狀態變化+選哪些殖民者(新UI面);結束(N1)勾人數是否影響狀態變化速率。套用所有佔位符,可分組(教師/學生VOE擴展待提供)。風險:hediff逐pawn逐部位異質粒度待定/抽象pawn改hediff行為待查。
+- 2026-06-10 N6細化:採樣粒度玩家可選(開始採樣視窗勾)——血量HP(先做)/肢體缺損狀態(部位重生毀損=斷肢重生)/特定狀態(添加加重減少失去,跳另一list選具體hediff,清單待參考mod)。套用方式定案:直接按速率調severity,不模擬地圖治療/環境邏輯(使用者明示那些不會正常作用也不在考慮範圍),抽象pawn直接套數值。
+- 2026-06-10 拆檔:TODO.md只留🔴Fix(F1/F2)+🟡完善(P1/P2);前瞻項🟢N1-N7+🔵E1-E4搬到新docs/IDEAS.md(含待參考暫存區)。增N7(採樣技能訓練程度:同N6第三模式作用occupants,記SkillRecord XP速率每週期Learn套用,併N6狀態變化區段與UI;是N6教師/學生分組的數值基礎;待釐清rust/passion)。
+- 2026-06-10 N7兩項定案:rust技能衰退由玩家勾選是否記錄(開始採樣視窗粒度清單再加一項);passion倍率採樣時不重現(採基礎速率),套用時依各佔位符pawn自身熱情程度即時加成(每週期Learn依該occupant自己passion算倍率)。
