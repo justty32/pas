@@ -15,16 +15,25 @@ namespace ColonyArchivalOutpost
         private ProductivitySnapshot snapshot = new ProductivitySnapshot();
         public string chosenIconPath; // N3：玩家選定的世界地圖圖標路徑（如 "WorldObjects/OutpostMining"）
 
-        public override Texture2D ExpandingIcon
+        // 渲染用的是 ExpandingMaterial（非 ExpandingIcon），須 override 此處才能換圖。
+        // ExpandingMaterial 以 def.ExpandingIconTexture 建 material 並 cache，不呼叫 ExpandingIcon。
+        public override Material ExpandingMaterial
         {
             get
             {
-                if (!chosenIconPath.NullOrEmpty())
+                if (!chosenIconPath.NullOrEmpty() && def.expandingShader != null)
                 {
-                    Texture2D t = ContentFinder<Texture2D>.Get(chosenIconPath, false);
-                    if (t != null) return t;
+                    Texture2D tex = ContentFinder<Texture2D>.Get(chosenIconPath, false);
+                    if (tex != null)
+                        return MaterialPool.MatFrom(new MaterialRequest
+                        {
+                            mainTex = tex,
+                            shader = def.expandingShader.Shader,
+                            color = Color.white,
+                            maskTex = def.ExpandingIconTextureMask
+                        });
                 }
-                return base.ExpandingIcon;
+                return base.ExpandingMaterial;
             }
         }
 
