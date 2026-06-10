@@ -22,4 +22,7 @@
   <CAO.SamplingStatus.Close>Close</CAO.SamplingStatus.Close>
   <CAO.ViewSampling>View sampling status</CAO.ViewSampling>
   <CAO.ViewSampling.Desc>Preview the current resource flow rates based on sampling so far.</CAO.ViewSampling.Desc>
+  <CAO.StopSampling>Stop sampling</CAO.StopSampling>
+  <CAO.StopSampling.Desc>End the sampling period without archiving. All sampled data will be discarded.</CAO.StopSampling.Desc>
+  <CAO.StopSampling.Confirm>Stop sampling and discard all sampled data?</CAO.StopSampling.Confirm>
 </LanguageData>

@@ -22,4 +22,7 @@
   <CAO.SamplingStatus.Close>關閉</CAO.SamplingStatus.Close>
   <CAO.ViewSampling>查看採樣狀況</CAO.ViewSampling>
   <CAO.ViewSampling.Desc>預覽目前採樣到的各資源流速。</CAO.ViewSampling.Desc>
+  <CAO.StopSampling>結束但不封存</CAO.StopSampling>
+  <CAO.StopSampling.Desc>結束採樣期，但不封存殖民地。所有採樣資料將被捨棄。</CAO.StopSampling.Desc>
+  <CAO.StopSampling.Confirm>確定結束採樣並捨棄所有採樣資料？</CAO.StopSampling.Confirm>
 </LanguageData>

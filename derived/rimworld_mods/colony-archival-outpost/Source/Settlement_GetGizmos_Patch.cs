@@ -45,6 +45,17 @@ namespace ColonyArchivalOutpost
                     action = () => Find.WindowStack.Add(new Dialog_SamplingStatus(map))
                 };
 
+                // 結束但不封存 → 確認後 Reset
+                yield return new Command_Action
+                {
+                    defaultLabel = "CAO.StopSampling".Translate(),
+                    defaultDesc = "CAO.StopSampling.Desc".Translate(),
+                    icon = TexCommand.ForbidOn,
+                    action = () => Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                        "CAO.StopSampling.Confirm".Translate(),
+                        () => tracker.Reset()))
+                };
+
                 // N1：結束封存 → 開確認視窗
                 var cmd = new Command_Action
                 {
