@@ -33,3 +33,4 @@
 - 2026-06-10 新增 N8 採樣孩童成長評級（同 N6/N7 第三模式，落 ideas-features.md）；標兩大風險「成長是離散事件非連續速率」「佔位符年齡是否推進需 VOE 源碼查證」；「生子評估」依使用者明示記入「暫不做（存查）」；IDEAS.md 速覽同步。
 - 2026-06-10 ideas-features.md(162行)過大再拆兩檔：ideas-features-flow.md(N1–N5 流程/UI/產出)＋ideas-features-pawn.md(N6–N8 佔位符狀態採樣家族＋暫不做存查)；IDEAS.md 分檔表/速覽、ideas-expansions.md 交叉連結同步更新。
 - 2026-06-10 一度新增 N9(Odyssey 軌道平台支援)後依使用者更正撤回——軌道平台屬 VOE 本身會支援，不納本 mod；相關索引/連結全數回退。
+- 2026-06-10 F1關閉(設計特性)：負成長料盡仍產正成長為本意，全有全無邏輯已實作但注解保存，標「這是特性，不是bug，玩得開心！」。F2a已修：Mathf.RoundToInt全改RateToInt(double計算+clamp)，消除int32溢位；build 0/0。

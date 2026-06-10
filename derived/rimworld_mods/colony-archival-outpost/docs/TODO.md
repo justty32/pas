@@ -8,22 +8,17 @@
 
 ## 🔴 需要 Fix（確認是缺陷／壞行為）
 
-### F1. 消耗端與產出端脫鉤——負成長料盡仍照產正成長
-- **現象**：用黃金產出食物的情境，黃金歸零後食物仍無條件產出（變「免費」）。
-- **位置**：`Source/Outpost_Sampled.cs:36-54` `Produce()`：先 `TakeItems` 扣負成長（不足扣到 0），
-  再 **無條件** `base.Produce()` 產正成長，兩者無耦合判斷。
-- **根因**：`ProductivitySnapshot.dailyRates` 把每資源記成獨立有號淨流，沒有「料↔產物」關聯。
-- **詳見**：`docs/2026-06-10-todo-consume-produce-decoupling.md`（含 3 個修法選項）。
-- **動工前**：先確認設計意圖（黃金是否為食物原料）。
+### ~~F1. 消耗端與產出端脫鉤—— 已關閉（設計特性）~~
+> **這是特性，不是 bug，玩得開心！**
+> 負成長視為象徵性維護費，與正成長獨立；料盡不停產為設計本意。
+> 全有全無邏輯已實作並注解於 `Source/Outpost_Sampled.cs` `Produce()` block，日後若想啟用直接取消注解即可。
 
 ### F2. 採樣時長過短／速率溢位防護（使用者提案，源碼核對後拆兩件）
 > ⚠ 使用者原始擔心「短採樣 → 產出超過 int64 → 出錯」。源碼核對（2026-06-10）後修正：
 > 該溢位**已被部分擋住**，且型別是 **int32+float，非 int64**。拆成兩件性質不同的事：
 
-- **F2a 殘留溢位點（真，機率極低）**：`Source/Outpost_Sampled.cs:28` 與 `:44`
-  `Mathf.RoundToInt(kv.Value * daysPerCycle)`（daysPerCycle = 900000/60000 = 15）。
-  僅當某資源 `delta` 逼近 int32 上限（約 21 億）時，`rate×15` 在 float→int 轉換溢位。
-  - 對策：用 `long`/`checked` 計算 + 上限 clamp，或 try/catch 包住封存流程（出錯即中止、不破壞存檔）。
+- ~~**F2a 殘留溢位點 — 已修**~~：`Mathf.RoundToInt` 全數改為私有 helper `RateToInt(float, float)`，
+  以 `double` 計算 + `int.MaxValue` clamp，消除 float→int 轉換溢位。build 0/0。
 - **F2b 採樣不足一天的處置（⚠ 使用者已改為「軟提醒」，不再硬擋——詳見 IDEAS.md N1）**：
   > 原構想是「不足門檻 → 按鈕變灰硬擋」；使用者後決定改為「照樣可封存，於確認視窗黃字提醒
   > 『不足一天，已強制以一天計算』」。實作併入 N1。若日後想改回硬擋或做兩段式（極短硬擋+其餘軟提醒），再議。
