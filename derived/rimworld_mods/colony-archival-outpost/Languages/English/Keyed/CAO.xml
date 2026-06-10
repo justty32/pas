@@ -7,4 +7,19 @@
   <CAO.Archived>Colony archived into an outpost.</CAO.Archived>
   <CAO.NotPlayerHome>Not a player home map.</CAO.NotPlayerHome>
   <CAO.LastBase>Cannot archive your last home base — there would be nowhere to deliver resources.</CAO.LastBase>
+  <CAO.ShortSampleWarning>Sampling time under one day — rate has been floored to one day.</CAO.ShortSampleWarning>
+  <CAO.Preview.Production>Production (per {0}-day cycle)</CAO.Preview.Production>
+  <CAO.Preview.Consumption>Consumption (per {0}-day cycle)</CAO.Preview.Consumption>
+  <CAO.Preview.Cycle>cycle</CAO.Preview.Cycle>
+  <CAO.Preview.None>(none)</CAO.Preview.None>
+  <CAO.ArchivalConfirm.Title>Confirm Archival</CAO.ArchivalConfirm.Title>
+  <CAO.ArchivalConfirm.OutpostName>Outpost name</CAO.ArchivalConfirm.OutpostName>
+  <CAO.ArchivalConfirm.ChooseIcon>World map icon</CAO.ArchivalConfirm.ChooseIcon>
+  <CAO.ArchivalConfirm.Confirm>Confirm archival</CAO.ArchivalConfirm.Confirm>
+  <CAO.ArchivalConfirm.Cancel>Not yet</CAO.ArchivalConfirm.Cancel>
+  <CAO.SamplingStatus.Title>Sampling Status</CAO.SamplingStatus.Title>
+  <CAO.SamplingStatus.Elapsed>Sampling time: {0}</CAO.SamplingStatus.Elapsed>
+  <CAO.SamplingStatus.Close>Close</CAO.SamplingStatus.Close>
+  <CAO.ViewSampling>View sampling status</CAO.ViewSampling>
+  <CAO.ViewSampling.Desc>Preview the current resource flow rates based on sampling so far.</CAO.ViewSampling.Desc>
 </LanguageData>

@@ -35,3 +35,4 @@
 - 2026-06-10 一度新增 N9(Odyssey 軌道平台支援)後依使用者更正撤回——軌道平台屬 VOE 本身會支援，不納本 mod；相關索引/連結全數回退。
 - 2026-06-10 F1關閉(設計特性)：負成長料盡仍產正成長為本意，全有全無邏輯已實作但注解保存，標「這是特性，不是bug，玩得開心！」。F2a已修：Mathf.RoundToInt全改RateToInt(double計算+clamp)，消除int32溢位；build 0/0。
 - 2026-06-10 P1/P2源碼查證完畢：P1(Deliver失敗)→VOE自帶fallback存回containedItems+Log.Warning，完全安全；P2(AddPawn內部)→只做occupants.Add+RecachePawnTraits，完全不觸碰pawn hediff/traits/comps，疑慮消除。🟡區全清。
+- 2026-06-10 實作N1+N2+N3：新增Dialog_ArchivalConfirm(確認視窗+圖標gallery)/Dialog_SamplingStatus(採樣狀況)/SnapshotPreviewDrawer(共用預覽helper)；Archive()加name/iconPath參數；Outpost_Sampled加chosenIconPath+ExpandingIcon override；csproj補3個新檔+2個Unity module ref；build 0/0。

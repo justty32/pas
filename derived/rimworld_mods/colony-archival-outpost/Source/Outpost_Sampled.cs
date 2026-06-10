@@ -13,6 +13,20 @@ namespace ColonyArchivalOutpost
     public class Outpost_Sampled : Outpost
     {
         private ProductivitySnapshot snapshot = new ProductivitySnapshot();
+        public string chosenIconPath; // N3：玩家選定的世界地圖圖標路徑（如 "WorldObjects/OutpostMining"）
+
+        public override Texture2D ExpandingIcon
+        {
+            get
+            {
+                if (!chosenIconPath.NullOrEmpty())
+                {
+                    Texture2D t = ContentFinder<Texture2D>.Get(chosenIconPath, false);
+                    if (t != null) return t;
+                }
+                return base.ExpandingIcon;
+            }
+        }
 
         public void SetSnapshot(ProductivitySnapshot s) => snapshot = s ?? new ProductivitySnapshot();
 
@@ -85,6 +99,7 @@ namespace ColonyArchivalOutpost
         {
             base.ExposeData();
             Scribe_Deep.Look(ref snapshot, "caoSnapshot");
+            Scribe_Values.Look(ref chosenIconPath, "caoIconPath", null);
             if (Scribe.mode == LoadSaveMode.PostLoadInit && snapshot == null)
                 snapshot = new ProductivitySnapshot();
         }

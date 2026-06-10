@@ -7,4 +7,19 @@
   <CAO.Archived>殖民地已封存成哨站。</CAO.Archived>
   <CAO.NotPlayerHome>非玩家家園地圖。</CAO.NotPlayerHome>
   <CAO.LastBase>不能封存最後一座家園——資源將無處投遞。</CAO.LastBase>
+  <CAO.ShortSampleWarning>採樣時間不到一天，速率已強制以一天計算。</CAO.ShortSampleWarning>
+  <CAO.Preview.Production>產出（每 {0} 天週期）</CAO.Preview.Production>
+  <CAO.Preview.Consumption>消耗（每 {0} 天週期）</CAO.Preview.Consumption>
+  <CAO.Preview.Cycle>週期</CAO.Preview.Cycle>
+  <CAO.Preview.None>（無）</CAO.Preview.None>
+  <CAO.ArchivalConfirm.Title>封存確認</CAO.ArchivalConfirm.Title>
+  <CAO.ArchivalConfirm.OutpostName>哨站名稱</CAO.ArchivalConfirm.OutpostName>
+  <CAO.ArchivalConfirm.ChooseIcon>世界地圖圖標</CAO.ArchivalConfirm.ChooseIcon>
+  <CAO.ArchivalConfirm.Confirm>確定封存</CAO.ArchivalConfirm.Confirm>
+  <CAO.ArchivalConfirm.Cancel>先等等</CAO.ArchivalConfirm.Cancel>
+  <CAO.SamplingStatus.Title>採樣狀況</CAO.SamplingStatus.Title>
+  <CAO.SamplingStatus.Elapsed>採樣時間：{0}</CAO.SamplingStatus.Elapsed>
+  <CAO.SamplingStatus.Close>關閉</CAO.SamplingStatus.Close>
+  <CAO.ViewSampling>查看採樣狀況</CAO.ViewSampling>
+  <CAO.ViewSampling.Desc>預覽目前採樣到的各資源流速。</CAO.ViewSampling.Desc>
 </LanguageData>

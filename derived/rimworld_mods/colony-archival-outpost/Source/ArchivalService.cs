@@ -48,7 +48,7 @@ namespace ColonyArchivalOutpost
             return new ProductivitySnapshot(rates);
         }
 
-        public static void Archive(Map map)
+        public static void Archive(Map map, string name = null, string iconPath = null)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -68,6 +68,8 @@ namespace ColonyArchivalOutpost
             outpost.Tile = tile;
             outpost.SetFaction(Faction.OfPlayer);
             outpost.SetSnapshot(snapshot);
+            if (!name.NullOrEmpty()) outpost.Name = name;
+            if (!iconPath.NullOrEmpty()) outpost.chosenIconPath = iconPath;
             Find.WorldObjects.Add(outpost);
 
             // 2) 搬玩家 pawn(殖民者+玩家動物+殖民地囚犯)。我們的 def 無 <Event> → CanAddPawn 恆過。
