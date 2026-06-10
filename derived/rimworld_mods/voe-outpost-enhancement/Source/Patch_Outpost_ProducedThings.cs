@@ -12,7 +12,7 @@ namespace VOEOutpostEnhancement
         static IEnumerable<Thing> Postfix(IEnumerable<Thing> __result, Outpost __instance)
         {
             var rec = WorldComponent_OutpostUpgrades.Instance?.GetOrCreate(__instance);
-            float mult = rec != null ? UpgradeService.ProdMultiplier[rec.productionLevel] : 1f;
+            float mult = rec != null ? UpgradeService.ProdMultiplierForLevel(rec.productionLevel) : 1f;
 
             foreach (var thing in __result)
             {

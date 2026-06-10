@@ -1,37 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
   <!-- Production upgrade -->
-  <VOEE.Gizmo.Prod.Label>Prod Boost ({0}/{1})</VOEE.Gizmo.Prod.Label>
-  <VOEE.Gizmo.Prod.Desc>Production {0} → {1}\nCost: {2} {3}</VOEE.Gizmo.Prod.Desc>
-  <VOEE.Gizmo.Prod.DescMax>Production boosted to {0} (max level)</VOEE.Gizmo.Prod.DescMax>
+  <VOEE.Gizmo.Prod.Label>Prod Boost (Lv.{0})</VOEE.Gizmo.Prod.Label>
+  <VOEE.Gizmo.Prod.Desc>Production {0} → {1}\nCost: {2} {3} (outpost storage)</VOEE.Gizmo.Prod.Desc>
   <VOEE.Gizmo.Prod.Name>Production Boost</VOEE.Gizmo.Prod.Name>
 
   <!-- Ammo capacity upgrade -->
-  <VOEE.Gizmo.AmmoC.Label>Ammo Cap ({0}/{1})</VOEE.Gizmo.AmmoC.Label>
-  <VOEE.Gizmo.AmmoC.Desc>Max ammo {0} → {1} shells\nCost: {2} {3}</VOEE.Gizmo.AmmoC.Desc>
-  <VOEE.Gizmo.AmmoC.DescMax>Max ammo {0} shells (max level)</VOEE.Gizmo.AmmoC.DescMax>
+  <VOEE.Gizmo.AmmoC.Label>Ammo Cap (Lv.{0})</VOEE.Gizmo.AmmoC.Label>
+  <VOEE.Gizmo.AmmoC.Desc>Max ammo {0} → {1} shells\nCost: {2} {3} (outpost storage)</VOEE.Gizmo.AmmoC.Desc>
   <VOEE.Gizmo.AmmoC.Name>Ammo Capacity</VOEE.Gizmo.AmmoC.Name>
 
   <!-- Ammo rate upgrade -->
-  <VOEE.Gizmo.AmmoR.Label>Ammo Rate ({0}/{1})</VOEE.Gizmo.AmmoR.Label>
-  <VOEE.Gizmo.AmmoR.Desc>Accumulation {0} → {1} shells/pawn/day\nCost: {2} {3}</VOEE.Gizmo.AmmoR.Desc>
-  <VOEE.Gizmo.AmmoR.DescMax>Accumulation {0} shells/pawn/day (max level)</VOEE.Gizmo.AmmoR.DescMax>
+  <VOEE.Gizmo.AmmoR.Label>Ammo Rate (Lv.{0})</VOEE.Gizmo.AmmoR.Label>
+  <VOEE.Gizmo.AmmoR.Desc>Accumulation {0} → {1} shells/pawn/day\nCost: {2} {3} (outpost storage)</VOEE.Gizmo.AmmoR.Desc>
   <VOEE.Gizmo.AmmoR.Name>Ammo Rate</VOEE.Gizmo.AmmoR.Name>
 
   <!-- Range upgrade -->
-  <VOEE.Gizmo.Range.Label>Range ({0}/{1})</VOEE.Gizmo.Range.Label>
-  <VOEE.Gizmo.Range.Desc>Range +{0} → +{1} tiles\nCost: {2}</VOEE.Gizmo.Range.Desc>
-  <VOEE.Gizmo.Range.DescMax>Range +{0} tiles (max level)</VOEE.Gizmo.Range.DescMax>
+  <VOEE.Gizmo.Range.Label>Range (Lv.{0})</VOEE.Gizmo.Range.Label>
+  <VOEE.Gizmo.Range.Desc>Range +{0} → +{1} tiles\nCost: {2} (outpost storage)</VOEE.Gizmo.Range.Desc>
   <VOEE.Gizmo.Range.Name>Range</VOEE.Gizmo.Range.Name>
 
   <!-- Restock -->
   <VOEE.Gizmo.Restock.Label>Restock ({0} shells, {1} steel)</VOEE.Gizmo.Restock.Label>
-  <VOEE.Gizmo.Restock.Desc>Buy {0} shells. Current: {1}/{2}</VOEE.Gizmo.Restock.Desc>
+  <VOEE.Gizmo.Restock.Desc>Buy {0} shells. Current: {1}/{2} (outpost storage)</VOEE.Gizmo.Restock.Desc>
 
   <!-- General -->
-  <VOEE.MaxLevel>Already at max level</VOEE.MaxLevel>
-  <VOEE.CantAfford>Need {0} {1}</VOEE.CantAfford>
-  <VOEE.CantAfford2>Need {0}</VOEE.CantAfford2>
+  <VOEE.CantAfford>Need {0} {1} in outpost storage</VOEE.CantAfford>
+  <VOEE.CantAfford2>Need {0} in outpost storage</VOEE.CantAfford2>
   <VOEE.Upgraded>{0} upgraded to level {1}: {2}</VOEE.Upgraded>
 
   <!-- Artillery -->
@@ -52,4 +47,13 @@
   <VOEE.Shell.Incendiary>Incendiary</VOEE.Shell.Incendiary>
   <VOEE.Shell.EMP>EMP</VOEE.Shell.EMP>
   <VOEE.Shell.Firefoam>Firefoam</VOEE.Shell.Firefoam>
+
+  <!-- Mod settings -->
+  <VOEE.Settings.Category>VOE Outpost Enhancement</VOEE.Settings.Category>
+  <VOEE.Settings.Prod.Silver>Production upgrade cost (silver/level): {0}</VOEE.Settings.Prod.Silver>
+  <VOEE.Settings.AmmoCap.Steel>Ammo capacity upgrade cost (steel/level): {0}</VOEE.Settings.AmmoCap.Steel>
+  <VOEE.Settings.AmmoRate.Comp>Ammo rate upgrade cost (components/level): {0}</VOEE.Settings.AmmoRate.Comp>
+  <VOEE.Settings.Range.Steel>Range upgrade cost (steel/level): {0}</VOEE.Settings.Range.Steel>
+  <VOEE.Settings.Range.Comp>Range upgrade cost (components/level): {0}</VOEE.Settings.Range.Comp>
+  <VOEE.Settings.Restock.Steel>Restock cost (steel/shell): {0}</VOEE.Settings.Restock.Steel>
 </LanguageData>

@@ -13,7 +13,7 @@ namespace VOEOutpostEnhancement
             if (__result <= 0) return;
             var rec = WorldComponent_OutpostUpgrades.Instance?.GetOrCreate(__instance);
             if (rec == null || rec.artRangeLevel <= 0) return;
-            __result += UpgradeService.RangeBonus[rec.artRangeLevel];
+            __result += UpgradeService.GetRangeBonus(rec);
         }
     }
 }

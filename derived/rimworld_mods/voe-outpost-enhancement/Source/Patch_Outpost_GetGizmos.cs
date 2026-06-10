@@ -9,8 +9,6 @@ using VOE;
 
 namespace VOEOutpostEnhancement
 {
-    // 向所有 Outpost（基底類）注入升級 gizmo。
-    // Harmony IEnumerable 後綴：自動以迭代器包裝，將我們的 gizmo 追加在原始列舉之後。
     [HarmonyPatch(typeof(Outpost), "GetGizmos")]
     public static class Patch_Outpost_GetGizmos
     {
@@ -22,10 +20,8 @@ namespace VOEOutpostEnhancement
             var rec = WorldComponent_OutpostUpgrades.Instance?.GetOrCreate(__instance);
             if (rec == null) yield break;
 
-            // ── 所有哨站：產量升級 ──
             yield return BuildProductionGizmo(__instance, rec);
 
-            // ── 火炮哨站專屬 ──
             if (__instance is Outpost_Artillery art)
             {
                 yield return BuildAmmoCapGizmo(art, rec);
@@ -35,119 +31,97 @@ namespace VOEOutpostEnhancement
             }
         }
 
-        // ──────────────────────────────────────────────────────────────
-        // 產量升級（白銀）
-        // ──────────────────────────────────────────────────────────────
+        // ── 產量升級（白銀，哨站倉庫）──────────────────────────────
         private static Command_Action BuildProductionGizmo(Outpost outpost, OutpostUpgradeRecord rec)
         {
-            bool maxed = rec.productionLevel >= UpgradeService.MaxLevel;
-            int nextCost = maxed ? 0 : UpgradeService.ProdSilverCost[rec.productionLevel + 1];
-            bool canAfford = !maxed && UpgradeService.CanAfford(ThingDefOf.Silver, nextCost);
-            float cur = UpgradeService.ProdMultiplier[rec.productionLevel];
+            int   cost      = UpgradeService.ProdSilverCost;
+            bool  canAfford = UpgradeService.CanAfford(outpost, ThingDefOf.Silver, cost);
+            float cur       = UpgradeService.ProdMultiplierForLevel(rec.productionLevel);
+            float next      = UpgradeService.ProdMultiplierForLevel(rec.productionLevel + 1);
 
             return new Command_Action
             {
-                defaultLabel = "VOEE.Gizmo.Prod.Label".Translate(rec.productionLevel, UpgradeService.MaxLevel),
-                defaultDesc  = maxed
-                    ? "VOEE.Gizmo.Prod.DescMax".Translate($"\xd7{cur:F2}")
-                    : "VOEE.Gizmo.Prod.Desc".Translate(
-                        $"\xd7{cur:F2}",
-                        $"\xd7{UpgradeService.ProdMultiplier[rec.productionLevel + 1]:F2}",
-                        nextCost, ThingDefOf.Silver.LabelCap),
-                icon          = ThingDefOf.Silver.uiIcon,
-                iconDrawScale = 0.85f,
-                Disabled      = maxed || !canAfford,
-                disabledReason = maxed
-                    ? "VOEE.MaxLevel".Translate()
-                    : "VOEE.CantAfford".Translate(nextCost, ThingDefOf.Silver.LabelCap),
+                defaultLabel   = "VOEE.Gizmo.Prod.Label".Translate(rec.productionLevel),
+                defaultDesc    = "VOEE.Gizmo.Prod.Desc".Translate(
+                                     $"\xd7{cur:F2}", $"\xd7{next:F2}",
+                                     cost, ThingDefOf.Silver.LabelCap),
+                icon           = ThingDefOf.Silver.uiIcon,
+                iconDrawScale  = 0.85f,
+                Disabled       = !canAfford,
+                disabledReason = "VOEE.CantAfford".Translate(cost, ThingDefOf.Silver.LabelCap),
                 action = () =>
                 {
-                    if (!UpgradeService.TryConsume(ThingDefOf.Silver, nextCost))
+                    if (!UpgradeService.TryConsume(outpost, ThingDefOf.Silver, cost))
                     {
-                        Messages.Message("VOEE.CantAfford".Translate(nextCost, ThingDefOf.Silver.LabelCap),
+                        Messages.Message("VOEE.CantAfford".Translate(cost, ThingDefOf.Silver.LabelCap),
                             MessageTypeDefOf.RejectInput, false);
                         return;
                     }
                     rec.productionLevel++;
                     Messages.Message("VOEE.Upgraded".Translate(
                         "VOEE.Gizmo.Prod.Name".Translate(), rec.productionLevel,
-                        $"\xd7{UpgradeService.ProdMultiplier[rec.productionLevel]:F2}"),
+                        $"\xd7{UpgradeService.ProdMultiplierForLevel(rec.productionLevel):F2}"),
                         outpost, MessageTypeDefOf.PositiveEvent, false);
                 }
             };
         }
 
-        // ──────────────────────────────────────────────────────────────
-        // 彈藥容量升級（鋼鐵）
-        // ──────────────────────────────────────────────────────────────
+        // ── 彈藥容量升級（鋼鐵，哨站倉庫）────────────────────────
         private static Command_Action BuildAmmoCapGizmo(Outpost_Artillery art, OutpostUpgradeRecord rec)
         {
-            bool maxed = rec.artAmmoCapLevel >= UpgradeService.MaxLevel;
-            int nextCost = maxed ? 0 : UpgradeService.AmmoCapSteelCost[rec.artAmmoCapLevel + 1];
-            bool canAfford = !maxed && UpgradeService.CanAfford(ThingDefOf.Steel, nextCost);
+            int  cost      = UpgradeService.AmmoCapSteelCost;
+            bool canAfford = UpgradeService.CanAfford(art, ThingDefOf.Steel, cost);
+            int  cur       = UpgradeService.GetMaxAmmo(rec);
+            int  next      = cur + 20;
 
             return new Command_Action
             {
-                defaultLabel = "VOEE.Gizmo.AmmoC.Label".Translate(rec.artAmmoCapLevel, UpgradeService.MaxLevel),
-                defaultDesc  = maxed
-                    ? "VOEE.Gizmo.AmmoC.DescMax".Translate(UpgradeService.GetMaxAmmo(rec))
-                    : "VOEE.Gizmo.AmmoC.Desc".Translate(
-                        UpgradeService.GetMaxAmmo(rec),
-                        UpgradeService.AmmoCapLevels[rec.artAmmoCapLevel + 1],
-                        nextCost, ThingDefOf.Steel.LabelCap),
-                icon          = ThingDefOf.Steel.uiIcon,
-                iconDrawScale = 0.85f,
-                Disabled      = maxed || !canAfford,
-                disabledReason = maxed
-                    ? "VOEE.MaxLevel".Translate()
-                    : "VOEE.CantAfford".Translate(nextCost, ThingDefOf.Steel.LabelCap),
+                defaultLabel   = "VOEE.Gizmo.AmmoC.Label".Translate(rec.artAmmoCapLevel),
+                defaultDesc    = "VOEE.Gizmo.AmmoC.Desc".Translate(
+                                     cur, next, cost, ThingDefOf.Steel.LabelCap),
+                icon           = ThingDefOf.Steel.uiIcon,
+                iconDrawScale  = 0.85f,
+                Disabled       = !canAfford,
+                disabledReason = "VOEE.CantAfford".Translate(cost, ThingDefOf.Steel.LabelCap),
                 action = () =>
                 {
-                    if (!UpgradeService.TryConsume(ThingDefOf.Steel, nextCost))
+                    if (!UpgradeService.TryConsume(art, ThingDefOf.Steel, cost))
                     {
-                        Messages.Message("VOEE.CantAfford".Translate(nextCost, ThingDefOf.Steel.LabelCap),
+                        Messages.Message("VOEE.CantAfford".Translate(cost, ThingDefOf.Steel.LabelCap),
                             MessageTypeDefOf.RejectInput, false);
                         return;
                     }
                     rec.artAmmoCapLevel++;
                     Messages.Message("VOEE.Upgraded".Translate(
                         "VOEE.Gizmo.AmmoC.Name".Translate(), rec.artAmmoCapLevel,
-                        UpgradeService.GetMaxAmmo(rec) + " shell cap"),
+                        UpgradeService.GetMaxAmmo(rec) + " shells"),
                         art, MessageTypeDefOf.PositiveEvent, false);
                 }
             };
         }
 
-        // ──────────────────────────────────────────────────────────────
-        // 蓄積速度升級（工業零件）
-        // ──────────────────────────────────────────────────────────────
+        // ── 蓄積速度升級（零件，哨站倉庫）────────────────────────
         private static Command_Action BuildAmmoRateGizmo(Outpost_Artillery art, OutpostUpgradeRecord rec)
         {
-            bool maxed = rec.artAmmoRateLevel >= UpgradeService.MaxLevel;
-            int nextCost = maxed ? 0 : UpgradeService.AmmoRateCompCost[rec.artAmmoRateLevel + 1];
-            bool canAfford = !maxed && UpgradeService.CanAfford(ThingDefOf.ComponentIndustrial, nextCost);
-            float curRate = UpgradeService.GetAmmoRate(rec);
+            int   cost      = UpgradeService.AmmoRateCompCost;
+            bool  canAfford = UpgradeService.CanAfford(art, ThingDefOf.ComponentIndustrial, cost);
+            float cur       = UpgradeService.GetAmmoRate(rec);
+            float next      = cur + 6f;
 
             return new Command_Action
             {
-                defaultLabel = "VOEE.Gizmo.AmmoR.Label".Translate(rec.artAmmoRateLevel, UpgradeService.MaxLevel),
-                defaultDesc  = maxed
-                    ? "VOEE.Gizmo.AmmoR.DescMax".Translate(curRate)
-                    : "VOEE.Gizmo.AmmoR.Desc".Translate(
-                        curRate,
-                        UpgradeService.AmmoRateLevels[rec.artAmmoRateLevel + 1],
-                        nextCost, ThingDefOf.ComponentIndustrial.LabelCap),
-                icon          = ThingDefOf.ComponentIndustrial.uiIcon,
-                iconDrawScale = 0.85f,
-                Disabled      = maxed || !canAfford,
-                disabledReason = maxed
-                    ? "VOEE.MaxLevel".Translate()
-                    : "VOEE.CantAfford".Translate(nextCost, ThingDefOf.ComponentIndustrial.LabelCap),
+                defaultLabel   = "VOEE.Gizmo.AmmoR.Label".Translate(rec.artAmmoRateLevel),
+                defaultDesc    = "VOEE.Gizmo.AmmoR.Desc".Translate(
+                                     cur, next, cost, ThingDefOf.ComponentIndustrial.LabelCap),
+                icon           = ThingDefOf.ComponentIndustrial.uiIcon,
+                iconDrawScale  = 0.85f,
+                Disabled       = !canAfford,
+                disabledReason = "VOEE.CantAfford".Translate(cost, ThingDefOf.ComponentIndustrial.LabelCap),
                 action = () =>
                 {
-                    if (!UpgradeService.TryConsume(ThingDefOf.ComponentIndustrial, nextCost))
+                    if (!UpgradeService.TryConsume(art, ThingDefOf.ComponentIndustrial, cost))
                     {
-                        Messages.Message("VOEE.CantAfford".Translate(nextCost, ThingDefOf.ComponentIndustrial.LabelCap),
+                        Messages.Message("VOEE.CantAfford".Translate(cost, ThingDefOf.ComponentIndustrial.LabelCap),
                             MessageTypeDefOf.RejectInput, false);
                         return;
                     }
@@ -160,81 +134,71 @@ namespace VOEOutpostEnhancement
             };
         }
 
-        // ──────────────────────────────────────────────────────────────
-        // 射程升級（鋼鐵 + 工業零件）
-        // ──────────────────────────────────────────────────────────────
+        // ── 射程升級（鋼鐵 + 零件，哨站倉庫）────────────────────
         private static Command_Action BuildRangeGizmo(Outpost_Artillery art, OutpostUpgradeRecord rec)
         {
-            bool maxed = rec.artRangeLevel >= UpgradeService.MaxLevel;
-            int ns = maxed ? 0 : UpgradeService.RangeSteelCost[rec.artRangeLevel + 1];
-            int nc = maxed ? 0 : UpgradeService.RangeCompCost[rec.artRangeLevel + 1];
-            bool canAfford = !maxed
-                && UpgradeService.CanAfford(ThingDefOf.Steel, ns)
-                && UpgradeService.CanAfford(ThingDefOf.ComponentIndustrial, nc);
+            int  ns        = UpgradeService.RangeSteelCost;
+            int  nc        = UpgradeService.RangeCompCost;
+            bool canAfford = UpgradeService.CanAfford(art, ThingDefOf.Steel, ns)
+                          && UpgradeService.CanAfford(art, ThingDefOf.ComponentIndustrial, nc);
             string costStr = nc > 0
                 ? $"{ns} {ThingDefOf.Steel.LabelCap} + {nc} {ThingDefOf.ComponentIndustrial.LabelCap}"
                 : $"{ns} {ThingDefOf.Steel.LabelCap}";
+            int curBonus  = UpgradeService.GetRangeBonus(rec);
+            int nextBonus = curBonus + 3;
 
             return new Command_Action
             {
-                defaultLabel = "VOEE.Gizmo.Range.Label".Translate(rec.artRangeLevel, UpgradeService.MaxLevel),
-                defaultDesc  = maxed
-                    ? "VOEE.Gizmo.Range.DescMax".Translate(UpgradeService.RangeBonus[rec.artRangeLevel])
-                    : "VOEE.Gizmo.Range.Desc".Translate(
-                        UpgradeService.RangeBonus[rec.artRangeLevel],
-                        UpgradeService.RangeBonus[rec.artRangeLevel + 1],
-                        costStr),
-                icon          = ThingDefOf.Steel.uiIcon,
-                iconDrawScale = 0.70f,
-                Disabled      = maxed || !canAfford,
-                disabledReason = maxed
-                    ? "VOEE.MaxLevel".Translate()
-                    : "VOEE.CantAfford2".Translate(costStr),
+                defaultLabel   = "VOEE.Gizmo.Range.Label".Translate(rec.artRangeLevel),
+                defaultDesc    = "VOEE.Gizmo.Range.Desc".Translate(curBonus, nextBonus, costStr),
+                icon           = ThingDefOf.Steel.uiIcon,
+                iconDrawScale  = 0.70f,
+                Disabled       = !canAfford,
+                disabledReason = "VOEE.CantAfford2".Translate(costStr),
                 action = () =>
                 {
-                    if (!UpgradeService.CanAfford(ThingDefOf.Steel, ns) ||
-                        !UpgradeService.CanAfford(ThingDefOf.ComponentIndustrial, nc))
+                    if (!UpgradeService.CanAfford(art, ThingDefOf.Steel, ns) ||
+                        !UpgradeService.CanAfford(art, ThingDefOf.ComponentIndustrial, nc))
                     {
-                        Messages.Message("VOEE.CantAfford2".Translate(costStr), MessageTypeDefOf.RejectInput, false);
+                        Messages.Message("VOEE.CantAfford2".Translate(costStr),
+                            MessageTypeDefOf.RejectInput, false);
                         return;
                     }
-                    UpgradeService.TryConsume(ThingDefOf.Steel, ns);
-                    UpgradeService.TryConsume(ThingDefOf.ComponentIndustrial, nc);
+                    UpgradeService.TryConsume(art, ThingDefOf.Steel, ns);
+                    UpgradeService.TryConsume(art, ThingDefOf.ComponentIndustrial, nc);
                     rec.artRangeLevel++;
                     Messages.Message("VOEE.Upgraded".Translate(
                         "VOEE.Gizmo.Range.Name".Translate(), rec.artRangeLevel,
-                        "+" + UpgradeService.RangeBonus[rec.artRangeLevel]),
+                        "+" + UpgradeService.GetRangeBonus(rec)),
                         art, MessageTypeDefOf.PositiveEvent, false);
                 }
             };
         }
 
-        // ──────────────────────────────────────────────────────────────
-        // 即時補給（鋼鐵 → 砲彈）
-        // ──────────────────────────────────────────────────────────────
+        // ── 即時補給（鋼鐵，哨站倉庫）────────────────────────────
         private static Command_Action BuildRestockGizmo(Outpost_Artillery art, OutpostUpgradeRecord rec)
         {
-            int max   = UpgradeService.GetMaxAmmo(rec);
-            int cur   = (int)rec.ammoStockpile;
-            int space = max - cur;
-            int toAdd = Math.Min(UpgradeService.AmmoBuyBatchSize, space);
-            int cost  = toAdd * UpgradeService.AmmoBuyCostPerShell;
-            bool canAfford = toAdd > 0 && UpgradeService.CanAfford(ThingDefOf.Steel, cost);
+            int   max       = UpgradeService.GetMaxAmmo(rec);
+            int   cur       = (int)rec.ammoStockpile;
+            int   space     = max - cur;
+            int   toAdd     = Math.Min(UpgradeService.AmmoBuyBatchSize, space);
+            int   cost      = toAdd * UpgradeService.AmmoBuyCostPerShell;
+            bool  canAfford = toAdd > 0 && UpgradeService.CanAfford(art, ThingDefOf.Steel, cost);
 
             return new Command_Action
             {
-                defaultLabel = "VOEE.Gizmo.Restock.Label".Translate(toAdd, cost),
-                defaultDesc  = "VOEE.Gizmo.Restock.Desc".Translate(toAdd, cur, max),
-                icon          = DefDatabase<ThingDef>.GetNamedSilentFail("Shell_HighExplosive")?.uiIcon
-                                ?? ThingDefOf.Steel.uiIcon,
-                iconDrawScale = 0.85f,
-                Disabled      = space <= 0 || !canAfford,
+                defaultLabel   = "VOEE.Gizmo.Restock.Label".Translate(toAdd, cost),
+                defaultDesc    = "VOEE.Gizmo.Restock.Desc".Translate(toAdd, cur, max),
+                icon           = DefDatabase<ThingDef>.GetNamedSilentFail("Shell_HighExplosive")?.uiIcon
+                                 ?? ThingDefOf.Steel.uiIcon,
+                iconDrawScale  = 0.85f,
+                Disabled       = space <= 0 || !canAfford,
                 disabledReason = space <= 0
                     ? "VOEE.Artillery.AmmoFull".Translate()
                     : "VOEE.CantAfford".Translate(cost, ThingDefOf.Steel.LabelCap),
                 action = () =>
                 {
-                    if (!UpgradeService.TryConsume(ThingDefOf.Steel, cost))
+                    if (!UpgradeService.TryConsume(art, ThingDefOf.Steel, cost))
                     {
                         Messages.Message("VOEE.CantAfford".Translate(cost, ThingDefOf.Steel.LabelCap),
                             MessageTypeDefOf.RejectInput, false);

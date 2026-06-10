@@ -1,0 +1,2 @@
+- 2026-06-10 v1 完成建置（0 errors 0 warnings）：寫完全部 C# 源碼（10 檔）＋三語系 XML；symlink 已裝入 ~/rimworld_mods + install/Mods；commit b0b5d4d
+- 2026-06-10 修NullRef：UpgradeService的GetDirectlyHeldThings()對Outpost永遠回null(MapParent預設)，CanAfford/TryConsume改用outpost.Things；此NullRef曾把所有哨站gizmo整串炸斷。修復已同步回repo副本。
