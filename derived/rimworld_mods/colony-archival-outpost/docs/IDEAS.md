@@ -7,19 +7,24 @@
 
 | 檔案 | 內容 |
 |---|---|
-| [`ideas-features.md`](./ideas-features.md) | 🟢 **未來新想法**（增強／新功能）：N1–N7 |
+| [`ideas-features-flow.md`](./ideas-features-flow.md) | 🟢 新想法 A：**封存流程／UI／產出消耗**（N1–N5） |
+| [`ideas-features-pawn.md`](./ideas-features-pawn.md) | 🟢 新想法 B：**佔位符狀態採樣家族**（N6–N8 + 暫不做存查） |
 | [`ideas-expansions.md`](./ideas-expansions.md) | 🔵 **未來擴展**（更大格局／架構延伸）：E1–E4 |
 
 ## 速覽
 
-**🟢 新想法（ideas-features.md）**
+**🟢 新想法 A · 流程/UI/產出（ideas-features-flow.md）**
 - **N1** 封存前確認視窗（產出/消耗預覽 + 命名 + 確定/取消，含不足一天軟提醒）
 - **N2** 採樣中查看狀況的 gizmo（即時預覽）
 - **N3** 封存視窗可選大地圖圖標
 - **N4** 速率隨殖民者數量縮放（per-pawn + 開關）
 - **N5** 把電量（電力流）納入採樣
+
+**🟢 新想法 B · 佔位符狀態採樣家族（ideas-features-pawn.md）**
 - **N6** 採樣殖民者 hediff/狀態變化（套用於佔位符）
 - **N7** 採樣技能訓練程度（套用於佔位符）
+- **N8** 採樣孩童成長評級（套用於佔位符孩童）
+- 暫不做（存查）：**生子評估**（使用者明示先不做）
 
 **🔵 擴展（ideas-expansions.md）**
 - **E1** 自訂哨站類型（封存出的 outpost 升格為可重用類型）

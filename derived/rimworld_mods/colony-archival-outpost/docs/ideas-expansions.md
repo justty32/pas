@@ -1,6 +1,6 @@
 # colony-archival-outpost · 🔵 未來擴展（更大格局／架構延伸）
 
-> 由 `IDEAS.md` 拆出（2026-06-10）。索引見 [`IDEAS.md`](./IDEAS.md)；🟢 新想法見 [`ideas-features.md`](./ideas-features.md)；🔴🟡 近期工作見 [`TODO.md`](./TODO.md)。
+> 由 `IDEAS.md` 拆出（2026-06-10）。索引見 [`IDEAS.md`](./IDEAS.md)；🟢 新想法見 [`ideas-features-flow.md`](./ideas-features-flow.md)（N1–N5）與 [`ideas-features-pawn.md`](./ideas-features-pawn.md)（N6–N8）；🔴🟡 近期工作見 [`TODO.md`](./TODO.md)。
 > 超出目前 mod 範圍，構想階段。源碼核對基準日：2026-06-10。
 
 ---

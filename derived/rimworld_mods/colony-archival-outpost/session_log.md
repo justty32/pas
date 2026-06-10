@@ -30,3 +30,6 @@
 - 2026-06-10 拆檔:TODO.md只留🔴Fix(F1/F2)+🟡完善(P1/P2);前瞻項🟢N1-N7+🔵E1-E4搬到新docs/IDEAS.md(含待參考暫存區)。增N7(採樣技能訓練程度:同N6第三模式作用occupants,記SkillRecord XP速率每週期Learn套用,併N6狀態變化區段與UI;是N6教師/學生分組的數值基礎;待釐清rust/passion)。
 - 2026-06-10 N7兩項定案:rust技能衰退由玩家勾選是否記錄(開始採樣視窗粒度清單再加一項);passion倍率採樣時不重現(採基礎速率),套用時依各佔位符pawn自身熱情程度即時加成(每週期Learn依該occupant自己passion算倍率)。
 - 2026-06-10 IDEAS.md過大再拆:IDEAS.md改為精簡索引(分檔表+速覽+待參考暫存);🟢N1-N7移ideas-features.md、🔵E1-E4移ideas-expansions.md。N7定rust玩家勾選/passion採樣不重現改套用時依各佔位符自身熱情加成。
+- 2026-06-10 新增 N8 採樣孩童成長評級（同 N6/N7 第三模式，落 ideas-features.md）；標兩大風險「成長是離散事件非連續速率」「佔位符年齡是否推進需 VOE 源碼查證」；「生子評估」依使用者明示記入「暫不做（存查）」；IDEAS.md 速覽同步。
+- 2026-06-10 ideas-features.md(162行)過大再拆兩檔：ideas-features-flow.md(N1–N5 流程/UI/產出)＋ideas-features-pawn.md(N6–N8 佔位符狀態採樣家族＋暫不做存查)；IDEAS.md 分檔表/速覽、ideas-expansions.md 交叉連結同步更新。
+- 2026-06-10 一度新增 N9(Odyssey 軌道平台支援)後依使用者更正撤回——軌道平台屬 VOE 本身會支援，不納本 mod；相關索引/連結全數回退。
