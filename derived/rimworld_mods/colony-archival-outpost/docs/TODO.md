@@ -35,29 +35,18 @@
 
 ## 🟡 可以完善（健壯性／邊界，未必是 bug，待查證或加固）
 
-### P1. 投遞失敗／找不到殖民地——無任何保險，且失敗路徑未驗證
-- **現象**：正成長產出的投遞 100% 委派 VOE `base.Produce()`（`Source/Outpost_Sampled.cs:53`），
-  我方無 try/catch、不檢查投遞結果。
-- **未知數**：VOE `Deliver()`（設計文件記為 `:1409`）對「無主基地可投遞／投遞失敗」如何處理，**尚未查證**
-  （VOE 反編譯源碼未 clone 進工作區）；設計文件 `docs/2026-06-09-design.md:145` 當初即標「待驗」，
-  Task9 實機只驗正常路徑。
-- **待辦**：
-  1. 取得並閱讀 VOE `Outposts.decompiled.cs` 的 `Deliver()`（:1409）行為。
-  2. 釐清「玩家此刻沒有任何家園地圖」時 outpost 產出會怎樣（憑空消失？卡住？報錯？）。
-  3. 若 VOE 無妥善處理 → 決定我方對策（暫存回 containedItems？暫停產出？提示玩家？）。
-  - 視查證結果，本項可能升級為 🔴 Fix。
+### ~~P1. 投遞失敗——已查證，VOE 有安全 fallback~~
+- **查證結論（2026-06-10，Outposts.decompiled.cs:1444）**：
+  `map = deliveryMap ?? (最近 IsPlayerHome 地圖)`；若 map == null →
+  `Log.Warning("...storing instead")` + 物品存回 `containedItems`，直接 return。
+  **不崩、不丟物，完全安全。不需我方額外處理。**
 
-### P2. pawn 轉入哨站的相容性查證（mod 掛在 pawn 上的額外資料是否保全）
-> 使用者疑慮：封存時殖民者「被 remove → 變 VOE 佔位符」會不會丟失其他 mod 掛在 pawn 上的資料。
-> 源碼核對（2026-06-10）後初步結論：**疑慮前提多半不成立**，但 VOE `AddPawn` 內部行為待源碼坐實。
-- **我方流程（已核對）**：`ArchivalService.cs:75-82` 不走原版商隊（無 `Caravan`/`CaravanFormingUtility`），
-  而是 `pawn.DeSpawn()`（從地圖移除，不 Destroy/不丟棄）+ `outpost.AddPawn(pawn)`（存進 `occupants`）。
-- **關鍵**：搬的是**原本那個 Pawn 物件本身**，非新建佔位符 → comps/hediffs/traits/關係/他 mod 額外資料
-  都隨同一物件一起進 occupants，理論上不會漏搬（沒「複製到新物件」這一步就不會漏）。
-- **待查證（需 VOE 源碼，未 clone）**：VOE `AddPawn`（設計文件記 `:1022`，`CanAddPawn:1033`）內部除
-  `occupants.Add` + `RecachePawnTraits` 外，是否還清除/重置 pawn 任何狀態。
-- **殘留真實風險（非「資料沒搬」）**：
-  1. `DeSpawn()` 觸發 comps `PostDeSpawn`——假設 pawn 恆在地圖的 mod 可能誤判（同商隊/任務帶走，非獨有）。
-  2. 地圖被銷毀（`ArchivalService.cs:95` `DeinitAndRemoveMap`）——存於 MapComponent/地圖綁定物件的 pawn 相關
-     資料會隨地圖消失（屬地圖資料非 pawn 資料）。
-  3. 哨站期間 VOE 用自身邏輯餵 occupants，依賴「pawn 在真實地圖」才 tick 的 mod 效果暫停作用。
+### ~~P2. pawn 轉入哨站相容性——已查證，AddPawn 不清除 pawn 狀態~~
+- **查證結論（2026-06-10，Outposts.decompiled.cs:1022）**：
+  我方路徑（DeSpawn 後呼叫）只走：CanAddPawn（恆過）→ holdingOwner?.Remove（null → skip）→
+  WorldPawns 檢查（不在 → skip）→ `occupants.Add(pawn)` + `RecachePawnTraits()`。
+  **完全不觸碰 hediffs / traits / relations / comps，疑慮消除。**
+- **殘留已知限制（非 bug）**：
+  1. `DeSpawn()` 觸發 `PostDeSpawn`——與商隊/任務帶走相同，非本 mod 獨有。
+  2. 地圖銷毀後 MapComponent 資料消失——屬地圖資料非 pawn 資料，符合預期。
+  3. 哨站期間依賴「pawn 在真實地圖」才 tick 的 mod 效果暫停——設計本意。
