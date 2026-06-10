@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 身體強化 Hediff 補充語言鍵 -->
+  <BFH.BodyFortification.label>身體強化</BFH.BodyFortification.label>
+  <BFH.BodyFortification.desc>此棋子的身體結構已獲強化，所有傷害依等級減免。
+- 輕度強化（severity 0.00–0.33）：傷害 ÷ 2
+- 中度強化（severity 0.34–0.66）：傷害 ÷ 5
+- 極限強化（severity 0.67–1.00）：傷害 ÷ 10</BFH.BodyFortification.desc>
+</LanguageData>

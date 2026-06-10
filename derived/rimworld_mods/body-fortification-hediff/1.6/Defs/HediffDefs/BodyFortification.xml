@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <HediffDef>
+    <defName>BFH_BodyFortification</defName>
+    <label>body fortification</label>
+    <labelNoun>body fortification</labelNoun>
+    <description>All body parts have reinforced structural integrity, reducing incoming damage by a multiplier. Severity determines the protection tier: light (×2), moderate (×5), or extreme (×10).</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <initialSeverity>0.001</initialSeverity>
+    <maxSeverity>1.0</maxSeverity>
+    <comps>
+      <li Class="BodyFortificationHediff.HediffCompProperties_BodyFortification">
+        <multiplier>2</multiplier>
+      </li>
+    </comps>
+    <stages>
+      <!-- 輕度強化 (×2)：severity 0.0 ~ 0.33 -->
+      <li>
+        <minSeverity>0.0</minSeverity>
+        <label>light fortification (×2)</label>
+      </li>
+      <!-- 中度強化 (×5)：severity 0.34 ~ 0.66 -->
+      <li>
+        <minSeverity>0.34</minSeverity>
+        <label>moderate fortification (×5)</label>
+      </li>
+      <!-- 極限強化 (×10)：severity 0.67 ~ 1.0 -->
+      <li>
+        <minSeverity>0.67</minSeverity>
+        <label>extreme fortification (×10)</label>
+      </li>
+    </stages>
+  </HediffDef>
+
+</Defs>
