@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -25,6 +26,11 @@ namespace ColonyArchivalOutpost
             h += HeaderH + Mathf.Max(1, pos) * RowH;
             h += SectionGap;
             h += HeaderH + Mathf.Max(1, neg) * RowH;
+            if (snapshot.dailySkillXP?.Count > 0)
+            {
+                h += SectionGap;
+                h += HeaderH + snapshot.dailySkillXP.Count * RowH;
+            }
             return h;
         }
 
@@ -61,6 +67,16 @@ namespace ColonyArchivalOutpost
                 "CAO.Preview.Consumption".Translate(Mathf.RoundToInt(daysPerCycle)),
                 snapshot.dailyRates.Where(kv => kv.Value < 0f).OrderBy(kv => kv.Value),
                 rect.y, scrollPos.y, outerHeight);
+
+            // N7：技能訓練預覽段落
+            if (snapshot.dailySkillXP?.Count > 0)
+            {
+                y += SectionGap;
+                DrawSkillSection(ref y, x, w, daysPerCycle,
+                    "CAO.Preview.SkillTraining".Translate(Mathf.RoundToInt(daysPerCycle)),
+                    snapshot.dailySkillXP.OrderByDescending(kv => kv.Value),
+                    rect.y, scrollPos.y, outerHeight);
+            }
 
             Text.Font = prevFont;
             GUI.color = prevColor;
@@ -115,6 +131,36 @@ namespace ColonyArchivalOutpost
                     GUI.color = positive ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f);
                     Widgets.Label(new Rect(x + w * 0.56f, y, w * 0.44f, RowH),
                         $"{sign}{perCycle} / {"CAO.Preview.Cycle".Translate()}");
+                    GUI.color = Color.white;
+                }
+                y += RowH;
+            }
+        }
+        // N7：技能訓練段落，顯示每技能每週期基礎 XP（乘 occupant passion 後為實際 XP）
+        private static void DrawSkillSection(ref float y, float x, float w,
+            float daysPerCycle, string header,
+            IEnumerable<KeyValuePair<SkillDef, float>> items,
+            float contentOrigin, float scrollY, float outerH)
+        {
+            if (IsVisible(y, HeaderH, contentOrigin, scrollY, outerH))
+            {
+                Text.Font = GameFont.Tiny;
+                Widgets.Label(new Rect(x, y, w, HeaderH), header);
+                Text.Font = GameFont.Small;
+            }
+            y += HeaderH;
+
+            foreach (var kv in items)
+            {
+                if (IsVisible(y, RowH, contentOrigin, scrollY, outerH))
+                {
+                    bool positive = kv.Value > 0f;
+                    float absBaseXP = Mathf.Abs(kv.Value) * daysPerCycle;
+                    string sign = positive ? "+" : "-";
+                    Widgets.Label(new Rect(x + 4f, y, w * 0.55f, RowH), kv.Key.LabelCap);
+                    GUI.color = positive ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f);
+                    Widgets.Label(new Rect(x + w * 0.56f, y, w * 0.44f, RowH),
+                        $"{sign}{Mathf.RoundToInt(absBaseXP)} XP / {"CAO.Preview.Cycle".Translate()} *");
                     GUI.color = Color.white;
                 }
                 y += RowH;

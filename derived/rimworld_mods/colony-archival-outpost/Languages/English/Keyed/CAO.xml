@@ -26,5 +26,6 @@
   <CAO.StopSampling.Desc>End the sampling period without archiving. All sampled data will be discarded.</CAO.StopSampling.Desc>
   <CAO.StopSampling.Confirm>Stop sampling and discard all sampled data?</CAO.StopSampling.Confirm>
   <CAO.ArchivalConfirm.ScalePawn>Scale rates by colonist count (sampling time: {0})</CAO.ArchivalConfirm.ScalePawn>
+  <CAO.Preview.SkillTraining>Skill Training (per {0}-day cycle, *base XP × each pawn's passion)</CAO.Preview.SkillTraining>
   <CAO.ArchivalConfirm.ApplySkillXP>Apply skill training rates to occupant colonists ({0} skills)</CAO.ArchivalConfirm.ApplySkillXP>
 </LanguageData>
