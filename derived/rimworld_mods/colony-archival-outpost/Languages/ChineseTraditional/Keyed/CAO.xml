@@ -26,4 +26,5 @@
   <CAO.StopSampling.Desc>結束採樣期，但不封存殖民地。所有採樣資料將被捨棄。</CAO.StopSampling.Desc>
   <CAO.StopSampling.Confirm>確定結束採樣並捨棄所有採樣資料？</CAO.StopSampling.Confirm>
   <CAO.ArchivalConfirm.ScalePawn>速率隨殖民者人數縮放（採樣當下：{0} 人）</CAO.ArchivalConfirm.ScalePawn>
+  <CAO.ArchivalConfirm.ApplySkillXP>套用技能訓練速率至佔位符殖民者（共 {0} 個技能）</CAO.ArchivalConfirm.ApplySkillXP>
 </LanguageData>

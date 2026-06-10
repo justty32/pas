@@ -43,6 +43,7 @@
     <Compile Include="SnapshotPreviewDrawer.cs" />
     <Compile Include="Dialog_ArchivalConfirm.cs" />
     <Compile Include="Dialog_SamplingStatus.cs" />
+    <Compile Include="PawnSkillSnapshot.cs" />
   </ItemGroup>
 
   <ItemGroup>

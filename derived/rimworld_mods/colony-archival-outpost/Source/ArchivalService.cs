@@ -34,7 +34,7 @@ namespace ColonyArchivalOutpost
         {
             var end = map.resourceCounter.AllCountedAmounts;
             int elapsedTicks = Find.TickManager.TicksGame - tracker.startTick;
-            float elapsedDays = Mathf.Max(elapsedTicks, 60000) / 60000f; // 數學防呆下限 = 1 遊戲天
+            float elapsedDays = Mathf.Max(elapsedTicks, 60000) / 60000f;
             var allDefs = new HashSet<ThingDef>(end.Keys);
             allDefs.UnionWith(tracker.startCounts.Keys);
             var rates = new Dictionary<ThingDef, float>();
@@ -42,14 +42,58 @@ namespace ColonyArchivalOutpost
             {
                 end.TryGetValue(def, out int e1);
                 tracker.startCounts.TryGetValue(def, out int s0);
-                int delta = e1 - s0; // 有號淨流：正=產出, 負=消耗
+                int delta = e1 - s0;
                 if (delta == 0) continue;
                 rates[def] = delta / elapsedDays;
             }
-            return new ProductivitySnapshot(rates);
+
+            var snapshot = new ProductivitySnapshot(rates);
+
+            // N7：技能速率——平均各 pawn 的 passion 修正後基礎 XP/天；只統計採樣期始末都在場的 pawn
+            if (tracker.startSkillSnapshots.Count > 0)
+            {
+                var skillDeltas = new Dictionary<SkillDef, List<float>>();
+                foreach (var psnap in tracker.startSkillSnapshots)
+                {
+                    var pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => p.ThingID == psnap.pawnId);
+                    if (pawn?.skills == null) continue;
+                    foreach (var kv in psnap.cumulativeXP)
+                    {
+                        var skill = pawn.skills.GetSkill(kv.Key);
+                        if (skill == null || skill.TotallyDisabled) continue;
+                        float endCumXP = skill.XpTotalEarned + skill.xpSinceLastLevel;
+                        float deltaXP = endCumXP - kv.Value;
+                        psnap.skillPassions.TryGetValue(kv.Key, out Passion startPassion);
+                        float baseRate = deltaXP / PassionFactor(startPassion) / elapsedDays;
+                        if (!skillDeltas.ContainsKey(kv.Key)) skillDeltas[kv.Key] = new List<float>();
+                        skillDeltas[kv.Key].Add(baseRate);
+                    }
+                }
+                var skillRates = new Dictionary<SkillDef, float>();
+                foreach (var kv in skillDeltas)
+                {
+                    float sum = 0f;
+                    foreach (float r in kv.Value) sum += r;
+                    float avg = sum / kv.Value.Count;
+                    if (avg != 0f) skillRates[kv.Key] = avg;
+                }
+                snapshot.dailySkillXP = skillRates;
+            }
+
+            return snapshot;
         }
 
-        public static void Archive(Map map, string name = null, string iconPath = null, bool perPawn = false)
+        // passion 倍率：與 SkillRecord.LearnRateFactor(direct=true) 一致
+        private static float PassionFactor(Passion passion) => passion switch
+        {
+            Passion.None => 0.35f,
+            Passion.Minor => 1f,
+            Passion.Major => 1.5f,
+            _ => 1f
+        };
+
+        public static void Archive(Map map, string name = null, string iconPath = null,
+            bool perPawn = false, bool applySkillXP = false)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -63,12 +107,15 @@ namespace ColonyArchivalOutpost
             var tile = map.Tile;
             var snapshot = ComputeSnapshot(map, tracker);
 
-            // N4：per-pawn 縮放——封存前記錄當下殖民者數，後續 Outpost_Sampled 用此基準縮放速率。
+            // N4：per-pawn 縮放
             if (perPawn)
             {
                 snapshot.perPawnScaling = true;
                 snapshot.basePawnCount = Math.Max(1, map.mapPawns.FreeColonistsCount);
             }
+            // N7：技能採樣開關
+            if (applySkillXP && snapshot.dailySkillXP?.Count > 0)
+                snapshot.applySkillXP = true;
 
             // 1) 建 outpost(掛玩家陣營, 餵 snapshot)
             var outpost = (Outpost_Sampled)WorldObjectMaker.MakeWorldObject(

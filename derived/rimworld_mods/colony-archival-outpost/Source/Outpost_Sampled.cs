@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Outposts;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -98,13 +100,31 @@ namespace ColonyArchivalOutpost
                         ? RateToInt(-kv.Value / snapshot.basePawnCount, daysPerCycle) * PawnCount
                         : RateToInt(-kv.Value, daysPerCycle);
                     if (want <= 0) continue;
-                    // VOE 公開 API：從 containedItems 取出最多 want 個；不足則取到 0。取出即消耗，Destroy 之。
                     List<Thing> removed = TakeItems(kv.Key, want);
                     if (removed == null) continue;
                     foreach (var t in removed)
                         if (t != null && !t.Destroyed) t.Destroy();
                 }
+
+                // N7：技能採樣——每週期對 occupants 施加技能 XP（direct=true：只乘 occupant 自身 passion，不計 GlobalLearningFactor/飽和）
+                if (snapshot.applySkillXP && snapshot.dailySkillXP?.Count > 0)
+                {
+                    var pawnList = AllPawns.ToList();
+                    foreach (var kv in snapshot.dailySkillXP)
+                    {
+                        float xpPerCycle = kv.Value * daysPerCycle;
+                        if (xpPerCycle == 0f) continue;
+                        foreach (var pawn in pawnList)
+                        {
+                            if (pawn.skills == null) continue;
+                            SkillRecord skill = pawn.skills.GetSkill(kv.Key);
+                            if (skill == null || skill.TotallyDisabled) continue;
+                            skill.Learn(xpPerCycle, direct: true);
+                        }
+                    }
+                }
             }
+
             base.Produce(); // 產出正成長並依玩家全域 DeliveryMethod 投遞
         }
 

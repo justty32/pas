@@ -16,6 +16,7 @@ namespace ColonyArchivalOutpost
         private string chosenIconPath;
         private bool scalePawnCount;
         private readonly int currentPawnCount;
+        private bool applySkillXP;
 
         private Vector2 previewScroll;
         private float previewContentH;
@@ -42,7 +43,7 @@ namespace ColonyArchivalOutpost
         private const float IconSlot = 40f; // 36px icon + 4px gap
         private const float IconSize = 36f;
 
-        public override Vector2 InitialSize => new Vector2(500f, 540f);
+        public override Vector2 InitialSize => new Vector2(500f, 580f);
 
         public Dialog_ArchivalConfirm(Map map)
         {
@@ -94,6 +95,14 @@ namespace ColonyArchivalOutpost
                 "CAO.ArchivalConfirm.ScalePawn".Translate(currentPawnCount), ref scalePawnCount);
             y += 32f;
 
+            // N7：技能採樣開關（只在有技能資料時顯示）
+            if (snapshot.dailySkillXP?.Count > 0)
+            {
+                Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
+                    "CAO.ArchivalConfirm.ApplySkillXP".Translate(snapshot.dailySkillXP.Count), ref applySkillXP);
+                y += 32f;
+            }
+
             // N3：圖標 gallery
             Widgets.Label(new Rect(x, y, w, 22f), "CAO.ArchivalConfirm.ChooseIcon".Translate() + ":");
             y += 24f;
@@ -139,7 +148,7 @@ namespace ColonyArchivalOutpost
             {
                 Close();
                 string name = outpostName.NullOrEmpty() ? null : outpostName.Trim();
-                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount);
+                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP);
             }
         }
     }
