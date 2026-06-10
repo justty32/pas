@@ -106,6 +106,13 @@ namespace ColonyArchivalOutpost
                         if (t != null && !t.Destroyed) t.Destroy();
                 }
 
+                // N6b：非傷勢 hediff 採樣——每週期對 occupants 施加 hediff severity 變化
+                if (snapshot.applyHediffDeltas && snapshot.dailyHediffDeltas?.Count > 0)
+                {
+                    foreach (var pawn in AllPawns.ToList())
+                        ApplyHediffDeltasToPawn(pawn, snapshot.dailyHediffDeltas, daysPerCycle);
+                }
+
                 // N6：傷勢採樣——每週期治癒 occupants 的可癒傷傷勢（按比例分配到各傷口）
                 if (snapshot.applyHealthDelta && snapshot.avgHealthDeltaPerDay < 0f)
                 {
@@ -154,6 +161,36 @@ namespace ColonyArchivalOutpost
                 if (h.ShouldRemove) toRemove.Add(h);
             }
             foreach (var h in toRemove) pawn.health.RemoveHediff(h);
+        }
+
+        // N6b：按速率對每個 pawn 的非傷勢 hediff 施加 severity 變化（正=加重/新增，負=消退）
+        private static void ApplyHediffDeltasToPawn(Pawn pawn, Dictionary<HediffDef, float> dailyDeltas, float days)
+        {
+            foreach (var kv in dailyDeltas)
+            {
+                float delta = kv.Value * days;
+                if (delta == 0f) continue;
+                var existing = pawn.health.hediffSet.GetFirstHediffOfDef(kv.Key);
+                if (delta > 0f)
+                {
+                    if (existing == null)
+                    {
+                        var hediff = HediffMaker.MakeHediff(kv.Key, pawn);
+                        hediff.Severity = delta;
+                        pawn.health.AddHediff(hediff);
+                    }
+                    else
+                    {
+                        existing.Severity += delta;
+                    }
+                }
+                else if (existing != null)
+                {
+                    existing.Severity += delta; // delta 為負，減少 severity
+                    if (existing.ShouldRemove)
+                        pawn.health.RemoveHediff(existing);
+                }
+            }
         }
 
         // double 計算再 clamp，防止極端速率 × 週期倍數超出 int32 範圍

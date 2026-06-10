@@ -80,6 +80,47 @@ namespace ColonyArchivalOutpost
                 snapshot.dailySkillXP = skillRates;
             }
 
+            // N6b：非傷勢 hediff 速率——統計採樣期始末都在場的 pawn 的各 hediff 平均 severity 變化量/天
+            if (tracker.startHediffSnapshots?.Count > 0)
+            {
+                var hediffDeltas = new Dictionary<HediffDef, List<float>>();
+                foreach (var psnap in tracker.startHediffSnapshots)
+                {
+                    var pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => p.ThingID == psnap.pawnId);
+                    if (pawn == null) continue;
+
+                    var endSeverities = new Dictionary<HediffDef, float>();
+                    foreach (var h in pawn.health.hediffSet.hediffs)
+                    {
+                        if (h is Hediff_Injury || h is Hediff_MissingPart || h.def == null) continue;
+                        endSeverities.TryGetValue(h.def, out float cur);
+                        endSeverities[h.def] = cur + h.Severity;
+                    }
+
+                    var allHediffDefs = new HashSet<HediffDef>(psnap.hediffSeverities.Keys);
+                    allHediffDefs.UnionWith(endSeverities.Keys);
+                    foreach (var def in allHediffDefs)
+                    {
+                        psnap.hediffSeverities.TryGetValue(def, out float startSev);
+                        endSeverities.TryGetValue(def, out float endSev);
+                        float rate = (endSev - startSev) / elapsedDays;
+                        if (rate == 0f) continue;
+                        if (!hediffDeltas.ContainsKey(def)) hediffDeltas[def] = new List<float>();
+                        hediffDeltas[def].Add(rate);
+                    }
+                }
+                var hediffRates = new Dictionary<HediffDef, float>();
+                foreach (var kv in hediffDeltas)
+                {
+                    float sum = 0f;
+                    foreach (float r in kv.Value) sum += r;
+                    float avg = sum / kv.Value.Count;
+                    if (avg != 0f) hediffRates[kv.Key] = avg;
+                }
+                if (hediffRates.Count > 0)
+                    snapshot.dailyHediffDeltas = hediffRates;
+            }
+
             // N6：傷勢速率——統計採樣期始末都在場的 pawn 的平均可癒傷勢變化量/天
             if (tracker.startInjurySeverity.Count > 0)
             {
@@ -118,7 +159,8 @@ namespace ColonyArchivalOutpost
         };
 
         public static void Archive(Map map, string name = null, string iconPath = null,
-            bool perPawn = false, bool applySkillXP = false, bool applyHealthDelta = false)
+            bool perPawn = false, bool applySkillXP = false, bool applyHealthDelta = false,
+            bool applyHediffDeltas = false)
         {
             var tracker = map.GetComponent<ColonyArchivalTracker>();
             if (tracker == null || !tracker.isSampling) return;
@@ -144,6 +186,9 @@ namespace ColonyArchivalOutpost
             // N6：傷勢採樣開關（只有淨治癒才套用）
             if (applyHealthDelta && snapshot.avgHealthDeltaPerDay < 0f)
                 snapshot.applyHealthDelta = true;
+            // N6b：非傷勢 hediff 採樣開關
+            if (applyHediffDeltas && snapshot.dailyHediffDeltas?.Count > 0)
+                snapshot.applyHediffDeltas = true;
 
             // 1) 建 outpost(掛玩家陣營, 餵 snapshot)
             var outpost = (Outpost_Sampled)WorldObjectMaker.MakeWorldObject(

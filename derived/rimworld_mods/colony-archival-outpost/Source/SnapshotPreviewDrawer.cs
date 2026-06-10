@@ -36,6 +36,11 @@ namespace ColonyArchivalOutpost
                 h += SectionGap;
                 h += HeaderH + RowH;
             }
+            if (snapshot.dailyHediffDeltas?.Count > 0)
+            {
+                h += SectionGap;
+                h += HeaderH + snapshot.dailyHediffDeltas.Count * RowH;
+            }
             return h;
         }
 
@@ -111,6 +116,16 @@ namespace ColonyArchivalOutpost
                 y += RowH;
             }
 
+            // N6b：非傷勢 hediff 變化段落
+            if (snapshot.dailyHediffDeltas?.Count > 0)
+            {
+                y += SectionGap;
+                DrawHediffDeltaSection(ref y, x, w, daysPerCycle,
+                    "CAO.Preview.HediffDeltas".Translate(Mathf.RoundToInt(daysPerCycle)),
+                    snapshot.dailyHediffDeltas.OrderBy(kv => kv.Value),
+                    rect.y, scrollPos.y, outerHeight);
+            }
+
             Text.Font = prevFont;
             GUI.color = prevColor;
             return y - rect.y;
@@ -169,6 +184,37 @@ namespace ColonyArchivalOutpost
                 y += RowH;
             }
         }
+        // N6b：非傷勢 hediff 變化段落（正=加重/新增紅色，負=消退綠色）
+        private static void DrawHediffDeltaSection(ref float y, float x, float w,
+            float daysPerCycle, string header,
+            IEnumerable<KeyValuePair<HediffDef, float>> items,
+            float contentOrigin, float scrollY, float outerH)
+        {
+            if (IsVisible(y, HeaderH, contentOrigin, scrollY, outerH))
+            {
+                Text.Font = GameFont.Tiny;
+                Widgets.Label(new Rect(x, y, w, HeaderH), header);
+                Text.Font = GameFont.Small;
+            }
+            y += HeaderH;
+
+            foreach (var kv in items)
+            {
+                if (IsVisible(y, RowH, contentOrigin, scrollY, outerH))
+                {
+                    bool improving = kv.Value < 0f; // 負=消退=好
+                    float absPerCycle = Math.Abs(kv.Value) * daysPerCycle;
+                    string sign = improving ? "-" : "+";
+                    Widgets.Label(new Rect(x + 4f, y, w * 0.55f, RowH), kv.Key.LabelCap);
+                    GUI.color = improving ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.65f, 0.4f);
+                    Widgets.Label(new Rect(x + w * 0.56f, y, w * 0.44f, RowH),
+                        $"{sign}{absPerCycle:F3} sev / {"CAO.Preview.Cycle".Translate()}");
+                    GUI.color = Color.white;
+                }
+                y += RowH;
+            }
+        }
+
         // N7：技能訓練段落，顯示每技能每週期基礎 XP（乘 occupant passion 後為實際 XP）
         private static void DrawSkillSection(ref float y, float x, float w,
             float daysPerCycle, string header,

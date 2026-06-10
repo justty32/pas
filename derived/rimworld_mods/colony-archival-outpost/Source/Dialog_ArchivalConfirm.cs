@@ -18,6 +18,7 @@ namespace ColonyArchivalOutpost
         private readonly int currentPawnCount;
         private bool applySkillXP;
         private bool applyHealthDelta;
+        private bool applyHediffDeltas;
 
         private Vector2 previewScroll;
         private float previewContentH;
@@ -113,6 +114,14 @@ namespace ColonyArchivalOutpost
                 y += 32f;
             }
 
+            // N6b：其他 hediff 變化開關（只在有非傷勢 hediff 資料時顯示）
+            if (snapshot.dailyHediffDeltas?.Count > 0)
+            {
+                Widgets.CheckboxLabeled(new Rect(x, y, w, 26f),
+                    "CAO.ArchivalConfirm.ApplyHediffDeltas".Translate(snapshot.dailyHediffDeltas.Count), ref applyHediffDeltas);
+                y += 32f;
+            }
+
             // N3：圖標 gallery
             Widgets.Label(new Rect(x, y, w, 22f), "CAO.ArchivalConfirm.ChooseIcon".Translate() + ":");
             y += 24f;
@@ -158,7 +167,7 @@ namespace ColonyArchivalOutpost
             {
                 Close();
                 string name = outpostName.NullOrEmpty() ? null : outpostName.Trim();
-                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP, applyHealthDelta);
+                ArchivalService.Archive(map, name, chosenIconPath, scalePawnCount, applySkillXP, applyHealthDelta, applyHediffDeltas);
             }
         }
     }

@@ -17,6 +17,9 @@ namespace ColonyArchivalOutpost
         // N6：傷勢採樣——期初各殖民者可癒傷勢（Hediff_Injury 且 CanHealNaturally）severity 總和
         public Dictionary<string, float> startInjurySeverity = new Dictionary<string, float>();
 
+        // N6b：非傷勢 hediff 採樣——期初各殖民者的非 Injury/MissingPart hediff severity
+        public List<PawnHediffSnapshot> startHediffSnapshots = new List<PawnHediffSnapshot>();
+
         public ColonyArchivalTracker(Map map) : base(map) { }
 
         public void BeginSampling()
@@ -29,6 +32,20 @@ namespace ColonyArchivalOutpost
             startInjurySeverity = new Dictionary<string, float>();
             foreach (var pawn in map.mapPawns.FreeColonistsSpawned)
                 startInjurySeverity[pawn.ThingID] = TotalHealableSeverity(pawn);
+
+            // N6b：snapshot 每個自由殖民者的非傷勢 hediff severity
+            startHediffSnapshots = new List<PawnHediffSnapshot>();
+            foreach (var pawn in map.mapPawns.FreeColonistsSpawned)
+            {
+                var snap = new PawnHediffSnapshot { pawnId = pawn.ThingID };
+                foreach (var h in pawn.health.hediffSet.hediffs)
+                {
+                    if (h is Hediff_Injury || h is Hediff_MissingPart || h.def == null) continue;
+                    snap.hediffSeverities[h.def] = h.Severity;
+                }
+                if (snap.hediffSeverities.Count > 0)
+                    startHediffSnapshots.Add(snap);
+            }
 
             // N7：snapshot 每個自由殖民者的技能累積 XP 及熱情
             startSkillSnapshots = new List<PawnSkillSnapshot>();
@@ -53,6 +70,7 @@ namespace ColonyArchivalOutpost
             startCounts = new Dictionary<ThingDef, int>();
             startSkillSnapshots = new List<PawnSkillSnapshot>();
             startInjurySeverity = new Dictionary<string, float>();
+            startHediffSnapshots = new List<PawnHediffSnapshot>();
         }
 
         private static float TotalHealableSeverity(Pawn pawn)
@@ -72,11 +90,13 @@ namespace ColonyArchivalOutpost
             Scribe_Collections.Look(ref startCounts, "caoStartCounts", LookMode.Def, LookMode.Value);
             Scribe_Collections.Look(ref startSkillSnapshots, "caoStartSkillSnapshots", LookMode.Deep);
             Scribe_Collections.Look(ref startInjurySeverity, "caoStartInjurySeverity", LookMode.Value, LookMode.Value);
+            Scribe_Collections.Look(ref startHediffSnapshots, "caoStartHediffSnapshots", LookMode.Deep);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 if (startCounts == null) startCounts = new Dictionary<ThingDef, int>();
                 if (startSkillSnapshots == null) startSkillSnapshots = new List<PawnSkillSnapshot>();
                 if (startInjurySeverity == null) startInjurySeverity = new Dictionary<string, float>();
+                if (startHediffSnapshots == null) startHediffSnapshots = new List<PawnHediffSnapshot>();
             }
         }
     }

@@ -21,6 +21,10 @@ namespace ColonyArchivalOutpost
         public float avgHealthDeltaPerDay; // 負值=有益（每天平均治癒 X severity/pawn）
         public bool applyHealthDelta;
 
+        // N6b：非傷勢 hediff severity 每日變化率（正=加重/新增，負=消退）
+        public Dictionary<HediffDef, float> dailyHediffDeltas = new Dictionary<HediffDef, float>();
+        public bool applyHediffDeltas;
+
         public ProductivitySnapshot() { }
 
         public ProductivitySnapshot(Dictionary<ThingDef, float> rates)
@@ -29,7 +33,8 @@ namespace ColonyArchivalOutpost
         }
 
         public bool IsEmpty => (dailyRates == null || dailyRates.Count == 0)
-                            && (dailySkillXP == null || dailySkillXP.Count == 0);
+                            && (dailySkillXP == null || dailySkillXP.Count == 0)
+                            && (dailyHediffDeltas == null || dailyHediffDeltas.Count == 0);
 
         public void ExposeData()
         {
@@ -40,10 +45,13 @@ namespace ColonyArchivalOutpost
             Scribe_Values.Look(ref applySkillXP, "applySkillXP", false);
             Scribe_Values.Look(ref avgHealthDeltaPerDay, "avgHealthDeltaPerDay", 0f);
             Scribe_Values.Look(ref applyHealthDelta, "applyHealthDelta", false);
+            Scribe_Collections.Look(ref dailyHediffDeltas, "dailyHediffDeltas", LookMode.Def, LookMode.Value);
+            Scribe_Values.Look(ref applyHediffDeltas, "applyHediffDeltas", false);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 if (dailyRates == null) dailyRates = new Dictionary<ThingDef, float>();
                 if (dailySkillXP == null) dailySkillXP = new Dictionary<SkillDef, float>();
+                if (dailyHediffDeltas == null) dailyHediffDeltas = new Dictionary<HediffDef, float>();
             }
         }
     }
