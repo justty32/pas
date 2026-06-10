@@ -55,7 +55,7 @@ namespace ColonyArchivalOutpost
             Widgets.DrawBoxSolid(outerRect, new Color(0f, 0f, 0f, 0.12f));
             Rect viewRect = new Rect(0f, 0f, w - 20f, Mathf.Max(previewOuterH, previewContentH));
             Widgets.BeginScrollView(outerRect, ref previewScroll, viewRect);
-            SnapshotPreviewDrawer.Draw(new Rect(4f, 4f, viewRect.width - 8f, viewRect.height), snapshot, elapsedTicks, daysPerCycle);
+            SnapshotPreviewDrawer.Draw(new Rect(4f, 4f, viewRect.width - 8f, viewRect.height), snapshot, elapsedTicks, daysPerCycle, previewScroll, previewOuterH);
             Widgets.EndScrollView();
 
             // 關閉按鈕
