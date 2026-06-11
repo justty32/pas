@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Empire Refactored 分析導覽</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">EMPIRE REFACTORED</div>
+        <a href="index.html" class="active">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="compat.html">相容模組</a>
+        <a href="extension.html">擴充接點</a>
+        <a href="tutorial.html">開發教學</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>Empire Refactored 分析概覽</h1>
+        <p>RimWorld 1.6「世界地圖層帝國經營」mod（<code>Matathias.Empire</code> v1.3.74）的深度架構剖析。重點在它如何把聚落／資源／建築／敕令／事件全面 def 化，並用 <strong>Registry + Interface</strong> 擴充接點，讓多數衍生開發「不必 Harmony patch」。</p>
+        <p style="margin-top:10px;">
+            <span class="badge badge-blue">RimWorld 1.6 only</span>
+            <span class="badge badge-orange">硬相依 harmony</span>
+            <span class="badge badge-green">9 個 compat 子模組</span>
+            <span class="badge badge-purple">Core 279 .cs</span>
+        </p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">導覽（依分析層級）</h2>
+        <div class="g2">
+            <a href="architecture.html" class="card card-accent-blue">
+                <h3>核心架構（L0-1）</h3>
+                <p>一句話定位、相依鏈、原始碼分佈，與單一真相 <code>FactionFC</code>（WorldComponent）＋ 每聚落 <code>WorldSettlementFC</code> 的資料模型、稅務／事件／敕令／軍事／升級／道路各系統。</p>
+            </a>
+            <a href="compat.html" class="card card-accent-green">
+                <h3>相容子模組（L2）</h3>
+                <p>為何拆成 9 個獨立 DLL、<code>LoadFolders.xml</code> 的 <code>IfModActive</code> 條件載入機制，以及兩種 compat 風格：Harmony 補丁 vs 強型別 Bridge 介面。</p>
+            </a>
+            <a href="extension.html" class="card card-accent-orange">
+                <h3>擴充接點（details）</h3>
+                <p>A 純資料（XML def）／ B 改碼（C#）兩條路徑：22 個 <code>FCInterfaces</code> + 15 個 Registry + DefModExtension 全表，以及 Bridge 模組走讀與完整 API 清單。</p>
+            </a>
+            <a href="tutorial.html" class="card card-accent-purple">
+                <h3>開發教學（tutorial）</h3>
+                <p>從零建立一個同時與 Empire 及（選配）Rim War 互動的獨立擴展 mod，含骨架／csproj／穩健註冊／接點決策／部署驗證／陷阱備忘。</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">核心資料流：徵稅一輪（TaxTick → AddTax）</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-blue">FactionFC.WorldComponentTick</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-orange">TaxTick（到期）</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-green">AddTax：每聚落 CreateTax</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-purple">包成 BillFC 稅單</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-cyan">物品落地 TaxMap</div>
+        </div>
+        <p class="src">依據：<code>FactionFC.cs:596 / :651 / :1635</code>；前後置擴充鉤 <code>TaxTickRegistry.InvokePre/PostTaxResolution</code>。詳見「核心架構」。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">擴充決策：由淺入深，能停在淺層就停</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-green">A. 純 XML def 能做？</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-blue">B-1. 實作核心介面 + Registry（免 Harmony）</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-red">B-2. compat DLL + Harmony（最後手段）</div>
+        </div>
+        <p class="src">核心介面有 22 個，多半有現成接點；鉤第三方 mod 才走 B-2。詳見「擴充接點」。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">原始文件（Markdown — 真相層）</h2>
+        <ul>
+            <li><a href="../architecture/00_overview.md">architecture/00_overview.md</a> — 架構總覽（定位／相依鏈／源碼分佈／系統總圖）</li>
+            <li><a href="../architecture/01_core_systems.md">architecture/01_core_systems.md</a> — 核心系統逐一（入口／資料模型／稅／敕令／事件／軍事／升級／道路）</li>
+            <li><a href="../architecture/02_compat_modules.md">architecture/02_compat_modules.md</a> — 相容子模組架構（9 DLL／IfModActive／兩風格）</li>
+            <li><a href="../details/extension_points.md">details/extension_points.md</a> — 擴充接點總表（A 資料 / B 改碼）</li>
+            <li><a href="../details/bridge_module_walkthrough.md">details/bridge_module_walkthrough.md</a> — Patch-RW 走讀 ＋ 完整 API 清單</li>
+            <li><a href="../tutorial/01_writing_extension_module.md">tutorial/01_writing_extension_module.md</a> — 寫第三方擴展模組教學</li>
+        </ul>
+        <p class="src">.md 為內容唯一真實來源；本 HTML 僅為索引與呈現層，內容更新一律先改 .md。</p>
+    </div>
+</body>
+</html>

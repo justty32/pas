@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>擴充接點 - Empire Refactored</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">EMPIRE REFACTORED</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="compat.html">相容模組</a>
+        <a href="extension.html" class="active">擴充接點</a>
+        <a href="tutorial.html">開發教學</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>擴充接點與 Bridge 走讀</h1>
+        <p>refactored 版主打：<strong>22 個 <code>FCInterfaces</code> + 15 個 Registry + DefModExtension</strong>，讓多數衍生開發免 Harmony。本頁綜整 <code>extension_points.md</code> 與 <code>bridge_module_walkthrough.md</code>。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">擴充最省力路徑（能停在淺層就停）</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-green">A. 純 XML def</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-blue">B-1. 實作介面 + Registry / DefModExtension（免 Harmony）</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-red">B-2. compat DLL + Harmony（碰第三方型別才用）</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">A. 純資料接點（只寫 XML）</h2>
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:12px;">README：「basic resources and settlements can be created in XML alone… Adding new events or policies is possible through XML, too!」</p>
+        <table class="tbl">
+            <thead><tr><th>想新增</th><th>Def 類別</th><th>限制（何時被迫升級到 B）</th></tr></thead>
+            <tbody>
+                <tr><td>新據點類型</td><td><code>WorldSettlementDef</code></td><td>只用內建 <code>SettlementTypeExtension</code> 即純 XML；要改建立/驗證/升級曲線得自訂 extension 子類</td></tr>
+                <tr><td>新資源類型</td><td><code>ResourceTypeDef</code></td><td>產量綁既有 <code>FCStatDef</code> 即純 XML；非線性產量/特殊過濾需 <code>ResourceProduction/FilterExtension</code></td></tr>
+                <tr><td>新據點建築</td><td><code>BuildingFCDef</code></td><td>升級樹與依賴皆 XML 表達；要建築主動行為需 <code>BuildingFCExtension</code></td></tr>
+                <tr><td>新事件</td><td><code>FCEventDef</code></td><td>觸發條件純 XML；有選項抉擇/特殊效果需 <code>FCEventHandlerExtension</code></td></tr>
+                <tr><td>新敕令/政策</td><td><code>FCPolicyDef</code></td><td>純增益/減益/禁用動作即 XML；要每稅期主動行為需 <code>FCPolicyBehavior</code> 子類</td></tr>
+                <tr><td>biome 產出 / 事件獎勵 / 軍事工作 / stat 軸</td><td><code>BiomeResourceDef</code> / <code>ResourceEventRewardDef</code> / <code>MilitaryJobDef</code> / <code>FCStatDef</code></td><td>數值純資料；全新行為需 B</td></tr>
+            </tbody>
+        </table>
+        <p class="src">A 類風險最低：不改 DLL、不破壞存檔、不衝突 Harmony。最大限制＝只能組合既有「行為原語」；任何「主動發生的事」都需要 B。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">B-1. 核心介面 + Registry（推薦，免 Harmony）</h2>
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:12px;">掛載方式：<span class="badge badge-blue">R</span> Registry 註冊（<code>XxxRegistry.Register(...)</code>）／<span class="badge badge-green">C</span> 把介面實作在掛於聚落的 <code>WorldObjectComp</code> 上，核心以 <code>comp is IXxx</code> 掃描。</p>
+        <table class="tbl">
+            <thead><tr><th>介面（FCInterfaces.cs 行）</th><th>掛載</th><th>用途 / 回呼時機</th><th>第三方適合度</th></tr></thead>
+            <tbody>
+                <tr><td><code>ILifecycleParticipant</code>（:128）</td><td>R</td><td>11 個事件總線：聚落建立/移除/升級/換型、建築建造/拆除、squad 派遣/召回、戰鬥結算、研究完成、傭兵死亡。繼承 <code>LifecycleParticipantBase</code> 只覆寫需要的</td><td><strong>最高</strong></td></tr>
+                <tr><td><code>IRaidTarget</code>（:261）</td><td>R</td><td>把自己的 world object 變成 Empire 襲擊體系一等公民（被選為攻擊目標 + <code>OnRaidWon/Lost</code>）</td><td><strong>最高</strong></td></tr>
+                <tr><td><code>IAutoDefender</code>（:280）</td><td>R</td><td>外部單位（載具/商隊）參與 Empire 防衛戰，<code>CreateDefendingForce</code> + spawn/return pawns</td><td><strong>最高</strong></td></tr>
+                <tr><td><code>ITaxTickParticipant</code>（:110）</td><td>R</td><td>稅期前後 + 每聚落造稅前後；<strong>可 <code>ref</code> 改白銀、可動 tithe 清單</strong></td><td>高</td></tr>
+                <tr><td><code>IBattleModifier</code>（:149）</td><td>R</td><td>每場模擬戰開頭，攻→防兩次 <code>ModifyForce(force, isAttacker)</code>（Patch-RW/WD 的選擇）</td><td>高</td></tr>
+                <tr><td><code>ISettlementFoundingValidator</code>（:187）</td><td>R</td><td>加建立條件 / 額外成本（注意 <code>OnSettlementFounded</code> 時聚落尚未生成）</td><td>高</td></tr>
+                <tr><td><code>IStatModifierProvider</code> / <code>IResourceProductionModifier</code> / <code>IProfitContributor</code>（:37/:51/:388）</td><td>C</td><td>comp 動態加 stat / 按資源調產量 / 改收支</td><td>高</td></tr>
+                <tr><td><code>ISettlementPostLoadInit</code>（:103）</td><td>C</td><td>聚落 PostLoadInit、stat 重建後 — comp 載入後初始化的正確時機</td><td>高</td></tr>
+                <tr><td><code>IRaidWeightProvider</code>（:245）</td><td>R</td><td>敵方選目標權重，乘法疊加、0＝排除</td><td>高</td></tr>
+                <tr><td><code>ISettlementWindowButton</code>（:354）/ <code>IMainTabWindowOverview</code>（:11）/ <code>ISettlementWindowOverview</code>（:23）</td><td>R / R / C</td><td>UI 入口：聚落視窗按鈕（最便宜）/ 帝國主分頁 / 聚落分頁</td><td>高</td></tr>
+                <tr><td><code>ISilverPaymentModifier</code> / <code>IThreatScalingContributor</code> / <code>IDefenseValidator</code> 等</td><td>R</td><td>折扣加價 / 威脅縮放 / 防守驗證（共 22 介面，詳見走讀 §6）</td><td>中</td></tr>
+            </tbody>
+        </table>
+        <p class="src">註冊慣例：<code>[StaticConstructorOnStartup]</code> 內 <code>XxxRegistry.Register(new MyImpl())</code>。Registry 不序列化，每次開機要重註冊；Invoke 對每個參與者單獨 try/catch（壞了默默記 <code>LogUtil.Error</code>）。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">⚠ 關鍵陷阱：Game.ClearCaches 清空全部 Registry</h2>
+        <div class="card card-accent-red">
+            <p>每次開新局/讀檔時 <code>Game.ClearCaches</code> 觸發 <code>EmpireCacheUtil.InvalidateAll</code>，清空全部 registry（<code>HarmonyPatches/CachePatches.cs:36-50,72-86</code>）。只在 <code>StaticConstructorOnStartup</code> 註冊一次 → <strong>第一次讀檔後擴展靜默失效</strong>。</p>
+            <p style="margin-top:8px;">解法：用 <code>EmpireCacheUtil.RegisterCacheInvalidator(id, RegisterAll)</code> 重註冊 —— invalidator 字典不會被清，且回呼在 <code>ClearAll</code> 之後執行（<code>CachePatches.cs:55-59</code>）。連核心自身都這麼做（<code>FactionFC.cs:524-527</code>「Re-register … in case ClearCaches ran」）。</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">B-2. Bridge 走讀（Patch-RW）：官方橋接的 9 種常用模式</h2>
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:12px;">9 個模組共通骨架：一個 <code>[StaticConstructorOnStartup]</code> Init 類做 <code>PatchAll</code> + Registry 註冊 + <code>MessageForce</code> 錨點；每 patch 一檔、檔頭寫「不修會怎樣」；prefix 守則 <strong>非自家物件一律 return true</strong>。</p>
+        <table class="tbl">
+            <thead><tr><th>模式</th><th>定義</th><th>實例</th></tr></thead>
+            <tbody>
+                <tr><td>可見性 postfix</td><td>對方白名單看不見自家物件 → postfix 放寬</td><td><code>Patch_IsValidSettlement.cs:19</code></td></tr>
+                <tr><td>單一漏斗攔截</td><td>找對方必經 getter，一刀置換</td><td><code>Patch_RimWarPoints.cs:19-39</code></td></tr>
+                <tr><td>行為導流 prefix</td><td>攔對方事件入口，翻譯參數轉呼自家 API</td><td><code>Patch_ResolveWarObjectAttack.cs:26-57</code></td></tr>
+                <tr><td>主權防衛 prefix</td><td>對方奪取/破壞流程對自家物件短路，回填等價後果</td><td><code>Patch_ConvertSettlement.cs:25-39</code></td></tr>
+                <tr><td>存檔修復 postfix</td><td>鉤 ExposeData PostLoadInit 修漂移序列化值</td><td><code>Patch_ForceVassalBehavior.cs:34-59</code></td></tr>
+                <tr><td>戰力換算 IBattleModifier</td><td>攻防兩次配對，依外部系統強度覆寫防方</td><td><code>RimWarCompatInit.cs:42-78</code></td></tr>
+                <tr><td>防衛式 transpiler</td><td>對方崩潰 bug 用 transpiler 換掉單一危險呼叫</td><td><code>Patch-KCSG/KCSGCompat.cs:31-57</code></td></tr>
+                <tr><td>載具 caravan 分流 prefix</td><td>對方子型別需完全不同處理 → prefix 認出自行處理</td><td><code>Patch-VF/…:31-38</code></td></tr>
+                <tr><td>延遲型別解析</td><td>目標 packageId 不穩時，型別存取移入 NoInlining + try/catch</td><td><code>Patch-FTV/…:122-135</code></td></tr>
+            </tbody>
+        </table>
+        <p class="src">針對 Rim War 的具體鉤點（官方已驗證）：可見性 <code>WorldUtility.IsValidSettlement</code>、點數 <code>RimWarSettlementComp.RimWarPoints</code>、攻擊入口 <code>IncidentUtility.ResolveWarObjectAttackOnSettlement</code>、奪城 <code>WorldUtility.ConvertSettlement</code>、存檔 <code>WorldComponent_PowerTracker.ExposeData</code>。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">原始文件</h2>
+        <ul>
+            <li><a href="../details/extension_points.md">details/extension_points.md</a> — A 資料 / B 改碼接點完整表 + 風險</li>
+            <li><a href="../details/bridge_module_walkthrough.md">details/bridge_module_walkthrough.md</a> — Patch-RW 逐檔走讀、22 介面完整 API、Registry 形狀與陷阱、周邊工具 API</li>
+        </ul>
+    </div>
+</body>
+</html>

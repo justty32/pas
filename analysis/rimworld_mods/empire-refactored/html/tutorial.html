@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>開發教學 - Empire Refactored</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">EMPIRE REFACTORED</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="compat.html">相容模組</a>
+        <a href="extension.html">擴充接點</a>
+        <a href="tutorial.html" class="active">開發教學</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>寫一個第三方擴展模組</h1>
+        <p>從零建立一個同時與 <strong>Empire Refactored</strong> 及（選配）<strong>Rim War</strong> 互動的獨立擴展 mod，直到在遊戲 log 驗證載入成功。本頁是 <code>tutorial/01_writing_extension_module.md</code> 的導覽；完整逐步請看原始文件。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">核心心法</h2>
+        <div class="card card-accent-blue">
+            <p><strong>對 Empire 走契約層（介面＋Registry），對沒有擴展 API 的 mod（如 Rim War）才走 Harmony</strong>；資料層問題（comp 掛載、def 調整）用條件載入的 XML patch。只擴展 Empire 本身可完全不用 Harmony。</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">六步流程</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-orange">1. mod 骨架</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-blue">2. csproj</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-green">3. Init 類</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-purple">4. 選接點</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-cyan">5. XML patch</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-orange">6. 部署驗證</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">關鍵步驟摘要</h2>
+        <div class="g2">
+            <div class="card card-accent-orange">
+                <h3>1. mod 骨架</h3>
+                <p>獨立擴展是自己的 mod（不塞檔進 Empire）。<code>About.xml</code> 硬依賴 Empire 就宣告 <code>modDependencies</code>；Rim War 若選配，照官方用 <code>LoadFolders.xml</code> 的 <code>IfModActive</code> 把鉤它的程式碼編成第二個 dll 條件載入。</p>
+            </div>
+            <div class="card card-accent-blue">
+                <h3>2. csproj 三鐵則</h3>
+                <ul>
+                    <li>所有外部 Reference 一律 <code>&lt;Private&gt;False&lt;/Private&gt;</code> — 絕不複製別人的 dll</li>
+                    <li>版本對準<strong>實裝版</strong> Empire dll（第三方用 HintPath 指工作坊實檔）</li>
+                    <li><code>OutputPath</code> 直指 mod 的 Assemblies，編譯即部署</li>
+                </ul>
+            </div>
+            <div class="card card-accent-green">
+                <h3>3. Init 類（含 ClearCaches 防護）</h3>
+                <p>官方範本自己都缺的防護：除了 <code>PatchAll</code> + <code>RegisterAll</code>，務必加 <code>EmpireCacheUtil.RegisterCacheInvalidator(id, RegisterAll)</code>，否則第一次讀檔後擴展靜默失效。驗證錨點用 <code>LogUtil.MessageForce</code>（不受 verbose 抑制）。</p>
+            </div>
+            <div class="card card-accent-purple">
+                <h3>4. 選接點（由淺入深）</h3>
+                <ul>
+                    <li>純 XML 能做到？→ 停在 def</li>
+                    <li>Empire 有現成介面？→ 22 個介面表（事件→<code>ILifecycleParticipant</code>、UI→<code>ISettlementWindowButton</code>、錢→<code>ITaxTickParticipant</code>…）</li>
+                    <li>都沒有才 Harmony；鉤第三方守則「非自家物件 return true」</li>
+                </ul>
+            </div>
+            <div class="card card-accent-cyan">
+                <h3>5. XML patch 掛 comp</h3>
+                <p>給 Empire 聚落掛自訂 comp：<code>PatchOperationAdd</code> 打 <code>WorldSettlementDefBase</code> 抽象基底。注意 xpath 元素名是 <code>FactionColonies.WorldSettlementDef</code>（不是 WorldObjectDef）—— Rim War 就踩過這坑。</p>
+            </div>
+            <div class="card card-accent-orange">
+                <h3>6. 部署與載入驗證</h3>
+                <p>本機慣例建 symlink 進 <code>Mods/</code>。驗證以 <strong>log 字串為準</strong>（ModsConfig 有列 ≠ 真載入）：搜錨點字串、Harmony 失敗即紅字、回呼煙霧測試（建聚落 + <strong>存檔→讀檔→再驗</strong>重註冊）、Debug inspector 看 comp。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">陷阱備忘（節選，全部踩過源碼確認）</h2>
+        <table class="tbl">
+            <thead><tr><th>陷阱</th><th>後果</th><th>解法</th></tr></thead>
+            <tbody>
+                <tr><td>只在 StaticConstructorOnStartup 註冊 registry</td><td>第一次讀檔/開新局後靜默失效</td><td><code>EmpireCacheUtil.RegisterCacheInvalidator</code> 重註冊</td></tr>
+                <tr><td>Reference 沒設 <code>Private=False</code></td><td>重複攜帶 dll → 型別衝突</td><td>全部 <code>&lt;Private&gt;False&lt;/Private&gt;</code></td></tr>
+                <tr><td>頂層 using 選配 mod 命名空間但無條件載入</td><td>對方不在場時 TypeLoadException</td><td>選配目標程式碼放條件載入 dll；packageId 不穩用 NoInlining 延遲解析</td></tr>
+                <tr><td>Prefix 對非自家物件也 return false</td><td>毀掉原 mod 與其他相容 mod</td><td>一律「非自家型別 return true」</td></tr>
+                <tr><td>判斷 PColony 用 defName 字串</td><td>脆弱判斷</td><td>用 <code>FactionCache.IsPlayerColonyFaction</code></td></tr>
+                <tr><td>在 <code>OnSettlementFounded</code> 假設聚落已存在</td><td>NRE（該回呼時聚落尚未生成）</td><td>初始化改實作 <code>ISettlementPostLoadInit</code></td></tr>
+                <tr><td>用 <code>LogUtil.Message</code> 當驗證錨點</td><td>verbose 關閉時看不到</td><td>用 <code>MessageForce</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">原始文件</h2>
+        <ul>
+            <li><a href="../tutorial/01_writing_extension_module.md">tutorial/01_writing_extension_module.md</a> — 完整含 About.xml / csproj / Init 類 / 接點決策 / 部署驗證清單 / 陷阱全表（附程式碼）</li>
+        </ul>
+    </div>
+</body>
+</html>

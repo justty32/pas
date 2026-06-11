@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>相容子模組 - Empire Refactored</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">EMPIRE REFACTORED</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="compat.html" class="active">相容模組</a>
+        <a href="extension.html">擴充接點</a>
+        <a href="tutorial.html">開發教學</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>相容子模組架構</h1>
+        <p>核心 <code>Empire.dll</code> 零硬相依（除 harmony）、能單獨運作；9 個 compat 各編成獨立 DLL，靠 <code>LoadFolders.xml</code> 的 <code>IfModActive</code> 條件載入。本頁綜整 <code>02_compat_modules.md</code>。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">為何拆成 9 個獨立 DLL</h2>
+        <div class="card card-accent-red">
+            <p>每個相容對象的 compat 程式碼<strong>直接引用對方型別</strong>（<code>using Vehicles;</code>、<code>using RimWar.Planet;</code>…）。若把這些 <code>using</code> 寫進核心 <code>Empire.dll</code>，對方 mod 不在時整個核心會因找不到型別而 <strong>TypeLoadException</strong> 載入失敗。</p>
+            <p style="margin-top:8px;">解法：把每個對方型別的引用隔離成<strong>獨立組件</strong>，只有對方 mod 真的啟用時才載入該組件。核心 DLL 永遠零硬相依。</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">9 個 compat 子模組</h2>
+        <table class="tbl">
+            <thead><tr><th>compat</th><th>源碼（檔數）</th><th>產物</th><th>對方 packageId</th></tr></thead>
+            <tbody>
+                <tr><td>VehicleFramework</td><td>Patch-VF/（1）</td><td>Empire.VF.dll</td><td><code>SmashPhil.VehicleFramework</code></td></tr>
+                <tr><td>RimWar</td><td>Patch-RW/（<strong>8</strong>）</td><td>Empire.RW.dll</td><td><code>Torann.RimWar</code></td></tr>
+                <tr><td>CombatExtended</td><td>Patch-CE/（1）</td><td>Empire.CE.dll</td><td><code>CETeam.CombatExtended</code></td></tr>
+                <tr><td>HumanoidAlienRaces</td><td>Patch-HAR/（1）</td><td>Empire.HAR.dll</td><td><code>erdelf.HumanoidAlienRaces</code></td></tr>
+                <tr><td>KCSG / VFE Core</td><td>Patch-KCSG/（1）</td><td>Empire.KCSG.dll</td><td><code>OskarPotocki.VanillaFactionsExpanded.Core</code></td></tr>
+                <tr><td>FactionTerritories</td><td>Patch-FTV/（1）</td><td>Empire.FTV.dll</td><td><code>jaeger972.factionterritories</code></td></tr>
+                <tr><td>WorldDomination</td><td>Patch-WD/（1）</td><td>Empire.WD.dll</td><td><code>TSA.WorldDomination</code></td></tr>
+                <tr><td>WDExperimental</td><td>Patch-WDExp/（1）</td><td>Empire.WDExp.dll</td><td><code>TSA.WorldDominationExperimental</code></td></tr>
+                <tr><td>PawnkindRaceDiversification</td><td>Patch-PRD/（1）</td><td>Empire.PRD.dll</td><td><code>Mlie.PawnkindRaceDiversification</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">條件載入機制：IfModActive（非反射、非條件編譯）</h2>
+        <div class="card card-accent-blue">
+            <p>核心機制是 RimWorld 原生的 <code>LoadFolders.xml</code> + <code>IfModActive</code>。只有對應 mod 啟用時，該 compat 資料夾（含 <code>Assemblies/*.dll</code>）才被掛載：</p>
+            <pre>&lt;!-- LoadFolders.xml --&gt;
+&lt;li IfModActive="CETeam.CombatExtended"&gt;Compat/1.6/CombatExtended&lt;/li&gt;
+&lt;li IfModActive="Torann.RimWar"&gt;Compat/1.6/RimWar&lt;/li&gt;
+&lt;li IfModActive="SmashPhil.VehicleFramework"&gt;Compat/1.6/VehicleFramework&lt;/li&gt;</pre>
+            <p style="margin-top:8px;">DLL 自啟動：被載入後各 compat DLL 用 <code>[StaticConstructorOnStartup]</code> 在遊戲啟動時自我註冊。<code>About.xml</code> 的 <code>&lt;loadAfter&gt;</code> 只確保<strong>載入順序</strong>，並非載入條件。</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">兩種 compat 風格</h2>
+        <div class="g2">
+            <div class="card card-accent-orange">
+                <h3>風格 A：Harmony 補丁</h3>
+                <p>compat DLL 自跑 <code>PatchAll</code>，補丁直接引用對方型別。</p>
+                <ul>
+                    <li><strong>VF</strong>：<code>Patch_CaravanDefend_Vehicle</code> Prefix 攔截核心的 <code>CaravanDefend</code>，把藏在 <code>VehicleRoleHandlers</code> 的乘員/載具正確 spawn 進防守地圖。</li>
+                    <li><strong>RW</strong>（8 檔）：兩種接點並用 — Harmony patch 對方（IsValidSettlement / ConvertSettlement…）讓 RimWar 視 Empire 聚落為合法；同時走核心 Registry（<code>RWStrengthBattleModifier : IBattleModifier</code> 註冊 <code>BattleModifierRegistry</code>）。</li>
+                </ul>
+            </div>
+            <div class="card card-accent-green">
+                <h3>風格 B：Bridge 介面（招牌）</h3>
+                <p>核心在 <code>Util/ModCompat/</code> 定義 bridge interface + 靜態 <code>Bridge</code> 屬性；gated DLL 用對方型別實作後塞入 <code>Bridge</code>。核心呼叫前判 <code>Bridge == null</code>，<strong>對對方型別零引用</strong>。</p>
+                <ul>
+                    <li><strong>CE</strong>：<code>ICombatExtendedBridge</code> + <code>Bridge</code>（CombatExtendedUtil.cs:11,37）；gated DLL 以 <code>using CombatExtended;</code> 直接型別實作裝彈藥等行為，避免反射。</li>
+                    <li><strong>HAR</strong>：<code>IHARBridge</code> + <code>HARUtil.Bridge</code>，核心 <code>CanRaceWearApparel</code>/<code>CanRaceUseWeapon</code> 前判 null 走預設。</li>
+                </ul>
+            </div>
+        </div>
+        <p class="src">風格 B 是 refactored 版的招牌：把「軟相容反射」升級成「強型別 bridge」——核心無對方依賴、gated DLL 有完整型別檢查與效能。</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">寫一個新 compat 子模組的最省力路徑</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-blue">1. LoadFolders.xml 加 IfModActive 行</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-orange">2. 新 Patch-MyX：ProjectReference Core + Reference 對方 DLL</div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step pipe-green">3. StaticConstructorOnStartup：優先註冊 Registry / 實作 bridge，不得已才 PatchAll</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">原始文件</h2>
+        <ul>
+            <li><a href="../architecture/02_compat_modules.md">architecture/02_compat_modules.md</a> — 含接點全景 Mermaid 圖</li>
+        </ul>
+    </div>
+</body>
+</html>
