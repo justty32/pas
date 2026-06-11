@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LanguageData>
-  <!-- 身体强化 Hediff 补充语言键 -->
-  <BFH.BodyFortification.label>身体强化</BFH.BodyFortification.label>
-  <BFH.BodyFortification.desc>此棋子的身体结构已获强化，所有伤害依等级减免。
-- 轻度强化（severity 0.00–0.33）：伤害 ÷ 2
-- 中度强化（severity 0.34–0.66）：伤害 ÷ 5
-- 极限强化（severity 0.67–1.00）：伤害 ÷ 10</BFH.BodyFortification.desc>
-</LanguageData>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LanguageData>
-  <!-- Supplemental keyed strings for Body Fortification Hediff -->
-  <BFH.BodyFortification.label>body fortification</BFH.BodyFortification.label>
-  <BFH.BodyFortification.desc>This pawn's body has been structurally reinforced, reducing all incoming damage.
-- Light fortification (severity 0.00–0.33): damage ÷ 2
-- Moderate fortification (severity 0.34–0.66): damage ÷ 5
-- Extreme fortification (severity 0.67–1.00): damage ÷ 10</BFH.BodyFortification.desc>
-</LanguageData>
