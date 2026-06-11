@@ -114,6 +114,7 @@
     - [ ] **Level 9: WML 預處理與元程式設計** (宏展開、條件編譯深探、WML-to-Config 性能限制)
     - [ ] **Level 10: 技術債與現代化專題** (C++ 遺留代碼、Boost 模組依賴優化、內存管理)
 - [x] **Freeciv** (地圖生成與 AI 系統極致深度剖析 Level 6+ 已完成 - 2026-05-17)
+- [x] **OpenClaw** (工業級 AI 閘道與執行引擎 Level 6 已完成 - 2026-06-11)
 
 ---
 *註：其餘如 `agent_server`, `arxiv_crawler`, `mylang`, `nlisp` 等非分析類專案已跳過。*
