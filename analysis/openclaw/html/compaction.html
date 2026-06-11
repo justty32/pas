@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>會話管理與壓縮機制 - OpenClaw</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">OPENCLAW ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">執行架構</a>
+        <a href="compaction.html" class="active">會話管理</a>
+        <a href="plugins.html">擴充系統</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>會話演化與檢查點管理</h1>
+        <p>探索 OpenClaw 如何透過實體快照實現穩定的長會話管理。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">檢查點壓縮 (Checkpoint Compaction)</h2>
+        <div class="card card-accent-green">
+            <p>不同於單純的「總結後刪除」，OpenClaw 採用了更安全的檢查點機制：</p>
+            <ol>
+                <li><strong>Pre-compaction 快照</strong>：在壓縮前備份原始會話文件。</li>
+                <li><strong>分叉與清理</strong>：確保壓縮過程中的原子性。</li>
+                <li><strong>容量治理</strong>：嚴格限制每個會話的磁碟配額 (128MB)，防止伺服器過載。</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">關鍵源碼路徑</h2>
+        <ul>
+            <li><code>src/gateway/session-compaction-checkpoints.ts</code> - 檢查點邏輯</li>
+            <li><code>src/auto-reply/reply/agent-runner-memory.ts</code> - 運行時記憶檢索</li>
+        </ul>
+    </div>
+</body>
+</html>

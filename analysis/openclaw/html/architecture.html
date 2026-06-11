@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>執行架構深度剖析 - OpenClaw</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">OPENCLAW ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html" class="active">執行架構</a>
+        <a href="compaction.html">會話管理</a>
+        <a href="plugins.html">擴充系統</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>Gateway 與 Agent 執行管線</h1>
+        <p>解構 OpenClaw 如何在多執行緒與非同步環境中精準調度 AI 任務。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">執行引擎總覽</h2>
+        <div class="card card-accent-blue">
+            <p>OpenClaw 的執行路徑呈現「長管線、重驗證」的特徵，確保了在生產環境中的極高穩定性。</p>
+            <ul>
+                <li><strong>RPC 橋接 (chat.ts)</strong>：將 UI 操作轉為內部的對話狀態。</li>
+                <li><strong>世代圍欄 (Generation Fencing)</strong>：透過 <code>generation</code> 計數器抑制陳舊的回覆交付。</li>
+                <li><strong>自動回退 (Fallback)</strong>：內建模型故障自動切換邏輯。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">關鍵源碼路徑</h2>
+        <ul>
+            <li><code>src/gateway/server.impl.ts</code> - Gateway 核心伺服器</li>
+            <li><code>src/auto-reply/reply/agent-runner.ts</code> - Agent 運行編排者</li>
+            <li><code>src/auto-reply/reply/agent-runner-execution.ts</code> - 最終 LLM 調用循環</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>擴充系統與鉤子機制 - OpenClaw</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">OPENCLAW ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">執行架構</a>
+        <a href="compaction.html">會話管理</a>
+        <a href="plugins.html" class="active">擴充系統</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>插件、有線鉤子與 MCP</h1>
+        <p>解構 OpenClaw 的模組化體系，如何實現跨平台的無縫擴充。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">插件與有線鉤子 (Wired Hooks)</h2>
+        <div class="g2">
+            <div class="card card-accent-orange">
+                <h3>Wired Hooks</h3>
+                <p>明確的生命週期鉤子，允許插件在訊息認領、LLM 調用、回覆分派等關鍵節點進行精準介入。</p>
+            </div>
+            <div class="card card-accent-purple">
+                <h3>MCP 整合</h3>
+                <p>原生支援 Model Context Protocol，讓 Agent 能直接呼叫外部工具伺服器提供的功能。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">關鍵源碼路徑</h2>
+        <ul>
+            <li><code>src/plugins/registry.ts</code> - 插件註冊與載入</li>
+            <li><code>src/plugins/wired-hooks-*.ts</code> - 各類生命週期鉤子</li>
+            <li><code>src/mcp/</code> - MCP 協議實作</li>
+        </ul>
+    </div>
+</body>
+</html>

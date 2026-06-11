@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenClaw 專案分析導覽層</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">OPENCLAW ANALYSIS</div>
+        <a href="index.html" class="active">概覽</a>
+        <a href="architecture.html">執行架構</a>
+        <a href="compaction.html">會話管理</a>
+        <a href="plugins.html">擴充系統</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>OpenClaw: 工業級多渠道 AI 助手框架</h1>
+        <p>基於 Node.js/TypeScript 的高性能、模組化 AI 閘道與 Agent 執行環境。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">核心分析進度 (Level 1-6)</h2>
+        <div class="g3">
+            <div class="card card-accent-blue">
+                <h3>Level 1-2: 初始與模組</h3>
+                <p>識別 Monorepo 結構與 Gateway/Agent Runner 的權責劃分。</p>
+                <a href="../architecture/L1_exploration.md" class="card-link">查看 L1 文件</a>
+                <a href="../architecture/L2_core_modules.md" class="card-link">查看 L2 文件</a>
+            </div>
+            <div class="card card-accent-green">
+                <h3>Level 3-4: 管線與記憶</h3>
+                <p>深度解構回覆圍欄 (Fencing) 與檢查點壓縮 (Checkpoints)。</p>
+                <a href="../architecture/L3_L4_deep_dive.md" class="card-link">查看 L3-4 文件</a>
+            </div>
+            <div class="card card-accent-orange">
+                <h3>Level 5-6: 擴充與診斷</h3>
+                <p>分析 Wired Hooks 鉤子系統、MCP 整合與事件循環監控。</p>
+                <a href="../architecture/L5_L6_extensibility.md" class="card-link">查看 L5-6 文件</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">關鍵技術專題</h2>
+        <div class="g2">
+            <div class="card">
+                <h3>世代回覆圍欄 (Generation Fencing)</h3>
+                <p>解決非同步環境下回覆順序錯亂的硬核工程方案。</p>
+            </div>
+            <div class="card">
+                <h3>實體快照壓縮 (Checkpoint Compaction)</h3>
+                <p>基於文件的會話管理，提供無損回滾與磁碟預算控制。</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
