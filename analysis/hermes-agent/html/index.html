@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>hermes-agent 分析導覽</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">HERMES ANALYSIS</div>
+        <a href="index.html" class="active">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="memory.html">記憶與學習</a>
+        <a href="extensibility.html">擴充系統</a>
+        <a href="gateway.html">閘道整合</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>hermes-agent 分析概覽</h1>
+        <p>自我改進型 AI Agent 的深度架構剖析。從對話迴圈到記憶管理，全方位解構 Nous Research 的核心技術。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">核心模組</h2>
+        <div class="g2">
+            <a href="architecture.html" class="card card-accent-blue">
+                <h3>Level 1-3: 核心引擎</h3>
+                <p>探索對話驅動引擎、工具執行器以及同步/非同步橋接機制。</p>
+            </a>
+            <a href="memory.html" class="card card-accent-green">
+                <h3>Level 4: 記憶與學習</h3>
+                <p>深入分析長短期記憶、會話壓縮以及 Curator 自我學習循環。</p>
+            </a>
+            <a href="extensibility.html" class="card card-accent-orange">
+                <h3>Level 5: 擴充系統</h3>
+                <p>解構 Skills 與 Plugins 體系，以及強大的 Lifecycle Hooks。</p>
+            </a>
+            <a href="gateway.html" class="card card-accent-purple">
+                <h3>Level 6: 閘道整合</h3>
+                <p>剖析多平台適配、多租戶實例管理與 Slash 指令系統。</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">數據流分析</h2>
+        <div class="pipeline">
+            <div class="pipe-step pipe-orange">使用者輸入</div>
+            <div class="pipe-arrow">??</div>
+            <div class="pipe-step pipe-blue">提示詞建構</div>
+            <div class="pipe-arrow">??</div>
+            <div class="pipe-step pipe-green">模型推理</div>
+            <div class="pipe-arrow">??</div>
+            <div class="pipe-step pipe-purple">工具執行</div>
+            <div class="pipe-arrow">??</div>
+            <div class="pipe-step pipe-cyan">結果回傳</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">原始文件 (Markdown)</h2>
+        <ul>
+            <li><a href="../architecture/L1_exploration.md">L1: 初始探索</a></li>
+            <li><a href="../architecture/L2_core_modules.md">L2: 核心模組職責</a></li>
+            <li><a href="../architecture/L3_execution_engine.md">L3: 對話迴圈與工具執行</a></li>
+            <li><a href="../architecture/L4_memory_and_learning.md">L4: 記憶與學習機制</a></li>
+            <li><a href="../architecture/L5_skills_and_plugins.md">L5: 技能系統與外掛架構</a></li>
+            <li><a href="../architecture/L6_gateway_integration.md">L6: 閘道與多平台整合</a></li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>核心架構深度剖析 - hermes-agent</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">HERMES ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html" class="active">核心架構</a>
+        <a href="memory.html">記憶與學習</a>
+        <a href="extensibility.html">擴充系統</a>
+        <a href="gateway.html">閘道整合</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>核心架構與驅動引擎</h1>
+        <p>解構 hermes-agent 的對話迴圈、API 適配器與強韌的執行機制。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">對話驅動循環 (Conversation Loop)</h2>
+        <div class="card card-accent-blue">
+            <p>位於 <code>agent/conversation_loop.py</code>，Hermes 採用了具備「預算感應」的迭代機制。</p>
+            <ul>
+                <li><strong>迭代預算 (Iteration Budget)</strong>：透過 <code>IterationBudget</code> 限制單次任務的最大 API 呼叫次數。</li>
+                <li><strong>寬限呼叫 (Grace Call)</strong>：當預算耗盡時，給予模型最後一次機會產出總結而非直接切斷。</li>
+                <li><strong>指令注入 (Steer Draining)</strong>：即時處理 <code>/steer</code> 指令，將其安插在工具回傳訊息中，修正模型規劃。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">深度技術：API 適配與安全</h2>
+        <div class="g2">
+            <div class="card card-accent-cyan">
+                <h3>中斷安全型 API 呼叫</h3>
+                <p><code>interruptible_api_call</code> 使用背景執行緒執行請求。為了防止 <strong>FD 污染 (File Descriptor Pollution)</strong>，每個請求擁有獨立的 Client，中斷時僅關閉 Socket 而不立即銷毀物件，避免內核將描述符回收給資料庫導致資料損毀。</p>
+            </div>
+            <div class="card card-accent-cyan">
+                <h3>同步-異步橋接器</h3>
+                <p>實作了 <code>_run_async</code> 並維護執行緒本地 (Thread-local) 的 Event Loop。這解決了 Python 中頻繁開關 Event Loop 導致的連線池損毀問題，確保了高併發環境下的穩定性。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">錯誤分類矩陣</h2>
+        <table class="card">
+            <thead>
+                <tr>
+                    <th>錯誤類型</th>
+                    <th>判定邏輯</th>
+                    <th>恢復策略</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>auth</code></td>
+                    <td>401 / 403 響應</td>
+                    <td>自動旋轉憑證 (Rotate)</td>
+                </tr>
+                <tr>
+                    <td><code>billing</code></td>
+                    <td>402 或特定的配額文字</td>
+                    <td>立即切換供應商 (Fallback)</td>
+                </tr>
+                <tr>
+                    <td><code>image_too_large</code></td>
+                    <td>供應商尺寸限制錯誤</td>
+                    <td>動態壓縮圖片並重試</td>
+                </tr>
+                <tr>
+                    <td><code>rate_limit</code></td>
+                    <td>429 響應</td>
+                    <td>指數退避重試 (Backoff)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">相關源碼文件</h2>
+        <ul>
+            <li><code>agent/conversation_loop.py</code> - 核心循環</li>
+            <li><code>agent/chat_completion_helpers.py</code> - API 適配工具</li>
+            <li><code>agent/error_classifier.py</code> - 錯誤決策引擎</li>
+        </ul>
+    </div>
+</body>
+</html>

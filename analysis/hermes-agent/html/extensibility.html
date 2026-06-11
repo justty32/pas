@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>擴充系統架構 - hermes-agent</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">HERMES ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="memory.html">記憶與學習</a>
+        <a href="extensibility.html" class="active">擴充系統</a>
+        <a href="gateway.html">閘道整合</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>技能、插件與自註冊體系</h1>
+        <p>解構 hermes-agent 的模組化設計，如何透過 Skills 與 Plugins 實現功能無限擴充。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">擴充雙軌制</h2>
+        <div class="g2">
+            <div class="card card-accent-orange">
+                <h3>技能系統 (Skills)</h3>
+                <p>基於腳本的輕量化功能。支援「自我維護」，Agent 可以自主產出、修改並 Patch 這些技能。透過 <code>SKILL.md</code> 定義 Metadata 與依賴。</p>
+            </div>
+            <div class="card card-accent-purple">
+                <h3>插件系統 (Plugins)</h3>
+                <p>系統級的重型擴充。可以透過 Entry-points 載入，具備完整的 <code>VALID_HOOKS</code> 生命週期鉤子，能介入 API 請求、LLM 輸出與閘道分派。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">技術細節：插件安全與載入</h2>
+        <div class="card card-accent-cyan">
+            <h3>懶加載單例 (Lazy Singleton)</h3>
+            <p><code>plugins/plugin_utils.py</code> 提供了 <code>lazy_singleton</code> 裝飾器。它解決了插件開發中最常見的「併發初始化」競態條件問題，確保昂貴資源（如 DB 連線）在多執行緒環境下僅被建立一次。</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">插件鉤子清單 (Hooks Matrix)</h2>
+        <table class="card">
+            <thead>
+                <tr>
+                    <th>鉤子名稱</th>
+                    <th>觸發時機</th>
+                    <th>應用場景</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>transform_llm_output</code></td>
+                    <td>模型生成文字後，輸出前</td>
+                    <td>即時翻譯、過濾敏感詞、角色扮演強化。</td>
+                </tr>
+                <tr>
+                    <td><code>pre_tool_call</code></td>
+                    <td>執行工具前</td>
+                    <td>安全審計、參數自動修正。</td>
+                </tr>
+                <tr>
+                    <td><code>pre_gateway_dispatch</code></td>
+                    <td>外部訊息進入閘道時</td>
+                    <td>訊息路由、多平台認證對接。</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">相關源碼文件</h2>
+        <ul>
+            <li><code>hermes_cli/plugins.py</code> - 插件管理器</li>
+            <li><code>tools/registry.py</code> - 工具自註冊表</li>
+            <li><code>plugins/plugin_utils.py</code> - 開發者工具箱</li>
+        </ul>
+    </div>
+</body>
+</html>

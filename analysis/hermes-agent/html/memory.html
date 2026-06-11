@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>記憶與學習機制 - hermes-agent</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">HERMES ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="memory.html" class="active">記憶與學習</a>
+        <a href="extensibility.html">擴充系統</a>
+        <a href="gateway.html">閘道整合</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>記憶、學習與會話演化</h1>
+        <p>探索 hermes-agent 如何透過長期記憶、自動壓縮與自我審查實現進化。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">記憶系統底層 (Memory Management)</h2>
+        <div class="g2">
+            <div class="card card-accent-green">
+                <h3>FTS5 全文檢索</h3>
+                <p>不依賴昂貴的向量庫，而是利用 SQLite 的 FTS5 虛擬表。透過資料庫觸發器 (Triggers)，在訊息寫入時即時建立全文索引，實現毫秒級的 <code>session_search</code>。</p>
+            </div>
+            <div class="card card-accent-green">
+                <h3>流式清洗器 (Streaming Scrubber)</h3>
+                <p><code>StreamingContextScrubber</code> 是一個高效的狀態機，能在 LLM 串流回傳時，即時過濾掉 <code>&lt;memory-context&gt;</code> 標籤內容，確保隱私資訊不洩漏給使用者。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">會話壓縮算法 (Context Compression)</h2>
+        <div class="card card-accent-yellow">
+            <p>當 Token 數接近極限時，觸發自動壓縮流程：</p>
+            <ol>
+                <li><strong>輔助模型總結</strong>：使用廉價模型（如 4o-mini）對中間對話進行總結。</li>
+                <li><strong>非指令化標記</strong>：在摘要前加入強力的 Preamble，解除摘要中舊指令的「效力」，防止 Agent 陷入舊任務。</li>
+                <li><strong>多模態預算</strong>：為圖片分配高額 Token 預算 (1600/張)，確保壓縮後請求不溢出。</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">自我改進迴圈 (The Curator)</h2>
+        <div class="card card-accent-orange">
+            <h3>Curator 運作矩陣</h3>
+            <ul>
+                <li><strong>閒置分支 (Idle Forking)</strong>：僅在系統閒置時啟動，分支一個獨立 Agent 進行審查。</li>
+                <li><strong>技能生命週期</strong>：透過 <code>.usage.json</code> 追蹤技能活躍度，自動執行「活躍 -> 陳舊 -> 封存」的狀態轉移。</li>
+                <li><strong>傘狀整合 (Umbrella Building)</strong>：將多個功能單一的腳本合併為結構化的「傘狀技能」，提升模型的檢索效率。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">相關源碼文件</h2>
+        <ul>
+            <li><code>agent/memory_manager.py</code> - 記憶調度</li>
+            <li><code>agent/context_compressor.py</code> - 壓縮算法</li>
+            <li><code>agent/curator.py</code> - 自我改進邏輯</li>
+            <li><code>hermes_state.py</code> - SQLite 狀態存儲</li>
+        </ul>
+    </div>
+</body>
+</html>

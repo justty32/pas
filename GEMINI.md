@@ -106,6 +106,7 @@
 - [ ] **godot-cpp** (正在進行 Level 1 分析 - 2026-04-15)
 - [ ] **ESPAsyncWebServer** (正在進行 Level 1 分析 - 2026-04-16)
 - [ ] **godot-open-rpg** (Level 1-2 已完成 - 2026-04-18)
+- [x] **hermes-agent** (Level 1-6 已完成 - 2026-06-11)
 - [x] **Unciv** (核心系統與 AI 深度剖析 Level 6 已完成 - 2026-05-17)
 - [x] **Wesnoth** (基礎分析 Level 1-6 已完成 - 2026-05-17)
     - [ ] **Level 7: 多人連線與同步機制** (網路協議、確定性模擬、重播系統)

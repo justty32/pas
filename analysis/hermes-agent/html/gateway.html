@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>閘道整合機制 - hermes-agent</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">HERMES ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">核心架構</a>
+        <a href="memory.html">記憶與學習</a>
+        <a href="extensibility.html">擴充系統</a>
+        <a href="gateway.html" class="active">閘道整合</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>連通之門：閘道與多平台</h1>
+        <p>解構 hermes-agent 如何實作多租戶、多平台的即時通訊閘道。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">閘道架構 (Gateway Runner)</h2>
+        <div class="card card-accent-purple">
+            <p><code>gateway/run.py</code> 是長期執行的守護進程，負責：</p>
+            <ul>
+                <li><strong>多平台併發</strong>：同時啟動 Telegram, Discord, Slack 適配器。</li>
+                <li><strong>Agent LRU 快取</strong>：為每個使用者維護獨立 <code>AIAgent</code> 實例，具備自動過期回收機制。</li>
+                <li><strong>非同步串流分派</strong>：將 LLM 的 Chunk 即時推送至各平台的訊息接口。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">技術細節：多平台整合</h2>
+        <div class="g2">
+            <div class="card card-accent-cyan">
+                <h3>配對系統 (Pairing)</h3>
+                <p><code>gateway/pairing.py</code> 允許將不同的平台帳號（如 Telegram ID）與特定的本地 Profile 進行配對，實現跨平台的一致性體驗。</p>
+            </div>
+            <div class="card card-accent-cyan">
+                <h3>取證系統 (Forensics)</h3>
+                <p><code>gateway/shutdown_forensics.py</code> 在系統崩潰時紀錄執行緒快照與變數狀態，對於調試非同步併發死結至關重要。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">相關源碼文件</h2>
+        <ul>
+            <li><code>gateway/run.py</code> - 閘道核心</li>
+            <li><code>gateway/platforms/</code> - 平台適配器實作</li>
+            <li><code>gateway/slash_commands.py</code> - 指令處理邏輯</li>
+        </ul>
+    </div>
+</body>
+</html>
