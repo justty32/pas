@@ -115,12 +115,18 @@
 - **Map Mode Framework 未特別分析**：`NozoMe.MapModeFramework`（3296654393）是 Faction Territories 的繪圖依賴，使用者指示只列出備用、不單獨分析；其角色是世界地圖模式繪製引擎（本 mod 繼承 `MapMode_Region`＋用 `MapModeDef` 接入）。
 
 ## 衍生（create）產物
-> 放 `derived/rimworld_mods/<項目>/`。測試用複本已複製到 `…/common/RimWorld/Mods/`。
+> **已遷移至獨立 repo [`~/repo/my_rimworld_mods`](https://github.com/justty32/my_rimworld_mods)**（2026-06 遷移；本 repo 的 `derived/rimworld_mods/` 已清除）。每個 mod 自帶 `PROJECT.md`／`session_log.md`／`docs/`，完整逐 mod 表與狀態見該 repo `README.md`。部署：`~/rimworld_mods/` staging → symlink 進遊戲 `Mods/`。
 
-| 衍生項目 | 基於 | 內容 | 狀態 |
-|---|---|---|---|
-| `cqf-caravan-redemption` | CQF | 最小可運行 CQF 純 XML 任務（`QuestScriptDef` 跳訊息＋發信號，獎勵走原版 DropPods）。獎勵不用 `CQFAction_Spawn`（任務生成階段空 targets 不生成）。未來長成「流民商隊的償還」四章故事 | XML 健檢綠；遊戲內實測待人工 Execute quest |
-| `speakup-context-expansion` | SpeakUp | C# 加 3 個殖民地層級情境變數（`COLONY_DANGER`/`COLONY_FOOD_DAYS`/`COLONY_DAYS_SINCE_DEATH`＋drafted），Harmony Postfix 掛 `ExtraGrammarUtility.ExtraRules`，外掛式不改原 mod | **DLL 編譯通過**；遊戲內掃 log 實測待人工 |
+| 衍生項目 | 基於（本群組分析） | 狀態（2026-06-12） |
+|---|---|---|
+| `cqf-caravan-redemption` | CQF | ✅ 端到端驗證通過（debug generate→接受→獎勵投放，log 零紅字） |
+| `speakup-context-expansion` | SpeakUp（＋Bubbles 顯示層） | ✅ 端到端完成（pain `>`＋food `<` 數值門檻台詞實機驗證） |
+| `sims-mode-community` | RimCities LordJob 範式（idea 10） | ✅ 多輪 E2E：影子 MapParent 反攻陷架構＋重組 gizmo 轉發驗證通過 |
+| `npc-outposts` | VOE／world_map_grand_strategy idea 4/5 | ✅ E2E 驗證；存檔字典/執行緒問題治本 |
+| `faction-politics` | Rim War bridge／idea 7/8 | ✅ Task 10 E2E 全清單通過（分裂/倒戈/上限/存讀檔/Rim War 雙向/Empire 排除） |
+| `colony-archival-outpost` | VOE（idea 6 殖民地封存） | v1＋N1/N2/N3/N6/N7 已實作；後續見其 `docs/TODO.md`／`IDEAS.md` |
+| `voe-outpost-enhancement` | VOE | v1 完成（哨站升級系統），實機修復 NullRef |
+| `body-fortification-hediff`／`body-hp-x10` | —（實驗/工具 hediff） | 修復裝箱失效後重編；body-hp-x10 為 debug 工具 |
 
 ### 流民商隊四章故事（CQF 未來擴充設計，已定）
 一條主線 QuestScriptDef 串 4 自足章節，章節間僅靠信號鏈＋共享 DB key 耦合：Ch1 探索被洗劫商隊營地（CustomMapDataDef）→ Ch2 生還商人對話委託護送（DialogTreeDef）→ Ch3 途中匪幫來襲防守（GroupDataDef，須保護商人存活）→ Ch4 送達結算聲望/白銀。待最小切片實測過再以「我建骨架＋多 agent 各做一章」並行實作。
