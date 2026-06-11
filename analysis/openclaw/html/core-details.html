@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>核心技術深挖 - OpenClaw</title>
+    <link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">OPENCLAW ANALYSIS</div>
+        <a href="index.html">概覽</a>
+        <a href="architecture.html">執行架構</a>
+        <a href="compaction.html">會話管理</a>
+        <a href="plugins.html">擴充系統</a>
+        <a href="core-details.html" class="active">核心細節</a>
+    </nav>
+
+    <header class="page-header">
+        <h1>AI 記憶、決策與安全神經網路</h1>
+        <p>深入探索 OpenClaw 的底層智慧與防禦機制。</p>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">AI 記憶：QMD 與耐久文件</h2>
+        <div class="g2">
+            <div class="card card-accent-blue">
+                <h3>QMD 向量引擎</h3>
+                <p>基於 <code>@tobilu/qmd</code> 的本地向量檢索。支援會話轉錄的自動索引與語義搜尋 (vsearch)，讓 Agent 具備「回憶」能力。</p>
+            </div>
+            <div class="card card-accent-blue">
+                <h3>MEMORY.md</h3>
+                <p>工作空間的「真相之源」。Agent 啟動時強制載入的耐久記憶文件，確保行為與偏好的一致性。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">AI 決策：思考分級制度</h2>
+        <div class="card card-accent-orange">
+            <p>透過 <code>Thinking Profiles</code> 實現推理能力的可量化調度：</p>
+            <ul>
+                <li><strong>五級推理</strong>：從 <code>off</code> (直覺反應) 到 <code>xhigh</code> (深度推理)。</li>
+                <li><strong>模型適配</strong>：動態映射各供應商的原生推理參數。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">安全網：溯源與隔離</h2>
+        <div class="g2">
+            <div class="card card-accent-red">
+                <h3>輸入溯源 (Provenance)</h3>
+                <p>識別訊息來源並注入安全前綴。徹底阻斷跨會話的指令劫持風險，確保 AI 不會被誤導執行來自非人類的惡意指令。</p>
+            </div>
+            <div class="card card-accent-red">
+                <h3>硬化沙盒 (Sandboxing)</h3>
+                <p>支援 Docker/SSH 隔離。實作了路徑錨定保護與工具執行審核流程 (Exec-Approval)，防止 Agent 逃逸並損毀主機系統。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">相關源碼文件</h2>
+        <ul>
+            <li><code>src/memory/root-memory-files.ts</code></li>
+            <li><code>src/auto-reply/thinking.ts</code></li>
+            <li><code>src/sessions/input-provenance.ts</code></li>
+            <li><code>src/agents/sandbox/validate-sandbox-security.ts</code></li>
+        </ul>
+    </div>
+</body>
+</html>
