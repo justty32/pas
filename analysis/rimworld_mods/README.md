@@ -101,7 +101,7 @@
 - **Vehicle Framework 不附具體載具**：框架只給 `Base*` 抽象 Def，卡車/船/直升機由內容 mod（如 Vanilla Vehicles Expanded）提供；那些抽象 Def 即「如何定義載具」的權威範本。
 - **RV 的 SimplePortal comp 是被注入的**：`CompSimplePortal` 由 SimplePortal 自己 patch 進 `BaseVehiclePawn`（`Patch_Vehicles.xml`），不是 RV 加的——做衍生載具不必手動加。RV 的 `VehicleFrameworkFix.dll` 修的是 `Map.Index` 複用導致 `VehiclePathingSystem` 快取錯亂。
 - **Empire compat 兩風格**：① Harmony patch（VF/RW）；② 核心定義 bridge 介面、gated DLL 提供強型別實作（CE 的 `ICombatExtendedBridge`、HAR 的 `IHARBridge`）。RW 還示範直接走核心 `IBattleModifier` registry 免 patch。
-- **VBGE / VOE 同屬 VFE 生態**：引擎都在 VFE Core 及其週邊 DLL；VBGE 是純資料層，KCSG 引擎本體未在本批反編譯（標待驗證）。
+- **VBGE / VOE 同屬 VFE 生態**：引擎都在 VFE Core 及其週邊 DLL；VBGE 是純資料層。**KCSG 引擎已於 2026-06-12 反編譯坐實**（接管＝Harmony Postfix 偷換 `MapGeneratorDef` getter；自訂 WorldObjectDef 掛 `CustomGenOption` 即可吃 KCSG、不必繼承 Settlement）：見 `vanilla-base-generation-expanded/details/kcsg_engine_takeover.md`。
 - **Empire 與 Rim War / Vehicle Framework 有 compat 子模組**：本批三者剛好互有接點（Empire 的 `Patch-RW`/`Patch-VF`），跨 mod create 時可交叉參照。
 - **AOBA 家族真正的後端是 FFF 不是 Exosuit**：表面相依鏈會誤導；判定「機甲行為從哪來」要看 XML 裡的 `Class="Fortified.*"`（FFF）與 `Exosuit.*`（外骨骼框架）。兩種機甲範式：FFF `WeaponUsableMech`（DMS 持武器機兵）vs Exosuit 可穿戴 Apparel（MobileDragoon）。FFF **去中心化、無單一主 Def 型別**，擴充前要先判斷需求屬哪個子系統。
 - **「框架↔零 DLL 範例」配對是本群組最佳純 XML 教材**：MobileDragoon（站 Exosuit 上）與 SCMF Sample（站 Ariandel Library 上）都是作者親手寫、零 .dll 的純 XML 內容/教學，逆推「在框架上做新內容要填哪些欄位」最快。

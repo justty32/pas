@@ -38,7 +38,7 @@ graph TD
 ```
 
 關鍵觀念 — **隱式 symbol**：KCSG 並不強制每個 grid token 都對應一個 SymbolDef。絕大多數 token 直接寫**原版 thing/terrain 的 defName**（`Wall_BlocksGranite`、`Door_Steel`、`MealFine`、`PavedTile`、`Sandbags_Cloth`、`DiningChair_Steel_East`…），引擎自動把它當成「放這個 Thing / 鋪這個 Terrain」。SymbolDef 只在「需要額外旗標」時才用——例如要生一具**屍體**（`spawnDead`）、生一個**奴隸 pawn**（`isSlave`）、或帶旋轉/材質等參數。所以全 mod 只有約 12 個 SymbolDef，卻有上百個結構藍圖。
-（帶方向後綴的 token 如 `Cooler_South`、`Shelf_WoodLog_North`、`CommsConsole_East` 是「defName_Rotation」寫法，由引擎解析旋轉——**屬 KCSG 引擎慣例 / 待驗證**。）
+（帶方向後綴的 token 如 `Cooler_South`、`Shelf_WoodLog_North`、`CommsConsole_East` 是「defName_Rotation」寫法——**已坐實**：grid token 查無同名 SymbolDef 時，引擎依 `_North/_East/_South/_West` 後綴 `HotGenerateRotationSymbols` 動態生成旋轉符號，`KCSG.decompiled.cs:3253-3272`。）
 
 ---
 
@@ -112,4 +112,4 @@ Skullspike_Steel,Wall_BlocksGranite,...,Wall_BlocksGranite,Skullspike_WoodLog
 2. 引擎找出所有 `tags` 含 `VGBE_PiratesDefence` 的 `StructureLayoutDef`（`VGBE_PiratesDefence1`~`5`），隨機抽 2~3 棟。
 3. 每棟結構照自己的 `terrainGrid/layouts/roofGrid` 鋪設；grid 內 token 多數是原版 defName（牆/門/家具），少數是 SymbolDef（屍體/奴隸）。
 
-> 引擎「如何把多棟結構排進中心區而不重疊、如何連道路、如何放 props」屬 KCSG C# 的版面演算法——**引擎屬 VFE Core / 待驗證**。資料層只描述「要什麼、幾棟」，不描述「擺在哪個座標」。
+> 引擎「如何把多棟結構排進中心區而不重疊、如何連道路、如何放 props」＝`SettlementGenUtils`（**已反編譯**）：Poisson 圓盤取樣產生 spawn 點（`KCSG.decompiled.cs:7269`）、依 `centerRect` 內外分流 center/peripheral、`GetWeight` 按 tag 連抽懲罰＋count 上限抽結構（`:7425`）、中心地標走 `centralBuildingTags`（`:7620`）。資料層只描述「要什麼、幾棟」，不描述「擺在哪個座標」。

@@ -38,7 +38,7 @@ graph LR
     KCSG -->|玩家攻打/進入聚落時鋪設地圖| RW
 ```
 
-要點：VBGE **不知道也不呼叫任何 C#**，它只是「填資料」。引擎（讀資料、選結構、鋪 symbol、生 pawn／物資）全在 VFE Core 的 KCSG 命名空間（**引擎屬 VFE Core / 待驗證內部細節**）。VBGE 與引擎的唯一契約是 def 的 XML schema（欄位名稱要對得上 KCSG 的反序列化類別）。
+要點：VBGE **不知道也不呼叫任何 C#**，它只是「填資料」。引擎（讀資料、選結構、鋪 symbol、生 pawn／物資）全在 VFE Core 的 KCSG 命名空間（**已於 2026-06-12 反編譯坐實**：`projects/.../decompiled-framework/KCSG.decompiled.cs`，接管機制見 `details/kcsg_engine_takeover.md`）。VBGE 與引擎的唯一契約是 def 的 XML schema（欄位名稱要對得上 KCSG 的反序列化類別）。
 
 ## 3. 資料 / 組件分佈表
 
@@ -54,7 +54,7 @@ graph LR
 | **符號層**（最底層, 具名） | 散落在上述 LayoutDefs（如 `GenericKitchen.xml:405`、`GenericProduction.xml:503/509`、`GenericPrison.xml:3`） | `KCSG.SymbolDef`：替「無法用 thing/terrain defName 直接表達」的東西（動物屍體 `VBGE_Corpse_Elk`、奴隸 `VESSlave`）取一個短代號，供 grid 引用 |
 | **掛接層** | `1.6/Patches/Settlements.xml` | `PatchOperationAddModExtension` 把 `KCSG.CustomGenOption` 注入原版/Royalty 的 4 個 FactionDef（Empire/TribeBase/OutlanderFactionBase/PirateBandBase） |
 | 編譯產物 | （無） | VBGE 沒有 Assemblies 目錄 |
-| 引擎（相依方） | VFE Core 的 KCSG.* C# 類別 | 不在本 mod；反序列化 def、執行生成。**待驗證內部細節** |
+| 引擎（相依方） | VFE Core 的 KCSG.* C# 類別 | 不在本 mod；反序列化 def、執行生成。**已反編譯**（`decompiled-framework/KCSG.decompiled.cs`，9464 行） |
 
 > 全 mod 統計：StructureLayoutDef 約 **317 個**（grep 計 `</KCSG.StructureLayoutDef>` 標籤 634 / 2）、SettlementLayoutDef **21 個**、SymbolDef 僅約 12 個（多數 grid 直接用原版 thing/terrain defName，不需具名 symbol）。
 

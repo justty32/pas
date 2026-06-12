@@ -53,19 +53,19 @@ VBGE 用兩種 PatchOperation 把生成藍圖綁到派系：
 | 邊界 | 為什麼純資料不行 | 歸屬 |
 |---|---|---|
 | 新的 grid token 行為原語 | 例如想要「這格放一個會隨季節變色的特殊物件」「生成時依玩家財富動態增減建物」——SymbolDef 只認引擎反序列化得出的既有欄位（`pawnKindDef`/`thing`/`isSlave`/`spawnDead`…），新增欄位必須改 KCSG 的 C# 類別 | KCSG.SymbolDef（VFE Core）|
-| 新的 symbol resolver | `symbolResolvers` 只能填引擎已註冊的 resolver 名（如 `kcsg_randomfilth`）。要新增一種程序化填充邏輯，得在 C# 寫並註冊 | KCSG resolver registry（待驗證）|
-| 版面/擺放演算法 | 「結構不重疊、道路怎麼連、props 怎麼散」由 KCSG C# 決定；資料只能調暴露出來的參數（`spaceAround`/`scatterMinDistance`…），改演算法本身要動引擎 | KCSG 生成器（待驗證）|
+| 新的 symbol resolver | `symbolResolvers` 只能填引擎已註冊的 resolver 名（坐實：VFE Core `Defs/CustomStructureGeneration/RulesDefs/Rules_Complex_CSG.xml` 共 18 個 RuleDef，全清單見 `kcsg_engine_takeover.md` §五）。要新增一種程序化填充邏輯，得在 C# 寫並註冊 | KCSG resolver registry（已坐實）|
+| 版面/擺放演算法 | 「結構不重疊、道路怎麼連、props 怎麼散」由 KCSG C# 決定；資料只能調暴露出來的參數（`spaceAround`/`scatterMinDistance`…），改演算法本身要動引擎 | KCSG `SettlementGenUtils`（已反編譯：Poisson 取樣選點 `KCSG.decompiled.cs:7269` + 權重抽 tag `:7425` + 中心地標 `:7620`）|
 | 生成觸發時機 | 「世界聚落何時被實體化成地圖、entry 時才鋪 / 預生成」由 RimWorld + VFE Core 控制，非 VBGE 資料能改 | 引擎層（見 §三）|
 | CustomGenOption 的可填欄位 | 只能填 VFE Core 在該 `DefModExtension` 上定義的欄位；想要新旋鈕得改 VFE Core C# | KCSG.CustomGenOption（VFE Core）|
 
 ---
 
-## 三、生成觸發（簡述，引擎屬 VFE Core / 待驗證）
+## 三、生成觸發（2026-06-12 反編譯坐實，機制詳見 `kcsg_engine_takeover.md`）
 
 層級理解（資料層可確認的部分 + 引擎推論）：
 1. **世界生成**：原版在世界地圖上替各派系放聚落（World Object）。此時聚落只是地圖上一個點，**還沒有實際的 tile 地圖**。
 2. **掛接已就緒**：因 `Patches/Settlements.xml` 已把 `CustomGenOption` 注入該派系的 `FactionDef`，引擎在需要生成此派系任一聚落地圖時，知道要去 `chooseFromSettlements` 抽一個 `SettlementLayoutDef`。
-3. **地圖實體化（鋪設藍圖）**：當玩家帶商隊**攻打/進入**該聚落（聚落 World Object 被 enter → 產生 Map）時，KCSG 的生成器接手：抽 SettlementLayoutDef → 依 allowedStructures 的 tag+count 抽 StructureLayoutDef → 把每棟的 grid 鋪到地圖座標 → 跑 symbolResolvers（filth 等）→ 放守軍/物資。**「進地圖才鋪」屬引擎行為，VFE Core / 待驗證。**
+3. **地圖實體化（鋪設藍圖）**：當玩家帶商隊**攻打/進入**該聚落（World Object 被 enter → `GetOrGenerateMap`）時，KCSG 以 Harmony Postfix 偷換 `Settlement.MapGeneratorDef` getter 回傳自家 `KCSG_Base_Faction`（內含 `KCSG.GenStep_Settlement`，order 599），其 `ScatterAt` 呼叫 `CustomGenOption.Generate`：抽 SettlementLayoutDef → push `kcsg_settlement` 回原版 BaseGen → 鋪建築/道路/電力/守軍。**「進地圖才鋪」坐實＝原版 lazy `GetOrGenerateMap` ＋ getter 偷換，引擎不預生成。**
 
 > 對 create 的意義：你的藍圖**何時被用**完全由引擎決定，你不需要也無法用資料改觸發時機；你只要保證「資料正確掛在對的 FactionDef 上」，引擎就會在玩家進該派系聚落時用到。
 

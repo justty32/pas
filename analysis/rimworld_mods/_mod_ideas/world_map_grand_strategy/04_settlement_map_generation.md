@@ -4,7 +4,7 @@
 >
 > 權威源（工作目錄 `/home/lorkhan/repo/pas`）：
 > - 本體 1.6 反編譯：`projects/rimworld/`（`RimWorld.BaseGen/*`、`RimWorld/GenStep_Settlement.cs`、`RimWorld.Planet/Settlement.cs`、`RimWorld/WorldObjectDef.cs`）。
-> - VBGE 純資料 + 安裝版：`projects/rimworld_mods/vanilla-base-generation-expanded/`、`~/.local/share/Steam/.../3209927822/`。**KCSG 引擎本身在 VFE Core，未 clone → 引擎內部一律標「待驗證」。**
+> - VBGE 純資料 + 安裝版：`projects/rimworld_mods/vanilla-base-generation-expanded/`、`~/.local/share/Steam/.../3209927822/`。**KCSG 引擎已於 2026-06-12 反編譯坐實**（`…/vanilla-base-generation-expanded/decompiled-framework/KCSG.decompiled.cs`，結論見 `analysis/rimworld_mods/vanilla-base-generation-expanded/details/kcsg_engine_takeover.md`）；本文舊「待驗證」標記已就地更新。
 > - RimCities 反編譯：`projects/rimworld_mods/rimcities/decompiled/RimCities.decompiled.cs`。
 > - Ancient Urban Ruins 反編譯：`projects/rimworld_mods/ancient-urban-ruins/`。
 > - 引用一律附 `path:line`。`analysis/` 非權威，生成演算法已回 `projects/` 源坐實。
@@ -129,7 +129,7 @@ VBGE 三層（`01_kcsg_data_model.md`）：
 
 掛接（`projects/rimworld_mods/vanilla-base-generation-expanded/.../Patches/Settlements.xml`）：用 `PatchOperationAddModExtension` 把 `KCSG.CustomGenOption{chooseFromSettlements:[...]}` 注入 `FactionDef`。引擎在生該派系聚落地圖時，從 `chooseFromSettlements` 抽一個 `SettlementLayoutDef` 鋪設。
 
-> **KCSG 引擎內部（怎麼接管原版 `"settlement"` symbol／是不是 Harmony patch 掉 `SymbolResolver_Settlement`／還是自己一個 GenStep）＝ VFE Core，未 clone，待驗證。** 已知契約只有 XML schema。`CustomGenOption` 還暴露 `symbolResolvers`（只能填引擎已註冊的，如 `kcsg_randomfilth`，`extension_points.md:37,56`）、`preventBridgeable` 等旋鈕；想加新 resolver 必須改 VFE Core C#。
+> **KCSG 引擎內部機制已坐實（2026-06-12 反編譯，詳見 `kcsg_engine_takeover.md`）**：接管＝Harmony Postfix 偷換 `Settlement.MapGeneratorDef`／`MapParent.MapGeneratorDef` getter → 自家 `KCSG_Base_Faction`/`KCSG_WorldObject` MapGeneratorDef（內含 `KCSG.GenStep_Settlement : 原版 GenStep_Settlement` 子類），`CustomGenOption.Generate` 最終 push `kcsg_settlement` 符號回**原版 BaseGen symbolStack**——既不 patch `SymbolResolver_Settlement` 也不另起爐灶。`symbolResolvers` 只能填引擎已註冊的 18 個符號（坐實，清單見該檔 §五）；想加新 resolver 必須改 VFE Core C#。
 
 ### 3.2 (C) RimCities 的程序生成（規劃感高但全自寫）
 
@@ -177,7 +177,7 @@ AUR 的 `CustomMapDataDef : Def`（`AncientMarket_Libraray.decompiled.cs:939`）
 
 ### 5.2 KCSG 路線（B）的限制
 
-KCSG 的 `SymbolDef` 能指定 `pawnKindDef`（生**新的匿名** pawn，如 `VESSlave`，`01_kcsg_data_model.md:31`），但**沒有「把這棟綁到某個既有具名 NPC / 家族」的資料欄位**（CustomGenOption schema 不含此概念，待驗證但極可能）。
+KCSG 的 `SymbolDef` 能指定 `pawnKindDef`（生**新的匿名** pawn，如 `VESSlave`，`01_kcsg_data_model.md:31`），但**沒有「把這棟綁到某個既有具名 NPC / 家族」的資料欄位**（2026-06-12 反編譯坐實：pawn 生成走 `AddHostilePawnGroup` 的 PawnGroupMaker 隨機抽，`KCSG.decompiled.cs:6264`；schema 無具名綁定概念）。
 
 → **結論**：純 KCSG 能做到「視覺上有議事廳/成排住宅/工坊」，但**做不到「這棟是 Smith 家、住的是名叫 X 的家族 NPC」**。要家族對應，必須加一個**自寫的 C# 後處理 GenStep**（在 KCSG 鋪完地圖後跑）：掃描地圖上的住宅房間（用 roof/door 分割或 KCSG 留的標記），把 idea 8 的家族 NPC 逐一塞進去、掛名牌/領地標記。這也是 §4 建議「(B) 當外觀、(A)/後處理補語意」的原因。
 
@@ -211,9 +211,9 @@ graph LR
 ```
 
 - 若走 **A 路線**：`MapGeneratorDef.genSteps` 裡放你的 `GenStep_PlannedSettlement`（自寫），outpost 與 NPC 聚落**指向同一個 MapGeneratorDef** 即完全共用。
-- 若走 **B 路線（KCSG）**：兩條子路徑——
-  - (i) 讓 outpost 的 `MapGeneratorDef` 用**原版聚落生成器（含 `GenStep_Settlement`，入口 `"settlement"` symbol）**，因 KCSG 是以 FactionDef 為單位接管「settlement」生成（待驗證引擎接管點），只要 outpost 派系掛了 `CustomGenOption`，KCSG 自動套用。
-  - (ii) 若 outpost 想用**不同**佈局（比聚落小/專一），給它一個專屬 MapGeneratorDef，並對該 outpost 派系掛專屬 `chooseFromSettlements`。**但 KCSG 是否會對「非 Settlement 的 MapParent」生效，取決於引擎的接管條件（待驗證——若引擎只 hook `SymbolResolver_Settlement` 或只認 `Settlement` 型，則 outpost 必須也是 Settlement 子類或走 (i)）。**
+- 若走 **B 路線（KCSG）**：兩條子路徑（**2026-06-12 反編譯定案，皆可行**，見 `kcsg_engine_takeover.md` §一/§二）——
+  - (i) **派系層**：outpost 派系的 `FactionDef` 掛 `CustomGenOption` → KCSG 的 `Settlement.MapGeneratorDef` Postfix 自動接管（只對 `Settlement` 型生效）。
+  - (ii) **WorldObject 層（推薦，輕量 WorldObject 直接可用）**：把 `CustomGenOption`（含專屬 `chooseFromSettlements`，可比聚落小/專一）掛在**自訂 WorldObjectDef** 上 → KCSG 的 `MapParent.MapGeneratorDef` Postfix 以「同 tile world object def 掃描」接住，換成 `KCSG_WorldObject` 生成器，`GenStep_WorldObject` 從 `map.Parent.def` 讀 ext。**不必繼承 `Settlement`、不必自寫 MapGeneratorDef，零 C#。**唯一注意：同 tile 多個帶 ext 的物件時取第一個，保持一格一物。
 
 ### 6.2 給輕量 WorldObject 一個「以後才生圖」的生成器
 
@@ -248,15 +248,15 @@ graph LR
 
 | 項目 | 狀態 | 說明 |
 |---|---|---|
-| KCSG 引擎接管原版生成的**確切機制** | **待驗證**（VFE Core 未 clone） | 不確定它是 Harmony patch `SymbolResolver_Settlement`、還是新 GenStep、還是換 MapGeneratorDef。直接影響 §6.1 (i)/(ii) 哪條可行。需 clone VFE Core / 反編譯 `OskarPotocki.VanillaFactionsExpanded.Core` 確認。 |
-| KCSG 對「非 Settlement 的 MapParent / 自寫 WorldObject」是否生效 | **待驗證** | 若引擎只認 `Settlement` 型，輕量 WorldObject 必須繼承 `Settlement` 或走原版 `Base_Faction`。 |
-| KCSG 是否能綁既有具名 pawn | **極可能不行**（schema 無此欄位） | → 家族對應一律走自寫後處理 step。 |
+| KCSG 引擎接管原版生成的**確切機制** | ✅ **已坐實**（2026-06-12 反編譯 KCSG.dll） | ＝Harmony Postfix 偷換 `Settlement.MapGeneratorDef`/`MapParent.MapGeneratorDef` getter → 自家 `KCSG_Base_Faction`/`KCSG_WorldObject` MapGeneratorDef，最終 push `kcsg_settlement` 回原版 BaseGen。詳見 `analysis/rimworld_mods/vanilla-base-generation-expanded/details/kcsg_engine_takeover.md`。 |
+| KCSG 對「非 Settlement 的 MapParent / 自寫 WorldObject」是否生效 | ✅ **生效**（已坐實） | `CustomGenOption` 掛自訂 **WorldObjectDef** 即被 `MapParent.MapGeneratorDef` Postfix 接住（同 tile def 掃描）；輕量 WorldObject **不必**繼承 `Settlement`。注意同 tile 多 ext 物件取第一個＋靜態全域 `GenOption.customGenExt` 非可重入。 |
+| KCSG 是否能綁既有具名 pawn | ✅ **不行**（已坐實） | pawn 生成走 `AddHostilePawnGroup` PawnGroupMaker 隨機（`KCSG.decompiled.cs:6264`）→ 家族對應一律走自寫後處理 step。 |
 | 生成效能（大地圖 + 多結構） | 注意 | KCSG 鋪多棟 grid + RimCities BSP 都是**生圖那一刻**的一次性成本，不是逐 tick；但 idea 7 上千據點若玩家頻繁攻打，仍是逐次數百 ms 級開銷。聚落尺寸越大（KCSG `settlementSize 72,72`，`Tribals.xml:77`，遠大於原版 34~38）生圖越久。建議對 NPC outpost 用較小佈局。 |
 | 與 Rim War 佔領易主後外觀一致性 | 注意（接 03 報告） | 據點易主換派系後，下次生圖會用**新派系**的 CustomGenOption / MapGeneratorDef → 外觀會變。若希望「建築還在、只是換旗」，需把已生成的 map 持久化（原版 Settlement 攻破後 map 可留存一段），或自寫「保留建物只換守軍/旗標」的輕量重生路徑。這與 idea 8「據點隨派系易主」直接相關，是跨報告的整合風險。 |
 
 ### 8.2 開放設計問題
 
-1. **走 A 還是 B？** 取決於使用者能否接受硬相依 VFE Core。建議：先 clone VFE Core 反編譯確認 §8.1 前兩項，再定。
+1. **走 A 還是 B？** §8.1 前兩項已坐實（B 路線對自訂 WorldObject 完全可行、零 C#），技術障礙消除——剩下唯一考量是**能否接受硬相依 VFE Core**。
 2. **家族屋的「家族」粒度**：idea 8 的家族 NPC 是逐 pawn 還是有「家族」聚合實體？家族屋數量 = 家族數還是固定？影響後處理 step 怎麼分房。
 3. **outpost 與正式聚落是否共用同一套 SettlementLayoutDef？** 還是 outpost 用精簡版（少幾棟、無防禦）？影響效能與辨識度。
 4. **易主後外觀策略**：重生（換派系外觀）vs 保留建物（只換旗/守軍）。後者需自寫，但對「世界有連續性」的大戰略體驗更好。

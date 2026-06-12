@@ -157,5 +157,5 @@ MyBaseMod/
 
 常見坑：
 - grid 三張表（terrain/layouts/roof）**行數或列數不一致**會錯位 → 嚴格對齊。
-- tag 在聚落 `allowedStructures` 引用了，但沒有任何 StructureLayoutDef 帶該 tag → 那棟抽不到（可能空缺或報錯，**待驗證**）。
+- tag 在聚落 `allowedStructures` 引用了，但沒有任何 StructureLayoutDef 帶該 tag → **紅字報錯**（坐實：`structuresTagsCache[tag]` 直接字典索引、無守衛，`KCSG.decompiled.cs:7674` 一帶 → `KeyNotFoundException`，該生成步中斷），非靜默空缺。
 - 忘了 `loadAfter` VFE Core → KCSG 類別還沒載入，def 反序列化失敗。
