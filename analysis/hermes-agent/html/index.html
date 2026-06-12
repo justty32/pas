@@ -58,7 +58,30 @@
     </div>
 
     <div class="section">
-        <h2 class="section-title">原始文件 (Markdown)</h2>
+        <h2 class="section-title">SDK 建造者深度剖析</h2>
+        <p style="color:var(--text-muted);margin-bottom:1rem;">以「從零打造自己的 AI agent SDK」為視角，深度分析各核心子系統的設計模式、最小必要抽象與坑點。</p>
+        <div class="g2">
+            <a href="../details/sdk_conversation_loop.md" class="card card-accent-blue">
+                <h3>對話迴圈設計</h3>
+                <p>最小狀態機、Tool Call Loop 不變量、串流與中斷整合、錯誤分類退避策略、SDK 最小核心建議。</p>
+            </a>
+            <a href="../details/sdk_tool_system.md" class="card card-accent-orange">
+                <h3>工具系統</h3>
+                <p>Registry 設計模式、Schema 格式與 LLM 整合、並行執行模型、Guardrails 模式、SDK 最小介面建議。</p>
+            </a>
+            <a href="../details/sdk_memory_context.md" class="card card-accent-green">
+                <h3>記憶與脈絡管理</h3>
+                <p>短期脈絡管理、壓縮機制五階段演算法、Curator 長期記憶、三層記憶分層架構、最小 SDK 建議。</p>
+            </a>
+            <a href="../details/sdk_extensibility.md" class="card card-accent-purple">
+                <h3>擴充架構（Plugin / Hook）</h3>
+                <p>Hook 系統設計、Plugin 生命週期、完整 20 個 VALID_HOOKS 清單、最小可擴充 SDK 介面草圖、安全性分析。</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">架構概覽文件 (Markdown)</h2>
         <ul>
             <li><a href="../architecture/L1_exploration.md">L1: 初始探索</a></li>
             <li><a href="../architecture/L2_core_modules.md">L2: 核心模組職責</a></li>

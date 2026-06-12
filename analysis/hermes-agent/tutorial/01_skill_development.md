@@ -61,6 +61,9 @@ if __name__ == "__main__":
 
 ### 第四步：註冊工具 (透過 `tools/` 適配器)
 在 `tools/` 下建立一個對應的註冊檔案（或在現有工具中加入），讓 LLM 能看到它：
+
+> **注意**：`schema` 只傳內層字典（`name / description / parameters`），**不要**加 `{"type":"function","function":{...}}` 的外層包裝。`ToolRegistry.get_definitions()`（`tools/registry.py:383`）會在對外輸出時自動補上。若雙重包裝，LLM 拿到的格式會是嵌套錯誤的結構。參考範例：`tools/terminal_tool.py`。
+
 ```python
 from tools.registry import registry
 
@@ -69,17 +72,14 @@ def register_my_calc():
         name="my_calc",
         toolset="utility",
         schema={
-            "type": "function",
-            "function": {
-                "name": "my_calc",
-                "description": "執行基礎數學運算",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "op": {"type": "string", "enum": ["add", "multiply"]},
-                        "a": {"type": "number"},
-                        "b": {"type": "number"}
-                    }
+            "name": "my_calc",
+            "description": "執行基礎數學運算",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "op": {"type": "string", "enum": ["add", "multiply"]},
+                    "a": {"type": "number"},
+                    "b": {"type": "number"}
                 }
             }
         },

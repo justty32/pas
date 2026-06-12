@@ -15,7 +15,9 @@
 ### 註冊流程：
 1. **工具模組**: 位於 `tools/` 下的各個 `.py` 檔案在被載入時，會呼叫 `tools.registry.register()`。
 2. **中繼層 (Registry)**: `tools/registry.py` 維護一個 `ToolRegistry` 單例，儲存所有 `ToolEntry`（包含 Schema, Handler, Check 函數等）。
-3. **動態發現**: `model_tools.py` 啟動時呼叫 `discover_builtin_tools()` 與 `discover_plugins()`，透過掃描目錄並匯入模組來完成工具掛載。
+3. **動態發現**: `model_tools.py` 啟動時呼叫兩個不同機制的發現函數：
+   - `discover_builtin_tools()`（定義於 `tools/registry.py:57-74`）：掃描 `tools/*.py` 目錄並匯入模組，觸發各模組的自註冊呼叫。
+   - `discover_plugins()`（來自 `hermes_cli/plugins.py`）：讀取各來源目錄下的 `plugin.yaml` manifest，與前者的「掃描目錄匯入」機制不同。
 
 ## 3. 工具執行器 (Tool Executor)
 位於 `agent/tool_executor.py`，負責將 LLM 的調用請求轉化為實際的代碼執行。

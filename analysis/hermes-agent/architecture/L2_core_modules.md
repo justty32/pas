@@ -5,7 +5,7 @@
 | 模組 | 職責描述 | 關鍵檔案 |
 |---|---|---|
 | **對話引擎 (Conversation Engine)** | 驅動 Agent 的主迴圈，負責「模型呼叫 -> 工具分派 -> 結果回傳 -> 狀態更新」。 | `agent/conversation_loop.py` |
-| **Agent 初始化 (Initialization)** | 處理複雜的 `AIAgent` 實例初始化，包含模型偵測、憑證解析、環境準備。 | `agent/agent_init.py`, `run_agent.py` |
+| **Agent 初始化 (Initialization)** | 處理複雜的 `AIAgent` 實例初始化，包含模型偵測、憑證解析、環境準備。`AIAgent` class 本體定義在頂層 `run_agent.py:320`（非 `agent/` 子目錄）。 | `run_agent.py`, `agent/agent_init.py` |
 | **工具執行器 (Tool Executor)** | 負責解析 LLM 產出的工具調用請求，並執行對應的技能腳本。 | `agent/tool_executor.py` |
 | **記憶管理 (Memory Management)** | 管理長短期記憶、會話壓縮、跨會話搜尋與回憶。 | `agent/memory_manager.py`, `agent/conversation_compression.py` |
 | **提示詞建構 (Prompt Builder)** | 根據當前上下文、記憶、技能與使用者資訊動態合成 System Prompt 與 User Message。 | `agent/prompt_builder.py`, `agent/system_prompt.py` |

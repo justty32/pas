@@ -43,16 +43,35 @@
     </div>
 
     <div class="section">
-        <h2 class="section-title">關鍵技術專題</h2>
+        <h2 class="section-title">SDK 建造者深度剖析</h2>
+        <p style="color:var(--text-muted);margin-bottom:1rem;">以「從零打造自己的 AI agent SDK」為視角，深度分析 openclaw 四個對 SDK 設計最有啟示的核心機制。</p>
         <div class="g2">
-            <div class="card">
-                <h3>世代回覆圍欄 (Generation Fencing)</h3>
-                <p>解決非同步環境下回覆順序錯亂的硬核工程方案。</p>
-            </div>
-            <div class="card">
-                <h3>實體快照壓縮 (Checkpoint Compaction)</h3>
-                <p>基於文件的會話管理，提供無損回滾與磁碟預算控制。</p>
-            </div>
+            <a href="../details/sdk_generation_fencing.md" class="card card-accent-blue">
+                <h3>世代圍欄（ForegroundReplyFence）</h3>
+                <p>Generation ID 競爭抑制、中止傳播鏈、TypeScript async 取消模式、SDK 最小實作建議。</p>
+            </a>
+            <a href="../details/sdk_compaction.md" class="card card-accent-green">
+                <h3>會話壓縮（Checkpoint Compaction）</h3>
+                <p>SessionCompactionCheckpoint 資料結構、Preflight 三路由策略、6 步壓縮演算法、與 hermes-agent 比較。</p>
+            </a>
+            <a href="../details/sdk_mcp_integration.md" class="card card-accent-orange">
+                <h3>MCP 整合</h3>
+                <p>MCP server 連接流程、Tool schema 轉換、Runtime 工具呼叫路由、生命週期管理、SDK 整合建議。</p>
+            </a>
+            <a href="../details/sdk_llm_providers.md" class="card card-accent-purple">
+                <h3>Multi-provider LLM 抽象層</h3>
+                <p>Provider 核心介面、Streaming 統一協定、Thinking 跨供應商映射、Fallback 矩陣、TypeScript 介面草圖。</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">核心細節文件</h2>
+        <div class="g2">
+            <a href="../details/core_mechanisms.md" class="card">
+                <h3>記憶、決策與安全網</h3>
+                <p>QMD 向量引擎、Thinking Profiles 五級決策、Input Provenance 跨 session 注入防禦、沙盒隔離。</p>
+            </a>
         </div>
     </div>
 </body>

@@ -25,10 +25,14 @@
 | 類別 | 關鍵鉤子 | 用途 |
 |---|---|---|
 | **工具介入** | `pre_tool_call`, `post_tool_call`, `transform_tool_result` | 攔截危險操作、修改工具回傳結果。 |
+| **終端輸出** | `transform_terminal_output` | 過濾或轉換終端指令的輸出內容。 |
 | **LLM 介入** | `pre_llm_call`, `post_llm_call`, `transform_llm_output` | 在發送前調整提示詞、或在顯示前過濾模型回應。 |
-| **會話管理** | `on_session_start`, `on_session_reset`, `on_session_end` | 初始化外部資源、清理快取或產出會話報告。 |
-| **基礎設施** | `pre_api_request`, `pre_gateway_dispatch` | 處理跨域認證、閘道層級的訊息過濾與重寫。 |
+| **會話管理** | `on_session_start`, `on_session_reset`, `on_session_end`, `on_session_finalize` | 初始化外部資源、清理快取或產出會話報告。`on_session_finalize` 在 `on_session_end` 之後觸發，用於最終清理。 |
+| **子 Agent** | `subagent_start`, `subagent_stop` | 監聽子 Agent 的啟動與結束生命週期。 |
+| **基礎設施** | `pre_api_request`, `post_api_request`, `api_request_error`, `pre_gateway_dispatch` | 處理跨域認證、API 請求後處理與錯誤攔截、閘道層級的訊息過濾。 |
 | **使用者互動** | `pre_approval_request`, `post_approval_response` | 觀察使用者的核准行為，用於審計或學習。 |
+
+> 完整清單以 `hermes_cli/plugins.py` 的 `VALID_HOOKS` 集合（`plugins.py:128-170`）為準。（核對於 2026-06-12）
 
 ## 3. 工具分派與註冊流程
 1. **發現 (Discovery)**: `hermes_cli/plugins.py` 掃描各來源目錄，讀取 `plugin.yaml`。
