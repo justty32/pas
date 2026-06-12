@@ -1,0 +1,5 @@
+# session_log — vanilla-expanded-framework（VEF / VFE Core）
+
+- 2026-06-12 淺層坑點分析（不做完整架構）：ilspycmd 反編譯 1.6 的 VEF.dll（71,881 行）入 `projects/.../decompiled/`（MVCF/PipeSystem/0PrepatcherAPI 一併反編譯供 grep），按被 patch 的原版型別分組統計：VEF.dll 375 個 `[HarmonyPatch]` 屬性行（約 327 個 patch 方法）＋32 處手動 `harm.Patch`，分四種時序上（啟動 uncategorized／def 後 LateHarmonyPatch／掃 DefDatabase 條件類／OptionalFeaturesDef opt-in）；MVCF 0 屬性 patch、24 個 PatchSet 全 feature opt-in；PipeSystem 20 個。KCSG/Outposts 已有分析，跳過。
+- 核心結論：VEF 九成 patch 是「postfix 查 extension、沒有就 return」旁路型，但無條件掛在咽喉上——對使用者領域的前三坑：(1) FactionDiscovery 每次 LoadedGame 掃 FactionDef 彈補生對話框/強制補生（VEF.cs:39524）；(2) PawnGenerator 三 patch 為 NRE 前科同型（GenerateNewPawnInternal/GenerateGenes postfix，VEF.cs:71295/:37133）；(3) GetOrGenerateMap prefix 會改地圖尺寸（OptionalFeature TileMutator，VEF.cs:27530）＋ MapGenerator.GenerateMap postfix 對每張地圖灑 ObjectSpawnsDef（VEF.cs:28084）。商隊 arrival action 體系本身未被碰（只有 Caravan_PathFollower 三連服務 MovingBase）；Prepatcher 僅 AestheticScaling 快取欄位注入，無 Prepatcher 時退化為字典快取、行為等價。
+- 產出：architecture/00_overview.md、details/pitfalls_and_global_patches.md、projects 下 SOURCE_POINTER.md。

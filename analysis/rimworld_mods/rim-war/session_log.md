@@ -12,3 +12,4 @@
 - 讀 RimWarDef.xml：派系→behavior+movement/combat/growth bonus（純資料可調）。
 - 確認玩家互動：CommsConsole patch（:5876）+ FactionDialogReMaker（:2530）請求商隊/軍援。
 - 產出 SOURCE_POINTER.md / 00_overview.md / 01_world_simulation.md / details/extension_points.md。
+- 2026-06-12：深掘目標選擇與抵達行為鏈，產出 details/target_selection_and_arrival.md——關鍵結論：IsValidSettlement（:16685）只管聚落註冊/行動源、不在目標查詢路徑上，任何 Settlement 子類掛上 RimWarSettlementComp 即可被 warband 選為目標（:9411）；途中不打聚落（ScanAction :14701 不含 Settlement），聚落交戰只在 ArrivalAction；Empire 附庸 def 已在白名單且 Vassal 永不被佔領（:11151）；AdjustCaravanTargets（:17235）是玩家 caravan 追擊重導、非 WarObject 改派。

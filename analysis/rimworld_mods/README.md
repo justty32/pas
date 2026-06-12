@@ -93,6 +93,17 @@
 |---|---|---|---|---|
 | **Loading Progress** | `ilyvion.LoadingProgress` / 3535481557（MIT/Apache 開源，GitHub `ilyvion/loading-progress`） | 開發者體驗工具：Harmony 鉤住 RimWorld 啟動載入管線（XML 合併/繼承/交叉引用解析/語言/LongEventHandler），即時顯示載入進度視窗＋逐 mod 載入耗時量測（StartupImpact）。**無 Def、單 DLL** | **無純 XML 擴充面**（純 C# 工具 mod）；create 價值＝技術參考範例（如何 instrument 啟動管線、在 LongEventHandler 畫面畫自訂 UI、量測逐 mod 耗時），衍生只能 fork C# | `loading-progress/architecture/00_overview.md` |
 
+### 第十二批：基礎函式庫（坑點導向淺析，2026-06-12）
+
+> 目的不是擴充而是**避雷**：盤點「裝在清單裡就有全域影響」的框架，標出會坑到自家 mod 的 patch 面。
+
+| Mod | packageId / workshop | 本質 | 主要坑點 | 入口文件 |
+|---|---|---|---|---|
+| **Vanilla Expanded Framework** | `OskarPotocki.VanillaFactionsExpanded.Core` / 2023507013 | VE 系共用引擎集（VEF.dll 主體 375 個 HarmonyPatch＋KCSG/MVCF/PipeSystem/Outposts 衛星 DLL）。四種 patch 上線時序：啟動即上／def 載入後／掃 DefDatabase 按需／OptionalFeaturesDef 點名 | ①FactionDiscovery 讀檔掃派系彈補生對話框（動態生滅派系的 mod 注意）；②PawnGenerator 三 postfix 無條件跑（NRE 前科區）；③`GetOrGenerateMap` prefix 可改地圖尺寸＋`GenerateMap` postfix 灑 ObjectSpawnsDef 雜物。CaravanArrivalAction 體系未被碰 | `vanilla-expanded-framework/details/pitfalls_and_global_patches.md` |
+| **HugsLib** | `UnlimitedHugs.HugsLib` / 818773962 | 老牌 mod 函式庫：ModBase 生命週期/設定框架/更新新聞/log 上傳。17 個全域 patch 常駐（不論有無 mod 依賴），但僅 3 個真改寫原版行為；不碰 Scribe/MapComponent/規則數值 | ①dev 模式改 modlist/語言會**跳過對話框直接重啟**（誤判閃退）；②UtilityWorldObject 存檔黏性（拔 HugsLib 紅字）；③更新新聞掃**所有** mod 的 `News/` 資料夾＋Ctrl+F12 全域按鍵。自家 mod 零依賴 ⇒ 幾乎無事 | `hugslib/details/pitfalls_and_global_patches.md` |
+
+> Rim War 同日加深：`rim-war/details/target_selection_and_arrival.md`（目標選擇＝`NearbyHostileSettlements` 隨機抽樣非窮舉、抵達行為鏈、`IsValidSettlement` 4 個呼叫點影響評估、NpcOutpost 接入推薦＝XML 注入 `RimWarSettlementComp` 零 C#、Empire 附庸會被選為目標但 Vassal 永不被佔領（:11151）、戰績訊號匯流排＝`RW_LetterMaker.Archive_RWLetter`）。
+
 ## 重要備註
 - **CQF 自帶權威 schema**：mod 目錄內 `<MOD>/.QuestEditor_Library/` 有作者原始碼樹＋4 份 `Skill/*/SKILL.md`（`cqf-overview`/`cqf-def-catalog`/`cqf-action-condition-dev`/`cqf-map-dev`），做 create 時優先參考。
 - **SpeakUp 不是 AI 對話**：目前完全是模板規則；若想「接 LLM 讓對話更聰明」是全新對話來源接點（B 類改碼），非改 XML 模板。
